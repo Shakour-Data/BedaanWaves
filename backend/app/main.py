@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.db.base import init_db, close_db
-from app.api.routes import market, analysis, stocks, portfolios, history, news, live
+from app.api.routes import market, analysis, stocks, portfolios, history, news, auth, ml, live
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -87,6 +87,8 @@ app.include_router(stocks.router, prefix=api_v1_prefix)
 app.include_router(portfolios.router, prefix=api_v1_prefix)
 app.include_router(history.router, prefix=api_v1_prefix)
 app.include_router(news.router, prefix=api_v1_prefix)
+app.include_router(auth.router, prefix=api_v1_prefix)
+app.include_router(ml.router, prefix=api_v1_prefix)
 app.include_router(live.router, prefix=api_v1_prefix)
 
 # Error Handlers
