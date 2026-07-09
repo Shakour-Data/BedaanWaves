@@ -25,9 +25,8 @@
     "external_directory": "deny"
   },
   "instructions": [
-    "AGENTS.md",
-    "CLAUDE.md",
-    "CONTEXT.md"
+    "docs/AGENTS.md",
+    "docs/CLAUDE.md"
   ],
   "skills": {
     "paths": [".kilo/skills"],

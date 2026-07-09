@@ -139,8 +139,10 @@ BedaanWaves/
 ├── database/              # Alembic migrations
 ├── frontend/              # Next.js 16+
 ├── docs/                  # Documentation
-├── kilo.json              # This config
-└── REWRITE_PROGRESS.md    # Progress tracking
+│   ├── AGENTS.md          # This file
+│   ├── CLAUDE.md          # Claude instructions
+│   └── REWRITE_PROGRESS.md # Progress tracking
+└── kilo.json              # Kilo config
 ```
 
 ## Development Guidelines

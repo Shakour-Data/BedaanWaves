@@ -216,10 +216,10 @@ BedaanWaves/
 ├── frontend/                   # Next.js React
 ├── database/                   # Alembic migrations
 ├── docs/                       # Project documentation
-├── AGENTS.md                   # Agent guidelines
-├── CLAUDE.md                   # This file
-├── kilo.json                   # Kilo config
-└── REWRITE_PROGRESS.md         # Progress tracking
+│   ├── AGENTS.md               # Agent guidelines
+│   ├── CLAUDE.md               # This file
+│   └── REWRITE_PROGRESS.md     # Progress tracking
+└── kilo.json                   # Kilo config
 ```
 
 ## Environment Setup
@@ -314,9 +314,9 @@ When completing a tier or feature, update `REWRITE_PROGRESS.md`:
 
 ## Reference Documentation
 
-- **Config**: See `kilo.json` and `AGENTS.md`
+- **Config**: See `kilo.json` and `docs/AGENTS.md`
 - **Architecture**: See `backend/README.md`
-- **Progress**: See `REWRITE_PROGRESS.md`
+- **Progress**: See `docs/REWRITE_PROGRESS.md`
 - **Services**: See `backend/app/services/`
 
 ## Key Principles
