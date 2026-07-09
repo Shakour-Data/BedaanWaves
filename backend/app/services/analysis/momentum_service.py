@@ -5,7 +5,7 @@ Momentum-based analysis and trading signals.
 """
 
 from typing import Any, Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 from ..core import AnalysisService
 
 
@@ -40,7 +40,7 @@ class MomentumService(AnalysisService):
             return {"error": "Insufficient price data"}
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "momentum": {
                 "strength": self._calculate_momentum_strength(prices),
@@ -81,7 +81,7 @@ class MomentumService(AnalysisService):
     
     def _calculate_acceleration(self, prices: List[float]) -> float:
         """Calculate momentum acceleration"""
-        if len(prices) < 5:
+        if len(prices) < 10:
             return 0.0
         
         m1 = prices[-1] - prices[-5]

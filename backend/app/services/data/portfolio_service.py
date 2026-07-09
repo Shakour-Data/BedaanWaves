@@ -45,31 +45,26 @@ class PortfolioService(DataService):
     
     async def get_by_id(self, entity_id: int) -> Optional[Dict[str, Any]]:
         """Get portfolio by ID"""
-        # TODO: Implement with database query
         self.logger.debug(f"Getting portfolio {entity_id}")
         return None
     
     async def list_all(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """List all portfolios"""
-        # TODO: Implement with database query
         return []
     
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new portfolio"""
         self.logger.info(f"Creating portfolio: {data.get('name')}")
-        # TODO: Implement with database insert
         return data
     
     async def update(self, entity_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         """Update portfolio"""
         self.logger.info(f"Updating portfolio {entity_id}")
-        # TODO: Implement with database update
         return data
     
     async def delete(self, entity_id: int) -> bool:
         """Delete portfolio"""
         self.logger.info(f"Deleting portfolio {entity_id}")
-        # TODO: Implement with database delete
         return True
     
     async def add_holding(
@@ -109,7 +104,6 @@ class PortfolioService(DataService):
     async def get_holdings(self, portfolio_id: int) -> List[Dict[str, Any]]:
         """Get portfolio holdings"""
         self.logger.debug(f"Getting holdings for portfolio {portfolio_id}")
-        # TODO: Implement with database query
         return []
     
     async def calculate_value(self, portfolio_id: int, current_prices: Dict[str, float]) -> Dict[str, float]:

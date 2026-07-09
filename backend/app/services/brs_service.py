@@ -28,7 +28,7 @@ class BrsApiClient:
         Args:
             api_key: API Key for BrsApi.ir (if None, use from settings)
         """
-        self.api_key = api_key or settings.BRS_API_KEY or "FreeSV0E1LSgB9RDjuf0QorSLViX8pPG"
+        self.api_key = api_key or settings.BRS_API_KEY or ""
         self.timeout = settings.BRS_API_TIMEOUT
         self.client = httpx.AsyncClient(
             base_url=self.BASE_URL,

@@ -23,31 +23,35 @@ async def get_symbols(
     asset_class: AssetClassEnum = Query(None),
     market: MarketEnum = Query(None),
     sector: str = Query(None),
+    industry: str = Query(None, description="TSE industry group filter (e.g. فلزات اساسی)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_session),
 ) -> List[AssetResponse]:
     """
     Get available trading symbols with filters
-    
+
     Args:
         asset_class: Filter by asset class (EQUITY, CRYPTO, ETF)
         market: Filter by market (TSE, BINANCE, etc.)
         sector: Filter by sector
+        industry: Filter by TSE industry group
         skip: Pagination skip
         limit: Pagination limit
-        
+
     Returns:
         List of assets matching criteria
     """
     query = select(Asset)
-    
+
     if asset_class:
         query = query.where(Asset.asset_class == asset_class)
     if market:
         query = query.where(Asset.market == market)
     if sector:
         query = query.where(Asset.sector == sector)
+    if industry:
+        query = query.where(Asset.industry == industry)
     
     query = query.where(Asset.active == True)
     query = query.offset(skip).limit(limit)
@@ -209,5 +213,130 @@ async def get_market_overview(
         "market": market,
         "total_assets": total_assets,
         "sectors": sectors,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/tse-dashboard", response_model=dict)
+async def tse_dashboard(
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    TSE market dashboard summary (Tehran Stock Exchange only).
+
+    Returns total symbols, average daily change, and top 5 gainers / losers
+    computed from the latest stored daily candles. Crypto / international
+    markets are excluded by the market='TSE' filter.
+
+    Returns:
+        TSE market overview snapshot
+    """
+    assets = (
+        await db.execute(
+            select(Asset).where(Asset.market == "TSE", Asset.active == True)
+        )
+    ).scalars().all()
+
+    rows = []
+    for asset in assets:
+        candles = (
+            await db.execute(
+                select(PriceCandle)
+                .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
+                .order_by(PriceCandle.timestamp.desc())
+                .limit(2)
+            )
+        ).scalars().all()
+
+        change_pct = None
+        last_close = float(candles[0].close) if candles else None
+        if len(candles) >= 2:
+            older, newer = candles[1], candles[0]
+            base = float(older.close)
+            change_pct = (float(newer.close) - base) / base * 100 if base else 0.0
+        elif len(candles) == 1:
+            change_pct = 0.0
+
+        rows.append(
+            {
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "last_close": last_close,
+                "change_pct": round(change_pct, 2) if change_pct is not None else None,
+            }
+        )
+
+    ranked = [r for r in rows if r["change_pct"] is not None]
+    ranked.sort(key=lambda x: x["change_pct"], reverse=True)
+    avg_change = sum(r["change_pct"] for r in ranked) / len(ranked) if ranked else 0.0
+
+    return {
+        "status": "success",
+        "market": "TSE",
+        "total_symbols": len(rows),
+        "average_change_pct": round(avg_change, 2),
+        "top_gainers": ranked[:5],
+        "top_losers": ranked[::-1][:5],
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/industry-ranking", response_model=dict)
+async def industry_ranking(
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    TSE industry ranking (رتبه‌بندی صنایع).
+
+    Ranks Tehran Stock Exchange industries by the average daily change of their
+    constituent symbols (computed from the latest stored daily candles). Only
+    market='TSE' symbols are considered; crypto / international are excluded.
+
+    Returns:
+        Industries ranked by average change %, each with member count
+    """
+    assets = (
+        await db.execute(
+            select(Asset).where(
+                Asset.market == "TSE", Asset.active == True, Asset.industry.isnot(None)
+            )
+        )
+    ).scalars().all()
+
+    industry_changes: Dict[str, List[float]] = {}
+    for asset in assets:
+        candles = (
+            await db.execute(
+                select(PriceCandle)
+                .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
+                .order_by(PriceCandle.timestamp.desc())
+                .limit(2)
+            )
+        ).scalars().all()
+
+        if len(candles) >= 2:
+            older, newer = candles[1], candles[0]
+            base = float(older.close)
+            change = (float(newer.close) - base) / base * 100 if base else 0.0
+            industry_changes.setdefault(asset.industry, []).append(change)
+
+    ranking = []
+    for industry, changes in industry_changes.items():
+        avg = sum(changes) / len(changes) if changes else 0.0
+        ranking.append(
+            {
+                "industry": industry,
+                "member_count": len(changes),
+                "average_change_pct": round(avg, 2),
+            }
+        )
+
+    ranking.sort(key=lambda x: x["average_change_pct"], reverse=True)
+
+    return {
+        "status": "success",
+        "market": "TSE",
+        "ranked_industries": len(ranking),
+        "ranking": ranking,
         "timestamp": datetime.utcnow().isoformat(),
     }

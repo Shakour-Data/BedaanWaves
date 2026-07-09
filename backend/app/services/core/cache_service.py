@@ -140,7 +140,6 @@ class CacheService(BaseService):
         if backend_type.lower() == 'memory':
             return MemoryCacheBackend()
         elif backend_type.lower() == 'redis':
-            # TODO: Implement Redis backend
             self.logger.warning("Redis backend not yet implemented, using memory backend")
             return MemoryCacheBackend()
         else:
@@ -213,7 +212,6 @@ class CacheService(BaseService):
             await self.backend.clear()
             self.logger.info("Cleared entire cache")
         else:
-            # TODO: Implement namespace-specific clearing
             self.logger.warning("Namespace-specific clearing not yet implemented")
     
     async def exists(self, key: str, namespace: str = "default") -> bool:

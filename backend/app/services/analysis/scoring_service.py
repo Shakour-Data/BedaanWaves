@@ -6,7 +6,7 @@ Comprehensive stock scoring and ranking.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from ..core import AnalysisService
 
 
@@ -65,14 +65,15 @@ class ScoringService(AnalysisService):
         
         node_id = 0
         for dimension in self.DIMENSIONS:
-            # Each dimension has ~50 nodes (51 * 6 = 306 total)
-            for i in range(51):
+            # 305 total nodes: 51 for first 5 dimensions, 50 for last dimension
+            nodes_in_dim = 51 if dimension != self.DIMENSIONS[-1] else 50
+            for i in range(nodes_in_dim):
                 node_id += 1
                 self._hierarchy_nodes[f"{dimension}_{i}"] = {
                     "id": node_id,
                     "dimension": dimension,
                     "index": i,
-                    "weight": 1.0 / 51,  # Equal weight initially
+                    "weight": 1.0 / nodes_in_dim,
                     "description": f"{dimension.title()} Factor {i}",
                 }
         
@@ -92,7 +93,7 @@ class ScoringService(AnalysisService):
         
         scores = {
             "ticker": ticker,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "scores": {},
             "overall_score": 0.0,
         }
@@ -145,16 +146,19 @@ class ScoringService(AnalysisService):
         Returns:
             List of score results
         """
-        results = []
-        for stock in stocks:
-            try:
-                score = await self.analyze(stock)
-                results.append(score)
-            except Exception as e:
-                self.logger.error(f"Error scoring {stock.get('ticker')}: {e}")
-                results.append({"error": str(e)})
+        import asyncio
+        tasks = [self.analyze(stock) for stock in stocks]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        return results
+        processed = []
+        for stock, result in zip(stocks, results):
+            if isinstance(result, Exception):
+                self.logger.error(f"Error scoring {stock.get('ticker')}: {result}")
+                processed.append({"error": str(result)})
+            else:
+                processed.append(result)
+        
+        return processed
     
     async def rank_stocks(
         self,

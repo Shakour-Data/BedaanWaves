@@ -1,5 +1,5 @@
 """API Routes Package"""
 
-from . import market, analysis
+from . import market, analysis, stocks, portfolios, history, news
 
-__all__ = ["market", "analysis"]
+__all__ = ["market", "analysis", "stocks", "portfolios", "history", "news"]

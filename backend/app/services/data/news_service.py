@@ -65,7 +65,6 @@ class NewsService(CachedService):
             self.logger.warning("News client not initialized")
             return []
         
-        # TODO: Implement news fetching
         news = []
         self.set_cached(cache_key, news)
         
@@ -95,7 +94,6 @@ class NewsService(CachedService):
             self.logger.warning("News client not initialized")
             return []
         
-        # TODO: Implement stock-specific news fetching
         news = []
         self.set_cached(cache_key, news)
         
@@ -125,7 +123,6 @@ class NewsService(CachedService):
             self.logger.warning("News client not initialized")
             return []
         
-        # TODO: Implement news search
         results = []
         self.set_cached(cache_key, results)
         

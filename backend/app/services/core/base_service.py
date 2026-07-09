@@ -12,7 +12,7 @@ This abstract base class provides:
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Type, TypeVar
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 T = TypeVar('T')
@@ -31,7 +31,7 @@ class BaseService(ABC):
         """
         self.service_name = service_name
         self.logger = logger or logging.getLogger(service_name)
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
         self._cache: Dict[str, Any] = {}
         self._metrics = {
             "calls": 0,
@@ -56,7 +56,7 @@ class BaseService(ABC):
         return {
             "service": self.service_name,
             "status": "healthy",
-            "uptime_seconds": (datetime.utcnow() - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
             "metrics": self._metrics.copy(),
         }
     
@@ -72,7 +72,7 @@ class BaseService(ABC):
         """Set value in service cache"""
         self._cache[key] = {
             "value": value,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "ttl": ttl_seconds,
         }
     
@@ -94,7 +94,7 @@ class BaseService(ABC):
         """Get service metrics"""
         return {
             "service": self.service_name,
-            "uptime_seconds": (datetime.utcnow() - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
             "calls": self._metrics["calls"],
             "errors": self._metrics["errors"],
             "error_rate": (
@@ -139,7 +139,7 @@ class CachedService(BaseService):
         if entry["ttl"] is None:
             return True
         
-        age_seconds = (datetime.utcnow() - entry["timestamp"]).total_seconds()
+        age_seconds = (datetime.now(timezone.utc) - entry["timestamp"]).total_seconds()
         return age_seconds < entry["ttl"]
     
     def get_cached(self, key: str) -> Optional[Any]:
@@ -202,16 +202,20 @@ class AnalysisService(BaseService):
         raise NotImplementedError
     
     async def batch_analyze(self, data_list: list) -> list:
-        """Perform batch analysis"""
-        results = []
-        for item in data_list:
-            try:
-                result = await self.analyze(item)
-                results.append(result)
-            except Exception as e:
-                self.logger.error(f"Batch analysis error: {e}")
-                results.append({"error": str(e)})
-        return results
+        """Perform batch analysis using asyncio.gather"""
+        import asyncio
+        tasks = [self.analyze(item) for item in data_list]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        processed = []
+        for item, result in zip(data_list, results):
+            if isinstance(result, Exception):
+                self.logger.error(f"Batch analysis error for {item}: {result}")
+                processed.append({"error": str(result)})
+            else:
+                processed.append(result)
+        
+        return processed
 
 
 class MLService(BaseService):

@@ -5,7 +5,7 @@ Risk assessment and portfolio risk analysis.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 from ..core import AnalysisService
 
@@ -52,14 +52,14 @@ class RiskAnalysisService(AnalysisService):
             return {"error": "Insufficient return data"}
         
         analysis = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "metrics": {},
         }
         
         # Calculate risk metrics
         analysis["metrics"].update(
-            await self._calculate_volatility_metrics(returns)
+            await self._calculate_volatility_metrics(returns, data)
         )
         analysis["metrics"].update(
             await self._calculate_value_at_risk(returns)
@@ -70,26 +70,35 @@ class RiskAnalysisService(AnalysisService):
         
         return analysis
     
-    async def _calculate_volatility_metrics(self, returns: List[float]) -> Dict[str, float]:
+    async def _calculate_volatility_metrics(self, returns: List[float], data: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
         """Calculate volatility metrics"""
         volatility = self._calculate_std_dev(returns)
+        beta = data.get("beta", 1.0) if data else 1.0
         
         return {
             "volatility": volatility,
             "annual_volatility": volatility * math.sqrt(252),  # 252 trading days
-            "beta": data.get("beta", 1.0) if isinstance(returns, dict) else 1.0,
+            "beta": beta,
         }
     
     async def _calculate_value_at_risk(self, returns: List[float]) -> Dict[str, float]:
         """Calculate Value at Risk"""
         sorted_returns = sorted(returns)
-        var_95 = sorted_returns[int(len(sorted_returns) * 0.05)]
-        var_99 = sorted_returns[int(len(sorted_returns) * 0.01)]
+        n = len(sorted_returns)
+        
+        idx_95 = max(0, int(n * 0.05) - 1)
+        idx_99 = max(0, int(n * 0.01) - 1)
+        
+        var_95 = sorted_returns[idx_95]
+        var_99 = sorted_returns[idx_99]
+        
+        cvar_count = max(1, int(n * 0.05))
+        cvar_95 = sum(sorted_returns[:cvar_count]) / cvar_count
         
         return {
             "var_95": var_95 * 100,
             "var_99": var_99 * 100,
-            "cvar_95": sum(sorted_returns[:int(len(sorted_returns) * 0.05)]) / (len(sorted_returns) * 0.05) * 100,
+            "cvar_95": cvar_95 * 100,
         }
     
     async def _calculate_performance_metrics(self, returns: List[float]) -> Dict[str, float]:
@@ -161,17 +170,25 @@ class RiskAnalysisService(AnalysisService):
         Returns:
             Portfolio risk metrics
         """
-        # Simplified portfolio risk calculation
-        portfolio_vol = 0.0
+        # Calculate portfolio variance with correlations
+        portfolio_var = 0.0
+        tickers = list(weights.keys())
         
-        for ticker, weight in weights.items():
-            vol = volatilities.get(ticker, 0.0)
-            portfolio_vol += (weight ** 2) * (vol ** 2)
+        for i, ticker_i in enumerate(tickers):
+            w_i = weights[ticker_i]
+            vol_i = volatilities.get(ticker_i, 0.0)
+            
+            for j, ticker_j in enumerate(tickers):
+                w_j = weights[ticker_j]
+                vol_j = volatilities.get(ticker_j, 0.0)
+                corr = correlations.get(f"{ticker_i}_{ticker_j}", 1.0 if i == j else 0.0)
+                
+                portfolio_var += w_i * w_j * vol_i * vol_j * corr
         
         return {
-            "portfolio_volatility": math.sqrt(portfolio_vol),
-            "portfolio_var_95": math.sqrt(portfolio_vol) * 1.645,
-            "portfolio_var_99": math.sqrt(portfolio_vol) * 2.326,
+            "portfolio_volatility": math.sqrt(portfolio_var) if portfolio_var > 0 else 0.0,
+            "portfolio_var_95": math.sqrt(portfolio_var) * 1.645 if portfolio_var > 0 else 0.0,
+            "portfolio_var_99": math.sqrt(portfolio_var) * 2.326 if portfolio_var > 0 else 0.0,
         }
     
     async def stress_test(

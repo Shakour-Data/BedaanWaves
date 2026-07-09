@@ -5,7 +5,7 @@ Volatility analysis and forecasting.
 """
 
 from typing import Any, Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 from ..core import AnalysisService
 
@@ -46,7 +46,7 @@ class VolatilityService(AnalysisService):
         ]
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "volatility": {
                 "historical": self._calculate_historical_volatility(returns),

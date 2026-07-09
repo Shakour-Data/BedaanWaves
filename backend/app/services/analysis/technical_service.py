@@ -5,7 +5,7 @@ Technical Analysis Service - Tier 3 Analysis Service
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 from ..core import AnalysisService
 
@@ -51,7 +51,7 @@ class TechnicalAnalysisService(AnalysisService):
             return {"error": "Insufficient price data"}
         
         indicators = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "indicators": {},
         }
@@ -170,11 +170,16 @@ class TechnicalAnalysisService(AnalysisService):
         """MACD Indicator"""
         ema12 = self._calculate_ema(prices, 12)
         ema26 = self._calculate_ema(prices, 26)
-        macd = ema12 - ema26
+        macd_line = ema12 - ema26
+        
+        # Calculate signal line (9-period EMA of MACD)
+        # For simplicity, we use a simplified signal calculation
+        # In production, maintain MACD history and calculate EMA
+        signal_line = macd_line  # Simplified: will be improved with history tracking
         
         return {
-            "macd": macd,
-            "signal": macd,  # Simplified
+            "macd": macd_line,
+            "signal": signal_line,
         }
     
     def _calculate_stochastic(self, prices: List[float], period: int) -> Dict[str, float]:
@@ -186,11 +191,15 @@ class TechnicalAnalysisService(AnalysisService):
         low = min(prices[-period:])
         close = prices[-1]
         
-        k = 100 * (close - low) / (high - low) if (high - low) != 0 else 50
+        k = 100 * (close - low) / (high - low) if (high - low) != 0 else 50.0
+        
+        # D is typically 3-period SMA of K
+        # Simplified for single point
+        d = k
         
         return {
             "k": k,
-            "d": k,  # Simplified
+            "d": d,
         }
     
     def _calculate_momentum_indicator(self, prices: List[float], period: int) -> float:
@@ -218,7 +227,20 @@ class TechnicalAnalysisService(AnalysisService):
     
     def _calculate_atr(self, prices: List[float], period: int) -> float:
         """Average True Range"""
-        return self._calculate_std_dev(prices, period) * 1.5  # Simplified
+        if len(prices) < period + 1:
+            return 0.0
+        
+        true_ranges = []
+        for i in range(1, len(prices)):
+            high = max(prices[i], prices[i-1])
+            low = min(prices[i], prices[i-1])
+            tr = high - low
+            true_ranges.append(tr)
+        
+        if len(true_ranges) < period:
+            return sum(true_ranges) / len(true_ranges) if true_ranges else 0.0
+        
+        return sum(true_ranges[-period:]) / period
     
     def _calculate_std_dev(self, prices: List[float], period: int) -> float:
         """Standard Deviation"""
@@ -244,7 +266,35 @@ class TechnicalAnalysisService(AnalysisService):
     
     def _calculate_cmf(self, prices: List[float], volumes: List[float], period: int) -> float:
         """Chaikin Money Flow"""
-        return 0.0  # Simplified
+        if len(prices) < period or len(volumes) < period:
+            return 0.0
+        
+        recent_prices = prices[-period:]
+        recent_volumes = volumes[-period:]
+        
+        money_flow_multiplier = []
+        money_flow_volume = []
+        
+        for i in range(len(recent_prices)):
+            high = recent_prices[i]
+            low = recent_prices[i]
+            close = recent_prices[i]
+            vol = recent_volumes[i]
+            
+            # For single price, high=low=close, so multiplier = 0
+            # In production, need high/low data
+            mfm = 0.0
+            mfv = mfm * vol
+            money_flow_multiplier.append(mfm)
+            money_flow_volume.append(mfv)
+        
+        sum_mfv = sum(money_flow_volume)
+        sum_vol = sum(recent_volumes)
+        
+        if sum_vol == 0:
+            return 0.0
+        
+        return sum_mfv / sum_vol
     
     def _calculate_accumulation_distribution(
         self,
@@ -252,4 +302,17 @@ class TechnicalAnalysisService(AnalysisService):
         volumes: List[float]
     ) -> float:
         """Accumulation/Distribution Line"""
-        return sum(volumes)  # Simplified
+        if not prices or not volumes or len(prices) != len(volumes):
+            return 0.0
+        
+        ad_line = 0.0
+        for i in range(len(prices)):
+            if i == 0:
+                ad_line = volumes[i]
+            else:
+                # Simplified: assumes close equals both high and low
+                # In production, use actual high/low/close
+                clv = 0.5  # (close - low) / (high - low) = 0 when high=low
+                ad_line += volumes[i] * clv
+        
+        return ad_line

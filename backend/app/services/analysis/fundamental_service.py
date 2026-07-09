@@ -5,7 +5,7 @@ Fundamental financial analysis and ratio calculations.
 """
 
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from ..core import AnalysisService
 
 
@@ -46,7 +46,7 @@ class FundamentalAnalysisService(AnalysisService):
         financials = data.get("financials", {})
         
         analysis = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "ratios": {},
             "assessment": "",
@@ -189,7 +189,9 @@ class FundamentalAnalysisService(AnalysisService):
     
     def _calc_roic(self, financials: Dict[str, Any]) -> float:
         """Return on Invested Capital"""
-        nopat = financials.get("net_income", 0)  # Simplified
+        operating_income = financials.get("operating_income", 0)
+        tax_rate = financials.get("tax_rate", 0.21)
+        nopat = operating_income * (1 - tax_rate)
         invested_capital = financials.get("equity", 0) + financials.get("debt", 0)
         
         if invested_capital <= 0:

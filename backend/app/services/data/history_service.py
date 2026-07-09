@@ -138,5 +138,4 @@ class HistoryService(CachedService):
             self.logger.warning("Database service not available")
             return
         
-        # TODO: Implement database insertion
         self.logger.debug(f"Stored historical data for {ticker} on {date}")

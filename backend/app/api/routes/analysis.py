@@ -1,6 +1,6 @@
 """Analysis and Signals Routes"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime
@@ -10,6 +10,12 @@ import logging
 from app.db.base import get_async_session
 from app.models.models import Asset, MLSignal, PriceCandle
 from app.schemas.schemas import MLSignalResponse, SignalTypeEnum
+from app.services.analysis.technical_service import TechnicalAnalysisService
+from app.services.analysis.risk_service import RiskAnalysisService
+from app.services.analysis.fundamental_service import FundamentalAnalysisService
+from app.services.analysis.momentum_service import MomentumService
+from app.services.analysis.volatility_service import VolatilityService
+from app.services.analysis.scoring_service import ScoringService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -276,5 +282,287 @@ async def get_risk_analysis(
             "max_drawdown": round(float(max_drawdown) * 100, 2),
             "avg_return": round(float(np.mean(returns)) * 100, 4),
         },
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/technical/{symbol}", response_model=dict)
+async def technical_analysis(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    TSE-specific technical analysis for a stored symbol.
+
+    Loads daily candles from the database (market='TSE') and runs the
+    TechnicalAnalysisService (moving averages, momentum, volatility, volume).
+    Crypto / international feeds are intentionally NOT mixed in here.
+
+    Args:
+        symbol: TSE symbol (e.g. فملی، خودرو)
+
+    Returns:
+        Computed technical indicators for the symbol
+    """
+    # Exact match first, then case-insensitive fallback.
+    asset = (
+        await db.execute(select(Asset).where(Asset.symbol == symbol))
+    ).scalars().first()
+    if not asset:
+        asset = (
+            await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
+        ).scalars().first()
+
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+
+    candles = (
+        await db.execute(
+            select(PriceCandle)
+            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
+            .order_by(PriceCandle.timestamp.asc())
+        )
+    ).scalars().all()
+
+    if len(candles) < 20:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient candle data for {symbol} (need >= 20, have {len(candles)})",
+        )
+
+    prices = [float(c.close) for c in candles]
+    volumes = [float(c.volume) for c in candles]
+
+    service = TechnicalAnalysisService()
+    await service.initialize()
+    result = await service.analyze(
+        {"ticker": asset.symbol, "prices": prices, "volumes": volumes}
+    )
+
+    return {
+        "status": "success",
+        "symbol": asset.symbol,
+        "name": asset.name,
+        "market": asset.market,
+        "data_points": len(candles),
+        "indicators": result,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/risk/{symbol}", response_model=dict)
+async def risk_analysis(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    TSE-specific risk analysis for a stored symbol.
+
+    Computes daily returns from the stored daily candles (market='TSE') and runs
+    the RiskAnalysisService (volatility, VaR 95/99, CVaR, Sharpe, Sortino,
+    max drawdown). Crypto / international feeds are intentionally excluded.
+
+    Args:
+        symbol: TSE symbol (e.g. فملی، خودرو)
+
+    Returns:
+        Risk metrics for the symbol
+    """
+    asset = (
+        await db.execute(select(Asset).where(Asset.symbol == symbol))
+    ).scalars().first()
+    if not asset:
+        asset = (
+            await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
+        ).scalars().first()
+
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+
+    candles = (
+        await db.execute(
+            select(PriceCandle)
+            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
+            .order_by(PriceCandle.timestamp.asc())
+        )
+    ).scalars().all()
+
+    if len(candles) < 20:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient candle data for {symbol} (need >= 20, have {len(candles)})",
+        )
+
+    closes = [float(c.close) for c in candles]
+    returns = [
+        (closes[i] - closes[i - 1]) / closes[i - 1]
+        for i in range(1, len(closes))
+        if closes[i - 1] != 0
+    ]
+
+    service = RiskAnalysisService()
+    await service.initialize()
+    result = await service.analyze(
+        {"ticker": asset.symbol, "returns": returns, "prices": closes}
+    )
+
+    return {
+        "status": "success",
+        "symbol": asset.symbol,
+        "name": asset.name,
+        "market": asset.market,
+        "data_points": len(returns),
+        "risk": result,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post("/fundamental", response_model=dict)
+async def fundamental_analysis(
+    data: dict = Body(...),
+) -> dict:
+    """
+    Perform fundamental analysis for a ticker.
+    
+    Request body:
+        ticker: Asset symbol
+        financials: Financial data dict
+    """
+    ticker = data.get("ticker", "UNKNOWN")
+    financials = data.get("financials", {})
+
+    service = FundamentalAnalysisService()
+    await service.initialize()
+    result = await service.analyze({"ticker": ticker, "financials": financials})
+
+    return {
+        "status": "success",
+        "symbol": ticker,
+        "fundamental": result,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/momentum/{symbol}", response_model=dict)
+async def momentum_analysis(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Momentum analysis for a stored symbol.
+    
+    Loads daily candles from the database and runs the MomentumService.
+    """
+    asset = (
+        await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
+    ).scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+
+    candles = (
+        await db.execute(
+            select(PriceCandle)
+            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
+            .order_by(PriceCandle.timestamp.asc())
+        )
+    ).scalars().all()
+
+    if len(candles) < 30:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient candle data for {symbol} (need >= 30, have {len(candles)})",
+        )
+
+    prices = [float(c.close) for c in candles]
+
+    service = MomentumService()
+    await service.initialize()
+    result = await service.analyze({"ticker": symbol, "prices": prices})
+
+    return {
+        "status": "success",
+        "symbol": asset.symbol,
+        "name": asset.name,
+        "market": asset.market,
+        "data_points": len(candles),
+        "momentum": result.get("momentum", {}),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/volatility/{symbol}", response_model=dict)
+async def volatility_analysis(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Volatility analysis for a stored symbol.
+    
+    Loads daily candles from the database and runs the VolatilityService.
+    """
+    asset = (
+        await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
+    ).scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+
+    candles = (
+        await db.execute(
+            select(PriceCandle)
+            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
+            .order_by(PriceCandle.timestamp.asc())
+        )
+    ).scalars().all()
+
+    if len(candles) < 20:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient candle data for {symbol} (need >= 20, have {len(candles)})",
+        )
+
+    prices = [float(c.close) for c in candles]
+
+    service = VolatilityService()
+    await service.initialize()
+    result = await service.analyze({"ticker": symbol, "prices": prices})
+
+    return {
+        "status": "success",
+        "symbol": asset.symbol,
+        "name": asset.name,
+        "market": asset.market,
+        "data_points": len(candles),
+        "volatility": result.get("volatility", {}),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post("/scoring", response_model=dict)
+async def scoring_analysis(
+    data: dict = Body(...),
+) -> dict:
+    """
+    Comprehensive 6D scoring for a ticker.
+    
+    Request body must include:
+        ticker: str
+        technical: dict (optional)
+        fundamental: dict (optional)
+        sentiment: dict (optional)
+        momentum: dict (optional)
+        risk: dict (optional)
+        growth: dict (optional)
+    """
+    ticker = data.get("ticker", "UNKNOWN")
+
+    service = ScoringService()
+    await service.initialize()
+    result = await service.analyze(data)
+
+    return {
+        "status": "success",
+        "symbol": ticker,
+        "scoring": result,
+        "hierarchy": service.get_hierarchy_info(),
         "timestamp": datetime.utcnow().isoformat(),
     }
