@@ -87,8 +87,6 @@ frontend/public/sw.js
 dist/
 build/
 
-# Docker (not used - local only)
-# docker-compose.override.yml
 
 # Migration backups
 database/versions/

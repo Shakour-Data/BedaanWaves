@@ -140,7 +140,6 @@ BedaanWaves/
 ├── frontend/              # Next.js 16+
 ├── docs/                  # Documentation
 │   ├── AGENTS.md          # This file
-│   ├── CLAUDE.md          # Claude instructions
 │   └── REWRITE_PROGRESS.md # Progress tracking
 └── kilo.json              # Kilo config
 ```

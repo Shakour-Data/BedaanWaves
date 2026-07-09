@@ -15,8 +15,6 @@
       "docs/**": "allow",
       ".kilo/**": "allow",
       "kilo.json": "allow",
-      "docker-compose.yml": "ask",
-      "Dockerfile*": "ask",
       "*": "ask"
     },
     "read": "allow",
@@ -25,8 +23,7 @@
     "external_directory": "deny"
   },
   "instructions": [
-    "docs/AGENTS.md",
-    "docs/CLAUDE.md"
+    "docs/AGENTS.md"
   ],
   "skills": {
     "paths": [".kilo/skills"],

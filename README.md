@@ -8,7 +8,6 @@ Unified platform consolidating 5 legacy projects into a single optimized system.
 
 - 📚 [Documentation](docs/README.md)
 - 🎯 [Development Guide](docs/AGENTS.md)
-- 🤖 [Claude Instructions](docs/CLAUDE.md)
 - 📊 [Progress](docs/REWRITE_PROGRESS.md)
 
 ## Tech Stack

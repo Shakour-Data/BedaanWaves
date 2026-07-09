@@ -182,16 +182,16 @@ Frontend اکنون در `http://localhost:3005` قابل دسترسی است.
 
 ## 📚 فایل‌های مرجع
 
-پروژه بر اساس این فایل‌های توثیق‌شده ساخته شده است:
+پروژه بر اساس اصول و الگوهای زیر توسعه یافته است:
 
-| فایل | موضوع | مکان |
-|------|-------|------|
-| **BourseApi.txt** | مستندات API BrsApi.ir | `docs/init_docs/BourseApi.txt` |
-| **postgre.txt** | تنظیمات PostgreSQL | `docs/init_docs/postgre.txt` |
-| **FrontEnd.txt** | معماری Frontend | `docs/init_docs/FrontEnd.txt` |
-| **Source_Within.txt** | کتابخانه علمی شاکاموتو | `docs/init_docs/Source_Within.txt` |
+| منبع | موضوع |
+|------|-------|
+| **BrsApi.ir** | مستندات API بورس تهران |
+| **PostgreSQL** | تنظیمات دیتابیس |
+| **Next.js** | معماری Frontend |
+| **Shakamoto** | کتابخانه علمی |
 
-### استفاده از فایل‌های مرجع:
+### استفاده از منابع مرجع:
 
 ```python
 # 1. برای اتصال BrsApi:
@@ -201,10 +201,10 @@ client = BrsApiClient()
 symbols = await client.get_all_symbols()
 
 # 2. برای تنظیمات دیتابیس:
-# backend/.env را مطابق postgre.txt تنظیم کنید
+# backend/.env را مطابق تنظیمات PostgreSQL تنظیم کنید
 
 # 3. برای رابط کاربری:
-# Frontend را براساس معماری FrontEnd.txt بسازید
+# Frontend را براساس معماری Next.js بسازید
 ```
 
 ---
@@ -257,11 +257,11 @@ BedaanWaves/
 │   └── migrations/                   # Alembic migrations
 │
 ├── docs/                             # Documentation
-│   └── init_docs/                    # Reference files
-│       ├── BourseApi.txt
-│       ├── postgre.txt
-│       ├── FrontEnd.txt
-│       └── Source_Within.txt
+│   └── references/                   # Reference sources
+│       ├── BrsApi.ir
+│       ├── PostgreSQL
+│       ├── Next.js
+│       └── Shakamoto
 │
 ├── scripts/                          # Helper scripts
 │   ├── setup_db.py                   # Database setup
@@ -271,7 +271,6 @@ BedaanWaves/
 ├── .gitignore
 ├── package.json                      # Root package.json
 ├── README.md                         # This file
-└── docker-compose.yml                # Docker (optional)
 ```
 
 ---

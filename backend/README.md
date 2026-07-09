@@ -140,7 +140,6 @@ backend/
 ├── requirements.txt           # Dependencies (100+ packages)
 ├── .env.example              # Environment variables template
 ├── .env                      # Local configuration
-├── docker-compose.yml        # Local development stack
 ├── pytest.ini               # Test configuration
 ├── pyproject.toml           # Project metadata
 └── README.md                # This file
@@ -537,20 +536,7 @@ Throughput:       1000+ requests/second (on 4-core server)
 
 ## 🚀 Deployment
 
-### Docker
-
-```bash
-# Build
-docker-compose build
-
-# Run
-docker-compose up -d
-
-# View logs
-docker-compose logs -f backend
-```
-
-### Production Checklist
+ Production Checklist
 
 - [ ] Set `DEBUG=False`
 - [ ] Generate new `SECRET_KEY`

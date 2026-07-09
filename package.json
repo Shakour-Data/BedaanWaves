@@ -13,19 +13,12 @@
     "start": "npm run start:backend & npm run start:frontend",
     "start:backend": "cd backend && python -m uvicorn app.main:app --port 3000 --host 0.0.0.0",
     "start:frontend": "cd frontend && next start -p 3005",
-    "db:setup": "cd database && python setup.py",
-    "db:migrate": "cd database && alembic upgrade head",
-    "db:reset": "cd database && python reset.py",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend && pytest",
     "test:frontend": "cd frontend && npm run test",
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd backend && flake8 app/ && mypy app/",
     "lint:frontend": "cd frontend && eslint . --max-warnings=0",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
     "concurrently": "^8.2.0"
