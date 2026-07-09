@@ -50,8 +50,24 @@
    پایه‌ها
    =========================================================================== */
 @layer base {
-  :root {
+   :root {
     color-scheme: light;
+  }
+
+  /* تم تاریک: قطبیت نور/تاریکی (FrontEnd.txt - فصل اول) */
+  .dark {
+    color-scheme: dark;
+    --color-background: #121212;
+    --color-surface: #1e1e1e;
+    --color-foreground: #f5f5f5;
+    --color-muted-foreground: #a8a8a8;
+    --color-border: #333333;
+    --color-neutral: #1e1e1e;
+  }
+
+  .dark body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
   }
 
   html {

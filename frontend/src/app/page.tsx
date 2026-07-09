@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TarotCard } from "@/components/ui/TarotCard";
 
@@ -47,7 +48,9 @@ export default function HomePage() {
           جاری می‌کند.
         </p>
         <div className="mt-3">
-          <PrimaryButton>شروع سفر</PrimaryButton>
+          <Link href="/dashboard">
+            <PrimaryButton>ورود به داشبورد</PrimaryButton>
+          </Link>
         </div>
       </section>
 

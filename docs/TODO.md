@@ -92,7 +92,7 @@
 - [ ] Create migrations for all models
 - [ ] Run initial migrations
 - [ ] Database indexes optimization
-- [ ] Seed data scripts
+- [x] Seed data scripts (`backend/scripts/seed_data.py` — idempotent; seeds assets, daily OHLCV candles, demo user, portfolio/positions, ML signals, alerts)
 - [ ] Backup & restore strategy
 - [ ] Performance tuning
 
@@ -100,7 +100,11 @@
 - [ ] Project setup and configuration
 - [ ] Component library setup (shadcn/ui or similar)
 - [ ] Authentication pages (login/register)
-- [ ] Dashboard layout
+- [x] Dashboard layout
+  - **App Shell**: `components/layout/Sidebar.tsx`, `Topbar.tsx`, `DashboardShell.tsx` (RTL, responsive, dark-mode)
+  - **Dashboard Widgets**: market stats, top movers, watchlist, ML signals, news (`components/dashboard/*`, `app/dashboard/*`)
+  - **Backend Integration**: `lib/api/dashboard.ts` fetches live data from `/market/tse-dashboard` & `/market/latest-prices` with mock fallback
+  - **Tooling Fixes**: ESLint flat config repaired; `@tailwindcss/postcss` dependency added; design tokens + dark theme in `globals.css`
 - [ ] Stock detail pages
 - [ ] Portfolio management pages
 - [ ] Charts and visualizations
@@ -108,7 +112,7 @@
 - [ ] Analysis reports pages
 - [ ] Admin panel
 - [ ] Responsive design
-- [ ] State management (Zustand/Redux)
+- [x] State management (Zustand/Redux)
 
 ## Testing
 - [ ] Unit tests for Tier 1 services
