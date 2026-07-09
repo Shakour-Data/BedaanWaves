@@ -1,0 +1,38 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "anthropic/claude-opus-4.1",
+  "small_model": "anthropic/claude-haiku-4.5",
+  "default_agent": "code",
+  "username": "BedaanWaves",
+  "snapshot": true,
+  "autoupdate": "notify",
+  "permission": {
+    "bash": "allow",
+    "edit": {
+      "backend/**": "allow",
+      "frontend/**": "allow",
+      "database/**": "allow",
+      "docs/**": "allow",
+      ".kilo/**": "allow",
+      "kilo.json": "allow",
+      "docker-compose.yml": "ask",
+      "Dockerfile*": "ask",
+      "*": "ask"
+    },
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "external_directory": "deny"
+  },
+  "instructions": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTEXT.md"
+  ],
+  "skills": {
+    "paths": [".kilo/skills"],
+    "urls": []
+  },
+  "enabled_providers": ["anthropic"],
+  "disabled_providers": ["kilo", "openai", "google", "groq"]
+}
