@@ -147,8 +147,12 @@ class ConfigService(BaseService):
     def _load_services_config(self) -> Dict[str, Any]:
         """Load services configuration"""
         return {
-            'brs_api_url': self.get('BRS_API_URL', 'https://api.brs.ir'),
-            'brs_api_timeout': self.get_int('BRS_API_TIMEOUT', 10),
+            'brs_api_url': self.get('BRS_API_URL', 'https://Api.BrsApi.ir'),
+            'brs_api_key': self.get('BRS_API_KEY', ''),
+            'brs_api_timeout': self.get_int('BRS_API_TIMEOUT', 30),
+            'brs_rate_limit_max_daily': self.get_int('BRS_RATE_LIMIT_MAX_DAILY', 50000),
+            'brs_rate_limit_max_window': self.get_int('BRS_RATE_LIMIT_MAX_WINDOW', 300),
+            'brs_rate_limit_window_seconds': self.get_int('BRS_RATE_LIMIT_WINDOW_SECONDS', 300),
             'news_api_url': self.get('NEWS_API_URL', 'https://newsapi.org'),
             'news_api_key': self.get('NEWS_API_KEY', ''),
             'nlp_model': self.get('NLP_MODEL', 'persian-bert'),

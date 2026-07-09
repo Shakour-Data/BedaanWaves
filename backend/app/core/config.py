@@ -85,10 +85,13 @@ class Settings(BaseSettings):
     # EXTERNAL APIs (BedaanWaves Integration)
     # ============================================================
     # Tehran Stock Exchange (BrsApi.ir)
-    BRS_API_BASE_URL: str = "https://api.brsapi.ir"
+    BRS_API_BASE_URL: str = "https://Api.BrsApi.ir"
     BRS_API_KEY: Optional[str] = None
     BRS_API_TIMEOUT: int = 30
     BRS_REFRESH_INTERVAL_MINUTES: int = 5
+    BRS_RATE_LIMIT_MAX_DAILY: int = 50000
+    BRS_RATE_LIMIT_MAX_WINDOW: int = 300
+    BRS_RATE_LIMIT_WINDOW_SECONDS: int = 300
     
     # Financial Disclosures (Codal)
     CODAL_API_BASE_URL: str = "https://api.codal.ir"
@@ -274,6 +277,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
         str_strip_whitespace = True
+        extra = "ignore"
 
 
 @lru_cache()
