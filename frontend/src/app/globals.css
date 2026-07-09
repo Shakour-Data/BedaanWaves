@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   معماری ارتعاشی - نقشه‌ی توکن‌ها (FrontEnd.txt)
+   همه‌ی مقادیر از src/styles/design-tokens.ts منشأ می‌گیرند.
+   =========================================================================== */
+@theme {
+  /* کابالا: آتش / آب / خاک / هوا */
+  --color-primary: #c62828;
+  --color-secondary: #1565c0;
+  --color-neutral: #f5f5f5;
+  --color-accent: #ffd54f;
+
+  /* معنایی (دسترسی‌پذیری ۴.۵:۱) */
+  --color-background: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-foreground: #1a1a1a;
+  --color-muted-foreground: #5c5c5c;
+  --color-border: #e0e0e0;
+  --color-success: #2e7d32;
+
+  /* مقیاس فیبوناچی تایپوگرافی */
+  --text-xs: 13px;
+  --text-sm: 16px;
+  --text-base: 16px;
+  --text-lg: 21px;
+  --text-xl: 34px;
+  --text-2xl: 55px;
+  --text-3xl: 89px;
+
+  /* فضای خالی (مضارب ۸) */
+  --spacing-1: 8px;
+  --spacing-2: 16px;
+  --spacing-3: 24px;
+  --spacing-4: 48px;
+  --spacing-5: 96px;
+
+  /* شبکه‌ی ۱۲ ستونه */
+  --grid-columns: 12;
+  --grid-gutter: 24px;
+
+  /* قانون ۳-۷-۳ انیمیشن */
+  --ease-flow: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-fast: 300ms;
+  --duration-page: 700ms;
+  --duration-ambient: 3000ms;
+}
+
+/* ===========================================================================
+   پایه‌ها
+   =========================================================================== */
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-size: var(--text-base);
+    line-height: 1.618;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* سلسله‌مراتب: بزرگ‌ترین عنوان در یک‌سوم بالایی صفحه */
+  h1 {
+    font-size: var(--text-xl);
+    line-height: 1.2;
+  }
+
+  @media (min-width: 768px) {
+    h1 {
+      font-size: var(--text-2xl);
+    }
+  }
+}
+
+/* ===========================================================================
+   کامپوننت‌های جادویی
+   =========================================================================== */
+@layer components {
+  /* دکمه‌ی اصلی: هاله‌ی نور طلایی + حرکت به بالا در هاور (۳۰۰ms) */
+  .btn-primary {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-1);
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: 9999px;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow:
+      0 0 0 0 rgba(255, 213, 79, 0.7),
+      0 8px 24px -8px rgba(198, 40, 40, 0.6);
+    transition:
+      transform var(--duration-fast) var(--ease-flow),
+      box-shadow var(--duration-fast) var(--ease-flow);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 0 32px 4px rgba(255, 213, 79, 0.7),
+      0 16px 32px -8px rgba(198, 40, 40, 0.6);
+  }
+
+  /* کارت‌های محتوا (Tarot Cards): سایه‌ی رنگ‌شده برای حس «نیروی نامرئی» */
+  .tarot-card {
+    background-color: var(--color-surface);
+    border-radius: 16px;
+    padding: var(--spacing-3);
+    box-shadow: 0 12px 32px -12px rgba(21, 101, 192, 0.35);
+    transition:
+      transform var(--duration-fast) var(--ease-flow),
+      box-shadow var(--duration-fast) var(--ease-flow);
+  }
+
+  .tarot-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(198, 40, 40, 0.35);
+  }
+}
