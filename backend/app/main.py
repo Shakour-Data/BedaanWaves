@@ -4,12 +4,12 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZIPMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.db.base import init_db, close_db
-from app.api.routes import market, analysis
+from app.api.routes import market, analysis, stocks, portfolios, history, news, live
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application")
     await close_db()
+    await live.close_brs_client()
 
 
 # Create FastAPI app
@@ -51,7 +52,7 @@ app.add_middleware(
 )
 
 # Add GZIP compression
-app.add_middleware(GZIPMiddleware, minimum_size=1000)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 # Health Check Route
@@ -82,8 +83,27 @@ api_v1_prefix = settings.API_V1_STR
 # Include routers
 app.include_router(market.router, prefix=api_v1_prefix)
 app.include_router(analysis.router, prefix=api_v1_prefix)
+app.include_router(stocks.router, prefix=api_v1_prefix)
+app.include_router(portfolios.router, prefix=api_v1_prefix)
+app.include_router(history.router, prefix=api_v1_prefix)
+app.include_router(news.router, prefix=api_v1_prefix)
+app.include_router(live.router, prefix=api_v1_prefix)
 
 # Error Handlers
+@app.exception_handler(RuntimeError)
+async def runtime_exception_handler(request, exc):
+    """Surface upstream API errors (e.g. BrsApi) as 502."""
+    logger.error(f"Runtime error: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=502,
+        content={
+            "status": "error",
+            "error_code": "UPSTREAM_ERROR",
+            "message": str(exc),
+        },
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler"""

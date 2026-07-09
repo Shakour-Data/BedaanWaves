@@ -40,7 +40,7 @@ class Asset(Base):
     delisting_date = Column(DateTime)
     
     # Metadata
-    metadata = Column(JSONB, default={})
+    meta = Column("metadata", JSONB, default={})
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
