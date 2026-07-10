@@ -146,6 +146,9 @@ class VolatilityService(AnalysisService):
             Volatility cluster information
         """
         clusters = []
+        if not returns:
+            return clusters
+
         mean = sum(returns) / len(returns)
         std = self._calculate_historical_volatility(returns)
         

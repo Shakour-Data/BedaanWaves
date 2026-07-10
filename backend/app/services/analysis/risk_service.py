@@ -83,6 +83,9 @@ class RiskAnalysisService(AnalysisService):
     
     async def _calculate_value_at_risk(self, returns: List[float]) -> Dict[str, float]:
         """Calculate Value at Risk"""
+        if not returns:
+            return {"var_95": 0.0, "var_99": 0.0, "cvar_95": 0.0}
+
         sorted_returns = sorted(returns)
         n = len(sorted_returns)
         

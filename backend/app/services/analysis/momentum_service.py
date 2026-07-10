@@ -54,13 +54,15 @@ class MomentumService(AnalysisService):
         """Calculate momentum strength"""
         if len(prices) < 2:
             return 0.0
-        
-        # Compare recent momentum to historical
+
         recent = prices[-10:]
         historical = prices[-30:-20]
-        
-        recent_momentum = (recent[-1] - recent[0]) / recent[0]
-        hist_momentum = (historical[-1] - historical[0]) / historical[0]
+
+        if not historical:
+            return 0.0
+
+        recent_momentum = (recent[-1] - recent[0]) / recent[0] if recent[0] != 0 else 0.0
+        hist_momentum = (historical[-1] - historical[0]) / historical[0] if historical[0] != 0 else 0.0
         
         return (recent_momentum - hist_momentum) * 100
     
