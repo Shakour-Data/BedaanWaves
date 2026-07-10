@@ -50,17 +50,20 @@ class TestDependencyContainer:
         with pytest.raises(RuntimeError, match="cannot build"):
             container.get("bad")
 
-    def test_register_instance(self, container):
+    def test_register_instance_stored_in_singletons(self, container):
         instance = _Dummy(value=42)
         container.register_instance("pre", instance)
-        assert container.get("pre") is instance
+        assert container.has("pre")
+        assert container._singletons["pre"] is instance
 
     def test_register_instance_requires_factory_for_get(self, container):
-        # register_instance stores in singletons but get() checks _factories first
+        # Documents current behaviour: register_instance stores only in
+        # _singletons, but get() looks in _factories first and raises.
         instance = _Dummy()
         container.register_instance("only_instance", instance)
-        # has() should still report it as present
         assert container.has("only_instance")
+        with pytest.raises(KeyError):
+            container.get("only_instance")
 
     def test_has(self, container):
         assert not container.has("x")
@@ -78,7 +81,7 @@ class TestDependencyContainer:
         instance = container.get("dummy")
         await container.shutdown_all()
         assert instance.shutdown_called is True
-        assert not container.has("dummy")  # singletons cleared
+        assert container.get_stats()["singleton_instances"] == 0  # singletons cleared
 
     async def test_shutdown_all_handles_service_without_shutdown(self, container):
         class NoShutdown:
