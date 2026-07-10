@@ -9,6 +9,10 @@ from .models import (
     User,
     Alert,
     APILog,
+    Watchlist,
+    WatchlistItem,
+    Notification,
+    UserPreference,
 )
 
 __all__ = [
@@ -20,4 +24,8 @@ __all__ = [
     "User",
     "Alert",
     "APILog",
+    "Watchlist",
+    "WatchlistItem",
+    "Notification",
+    "UserPreference",
 ]

@@ -1,7 +1,7 @@
 """Pydantic Schemas for API"""
 
 from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 from enum import Enum
 from decimal import Decimal
@@ -303,4 +303,81 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
+
+
+# User Profile Schemas
+class UserProfileUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    theme: Optional[str] = None
+    notifications_enabled: Optional[bool] = None
+
+
+# Watchlist Schemas
+class WatchlistItemCreate(BaseModel):
+    asset_id: uuid.UUID
+    note: Optional[str] = None
+    alert_threshold_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+
+
+class WatchlistItemResponse(BaseModel):
+    id: uuid.UUID
+    watchlist_id: uuid.UUID
+    asset_id: uuid.UUID
+    note: Optional[str] = None
+    alert_threshold_pct: Optional[Decimal] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WatchlistCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    is_default: bool = False
+
+
+class WatchlistResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    description: Optional[str] = None
+    is_default: bool
+    items: List[WatchlistItemResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Notification Schemas
+class NotificationResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    type: str
+    title: str
+    message: str
+    channel: str
+    priority: str
+    read: bool
+    metadata: dict = Field(default={}, validation_alias="extra", serialization_alias="metadata")
+    created_at: datetime
+    read_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+
+# Preference Schemas
+class PreferenceUpdate(BaseModel):
+    value: Any
+
+
+class PreferenceResponse(BaseModel):
+    key: str
+    value: Any
 

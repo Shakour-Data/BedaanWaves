@@ -10,6 +10,7 @@ This configuration consolidates settings from:
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 from functools import lru_cache
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -81,6 +82,57 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     RATE_LIMIT_REQUESTS_PER_HOUR: int = 5000
     
+    # Global Auth Guard
+    # When True, every protected API route requires a valid Bearer access token.
+    # Keep False in local development so the frontend (mock fallback) keeps working.
+    REQUIRE_AUTH: bool = False
+    # Fixed user id used by dev-only endpoints when the guard is disabled.
+    DEV_USER_ID: str = "00000000-0000-0000-0000-000000000000"
+    # Paths that never require authentication (prefix or exact match).
+    AUTH_PUBLIC_PATHS: List[str] = [
+        "/",
+        "/health",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+    ]
+    # Path prefixes that never require authentication (e.g. the auth router itself).
+    AUTH_PUBLIC_PREFIXES: List[str] = [
+        "/api/v1/auth",
+        "/api/v1/docs",
+        "/api/v1/redoc",
+        "/api/v1/openapi.json",
+    ]
+    # Permissions granted to a normal (non-admin) authenticated user.
+    DEFAULT_USER_PERMISSIONS: List[str] = [
+        "market:read",
+        "analysis:read",
+        "stocks:read",
+        "portfolios:read",
+        "portfolios:write",
+        "history:read",
+        "news:read",
+        "ml:read",
+        "watchlist:read",
+        "watchlist:write",
+        "profile:read",
+        "profile:write",
+    ]
+    # Permissions granted to an admin user (superset of everything).
+    ADMIN_PERMISSIONS: List[str] = [
+        "market:read", "market:write",
+        "analysis:read", "analysis:write",
+        "stocks:read", "stocks:write",
+        "portfolios:read", "portfolios:write",
+        "history:read", "history:write",
+        "news:read", "news:write",
+        "ml:read", "ml:write",
+        "watchlist:read", "watchlist:write",
+        "profile:read", "profile:write",
+        "users:read", "users:write",
+        "admin:access",
+    ]
+   
     # ============================================================
     # EXTERNAL APIs (BedaanWaves Integration)
     # ============================================================
@@ -273,6 +325,24 @@ class Settings(BaseSettings):
     # ============================================================
     # PYDANTIC CONFIG
     # ============================================================
+    _bool_consume_list: list[str] = [
+        "DEBUG",
+        "DATABASE_ECHO",
+        "CACHE_ENABLED",
+        "RATE_LIMIT_ENABLED",
+        "REQUIRE_AUTH",
+        "CRYPTO_SUPPORT_ENABLED",
+        "CRYPTO_PORTFOLIOS_ENABLED",
+        "CRYPTO_ALERTS_ENABLED",
+    ]
+
+    @field_validator(*_bool_consume_list, mode="before")
+    @classmethod
+    def coerce_bool_fields(cls, v):
+        if isinstance(v, str):
+            return v.lower() not in ("false", "0", "no", "off", "")
+        return v
+
     class Config:
         env_file = ".env"
         case_sensitive = True

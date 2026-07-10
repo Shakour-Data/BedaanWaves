@@ -9,7 +9,13 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.db.base import init_db, close_db
-from app.api.routes import market, analysis, stocks, portfolios, history, news, auth, ml, live
+from app.api.middleware import (
+    AuthGuardMiddleware,
+    CorrelationIdMiddleware,
+    RateLimitMiddleware,
+    protected_dependencies,
+)
+from app.api.routes import market, analysis, stocks, portfolios, history, news, auth, ml, live, users, watchlists, notifications, specialized, system
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +60,12 @@ app.add_middleware(
 # Add GZIP compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# Add global middlewares (order: last added runs closest to the app).
+# Correlation id is outermost so every response carries a tracing header.
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
+app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
+
 
 # Health Check Route
 @app.get("/health")
@@ -80,16 +92,24 @@ async def root():
 # API Routes
 api_v1_prefix = settings.API_V1_STR
 
-# Include routers
-app.include_router(market.router, prefix=api_v1_prefix)
-app.include_router(analysis.router, prefix=api_v1_prefix)
-app.include_router(stocks.router, prefix=api_v1_prefix)
-app.include_router(portfolios.router, prefix=api_v1_prefix)
-app.include_router(history.router, prefix=api_v1_prefix)
-app.include_router(news.router, prefix=api_v1_prefix)
+# Include routers. The auth router is intentionally excluded from the global
+# guard so login/register/refresh stay public. All other routers enforce auth
+# (via protected_dependencies) when REQUIRE_AUTH is enabled.
+auth_guard = protected_dependencies()
+app.include_router(market.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(analysis.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(stocks.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(portfolios.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(history.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(news.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(auth.router, prefix=api_v1_prefix)
-app.include_router(ml.router, prefix=api_v1_prefix)
-app.include_router(live.router, prefix=api_v1_prefix)
+app.include_router(ml.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(users.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(watchlists.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(notifications.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(live.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(specialized.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(system.router, prefix=api_v1_prefix, dependencies=auth_guard)
 
 # Error Handlers
 @app.exception_handler(RuntimeError)

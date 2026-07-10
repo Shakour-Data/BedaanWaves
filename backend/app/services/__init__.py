@@ -40,6 +40,13 @@ from .analysis.risk_service import RiskAnalysisService
 from .analysis.momentum_service import MomentumService
 from .analysis.volatility_service import VolatilityService
 
+# Tier 5: NLP Services
+from .nlp.sentiment_analysis_service import SentimentAnalysisService
+from .nlp.news_summarization_service import NewsSummarizationService
+from .nlp.document_extraction_service import DocumentExtractionService
+from .nlp.chatbot_service import ChatbotService
+from .nlp.search_service import SearchService
+
 __all__ = [
     # Tier 1
     "DependencyContainer",
@@ -62,4 +69,10 @@ __all__ = [
     "RiskAnalysisService",
     "MomentumService",
     "VolatilityService",
+    # Tier 5: NLP
+    "SentimentAnalysisService",
+    "NewsSummarizationService",
+    "DocumentExtractionService",
+    "ChatbotService",
+    "SearchService",
 ]

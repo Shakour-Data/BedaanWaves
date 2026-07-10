@@ -285,3 +285,89 @@ class APILog(Base):
         Index('idx_log_endpoint', 'endpoint'),
         Index('idx_log_timestamp', 'created_at'),
     )
+
+
+class Watchlist(Base):
+    """User watchlist (collection of watched assets)"""
+    __tablename__ = "watchlists"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    is_default = Column(Boolean, default=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    items = relationship(
+        "WatchlistItem",
+        back_populates="watchlist",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    
+    __table_args__ = (
+        Index('idx_watchlist_user', 'user_id'),
+    )
+
+
+class WatchlistItem(Base):
+    """A single asset entry within a watchlist"""
+    __tablename__ = "watchlist_items"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    watchlist_id = Column(UUID(as_uuid=True), ForeignKey("watchlists.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    
+    note = Column(Text, nullable=True)
+    alert_threshold_pct = Column(Numeric(8, 4), nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    watchlist = relationship("Watchlist", back_populates="items")
+    
+    __table_args__ = (
+        UniqueConstraint('watchlist_id', 'asset_id', name='uix_watchlist_asset'),
+    )
+
+
+class Notification(Base):
+    """In-app (and channel) notification for a user"""
+    __tablename__ = "notifications"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    
+    type = Column(String(30), nullable=False)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    
+    channel = Column(String(20), default="IN_APP")  # IN_APP, EMAIL, SMS, PUSH, WEBHOOK
+    priority = Column(String(10), default="NORMAL")  # LOW, NORMAL, HIGH, CRITICAL
+    
+    read = Column(Boolean, default=False, index=True)
+    extra = Column("metadata", JSONB, default={})
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    read_at = Column(DateTime, nullable=True)
+    
+    __table_args__ = (
+        Index('idx_notification_user_read', 'user_id', 'read'),
+    )
+
+
+class UserPreference(Base):
+    """Generic key/value user preference"""
+    __tablename__ = "user_preferences"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    key = Column(String(100), nullable=False)
+    value = Column(JSONB, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'key', name='uix_user_pref'),
+    )
