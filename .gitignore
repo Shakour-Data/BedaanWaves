@@ -34,6 +34,7 @@ ENV/
 .env
 .env.local
 .env.*.local
+backend/.env
 
 # IDEs
 .vscode/
@@ -93,3 +94,7 @@ database/versions/
 # Local configuration overrides
 local.env
 settings.local.json
+
+# Test results
+backend/test_results.txt
+backend/test_results/
