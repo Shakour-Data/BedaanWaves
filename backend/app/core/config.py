@@ -10,7 +10,7 @@ This configuration consolidates settings from:
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 from functools import lru_cache
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 
 class Settings(BaseSettings):
@@ -84,8 +84,9 @@ class Settings(BaseSettings):
     
     # Global Auth Guard
     # When True, every protected API route requires a valid Bearer access token.
-    # Keep False in local development so the frontend (mock fallback) keeps working.
-    REQUIRE_AUTH: bool = False
+    # Defaults to True (secure by default). In local development you may set
+    # REQUIRE_AUTH=false explicitly in .env, but production MUST keep it True.
+    REQUIRE_AUTH: bool = True
     # Fixed user id used by dev-only endpoints when the guard is disabled.
     DEV_USER_ID: str = "00000000-0000-0000-0000-000000000000"
     # Paths that never require authentication (prefix or exact match).
@@ -342,6 +343,20 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v.lower() not in ("false", "0", "no", "off", "")
         return v
+
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        if self.ENVIRONMENT == "production" and not self.REQUIRE_AUTH:
+            raise ValueError(
+                "REQUIRE_AUTH must be True when ENVIRONMENT is 'production'. "
+                "Refusing to start with authentication disabled in production."
+            )
+        if self.ENVIRONMENT == "production" and self.DEBUG:
+            raise ValueError(
+                "DEBUG must be False when ENVIRONMENT is 'production'. "
+                "Refusing to start with debug mode enabled in production."
+            )
+        return self
 
     class Config:
         env_file = ".env"

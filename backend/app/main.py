@@ -30,6 +30,20 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    
+    # Fail-fast: enforce security requirements in production
+    if settings.ENVIRONMENT == "production":
+        if not settings.REQUIRE_AUTH:
+            raise RuntimeError(
+                "Refusing to start: REQUIRE_AUTH must be True in production. "
+                "Set REQUIRE_AUTH=true or ENVIRONMENT=development."
+            )
+        if settings.DEBUG:
+            raise RuntimeError(
+                "Refusing to start: DEBUG must be False in production. "
+                "Set DEBUG=false or ENVIRONMENT=development."
+            )
+    
     await init_db()
     yield
     # Shutdown
