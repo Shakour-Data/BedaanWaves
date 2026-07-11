@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AssetRow } from "@/lib/dashboard-data";
 import { ChangeBadge } from "./StatCard";
 
@@ -26,7 +27,14 @@ export function AssetTable({ rows }: { rows: AssetRow[] }) {
               key={r.symbol}
               className="border-b border-border/60 transition duration-fast ease-flow hover:bg-black/5"
             >
-              <td className="px-2 py-2 font-semibold">{r.symbol}</td>
+              <td className="px-2 py-2 font-semibold">
+                <Link
+                  href={`/stocks/${encodeURIComponent(r.symbol)}`}
+                  className="text-secondary hover:underline"
+                >
+                  {r.symbol}
+                </Link>
+              </td>
               <td className="px-2 py-2 text-muted-foreground">{r.name}</td>
               <td className="px-2 py-2 text-center">
                 <span className="rounded-full bg-neutral/70 px-2 py-0.5 text-xs">

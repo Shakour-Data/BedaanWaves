@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface NavItem {
   href: string;
@@ -11,19 +12,27 @@ interface NavItem {
   ready: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },
-  { href: "/market", label: "بازار", icon: "📈", ready: false },
-  { href: "/stocks", label: "سهام", icon: "🏢", ready: false },
-  { href: "/portfolio", label: "پورتفولیو", icon: "💼", ready: false },
-  { href: "/analysis", label: "تحلیل", icon: "🔮", ready: false },
-  { href: "/news", label: "اخبار", icon: "📰", ready: false },
-  { href: "/alerts", label: "هشدارها", icon: "🔔", ready: false },
-  { href: "/settings", label: "تنظیمات", icon: "⚙️", ready: false },
-];
+const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", icon: "🔐", ready: true };
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  const navItems: NavItem[] = isAuthenticated
+    ? [
+        { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },
+        { href: "/stocks", label: "سهام", icon: "🏢", ready: true },
+        { href: "/portfolio", label: "پورتفولیو", icon: "💼", ready: false },
+        { href: "/analysis", label: "تحلیل", icon: "🔮", ready: false },
+        { href: "/news", label: "اخبار", icon: "📰", ready: false },
+        { href: "/alerts", label: "هشدارها", icon: "🔔", ready: false },
+        { href: "/settings", label: "تنظیمات", icon: "⚙️", ready: false },
+      ]
+    : [
+        { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },
+        { href: "/stocks", label: "سهام", icon: "🏢", ready: true },
+        AUTH_ITEM,
+      ];
 
   return (
     <aside
@@ -40,7 +49,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-1" aria-label="منوی اصلی">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = pathname === item.href;
           const inner = (
             <span
@@ -79,8 +88,25 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto rounded-xl bg-neutral/60 p-3 text-xs text-muted-foreground">
-        معماری ارتعاشی بازار سرمایه
+      <div className="mt-auto flex flex-col gap-2">
+        {isAuthenticated && user ? (
+          <div className="rounded-xl bg-neutral/60 p-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true">👤</span>
+              <span className="flex-1 truncate">{user.name}</span>
+            </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="mt-2 w-full rounded-lg border border-border px-2 py-1 text-xs transition duration-fast ease-flow hover:bg-black/5"
+            >
+              خروج
+            </button>
+          </div>
+        ) : null}
+        <div className="rounded-xl bg-neutral/60 p-3 text-xs text-muted-foreground">
+          معماری ارتعاشی بازار سرمایه
+        </div>
       </div>
     </aside>
   );
