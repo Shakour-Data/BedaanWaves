@@ -152,6 +152,17 @@ class FakeAsyncSession:
                 key = crit.left.key
                 vals = crit.right.value if hasattr(crit.right, "value") else crit.right
                 rows = [r for r in rows if getattr(r, key, None) in list(vals)]
+            elif op is operators.is_:
+                key = crit.left.key
+                right = crit.right
+                target = right.value if hasattr(right, "value") else right
+                rname = type(right).__name__
+                if rname == "False_" or target is False:
+                    rows = [r for r in rows if getattr(r, key, None) is False]
+                elif rname == "True_" or target is True:
+                    rows = [r for r in rows if getattr(r, key, None) is True]
+                else:
+                    rows = [r for r in rows if getattr(r, key, None) is None]
             elif isinstance(crit, BooleanClauseList) and crit.operator is operators.and_:
                 for sub in crit.clauses:
                     rows = self._apply_single(rows, sub)
@@ -173,9 +184,10 @@ class FakeAsyncSession:
             key = crit.left.key
             right = crit.right
             target = right.value if hasattr(right, "value") else right
-            if target is False:
+            rname = type(right).__name__
+            if rname == "False_" or target is False:
                 return [r for r in rows if getattr(r, key, None) is False]
-            if target is True:
+            if rname == "True_" or target is True:
                 return [r for r in rows if getattr(r, key, None) is True]
             return [r for r in rows if getattr(r, key, None) is None]
         return rows
@@ -204,16 +216,12 @@ class FakeAsyncSession:
             current = getattr(obj, col.key, None)
             if current is not None or col.default is None:
                 continue
-            default = col.default.arg
-            if callable(default):
-                try:
-                    default = default()
-                except Exception:
-                    continue
-            try:
-                setattr(obj, col.key, default)
-            except Exception:
-                pass
+            if col.key == "id":
+                setattr(obj, col.key, _uuid.uuid4())
+            elif col.key in ("created_at", "updated_at"):
+                setattr(obj, col.key, _dt.datetime.utcnow())
+            elif not callable(col.default.arg):
+                setattr(obj, col.key, col.default.arg)
 
     async def commit(self):
         return None
