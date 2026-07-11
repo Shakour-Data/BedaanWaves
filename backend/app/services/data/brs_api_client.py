@@ -367,3 +367,88 @@ class BrsApiClient(ExternalAPIService):
         """IME Certificate endpoint - commodity deposit certificates."""
         data = await self._request("/IME/Certificate.php")
         return data.get("certificates", data) if isinstance(data, dict) else data
+
+    # ------------------------------------------------------------------ #
+    # Compatibility wrappers used by StockService / HistoryService /
+    # MarketService. These map the service-level method names onto the
+    # canonical BrsApi endpoints above so the rest of the codebase can
+    # call a stable interface regardless of endpoint naming.
+    # ------------------------------------------------------------------ #
+    async def get_stock_info(self, l18: str) -> Dict[str, Any]:
+        """Compatibility wrapper: stock info → Symbol endpoint."""
+        return await self.get_symbol(l18)
+
+    async def get_stock_price(self, l18: str) -> Dict[str, Any]:
+        """Compatibility wrapper: current price → real-time 2-minute candle."""
+        data = await self.get_candlestick(l18, candle_type=1)
+        candles = (
+            data.get("candles", data) if isinstance(data, dict) else data
+        )
+        if isinstance(candles, list) and candles:
+            latest = candles[-1]
+            return {
+                "open": latest.get("open"),
+                "high": latest.get("high"),
+                "low": latest.get("low"),
+                "close": latest.get("close"),
+                "last": latest.get("close"),
+            }
+        return data
+
+    async def get_stock_history(
+        self,
+        l18: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interval: str = "daily",
+    ) -> List[Dict[str, Any]]:
+        """Compatibility wrapper: history → History endpoint."""
+        return await self.get_history(l18, history_type=0)
+
+    async def search_stocks(self, query: str) -> List[Dict[str, Any]]:
+        """Compatibility wrapper: search → filter AllSymbols by l18/name."""
+        symbols = await self.get_all_symbols(market_type=1)
+        if not isinstance(symbols, list):
+            return []
+        q = query.strip().lower()
+        return [
+            s for s in symbols
+            if q in str(s.get("l18", "")).lower()
+            or q in str(s.get("name", "")).lower()
+            or q in str(s.get("symbol", "")).lower()
+        ]
+
+    async def get_market_indices(self) -> List[Dict[str, Any]]:
+        """Compatibility wrapper: market indices → Index endpoint (type=1)."""
+        data = await self.get_index(index_type=1)
+        if isinstance(data, dict):
+            return data.get("indices", [data])
+        return data if isinstance(data, list) else [data]
+
+    async def get_market_stats(self) -> Dict[str, Any]:
+        """Compatibility wrapper: market stats → aggregate Index data."""
+        indices = await self.get_index(index_type=1)
+        if isinstance(indices, dict):
+            return indices
+        return {"indices": indices}
+
+    async def get_top_gainers(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Compatibility stub: gainers require DB latest_prices view."""
+        raise RuntimeError(
+            "get_top_gainers requires database access. "
+            "Use the /market/tse-dashboard endpoint instead."
+        )
+
+    async def get_top_losers(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Compatibility stub: losers require DB latest_prices view."""
+        raise RuntimeError(
+            "get_top_losers requires database access. "
+            "Use the /market/tse-dashboard endpoint instead."
+        )
+
+    async def get_most_active(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Compatibility stub: most active requires DB latest_prices view."""
+        raise RuntimeError(
+            "get_most_active requires database access. "
+            "Use the /market/tse-dashboard endpoint instead."
+        )

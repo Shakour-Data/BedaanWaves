@@ -543,21 +543,40 @@ async def scoring_analysis(
 ) -> dict:
     """
     Comprehensive 6D scoring for a ticker.
-    
+
+    Input can provide either:
+    - 6D keys: fundamental, technical, sentiment, risk, macro, ai
+
+    OR the legacy names:
+    - growth -> macro
+    - momentum -> ai
+
     Request body must include:
         ticker: str
         technical: dict (optional)
         fundamental: dict (optional)
         sentiment: dict (optional)
-        momentum: dict (optional)
         risk: dict (optional)
-        growth: dict (optional)
+        macro: dict (optional)
+        ai: dict (optional)
+
+    Legacy compatibility:
+        momentum: dict (optional) will be mapped to ai if ai is missing
+        growth: dict (optional) will be mapped to macro if macro is missing
     """
     ticker = data.get("ticker", "UNKNOWN")
+
+    # Map legacy keys to scoring dimensions so macro/ai are populated.
+    data = dict(data)  # shallow copy to avoid mutating caller payload
+    if "macro" not in data and "growth" in data:
+        data["macro"] = data.get("growth")
+    if "ai" not in data and "momentum" in data:
+        data["ai"] = data.get("momentum")
 
     service = ScoringService()
     await service.initialize()
     result = await service.analyze(data)
+
 
     return {
         "status": "success",

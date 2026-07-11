@@ -13,6 +13,8 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ..core import BaseService
+
 
 class JobStatus(str, Enum):
     """Job lifecycle states."""
