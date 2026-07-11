@@ -23,7 +23,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 
 ## Implementation Status
 
-### ✅ Completed (Phase 3: 35%)
+### ✅ Completed (Phase 3: ~50%)
 
 **Tier 1 Core Services** (6 services, 1,270 LOC)
 - DependencyContainer: IoC/DI management
@@ -49,14 +49,22 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - MomentumService: Momentum analysis
 - VolatilityService: Volatility forecasting
 
-### 🔄 Pending (Tiers 4-9)
+### ✅ Completed (Phase 3: ~50%)
 
-**Tier 4 - ML Services**: 6 services
-**Tier 5 - NLP Services**: 5 services
-**Tier 6 - User Services**: 6 services
-**Tier 7 - Specialized Services**: 5 services
-**Tier 8 - Crypto Services**: 5 services
-**Tier 9 - System Services**: 6 services
+**Tier 4 - ML Services** (6 services): Prediction, Pattern Recognition, Anomaly Detection, Recommendation, Portfolio Optimization, Time-Series Forecasting
+
+### 🔄 Pending (Tiers 5-9)
+
+**Tier 5 - NLP Services** (5 services): Sentiment, News Summarization, Document Extraction, Chatbot, Search
+**Tier 6 - User Services** (6 services): Authentication ✅ (done), Authorization, UserProfile, Watchlist, Notification, Preference
+**Tier 7 - Specialized Services** (5 services): Sector Analysis, Screening, Comparison, Correlation, Calendar
+**Tier 8 - Crypto Services** (5 services): Price, Portfolio, Analysis, News, Arbitrage
+**Tier 9 - System Services** (6 services): Backup, Logging, Metrics, Queue, Scheduler, NotificationDispatcher
+
+### ⚠️ Gaps (despite completed services)
+- No database migrations (Alembic) — only `database/init.sql`; schema not migratable
+- No unit tests for Tiers 2-4 (~20 services) — only Tier 1 covered
+- No API integration/E2E tests
 
 ## Setup & Development
 
