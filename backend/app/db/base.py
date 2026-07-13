@@ -6,6 +6,7 @@ from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.pool import NullPool, QueuePool
 from typing import AsyncGenerator, Generator
 import logging
+import os
 
 from app.core.config import get_settings
 
@@ -18,8 +19,13 @@ Base = declarative_base()
 settings = get_settings()
 
 # Create async engine for PostgreSQL
+url = settings.DATABASE_URL
+if url.startswith("postgresql://"):
+    url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif url.startswith("postgres://"):
+    url = url.replace("postgres://", "postgresql+asyncpg://", 1)
 engine = create_async_engine(
-    settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
+    url,
     echo=settings.DATABASE_ECHO,
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
@@ -55,10 +61,14 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Initialize database with all tables"""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully")
+    """Initialize database by running Alembic migrations."""
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini"))
+    alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+    command.upgrade(alembic_cfg, "head")
+    logger.info("Database migrations applied successfully")
 
 
 async def drop_db() -> None:

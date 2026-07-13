@@ -15,7 +15,11 @@ from app.api.middleware import (
     RateLimitMiddleware,
     protected_dependencies,
 )
-from app.api.routes import market, analysis, stocks, portfolios, history, news, auth, ml, live, users, watchlists, notifications, specialized, system
+from app.api.routes import market, analysis, stocks, portfolios, history, news, auth, ml, live, users, watchlists, notifications, specialized, system, crypto, intl
+from app.services.core.dependency_container import get_global_container
+from app.services.system.scheduler_service import SchedulerService
+from app.services.system.metrics_service import MetricsService
+from app.services.system.queue_service import QueueService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,9 +49,26 @@ async def lifespan(app: FastAPI):
             )
     
     await init_db()
+
+    container = get_global_container()
+    container.register_instance("scheduler", SchedulerService())
+    container.register_instance("metrics", MetricsService())
+    container.register_instance("queue", QueueService())
+
+    scheduler = container.get("scheduler")
+    metrics = container.get("metrics")
+    queue = container.get("queue")
+    await scheduler.initialize()
+    await metrics.initialize()
+    await queue.initialize()
+
     yield
     # Shutdown
     logger.info("Shutting down application")
+    await scheduler.shutdown()
+    await metrics.shutdown()
+    await queue.shutdown()
+    await container.shutdown_all()
     await close_db()
     await live.close_brs_client()
 
@@ -124,6 +145,8 @@ app.include_router(notifications.router, prefix=api_v1_prefix, dependencies=auth
 app.include_router(live.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(specialized.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(system.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(crypto.router, prefix=api_v1_prefix, dependencies=auth_guard)
+app.include_router(intl.router, prefix=api_v1_prefix, dependencies=auth_guard)
 
 # Error Handlers
 @app.exception_handler(RuntimeError)

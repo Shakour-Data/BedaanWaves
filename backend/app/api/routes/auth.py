@@ -59,7 +59,10 @@ async def login(data: LoginRequest) -> Token:
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(token: str) -> Token:
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     username: str = payload.get("sub")
     token_type: str = payload.get("type")
     if username is None or token_type != "refresh":

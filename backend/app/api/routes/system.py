@@ -5,17 +5,30 @@ from datetime import datetime
 from typing import Optional
 import logging
 
+from app.api.dependencies import get_current_admin_user
+from app.services.core.dependency_container import get_global_container
 from app.services.system.scheduler_service import SchedulerService
 from app.services.system.metrics_service import MetricsService
 from app.services.system.queue_service import QueueService, JobStatus
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/system", tags=["system"])
+router = APIRouter(
+    prefix="/system",
+    tags=["system"],
+    dependencies=[Depends(get_current_admin_user)],
+)
 
 
-def _load(svc_cls):
-    svc = svc_cls()
-    return svc
+def _get_scheduler() -> SchedulerService:
+    return get_global_container().get("scheduler")
+
+
+def _get_metrics() -> MetricsService:
+    return get_global_container().get("metrics")
+
+
+def _get_queue() -> QueueService:
+    return get_global_container().get("queue")
 
 
 # ---- Scheduler Endpoints ----
@@ -23,8 +36,7 @@ def _load(svc_cls):
 @router.get("/scheduler/jobs")
 async def list_scheduler_jobs() -> dict:
     """List all registered scheduler jobs."""
-    svc = _load(SchedulerService)
-    await svc.initialize()
+    svc = _get_scheduler()
     jobs = svc.list_jobs()
     return {"status": "success", "jobs": jobs, "count": len(jobs)}
 
@@ -44,8 +56,7 @@ async def register_scheduler_job(data: dict) -> dict:
     async def _noop():
         return {"status": "ok"}
     
-    svc = _load(SchedulerService)
-    await svc.initialize()
+    svc = _get_scheduler()
     job = svc.register_job(name, _noop, interval_seconds)
     return {"status": "success", "job": svc.get_job_status(name)}
 
@@ -53,8 +64,7 @@ async def register_scheduler_job(data: dict) -> dict:
 @router.delete("/scheduler/jobs/{name}")
 async def unregister_scheduler_job(name: str) -> dict:
     """Unregister a scheduled job."""
-    svc = _load(SchedulerService)
-    await svc.initialize()
+    svc = _get_scheduler()
     ok = svc.unregister_job(name)
     if not ok:
         raise HTTPException(status_code=404, detail=f"Job not found: {name}")
@@ -64,8 +74,7 @@ async def unregister_scheduler_job(name: str) -> dict:
 @router.post("/scheduler/jobs/{name}/run")
 async def run_scheduler_job_now(name: str) -> dict:
     """Trigger a scheduled job immediately."""
-    svc = _load(SchedulerService)
-    await svc.initialize()
+    svc = _get_scheduler()
     result = await svc.run_job_now(name)
     return result
 
@@ -75,8 +84,7 @@ async def run_scheduler_job_now(name: str) -> dict:
 @router.get("/metrics")
 async def get_platform_metrics() -> dict:
     """Get platform-wide metrics summary."""
-    svc = _load(MetricsService)
-    await svc.initialize()
+    svc = _get_metrics()
     metrics = svc.get_all_metrics()
     return {"status": "success", "timestamp": datetime.utcnow().isoformat(), **metrics}
 
@@ -84,8 +92,7 @@ async def get_platform_metrics() -> dict:
 @router.get("/metrics/health")
 async def get_health_summary() -> dict:
     """Get health summary for all services."""
-    svc = _load(MetricsService)
-    await svc.initialize()
+    svc = _get_metrics()
     health = svc.get_health_summary()
     return {"status": "success", **health}
 
@@ -110,8 +117,7 @@ async def enqueue_job(data: dict) -> dict:
     async def default_processor(job):
         return {"processed": job.name, "payload": job.payload}
     
-    svc = _load(QueueService)
-    await svc.initialize()
+    svc = _get_queue()
     svc.set_processor(default_processor)
     job = await svc.enqueue(name, payload, priority=priority, max_retries=max_retries)
     return {"status": "success", "job_id": job.id, "name": job.name}
@@ -120,8 +126,7 @@ async def enqueue_job(data: dict) -> dict:
 @router.get("/queue/jobs/{job_id}")
 async def get_queue_job(job_id: str) -> dict:
     """Get job details by ID."""
-    svc = _load(QueueService)
-    await svc.initialize()
+    svc = _get_queue()
     job = svc.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
@@ -131,8 +136,7 @@ async def get_queue_job(job_id: str) -> dict:
 @router.get("/queue/stats")
 async def get_queue_stats() -> dict:
     """Get queue statistics."""
-    svc = _load(QueueService)
-    await svc.initialize()
+    svc = _get_queue()
     stats = svc.get_queue_stats()
     return {"status": "success", **stats}
 
@@ -140,7 +144,6 @@ async def get_queue_stats() -> dict:
 @router.get("/queue/dead-letter")
 async def get_dead_letter_jobs() -> dict:
     """Get dead-letter jobs."""
-    svc = _load(QueueService)
-    await svc.initialize()
+    svc = _get_queue()
     jobs = svc.get_dead_letter_jobs()
     return {"status": "success", "jobs": jobs, "count": len(jobs)}

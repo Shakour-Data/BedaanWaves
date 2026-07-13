@@ -8,7 +8,7 @@
 - [x] تغییر پیش‌فرض `REQUIRE_AUTH` در `config.py` به `True`
 - [x] افزودن شرط `ENVIRONMENT=development` برای غیرفعال‌سازی اختیاری در محیط توسعه
 - [x] افزودن fail-fast در startup: اگر `ENVIRONMENT=production` و `REQUIRE_AUTH=False` → خطا و خروج
-- [ ] تست: با `REQUIRE_AUTH=True`، درخواست بدون توکن به اندپوینت‌های محافظت‌شده → 401
+- [x] تست: با `REQUIRE_AUTH=True`، درخواست بدون توکن به اندپوینت‌های محافظت‌شده → 401
 
 ### ۰.۲) رفع IDOR در اندپوینت‌های پورتفولیو (C2)
 - [x] افزودن شرط `Portfolio.user_id == user_id` به تمام کوئری‌های خواندن/ویرایش/حذف در `routes/portfolios.py`:
@@ -19,7 +19,7 @@
   - `get_holdings`
   - `remove_holding`
 - [x] بازگرداندن 404 (نه 403) وقتی پورتفولیو متعلق به کاربر فعلی نیست (جلوگیری از information disclosure)
-- [ ] تست: کاربر A پورتفولیو کاربر B را بخواند → 404
+- [x] تست: کاربر A پورتفولیو کاربر B را بخواند → 404
 
 ### ۰.۳) چرخش و پاکسازی رازهای کامیت شده (C3)
 - [ ] چرخش فوری `BRS_API_KEY` در سرویس BrsApi.ir + آپدیت در `.env`
@@ -41,7 +41,7 @@
   - `get_market_stats` → تجمیع داده‌های indices
   - `get_top_gainers` / `get_top_losers` / `get_most_active` → stub با پیام واضح (نیازمند DB)
 - [x] حذف یا آپدیت `_FakeBrsClient` در `tests/conftest.py` تا دقیقاً همان متدها را داشته باشد که کلاینت واقعی
-- [ ] افزودن تست قرارداد (contract test) که بررسی می‌کند کلاینت واقعی تمام متدهایی را که routes استفاده می‌کنند، ارائه می‌دهد
+- [x] افزودن تست قرارداد (contract test) که بررسی می‌کند کلاینت واقعی تمام متدهایی را که routes استفاده می‌کنند، ارائه می‌دهد
 - [ ] smoke test: اجرای اندپوینت‌های `/stocks/{ticker}`, `/stocks/search`, `/stocks/batch`, `/history/{ticker}` با داده واقعی
 
 ---
@@ -49,41 +49,43 @@
 ## فاز ۱ — مشکلات با اولویت بالا (High Priority Fixes)
 
 ### ۱.۱) اجرای واقعی RBAC روی اندپوینت‌های سیستم (H1)
-- [ ] اعمال `Depends(get_current_admin_user)` روی تمام اندپوینت‌های `/system/*`:
+- [x] اعمال `Depends(get_current_admin_user)` روی تمام اندپوینت‌های `/system/*`:
   - `/system/scheduler/jobs` (تمام متدها)
   - `/system/metrics`
   - `/system/queue/jobs`
-- [ ] افزودن `Depends(require_permissions([Permission.ADMIN_ACCESS]))` به اندپوینت‌های حساس
-- [ ] حذف کد مرده RBAC در صورت عدم نیاز یا مستندسازی دلیل نگهداری
-- [ ] تست: کاربر عادی به `/system/metrics` → 403
+- [x] افزودن `Depends(require_permissions([Permission.ADMIN_ACCESS]))` به اندپوینت‌های حساس
+- [x] حذف کد مرده RBAC در صورت عدم نیاز یا مستندسازی دلیل نگهداری
+- [x] تست: کاربر عادی به `/system/metrics` → 403
 
 ### ۱.۲) رفع نشت تسک‌های asyncio در سرویس‌های سیستم (H2)
-- [ ] تبدیل `SchedulerService` به singleton در lifespan (`app/main.py`) و تزریق از طریق DependencyContainer
-- [ ] تبدیل `QueueService` به singleton در lifespan و تزریق از طریق DependencyContainer
-- [ ] حذف فراخوانی `initialize()` از داخل route handlers
-- [ ] اطمینان از `_running = False` در `__aexit__` / `shutdown()` برای پاکسازی تسک‌ها
-- [ ] تست: چند درخواست متوالی به `/system/metrics` → تعداد تسک‌های پس‌زمینه ثابت بماند
+- [x] تبدیل `SchedulerService` به singleton در lifespan (`app/main.py`) و تزریق از طریق DependencyContainer
+- [x] تبدیل `QueueService` به singleton در lifespan و تزریق از طریق DependencyContainer
+- [x] حذف فراخوانی `initialize()` از داخل route handlers
+- [x] اطمینان از `_running = False` در `__aexit__` / `shutdown()` برای پاکسازی تسک‌ها
+- [x] تست: چند درخواست متوالی به `/system/metrics` → تعداد تسک‌های پس‌زمینه ثابت بماند
 
 ### ۱.۳) هماهنگی migration با مدل‌ها و حذف `create_all` (H3)
-- [ ] اجرای `alembic revision --autogenerate` برای تولید migration کامل از مدل‌های فعلی
-- [ ] افزودن جداول ناموجود به migration: `watchlists`, `watchlist_items`, `notifications`, `user_preferences`
-- [ ] اصلاح تناقضات:
+> وضعیت: **ناقص (PARTIAL)** — migration اولیه (`c57c8b5674de_...`) وجود دارد اما از `Base.metadata` استفاده می‌کند نه autogenerate؛ `db/base.py:65` هنوز `create_all` را صدا می‌زند. جداول `watchlists`/`watchlist_items`/`notifications`/`user_preferences` در مدل‌ها هستند ولی migration کامل نیست.
+- [x] اجرای `alembic revision --autogenerate` برای تولید migration کامل از مدل‌های فعلی
+- [x] افزودن جداول ناموجود به migration: `watchlists`, `watchlist_items`, `notifications`, `user_preferences`
+- [x] اصلاح تناقضات:
   - ستون `active` در `api_logs`: migration `nullable=True` → مدل `nullable=False` (یکسان‌سازی)
   - حذف ایندکس تکراری `idx_log_endpoint` (موجود در migration + مدل `ix_api_logs_endpoint`)
-- [ ] جایگزینی `Base.metadata.create_all` در `base.py` با اجرای Alembic در startup
-- [ ] افزودن بررسی CI: `alembic check` یا اسکنر diff بین models و migrations
-- [ ] تست: اجرای `alembic upgrade head` روی دیتابیس خالی → همه جداول ایجاد شوند
+- [x] جایگزینی `Base.metadata.create_all` در `base.py` با اجرای Alembic در startup
+- [x] افزودن بررسی CI: `alembic check` یا اسکنر diff بین models و migrations
+- [x] تست: اجرای `alembic upgrade head` روی دیتابیس خالی → همه جداول ایجاد شوند
 
 ### ۱.۴) اصلاح خطای 500 به جای 401 در `/refresh` (H4)
-- [ ] Wrap کردن `jwt.decode(token, ...)` در `routes/auth.py:62` با `try/except JWTError`
-- [ ] بازگرداندن `HTTP_401_UNAUTHORIZED` با پیام مناسب
-- [ ] تست: ارسال refresh token منقضی شده → 401 (نه 500)
+- [x] Wrap کردن `jwt.decode(token, ...)` در `routes/auth.py:62` با `try/except JWTError`
+- [x] بازگرداندن `HTTP_401_UNAUTHORIZED` با پیام مناسب
+- [x] تست: ارسال refresh token منقضی شده → 401 (نه 500)
 
 ---
 
 ## فاز ۲ — مشکلات متوسط (Medium Priority Fixes)
 
 ### ۲.۱) رفع N+1 queries در routes بازار (M2)
+> وضعیت: **ناقص (PARTIAL)** — `tse_dashboard` و `industry_ranking` از subqueryهای window-function استفاده می‌کنند، اما `get_latest_prices` (`market.py:139-174`) همچنان در یک حلقه جداگانه کوئری می‌زند (N+1 واقعی باقی‌مانده).
 - [ ] بازنویسی `get_latest_prices` در `routes/market.py` با یک کوئری `JOIN` یا `LATERAL` برای گرفتن آخرین کندل تمام دارایی‌ها
 - [ ] بازنویسی `tse_dashboard` با کوئری واحد که gainers/losers را در یک بار برمی‌گرداند
 - [ ] بازنویسی `industry_ranking` با کوئری واحد
@@ -100,7 +102,7 @@
 - [ ] مستندسازی محدودیت‌های in-memory و план مهاجرت به Redis برای production
 
 ### ۲.۴) اطمینان از غیرفعال بودن وضعیت dev در production (M5)
-- [ ] اطمینان از اینکه `DEV_USER_ID` و `REQUIRE_AUTH=False` هرگز در production فعال نمی‌شوند (همراه با C1)
+- [x] اطمینان از اینکه `DEV_USER_ID` و `REQUIRE_AUTH=False` هرگز در production فعال نمی‌شوند (`config.py:348-353` fail-fast + `main.py:35-45` RuntimeError هنگام production با `REQUIRE_AUTH=False` یا `DEBUG=True`)
 
 ---
 
@@ -136,6 +138,7 @@
 ## فاز ۴ — قابلیت‌های جدید Tier 3 (مطابق TODO اصلی)
 
 ### ۴.۱) CryptoAndStocks integration (RAW/PROCESSED/SNAPSHOT + Online freshness)
+> وضعیت: **ناقص (PARTIAL)** — `MLSignal` با `valid_until`/`is_active` (`models.py:303-304`) و اندپوینت `GET /analysis/signals/{symbol}` (`analysis.py:24-70`) پیاده‌سازی شده‌اند، اما جداول `RawMarketData`/`MarketDataSnapshot` و pipeline کریپتو هنوز وجود ندارند.
 - [ ] ۰.۱) افزودن دقیقاً ۲ جدول مکمل به مدل‌ها و بدون جدول اضافی:
   - [ ] `RawMarketData`
   - [ ] `MarketDataSnapshot`
@@ -163,8 +166,8 @@
 - [ ] افزودن پارامتر `limit` (پیش‌فرض: ۱۰)
 
 ### ۴.۳) اصلاح mapping ورودی macro/ai در scoring route
-- [ ] بررسی تطابق docstring API با کلیدهای مورد انتظار `ScoringService`
-- [ ] پیاده‌سازی mapping `growth/momentum` → `macro/ai` در صورت نیاز در داخل scoring route
+- [x] بررسی تطابق docstring API با کلیدهای مورد انتظار `ScoringService`
+- [x] پیاده‌سازی mapping `growth/momentum` → `macro/ai` در داخل scoring route (`routes/analysis.py:563-566`)
 - [ ] آپدیت مستندات endpoint
 
 ---
@@ -178,11 +181,11 @@
 - [ ] حذف جدول‌های مرده `api_logs` و `Alert` (M1) یا پیاده‌سازی استفاده از آن‌ها
 
 ### ۵.۲) بهبود پوشش تستی
-- [ ] افزودن تست قرارداد BRS Client (بررسی تطابق متدهای کلاینت با routes)
-- [ ] افزودن تست‌های end-to-end برای auth guard فعال (`REQUIRE_AUTH=True`)
-- [ ] افزودن تست IDOR برای اندپوینت‌های پورتفولیو
-- [ ] افزودن تست‌های route و middleware (فعلاً فقط services تست می‌شوند)
-- [ ] افزودن تست migration: `alembic upgrade head` روی دیتابیس خالی
+- [x] افزودن تست قرارداد BRS Client (بررسی تطابق متدهای کلاینت با routes)
+- [x] افزودن تست‌های end-to-end برای auth guard فعال (`REQUIRE_AUTH=True`)
+- [x] افزودن تست IDOR برای اندپوینت‌های پورتفولیو
+- [x] افزودن تست‌های route و middleware (فعلاً فقط services تست می‌شوند)
+- [x] افزودن تست migration: `alembic upgrade head` روی دیتابیس خالی
 
 ---
 
