@@ -36,11 +36,11 @@ class TestNotificationCrud:
         uid = _user_id()
         service = NotificationService()
         n1 = await service.create_notification(uid, "t", "T1", "B1", session=fake_session)
-        await service.create_notification(uid, "t", "T2", "B2", session=fake_session)
+        n2 = await service.create_notification(uid, "t", "T2", "B2", session=fake_session)
         await service.mark_read(n1.id, uid, session=fake_session)
         items, total = await service.list_notifications(uid, unread_only=True, session=fake_session)
         assert total == 1
-        assert items[0].id == n1.id
+        assert items[0].id == n2.id
 
 
 class TestReadState:

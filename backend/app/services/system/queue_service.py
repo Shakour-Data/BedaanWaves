@@ -52,7 +52,7 @@ class QueueService(BaseService):
     def __init__(self, service_name: str = "QueueService", max_workers: int = 4):
         super().__init__(service_name)
         self._max_workers = max_workers
-        self._queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
+        self._queue: Optional[asyncio.PriorityQueue] = None
         self._jobs: Dict[str, QueuedJob] = {}
         self._dead_letter: List[QueuedJob] = []
         self._workers: List[asyncio.Task] = []
@@ -61,6 +61,7 @@ class QueueService(BaseService):
     
     async def initialize(self) -> None:
         self._running = True
+        self._queue = asyncio.PriorityQueue()
         for _ in range(self._max_workers):
             task = asyncio.create_task(self._worker_loop())
             self._workers.append(task)

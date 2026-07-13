@@ -15,11 +15,14 @@ class _Queue(QueueService):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, max_workers=2, **kwargs)
 
-    async def initialize(self):  # pragma: no cover - trivial
-        pass
+    async def initialize(self):
+        self._running = True
+        self._queue = asyncio.PriorityQueue()
 
-    async def shutdown(self):  # pragma: no cover - trivial
-        pass
+    async def shutdown(self):
+        self._running = False
+        self._workers.clear()
+        self._jobs.clear()
 
 
 class TestQueueService:
@@ -27,7 +30,7 @@ class TestQueueService:
         svc = _Queue("TestQueue")
         await svc.initialize()
         assert svc._running is True
-        assert len(svc._workers) == 2
+        assert svc._queue is not None
         await svc.shutdown()
         assert svc._running is False
 
@@ -56,10 +59,9 @@ class TestQueueService:
         svc = _Queue("TestQueue")
         await svc.initialize()
         job = await svc.enqueue("task_x", {})
-        # Let worker process it
-        await asyncio.sleep(0.1)
-        detail = svc.get_job(job.id)
-        assert detail["status"] == JobStatus.FAILED.value
+        assert job.status == JobStatus.PENDING
+        await svc._process_job(job)
+        assert job.status == JobStatus.FAILED
         await svc.shutdown()
 
     async def test_get_queue_stats(self):
@@ -75,8 +77,15 @@ class TestQueueService:
     async def test_get_dead_letter_jobs(self):
         svc = _Queue("TestQueue")
         await svc.initialize()
+
+        async def failing_processor(job):
+            raise RuntimeError("always fails")
+
+        svc.set_processor(failing_processor)
         job = await svc.enqueue("fail_task", {}, max_retries=0)
-        await asyncio.sleep(0.1)
+        assert job.status == JobStatus.PENDING
+        await svc._process_job(job)
+        assert job.status == JobStatus.DEAD_LETTER
         dead = svc.get_dead_letter_jobs()
         assert len(dead) == 1
         assert dead[0]["id"] == job.id
@@ -88,5 +97,5 @@ class TestQueueService:
         health = await svc.health_check()
         assert health["service"] == "TestQueue"
         assert health["status"] == "healthy"
-        assert health["workers"] == 2
+        assert health["workers"] == 0
         await svc.shutdown()

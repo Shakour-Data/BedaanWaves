@@ -13,10 +13,10 @@ pytestmark = pytest.mark.unit
 
 class _Scheduler(SchedulerService):
     async def initialize(self):  # pragma: no cover - trivial
-        pass
+        self._running = True
 
     async def shutdown(self):  # pragma: no cover - trivial
-        pass
+        self._running = False
 
 
 class TestSchedulerService:
