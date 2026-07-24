@@ -3,13 +3,13 @@ BedaanWaves Services Module
 
 Consolidates services from the legacy Bedaan projects into a 9-tier layout:
   Tier 1: Core        (Dependency, Config, Logging, Cache, Database, Health)
-  Tier 2: Data        (BRS API, Stock, Market, Portfolio, History, News)
+  Tier 2: Data        (BRS API, Stock, Market, Portfolio, History, News, Crypto, Intl)
   Tier 3: Analysis    (Scoring, Technical, Fundamental, Risk, Momentum, Volatility)
   Tier 4: ML          (Prediction, Anomaly, Clustering, Ensemble)        [pending]
   Tier 5: NLP         (Sentiment, News, Entity, Summarization)           [pending]
   Tier 6: User        (Auth, Portfolio, Alerts, Notifications)           [pending]
   Tier 7: Specialized (Hierarchy, Backtest, Optimization)                [pending]
-  Tier 8: Crypto      (Multi-asset analysis)                             [pending]
+  Tier 8: Crypto      (Price, Portfolio, Analysis, News, Arbitrage)      [partial]
   Tier 9: System      (Monitoring, Backup, Recovery)                     [pending]
 
 Only implemented tiers are imported here so the package stays importable as
@@ -31,6 +31,8 @@ from .data.market_service import MarketService
 from .data.portfolio_service import PortfolioService
 from .data.history_service import HistoryService
 from .data.news_service import NewsService
+from .data.crypto_api_client import CryptoApiClient
+from .data.intl_api_client import IntlApiClient
 
 # Tier 3: Analysis Services
 from .analysis.scoring_service import ScoringService
@@ -47,6 +49,10 @@ from .nlp.document_extraction_service import DocumentExtractionService
 from .nlp.chatbot_service import ChatbotService
 from .nlp.search_service import SearchService
 
+# Tier 8: Crypto Services
+from .crypto.price_service import CryptoPriceService
+from .crypto.portfolio_service import CryptoPortfolioService
+
 __all__ = [
     # Tier 1
     "DependencyContainer",
@@ -62,6 +68,8 @@ __all__ = [
     "PortfolioService",
     "HistoryService",
     "NewsService",
+    "CryptoApiClient",
+    "IntlApiClient",
     # Tier 3
     "ScoringService",
     "TechnicalAnalysisService",
@@ -75,4 +83,7 @@ __all__ = [
     "DocumentExtractionService",
     "ChatbotService",
     "SearchService",
+    # Tier 8: Crypto
+    "CryptoPriceService",
+    "CryptoPortfolioService",
 ]
