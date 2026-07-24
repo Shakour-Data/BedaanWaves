@@ -4,7 +4,7 @@ Seed Data Script - BedaanWaves
 پر می‌کند پایگاه‌داده را با داده‌های نمایشی واقع‌گرایانه:
 
   - assets:         نمادهای بورس/فرابورس و دارایی‌های دیجیتال
-  - price_candles:  کندل‌های روزانه‌ی OHLCV (random-walk)
+  - ir_price_candles:  کندل‌های روزانه‌ی OHLCV (random-walk)
   - users:          یک کاربر نمایشی
   - portfolios:     یک پورتفولیو با موقعیت‌ها
   - ml_signals:     سیگنال‌های هوشمند
@@ -47,10 +47,19 @@ load_dotenv(os.path.join(BACKEND_ROOT, ".env"))
 os.environ.setdefault("DEBUG", "True")
 os.environ["DEBUG"] = "True"
 
-RAW_URL = os.getenv("DATABASE_URL", "postgresql://postgres:BedaanWaves2026@localhost:5432/bedaanwaves_db")
-SEED_URL = RAW_URL.replace("postgresql+psycopg2://", "postgresql+psycopg://")
-if SEED_URL.startswith("postgresql://"):
+from app.core.config import get_settings
+
+# Fall back to the single source of truth (config.py) when DATABASE_URL is
+# not provided via .env. This keeps the seeder in sync with the rest of the app
+# instead of relying on a hardcoded connection string / password.
+RAW_URL = os.getenv("DATABASE_URL") or get_settings().DATABASE_URL
+SEED_URL = RAW_URL
+if SEED_URL.startswith("postgresql+psycopg2://"):
+    SEED_URL = SEED_URL.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+elif SEED_URL.startswith("postgresql://"):
     SEED_URL = SEED_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+elif SEED_URL.startswith("postgres://"):
+    SEED_URL = SEED_URL.replace("postgres://", "postgresql+psycopg://", 1)
 # base.py در زمان import موتور را با DATABASE_URL می‌سازد
 os.environ["DATABASE_URL"] = SEED_URL
 
@@ -59,7 +68,7 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.models.models import (  # noqa: E402
     Asset,
-    PriceCandle,
+    IRPriceCandle,
     MLSignal,
     Portfolio,
     Position,
@@ -149,7 +158,7 @@ def _seed_candles(session, asset_ids: dict[str, uuid.UUID]) -> None:
             low = min(open_p, close) * (1 - abs(__import__("random").gauss(0, 0.01)))
             volume = int(abs(__import__("random").gauss(5_000_000, 2_000_000)) + 500_000)
             session.add(
-                PriceCandle(
+                IRPriceCandle(
                     id=uuid.uuid4(),
                     asset_id=aid,
                     timestamp=ts,
@@ -285,7 +294,7 @@ def _seed_alerts(session, user_id: uuid.UUID, asset_ids: dict[str, uuid.UUID]) -
 
 def _clear(session) -> None:
     # حذف از جدول‌های فرزند به والد (رعایت کلیدهای خارجی)
-    for model in (Alert, Position, MLSignal, PriceCandle, Portfolio, APILog, User, Asset):
+    for model in (Alert, Position, MLSignal, IRPriceCandle, Portfolio, APILog, User, Asset):
         session.execute(delete(model))
 
 
@@ -302,7 +311,7 @@ def main() -> None:
         asset_ids = _seed_assets(session)
         session.flush()
 
-        print("→ درج price_candles…")
+        print("→ درج ir_price_candles…")
         _seed_candles(session, asset_ids)
 
         print("→ درج user / portfolio / signals / alerts…")
@@ -317,7 +326,7 @@ def main() -> None:
     with Session() as session:
         counts = {
             "assets": session.query(Asset).count(),
-            "price_candles": session.query(PriceCandle).count(),
+            "ir_price_candles": session.query(IRPriceCandle).count(),
             "users": session.query(User).count(),
             "portfolios": session.query(Portfolio).count(),
             "positions": session.query(Position).count(),
