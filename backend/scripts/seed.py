@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import async_session_maker
-from app.models.models import User, Asset, PriceCandle, Portfolio, Position
+from app.models.models import User, Asset, IRPriceCandle, Portfolio, Position
 
 # Demo user
 DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
@@ -129,7 +129,7 @@ async def seed_assets(session: AsyncSession):
 async def seed_prices(session: AsyncSession, assets: dict):
     for symbol, asset in assets.items():
         for c in _build_candles(28500 if symbol == "فملی" else 4100 if symbol == "خودرو" else 1950):
-            stmt = pg_insert(PriceCandle).values(
+            stmt = pg_insert(IRPriceCandle).values(
                 asset_id=asset.id,
                 timestamp=c["timestamp"],
                 timeframe="1d",
