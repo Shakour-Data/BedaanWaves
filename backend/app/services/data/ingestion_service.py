@@ -9,7 +9,7 @@ Jalali calendar). Do NOT mix crypto/international feeds into these tables.
 
 Field mappings follow docs/BourseApi.txt exactly:
   AllSymbols -> assets   (l18=symbol, l30=name, isin=isin_code)
-  History    -> price_candles (pf=open, pc=close, pmin/pmax, tvol/tval/tno)
+  History    -> ir_price_candles (pf=open, pc=close, pmin/pmax, tvol/tval/tno)
 """
 
 from typing import Any, Dict, List, Optional
@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..core import DataService
 from app.db.base import AsyncSession
-from app.models.models import Asset, PriceCandle
+from app.models.models import Asset, IRPriceCandle
 
 # Tehran market close time used for daily candle timestamps.
 _MARKET_CLOSE = time(12, 30)
@@ -128,7 +128,7 @@ class TSEIngestionService(DataService):
     async def upsert_candles(
         self, session: AsyncSession, asset_id: str, candles: List[Dict[str, Any]]
     ) -> int:
-        """Upsert daily candles for one TSE symbol into price_candles."""
+        """Upsert daily candles for one TSE symbol into ir_price_candles."""
         rows = []
         for c in candles:
             ts = _jalali_to_gregorian(c.get("date"))
@@ -152,7 +152,7 @@ class TSEIngestionService(DataService):
             )
         if not rows:
             return 0
-        stmt = pg_insert(PriceCandle).values(rows)
+        stmt = pg_insert(IRPriceCandle).values(rows)
         stmt = stmt.on_conflict_do_update(
             index_elements=["asset_id", "timestamp", "timeframe"],
             set_={
