@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from typing import List
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, PriceCandle
+from app.models.models import Asset, candle_model_for_market
 from app.services.ml.prediction_service import PredictionService
 from app.services.ml.pattern_recognition_service import PatternRecognitionService
 from app.services.ml.anomaly_detection_service import AnomalyDetectionService
@@ -26,10 +26,10 @@ def _load_service(svc_cls):
 
 @router.get("/predict/{symbol}")
 async def predict(symbol: str, horizon: int = Query(1, ge=1, le=30), db: AsyncSession = Depends(get_async_session)):
-    asset = (await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))).scalars().first()
+    asset = (await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))).scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-    candles = (await db.execute(select(PriceCandle).where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d").order_by(PriceCandle.timestamp.asc()))).scalars().all()
+    candles = (await db.execute(select(candle_model_for_market(asset.market)).where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d").order_by(candle_model_for_market(asset.market).timestamp.asc()))).scalars().all()
     if len(candles) < 10:
         raise HTTPException(status_code=400, detail="Insufficient candle data")
     prices = [float(c.close) for c in candles]
@@ -41,10 +41,10 @@ async def predict(symbol: str, horizon: int = Query(1, ge=1, le=30), db: AsyncSe
 
 @router.get("/patterns/{symbol}")
 async def patterns(symbol: str, db: AsyncSession = Depends(get_async_session)):
-    asset = (await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))).scalars().first()
+    asset = (await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))).scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-    candles = (await db.execute(select(PriceCandle).where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d").order_by(PriceCandle.timestamp.asc()))).scalars().all()
+    candles = (await db.execute(select(candle_model_for_market(asset.market)).where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d").order_by(candle_model_for_market(asset.market).timestamp.asc()))).scalars().all()
     if len(candles) < 20:
         raise HTTPException(status_code=400, detail="Insufficient candle data")
     prices = [float(c.close) for c in candles]
@@ -56,10 +56,10 @@ async def patterns(symbol: str, db: AsyncSession = Depends(get_async_session)):
 
 @router.get("/anomaly/{symbol}")
 async def anomaly(symbol: str, db: AsyncSession = Depends(get_async_session)):
-    asset = (await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))).scalars().first()
+    asset = (await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))).scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-    candles = (await db.execute(select(PriceCandle).where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d").order_by(PriceCandle.timestamp.asc()))).scalars().all()
+    candles = (await db.execute(select(candle_model_for_market(asset.market)).where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d").order_by(candle_model_for_market(asset.market).timestamp.asc()))).scalars().all()
     if len(candles) < 5:
         raise HTTPException(status_code=400, detail="Insufficient candle data")
     prices = [float(c.close) for c in candles]
