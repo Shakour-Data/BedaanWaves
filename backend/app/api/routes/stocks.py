@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List
+from sqlalchemy import func
 import logging
 
 from app.services.data.stock_service import StockService
@@ -20,10 +21,10 @@ async def get_stock(
     """Get stock information by ticker."""
     service = StockService(brs_client=client)
     await service.initialize()
-    data = await service.get_stock(ticker)
+    data = await service.get_stock(ticker, use_cache=False)
     return {
         "status": "success",
-        "ticker": ticker.upper(),
+        "ticker": ticker,
         "data": data,
     }
 
