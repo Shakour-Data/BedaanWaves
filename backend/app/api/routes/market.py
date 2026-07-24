@@ -1,14 +1,15 @@
 """Market Data Routes"""
 
+from collections import defaultdict
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Dict
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, PriceCandle
+from app.models.models import Asset, candle_model_for_market
 from app.schemas.schemas import (
     AssetResponse, PriceCandleResponse, PaginationParams,
     MarketDataResponse, TimeframeEnum, AssetClassEnum, MarketEnum
@@ -86,7 +87,7 @@ async def get_price_history(
         List of price candles
     """
     # Get asset
-    asset_query = select(Asset).where(Asset.symbol == symbol.upper())
+    asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
     
@@ -100,14 +101,15 @@ async def get_price_history(
         start_date = end_date - timedelta(days=252)
     
     # Get price data
-    candle_query = select(PriceCandle).where(
+    Candle = candle_model_for_market(asset.market)
+    candle_query = select(Candle).where(
         and_(
-            PriceCandle.asset_id == asset.id,
-            PriceCandle.timeframe == timeframe,
-            PriceCandle.timestamp >= start_date,
-            PriceCandle.timestamp <= end_date,
+            Candle.asset_id == asset.id,
+            Candle.timeframe == timeframe,
+            Candle.timestamp >= start_date,
+            Candle.timestamp <= end_date,
         )
-    ).order_by(PriceCandle.timestamp.asc()).limit(limit)
+    ).order_by(Candle.timestamp.asc()).limit(limit)
     
     result = await db.execute(candle_query)
     candles = result.scalars().all()
@@ -135,7 +137,7 @@ async def get_latest_prices(
     latest_prices = {}
     
     for symbol in symbols:
-        asset_query = select(Asset).where(Asset.symbol == symbol.upper())
+        asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
         asset_result = await db.execute(asset_query)
         asset = asset_result.scalars().first()
         
@@ -143,15 +145,16 @@ async def get_latest_prices(
             continue
         
         # Get latest candle
+        Candle = candle_model_for_market(asset.market)
         candle_query = (
-            select(PriceCandle)
+            select(Candle)
             .where(
                 and_(
-                    PriceCandle.asset_id == asset.id,
-                    PriceCandle.timeframe == "1d",
+                    Candle.asset_id == asset.id,
+                    Candle.timeframe == "1d",
                 )
             )
-            .order_by(PriceCandle.timestamp.desc())
+            .order_by(Candle.timestamp.desc())
             .limit(1)
         )
         
@@ -225,8 +228,8 @@ async def tse_dashboard(
     TSE market dashboard summary (Tehran Stock Exchange only).
 
     Returns total symbols, average daily change, and top 5 gainers / losers
-    computed from the latest stored daily candles. Crypto / international
-    markets are excluded by the market='TSE' filter.
+    from the latest stored daily candles using a single window-function query.
+    Crypto / international markets are excluded by the market='TSE' filter.
 
     Returns:
         TSE market overview snapshot
@@ -237,27 +240,67 @@ async def tse_dashboard(
         )
     ).scalars().all()
 
-    rows = []
-    for asset in assets:
-        candles = (
-            await db.execute(
-                select(PriceCandle)
-                .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
-                .order_by(PriceCandle.timestamp.desc())
-                .limit(2)
-            )
-        ).scalars().all()
+    if not assets:
+        return {
+            "status": "success",
+            "market": "TSE",
+            "total_symbols": 0,
+            "average_change_pct": 0.0,
+            "top_gainers": [],
+            "top_losers": [],
+            "timestamp": datetime.utcnow().isoformat(),
+        }
 
+    asset_ids = [a.id for a in assets]
+    Candle = candle_model_for_market("TSE")
+
+    ranked = (
+        select(
+            Candle.asset_id,
+            Candle.close,
+            func.row_number()
+            .over(
+                partition_by=Candle.asset_id,
+                order_by=Candle.timestamp.desc(),
+            )
+            .label("rn"),
+        )
+        .where(
+            and_(
+                Candle.asset_id.in_(asset_ids),
+                Candle.timeframe == "1d",
+            )
+        )
+        .subquery()
+    )
+
+    rows = (
+        await db.execute(
+            select(ranked)
+            .where(ranked.c.rn <= 2)
+            .order_by(ranked.c.asset_id, ranked.c.rn)
+        )
+    ).all()
+
+    candles_by_asset: Dict[str, list] = defaultdict(list)
+    for row in rows:
+        candles_by_asset[str(row.asset_id)].append(row)
+
+    result_rows = []
+    for asset in assets:
+        asset_candles = candles_by_asset.get(str(asset.id), [])
+        asset_candles.sort(key=lambda r: r.rn)
+
+        last_close = float(asset_candles[0].close) if len(asset_candles) >= 1 else None
         change_pct = None
-        last_close = float(candles[0].close) if candles else None
-        if len(candles) >= 2:
-            older, newer = candles[1], candles[0]
+        if len(asset_candles) >= 2:
+            older, newer = asset_candles[1], asset_candles[0]
             base = float(older.close)
             change_pct = (float(newer.close) - base) / base * 100 if base else 0.0
-        elif len(candles) == 1:
+        elif len(asset_candles) == 1:
             change_pct = 0.0
 
-        rows.append(
+        result_rows.append(
             {
                 "symbol": asset.symbol,
                 "name": asset.name,
@@ -266,17 +309,17 @@ async def tse_dashboard(
             }
         )
 
-    ranked = [r for r in rows if r["change_pct"] is not None]
-    ranked.sort(key=lambda x: x["change_pct"], reverse=True)
-    avg_change = sum(r["change_pct"] for r in ranked) / len(ranked) if ranked else 0.0
+    ranked_change = [r for r in result_rows if r["change_pct"] is not None]
+    ranked_change.sort(key=lambda x: x["change_pct"], reverse=True)
+    avg_change = sum(r["change_pct"] for r in ranked_change) / len(ranked_change) if ranked_change else 0.0
 
     return {
         "status": "success",
         "market": "TSE",
-        "total_symbols": len(rows),
+        "total_symbols": len(result_rows),
         "average_change_pct": round(avg_change, 2),
-        "top_gainers": ranked[:5],
-        "top_losers": ranked[::-1][:5],
+        "top_gainers": ranked_change[:5],
+        "top_losers": sorted(ranked_change, key=lambda x: x["change_pct"])[:5],
         "timestamp": datetime.utcnow().isoformat(),
     }
 
@@ -289,8 +332,8 @@ async def industry_ranking(
     TSE industry ranking (رتبه‌بندی صنایع).
 
     Ranks Tehran Stock Exchange industries by the average daily change of their
-    constituent symbols (computed from the latest stored daily candles). Only
-    market='TSE' symbols are considered; crypto / international are excluded.
+    constituent symbols using a single window-function query over daily candles.
+    Only market='TSE' symbols are considered; crypto / international are excluded.
 
     Returns:
         Industries ranked by average change %, each with member count
@@ -303,19 +346,56 @@ async def industry_ranking(
         )
     ).scalars().all()
 
+    if not assets:
+        return {
+            "status": "success",
+            "market": "TSE",
+            "ranked_industries": 0,
+            "ranking": [],
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    asset_ids = [a.id for a in assets]
+    Candle = candle_model_for_market("TSE")
+
+    ranked = (
+        select(
+            Candle.asset_id,
+            Candle.close,
+            func.row_number()
+            .over(
+                partition_by=Candle.asset_id,
+                order_by=Candle.timestamp.desc(),
+            )
+            .label("rn"),
+        )
+        .where(
+            and_(
+                Candle.asset_id.in_(asset_ids),
+                Candle.timeframe == "1d",
+            )
+        )
+        .subquery()
+    )
+
+    rows = (
+        await db.execute(
+            select(ranked)
+            .where(ranked.c.rn <= 2)
+            .order_by(ranked.c.asset_id, ranked.c.rn)
+        )
+    ).all()
+
+    candles_by_asset: Dict[str, list] = defaultdict(list)
+    for row in rows:
+        candles_by_asset[str(row.asset_id)].append(row)
+
     industry_changes: Dict[str, List[float]] = {}
     for asset in assets:
-        candles = (
-            await db.execute(
-                select(PriceCandle)
-                .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
-                .order_by(PriceCandle.timestamp.desc())
-                .limit(2)
-            )
-        ).scalars().all()
-
-        if len(candles) >= 2:
-            older, newer = candles[1], candles[0]
+        asset_candles = candles_by_asset.get(str(asset.id), [])
+        asset_candles.sort(key=lambda r: r.rn)
+        if len(asset_candles) >= 2:
+            older, newer = asset_candles[1], asset_candles[0]
             base = float(older.close)
             change = (float(newer.close) - base) / base * 100 if base else 0.0
             industry_changes.setdefault(asset.industry, []).append(change)
