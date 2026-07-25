@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, PriceCandle, MLSignal
+from app.models.models import Asset, candle_model_for_market, MLSignal
 from app.services.specialized.sector_analysis_service import SectorAnalysisService
 from app.services.specialized.screening_service import ScreeningService
 from app.services.specialized.comparison_service import ComparisonService
@@ -28,29 +28,30 @@ async def _build_universe(
     db: AsyncSession, market: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Build a stock universe from stored assets, latest candle, and latest signal."""
+    Candle = candle_model_for_market(market or "TSE")
     latest_ts = (
         select(
-            PriceCandle.asset_id,
-            func.max(PriceCandle.timestamp).label("ts"),
+            Candle.asset_id,
+            func.max(Candle.timestamp).label("ts"),
         )
-        .where(PriceCandle.timeframe == "1d")
-        .group_by(PriceCandle.asset_id)
+        .where(Candle.timeframe == "1d")
+        .group_by(Candle.asset_id)
         .subquery()
     )
 
     query = (
-        select(Asset, PriceCandle)
+        select(Asset, Candle)
         .where(Asset.active == True)  # noqa: E712
         .join(
             latest_ts,
             Asset.id == latest_ts.c.asset_id,
         )
         .join(
-            PriceCandle,
+            Candle,
             and_(
-                PriceCandle.asset_id == latest_ts.c.asset_id,
-                PriceCandle.timestamp == latest_ts.c.ts,
-                PriceCandle.timeframe == "1d",
+                Candle.asset_id == latest_ts.c.asset_id,
+                Candle.timestamp == latest_ts.c.ts,
+                Candle.timeframe == "1d",
             ),
         )
     )
