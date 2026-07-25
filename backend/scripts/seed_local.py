@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.base import engine, async_session_maker
-from app.models.models import Asset, PriceCandle
+from app.models.models import Asset, IRPriceCandle
 
 _MARKET_CLOSE = time(12, 30)
 
@@ -123,7 +123,7 @@ async def seed():
             asset_id = result.scalars().first().id
 
             for c in _build_candles(base):
-                candle_stmt = pg_insert(PriceCandle).values(
+                candle_stmt = pg_insert(IRPriceCandle).values(
                     asset_id=asset_id,
                     timestamp=c["timestamp"],
                     timeframe="1d",
