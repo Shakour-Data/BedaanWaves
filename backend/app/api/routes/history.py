@@ -2,12 +2,14 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from typing import List
+from collections import defaultdict
+from datetime import datetime, timedelta
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, PriceCandle
+from app.models.models import Asset, candle_model_for_market
 from app.services.data.history_service import HistoryService
 from app.services.data.brs_api_client import BrsApiClient
 from app.api.routes.live import get_brs_client
@@ -23,7 +25,7 @@ async def get_price_history(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[dict]:
     """Get price history for a ticker."""
-    asset_query = select(Asset).where(Asset.symbol == ticker.upper())
+    asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(ticker))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
     if not asset:
@@ -43,7 +45,7 @@ async def get_volume_history(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[dict]:
     """Get volume history for a ticker."""
-    asset_query = select(Asset).where(Asset.symbol == ticker.upper())
+    asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(ticker))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
     if not asset:
