@@ -12,6 +12,10 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from .base_service import BaseService
 
+from app.core.config import get_settings
+
+settings = get_settings()
+
 
 class DatabaseService(BaseService):
     """
@@ -27,29 +31,29 @@ class DatabaseService(BaseService):
     def __init__(
         self,
         service_name: str = "DatabaseService",
-        database_url: str = "postgresql://localhost/bedaanwaves",
+        database_url: Optional[str] = None,
         async_mode: bool = True,
-        pool_size: int = 20,
-        max_overflow: int = 10,
-        echo: bool = False,
+        pool_size: Optional[int] = None,
+        max_overflow: Optional[int] = None,
+        echo: Optional[bool] = None,
     ):
         """
         Initialize database service.
         
         Args:
             service_name: Service identifier
-            database_url: Database connection URL
+            database_url: Database connection URL (defaults to settings.DATABASE_URL)
             async_mode: Use async SQLAlchemy engine
-            pool_size: Connection pool size
-            max_overflow: Maximum overflow connections
-            echo: Log SQL statements
+            pool_size: Connection pool size (defaults to settings)
+            max_overflow: Maximum overflow connections (defaults to settings)
+            echo: Log SQL statements (defaults to settings)
         """
         super().__init__(service_name)
-        self.database_url = database_url
+        self.database_url = database_url or settings.DATABASE_URL
         self.async_mode = async_mode
-        self.pool_size = pool_size
-        self.max_overflow = max_overflow
-        self.echo = echo
+        self.pool_size = pool_size if pool_size is not None else settings.DATABASE_POOL_SIZE
+        self.max_overflow = max_overflow if max_overflow is not None else settings.DATABASE_MAX_OVERFLOW
+        self.echo = echo if echo is not None else settings.DATABASE_ECHO
         
         self.engine = None
         self.session_factory = None
