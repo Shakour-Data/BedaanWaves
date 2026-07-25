@@ -150,14 +150,14 @@ class TestBrsApiClientRequest:
         session_mock = MagicMock()
         response_mock = AsyncMock()
         response_mock.status = 500
-        response_mock.json = AsyncMock(return_value={"error": "server"})
+        response_mock.text = AsyncMock(return_value="server error body")
         cm = AsyncMock()
         cm.__aenter__.return_value = response_mock
         cm.__aexit__.return_value = False
         session_mock.get.return_value = cm
         client.session = session_mock
 
-        with pytest.raises(RuntimeError, match="BrsApi error 500"):
+        with pytest.raises(RuntimeError, match="BrsApi server error 500"):
             await client._request("/Tsetmc/Symbol.php")
 
     async def test_request_retries_on_client_error(self):
