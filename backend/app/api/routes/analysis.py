@@ -2,13 +2,13 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from datetime import datetime
 from typing import List
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, MLSignal, PriceCandle
+from app.models.models import Asset, MLSignal, candle_model_for_market
 from app.schemas.schemas import MLSignalResponse, SignalTypeEnum
 from app.services.analysis.technical_service import TechnicalAnalysisService
 from app.services.analysis.risk_service import RiskAnalysisService
@@ -36,7 +36,7 @@ async def get_signal(
         Latest ML signal
     """
     # Get asset
-    asset_query = select(Asset).where(Asset.symbol == symbol.upper())
+    asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
     
@@ -151,19 +151,20 @@ async def get_top_performers(
         List of top performers with performance metrics
     """
     # Get latest candles for all assets
-    query = select(Asset, PriceCandle).where(
+    Candle = candle_model_for_market(market or "TSE")
+    query = select(Asset, Candle).where(
         and_(
             Asset.active == True,
-            PriceCandle.timeframe == timeframe,
+            Candle.timeframe == timeframe,
         )
     ).outerjoin(
-        PriceCandle,
+        Candle,
         and_(
-            Asset.id == PriceCandle.asset_id,
-            PriceCandle.timestamp == (
-                select(PriceCandle.timestamp)
-                .where(PriceCandle.asset_id == Asset.id)
-                .order_by(PriceCandle.timestamp.desc())
+            Asset.id == Candle.asset_id,
+            Candle.timestamp == (
+                select(Candle.timestamp)
+                .where(Candle.asset_id == Asset.id)
+                .order_by(Candle.timestamp.desc())
                 .limit(1)
                 .correlate(Asset)
                 .scalar_subquery()
@@ -221,27 +222,27 @@ async def get_risk_analysis(
         Risk metrics (volatility, VaR, Sharpe ratio, etc.)
     """
     # Get asset
-    asset_query = select(Asset).where(Asset.symbol == symbol.upper())
+    asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
     
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
     
-    # Get price history
+    # Calculate returns
     from datetime import timedelta
     start_date = datetime.utcnow() - timedelta(days=period_days)
     
     candle_query = (
-        select(PriceCandle)
+        select(candle_model_for_market(asset.market))
         .where(
             and_(
-                PriceCandle.asset_id == asset.id,
-                PriceCandle.timeframe == "1d",
-                PriceCandle.timestamp >= start_date,
+                candle_model_for_market(asset.market).asset_id == asset.id,
+                candle_model_for_market(asset.market).timeframe == "1d",
+                candle_model_for_market(asset.market).timestamp >= start_date,
             )
         )
-        .order_by(PriceCandle.timestamp.asc())
+        .order_by(candle_model_for_market(asset.market).timestamp.asc())
     )
     
     result = await db.execute(candle_query)
@@ -304,23 +305,18 @@ async def technical_analysis(
     Returns:
         Computed technical indicators for the symbol
     """
-    # Exact match first, then case-insensitive fallback.
     asset = (
-        await db.execute(select(Asset).where(Asset.symbol == symbol))
+        await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
     ).scalars().first()
-    if not asset:
-        asset = (
-            await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
-        ).scalars().first()
 
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
 
     candles = (
         await db.execute(
-            select(PriceCandle)
-            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
-            .order_by(PriceCandle.timestamp.asc())
+            select(candle_model_for_market(asset.market))
+            .where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d")
+            .order_by(candle_model_for_market(asset.market).timestamp.asc())
         )
     ).scalars().all()
 
@@ -369,21 +365,17 @@ async def risk_analysis(
         Risk metrics for the symbol
     """
     asset = (
-        await db.execute(select(Asset).where(Asset.symbol == symbol))
+        await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
     ).scalars().first()
-    if not asset:
-        asset = (
-            await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
-        ).scalars().first()
 
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
 
     candles = (
         await db.execute(
-            select(PriceCandle)
-            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
-            .order_by(PriceCandle.timestamp.asc())
+            select(candle_model_for_market(asset.market))
+            .where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d")
+            .order_by(candle_model_for_market(asset.market).timestamp.asc())
         )
     ).scalars().all()
 
@@ -454,16 +446,16 @@ async def momentum_analysis(
     Loads daily candles from the database and runs the MomentumService.
     """
     asset = (
-        await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
+        await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
     ).scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
 
     candles = (
         await db.execute(
-            select(PriceCandle)
-            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
-            .order_by(PriceCandle.timestamp.asc())
+            select(candle_model_for_market(asset.market))
+            .where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d")
+            .order_by(candle_model_for_market(asset.market).timestamp.asc())
         )
     ).scalars().all()
 
@@ -501,16 +493,16 @@ async def volatility_analysis(
     Loads daily candles from the database and runs the VolatilityService.
     """
     asset = (
-        await db.execute(select(Asset).where(Asset.symbol == symbol.upper()))
+        await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
     ).scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
 
     candles = (
         await db.execute(
-            select(PriceCandle)
-            .where(PriceCandle.asset_id == asset.id, PriceCandle.timeframe == "1d")
-            .order_by(PriceCandle.timestamp.asc())
+            select(candle_model_for_market(asset.market))
+            .where(candle_model_for_market(asset.market).asset_id == asset.id, candle_model_for_market(asset.market).timeframe == "1d")
+            .order_by(candle_model_for_market(asset.market).timestamp.asc())
         )
     ).scalars().all()
 
