@@ -16,8 +16,10 @@ Reference rules implemented here:
 """
 
 import asyncio
+import calendar
 import time
 from collections import deque
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -50,11 +52,11 @@ class RateLimiter:
         self.window_timestamps: deque[float] = deque()
 
     def _next_midnight(self) -> float:
-        now = time.localtime()
-        midnight = time.mktime(
-            (now.tm_year, now.tm_mon, now.tm_mday, 0, 0, 0, 0, 0, -1)
-        ) + 86400
-        return midnight
+        now = datetime.now(timezone.utc)
+        next_midnight = (now + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        return next_midnight.timestamp()
 
     def _rotate_day(self) -> None:
         now = time.time()
@@ -190,9 +192,25 @@ class BrsApiClient(ExternalAPIService):
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=self.timeout),
                 ) as response:
-                    if response.status == 429:  # rate limited
+                    if response.status == 429:
                         await self._handle_rate_limit(attempt)
                         continue
+
+                    if response.status >= 500:
+                        body = await response.text()
+                        if attempt < self.max_retries - 1:
+                            self.logger.warning(
+                                "Retry %s/%s on %s: %s",
+                                attempt + 1,
+                                self.max_retries,
+                                response.status,
+                                url,
+                            )
+                            await asyncio.sleep(min(2 ** attempt, 30))
+                            continue
+                        raise RuntimeError(
+                            f"BrsApi server error {response.status}: {body[:200]}"
+                        )
 
                     try:
                         data = await response.json()
@@ -433,22 +451,38 @@ class BrsApiClient(ExternalAPIService):
         return {"indices": indices}
 
     async def get_top_gainers(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Compatibility stub: gainers require DB latest_prices view."""
-        raise RuntimeError(
-            "get_top_gainers requires database access. "
-            "Use the /market/tse-dashboard endpoint instead."
+        """Real-time top gainers computed from AllSymbols (plp/pcp)."""
+        symbols = await self.get_all_symbols(market_type=1)
+        if not isinstance(symbols, list):
+            return []
+        ranked = sorted(
+            symbols,
+            key=lambda s: float(s.get("plp", s.get("pcp", 0)) or 0),
+            reverse=True,
         )
+        return ranked[:limit]
 
     async def get_top_losers(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Compatibility stub: losers require DB latest_prices view."""
-        raise RuntimeError(
-            "get_top_losers requires database access. "
-            "Use the /market/tse-dashboard endpoint instead."
+        """Real-time top losers computed from AllSymbols (plp/pcp)."""
+        symbols = await self.get_all_symbols(market_type=1)
+        if not isinstance(symbols, list):
+            return []
+        ranked = sorted(
+            symbols,
+            key=lambda s: float(s.get("plp", s.get("pcp", 0)) or 0),
         )
+        return ranked[:limit]
 
     async def get_most_active(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Compatibility stub: most active requires DB latest_prices view."""
-        raise RuntimeError(
-            "get_most_active requires database access. "
-            "Use the /market/tse-dashboard endpoint instead."
+        """Real-time most active symbols by volume (tvol)."""
+        symbols = await self.get_all_symbols(market_type=1)
+        if not isinstance(symbols, list):
+            return []
+        ranked = sorted(
+            symbols,
+            key=lambda s: float(s.get("tvol", s.get("tval", 0)) or 0),
+            reverse=True,
         )
+        return ranked[:limit]
+
+
