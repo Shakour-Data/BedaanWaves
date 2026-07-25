@@ -8,6 +8,8 @@ Services for data management and external API integration:
 - PortfolioService: Portfolio management
 - HistoryService: Historical data management
 - NewsService: News data integration
+- CryptoApiClient: Cryptocurrency market data
+- IntlApiClient: International stock exchange data
 """
 
 from .brs_api_client import BrsApiClient
@@ -16,6 +18,8 @@ from .market_service import MarketService
 from .portfolio_service import PortfolioService
 from .history_service import HistoryService
 from .news_service import NewsService
+from .crypto_api_client import CryptoApiClient
+from .intl_api_client import IntlApiClient
 
 __all__ = [
     "BrsApiClient",
@@ -24,4 +28,6 @@ __all__ = [
     "PortfolioService",
     "HistoryService",
     "NewsService",
+    "CryptoApiClient",
+    "IntlApiClient",
 ]
