@@ -1,7 +1,0 @@
-{
-  "/api/gold-currency/route": "app/api/gold-currency/route.js",
-  "/api/indices/route": "app/api/indices/route.js",
-  "/api/market/route": "app/api/market/route.js",
-  "/api/news/route": "app/api/news/route.js",
-  "/page": "app/page.js"
-}
