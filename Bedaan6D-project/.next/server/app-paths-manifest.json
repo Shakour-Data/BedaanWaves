@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/6d/hierarchy/route": "app/api/6d/hierarchy/route.js",
+  "/api/6d/hierarchy/tree/route": "app/api/6d/hierarchy/tree/route.js",
+  "/api/6d/scoring/rankings/route": "app/api/6d/scoring/rankings/route.js",
+  "/api/6d/scoring/route": "app/api/6d/scoring/route.js",
+  "/api/6d/symbols/[id]/route": "app/api/6d/symbols/[id]/route.js",
+  "/api/6d/symbols/route": "app/api/6d/symbols/route.js",
+  "/api/download-zip/route": "app/api/download-zip/route.js",
+  "/api/gold-currency/route": "app/api/gold-currency/route.js",
+  "/api/indices/route": "app/api/indices/route.js",
+  "/api/market/route": "app/api/market/route.js",
+  "/api/ml/predict/route": "app/api/ml/predict/route.js",
+  "/api/news/route": "app/api/news/route.js",
+  "/page": "app/page.js"
+}
