@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Backend",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/BedaanWaves/backend/run.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
