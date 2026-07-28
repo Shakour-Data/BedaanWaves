@@ -1,0 +1,43 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "StepFun: Step 3.7 Flash (free)",
+  "small_model": "anthropic/claude-haiku-4.5",
+  "default_agent": "code",
+  "username": "BedaanWaves",
+  "snapshot": false,
+  "autoupdate": "notify",
+  "permission": {
+    "bash": "allow",
+    "edit": {
+      "backend/**": "allow",
+      "frontend/**": "allow",
+      "database/**": "allow",
+      "docs/**": "allow",
+      ".kilo/**": "allow",
+      "kilo.json": "allow",
+      "*": "ask"
+    },
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "external_directory": "deny"
+  },
+  "instructions": [
+    "docs/AGENTS.md"
+  ],
+  "skills": {
+    "paths": [
+      ".kilo/skills"
+    ],
+    "urls": []
+  },
+  "enabled_providers": [
+    "anthropic",
+    "kilo"
+  ],
+  "disabled_providers": [
+    "openai",
+    "google",
+    "groq"
+  ]
+}
