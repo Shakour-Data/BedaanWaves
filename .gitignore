@@ -1,5 +1,24 @@
 # Kilo worktrees and internal files
-.kilo/worktrees/
+.kilo/
+.kilo_temp.tar.gz
+
+# Python cache and build
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+*.env
+.env.example
 
 # Node modules - regenerate with npm install
 node_modules/
@@ -8,14 +27,27 @@ node_modules/
 dist/
 build/
 *.log
+*.tsbuildinfo
 
 # OS files
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# IDE and editor files
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Coverage reports
+.coverage
+htmlcov/
+.coverage.*
 
 # Sensitive files (API keys, passwords - do not track)
 .env
 *.env
 .env.example
-
-BedaanWaves
