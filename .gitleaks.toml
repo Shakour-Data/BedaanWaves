@@ -1,0 +1,28 @@
+# Gitleaks configuration for BedaanWaves
+# Prevents committing secrets (API keys, passwords, tokens) into the repository.
+# Used by .github/workflows/secret-scan.yml (gitleaks/gitleaks-action).
+
+title = "BedaanWaves Gitleaks Config"
+
+[extend]
+# Start from Gitleaks' built-in rule set and add project-specific rules below.
+useDefault = true
+
+# Paths that are allowed to contain placeholder/example secrets so the
+# scanner does not raise false positives on documentation and tests.
+[allowlist]
+paths = [
+    '''.*\.env\.example$''',
+    '''.*\.md$''',
+    '''.*/tests/.*''',
+    '''.*test_.*\.py$''',
+    '''.*conftest\.py$''',
+]
+
+# Detect the weak/placeholder SECRET_KEY values that must never ship to production.
+[[rules]]
+id = "bedaanwaves-weak-secret-key"
+description = "Detects placeholder/weak SECRET_KEY values used in BedaanWaves"
+regex = '''(?i)(secret_key|secret-key)\s*=\s*['"]?(your-secret-key-change-in-production|bedaanwaves-dev-secret-key-change-in-production)['"]?'''
+keywords = ["SECRET_KEY"]
+entropy = 0.0
