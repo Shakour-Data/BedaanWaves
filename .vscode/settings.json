@@ -1,0 +1,8 @@
+{
+    "files.exclude": {
+        "BedaanWaves/": true
+    },
+    "search.exclude": {
+        "BedaanWaves/": true
+    }
+}
