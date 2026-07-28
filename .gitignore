@@ -1,1 +1,21 @@
+# Kilo worktrees and internal files
+.kilo/worktrees/
+
+# Node modules - regenerate with npm install
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sensitive files (API keys, passwords - do not track)
+.env
+*.env
+.env.example
+
 BedaanWaves
