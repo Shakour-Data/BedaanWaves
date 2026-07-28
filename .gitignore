@@ -20,6 +20,9 @@ env/
 *.env
 .env.example
 
+# Kilo worktrees
+.kilo/worktrees/
+
 # Node modules - regenerate with npm install
 node_modules/
 
@@ -51,3 +54,10 @@ htmlcov/
 .env
 *.env
 .env.example
+
+# Docs
+docs/api/BourseApi.txt
+docs/postgre.txt
+docs/BourseApi.txt
+docs/init_docs/BourseApi.txt
+docs/init_docs/postgre.txt
