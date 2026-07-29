@@ -107,7 +107,7 @@ class AuthGuardMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """In-memory sliding-window rate limiter keyed by client IP."""
+    """In-memory sliding-window rate limiter keyed by client IP with automatic eviction."""
 
     def __init__(self, app, *, enabled: bool = True):
         super().__init__(app)
@@ -115,6 +115,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.per_minute = settings.RATE_LIMIT_REQUESTS_PER_MINUTE
         self.per_hour = settings.RATE_LIMIT_REQUESTS_PER_HOUR
         self._windows: Dict[str, deque] = {}
+        self._last_activity: Dict[str, float] = {}  # Track last request time per IP
+        self._eviction_interval = 3600  # Evict keys with no activity for 1 hour
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not self.enabled:
@@ -125,6 +127,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         key = _client_ip(request)
         now = time.monotonic()
+        self._last_activity[key] = now  # Update last activity time
+
+        # Periodic eviction of inactive keys (simple approach)
+        if len(self._windows) > 1000:  # Only run eviction when we have many keys
+            cutoff = now - self._eviction_interval
+            inactive_keys = [k for k, t in self._last_activity.items() if t < cutoff]
+            for k in inactive_keys:
+                self._windows.pop(k, None)
+                self._last_activity.pop(k, None)
+
         window = self._windows.setdefault(key, deque())
 
         # Drop entries older than one hour.
