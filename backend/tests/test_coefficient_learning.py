@@ -389,5 +389,198 @@ class TestCoefficientLearningServiceIntegration:
             coefficient_service._coefficient_service = original_service
 
 
+@pytest.mark.unit
+class TestCoefficientConstraints:
+    """Test coefficient validation and normalization constraints."""
+
+    def test_normalize_coefficients_basic(self, coefficient_service):
+        """Test basic coefficient normalization."""
+        # Test with values that don't sum to 1
+        coeffs = {'a': 0.3, 'b': 0.5, 'c': 0.3}
+        normalized = coefficient_service._normalize_coefficients(coeffs)
+        
+        # Should sum to 1.0
+        assert abs(sum(normalized.values()) - 1.0) < 1e-6
+        # All values should be in [0, 1]
+        assert all(0.0 <= v <= 1.0 for v in normalized.values())
+        # Should preserve relative proportions
+        assert normalized['b'] > normalized['a']
+        assert normalized['b'] > normalized['c']
+
+    def test_normalize_coefficients_negative_values(self, coefficient_service):
+        """Test normalization handles negative values."""
+        coeffs = {'a': 0.5, 'b': -0.2, 'c': 0.8}
+        normalized = coefficient_service._normalize_coefficients(coeffs)
+        
+        # Negative values should be clamped to 0
+        assert normalized['b'] == 0.0
+        assert abs(sum(normalized.values()) - 1.0) < 1e-6
+        assert all(v >= 0.0 for v in normalized.values())
+
+    def test_normalize_coefficients_values_above_1(self, coefficient_service):
+        """Test normalization handles values > 1."""
+        coeffs = {'a': 1.5, 'b': 0.5, 'c': 0.2}
+        normalized = coefficient_service._normalize_coefficients(coeffs)
+        
+        # Values > 1 should be clamped to 1
+        assert normalized['a'] <= 1.0
+        assert abs(sum(normalized.values()) - 1.0) < 1e-6
+
+    def test_normalize_coefficients_all_zero(self, coefficient_service):
+        """Test normalization with all zero values."""
+        coeffs = {'a': 0.0, 'b': 0.0, 'c': 0.0}
+        normalized = coefficient_service._normalize_coefficients(coeffs)
+        
+        # Should fall back to uniform distribution
+        assert abs(sum(normalized.values()) - 1.0) < 1e-6
+        assert all(v > 0 for v in normalized.values())
+        # All should be equal (uniform)
+        values = list(normalized.values())
+        assert all(abs(v - values[0]) < 1e-6 for v in values)
+
+    def test_normalize_coefficients_empty(self, coefficient_service):
+        """Test normalization with empty dict."""
+        coeffs = {}
+        normalized = coefficient_service._normalize_coefficients(coeffs)
+        assert normalized == {}
+
+    def test_validate_coefficients_valid(self, coefficient_service):
+        """Test validation passes for valid coefficients."""
+        coeffs = {'a': 0.3, 'b': 0.5, 'c': 0.2}
+        assert coefficient_service._validate_coefficients(coeffs) is True
+
+    def test_validate_coefficients_invalid_sum(self, coefficient_service):
+        """Test validation fails for sum != 1."""
+        coeffs = {'a': 0.5, 'b': 0.5}  # Sum = 1.0 - this is valid
+        assert coefficient_service._validate_coefficients(coeffs) is True
+        
+        coeffs = {'a': 0.3, 'b': 0.3}  # Sum = 0.6 - invalid
+        assert coefficient_service._validate_coefficients(coeffs) is False
+
+    def test_validate_coefficients_negative(self, coefficient_service):
+        """Test validation fails for negative values."""
+        coeffs = {'a': 0.5, 'b': -0.1, 'c': 0.6}
+        assert coefficient_service._validate_coefficients(coeffs) is False
+
+    def test_validate_coefficients_above_1(self, coefficient_service):
+        """Test validation fails for values > 1."""
+        coeffs = {'a': 1.1, 'b': 0.1}
+        assert coefficient_service._validate_coefficients(coeffs) is False
+
+    def test_validate_coefficients_non_numeric(self, coefficient_service):
+        """Test validation fails for non-numeric values."""
+        coeffs = {'a': 0.5, 'b': 'invalid'}
+        assert coefficient_service._validate_coefficients(coeffs) is False
+
+    def test_get_coefficients_validates_before_return(self, coefficient_service):
+        """Test that get_coefficients validates and normalizes before returning."""
+        # Set invalid coefficients
+        coefficient_service.learned_coefficients['dimensions'] = {
+            'fundamental': 0.5,
+            'technical': 0.5,
+            'sentiment': 0.5,  # Sum = 1.5
+        }
+        
+        # Should return normalized coefficients
+        coeffs = coefficient_service.get_coefficients('dimensions')
+        assert abs(sum(coeffs.values()) - 1.0) < 1e-6
+        assert all(0.0 <= v <= 1.0 for v in coeffs.values())
+
+
+@pytest.mark.unit
+class TestScoringServiceScoreConstraints:
+    """Test that scores are constrained to [0, 100] range."""
+
+    async def test_dimension_scores_clamped_to_100(self):
+        """Test dimension scores don't exceed 100."""
+        service = ScoringService()
+        await service.initialize()
+        
+        # Create data that would produce scores > 100
+        data = {
+            "ticker": "TEST",
+            "market": "TSE",
+            "fundamental": {"pe_ratio": 5, "roe": 50},  # Very high values
+            "technical": {"rsi": 90, "macd": 10},       # Very high values
+            "sentiment": {"score": 150},
+            "risk": {"volatility": 0.01},
+            "macro": {"gdp_growth": 20},
+            "ai": {"prediction": 2.0}
+        }
+        
+        result = await service.analyze(data)
+        
+        # All dimension scores should be in [0, 100]
+        for dim, score in result["dimension_scores"].items():
+            assert 0.0 <= score <= 100.0, f"Dimension {dim} score {score} out of range"
+        
+        # Overall score should be in [0, 100]
+        assert 0.0 <= result["overall_score"] <= 100.0
+
+    async def test_dimension_scores_clamped_to_0(self):
+        """Test dimension scores don't go below 0."""
+        service = ScoringService()
+        await service.initialize()
+        
+        # Create data that would produce negative scores
+        data = {
+            "ticker": "TEST",
+            "market": "TSE",
+            "fundamental": {"pe_ratio": -50, "roe": -1.0},
+            "technical": {"rsi": -10, "macd": -5},
+            "sentiment": {"score": -50},
+            "risk": {"volatility": 2.0},
+            "macro": {"gdp_growth": -10},
+            "ai": {"prediction": -1.0}
+        }
+        
+        result = await service.analyze(data)
+        
+        # All dimension scores should be in [0, 100]
+        for dim, score in result["dimension_scores"].items():
+            assert 0.0 <= score <= 100.0, f"Dimension {dim} score {score} out of range"
+        
+        # Overall score should be in [0, 100]
+        assert 0.0 <= result["overall_score"] <= 100.0
+
+    async def test_overall_score_weighted_sum_valid(self):
+        """Test that overall score is a valid weighted sum of dimension scores."""
+        service = ScoringService()
+        await service.initialize()
+        
+        # Use known values
+        data = {
+            "ticker": "TEST",
+            "market": "TSE",
+            "fundamental": {"pe_ratio": 10, "roe": 0.15},
+            "technical": {"rsi": 55, "macd": 0.5},
+            "sentiment": {"score": 70},
+            "risk": {"volatility": 0.2},
+            "macro": {"gdp_growth": 3.0},
+            "ai": {"prediction": 0.75}
+        }
+        
+        result = await service.analyze(data)
+        
+        # Verify overall score is calculated correctly
+        weights = service._get_dynamic_weights("dimensions")
+        if not weights:
+            weights = service.DIMENSION_WEIGHTS
+        
+        total_weight = sum(weights.values())
+        if total_weight > 0:
+            normalized = {k: v / total_weight for k, v in weights.items()}
+        else:
+            normalized = service.DIMENSION_WEIGHTS
+        
+        expected = sum(
+            result["dimension_scores"].get(dim, 0) * normalized.get(dim, 0)
+            for dim in service.DIMENSIONS
+        )
+        
+        # Should match within rounding precision
+        assert abs(result["overall_score"] - round(max(0.0, min(100.0, expected)), 2)) < 0.01
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

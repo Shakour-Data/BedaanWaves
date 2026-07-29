@@ -962,3 +962,209 @@ class CryptoMLSignal(Base):
         Index('idx_crypto_signal_active', 'asset_id', 'is_active', 'valid_until'),
         Index('idx_crypto_signal_model', 'model_version'),
     )
+
+
+# ===========================================================================
+# 17. Coefficient Learning Pipeline - Raw Performance Data
+# ===========================================================================
+class RawPerformanceScore(Base):
+    """Raw performance data for ML coefficient learning.
+    
+    Stores dimension/sub-dimension/aspect/sub-aspect scores and market outcomes
+    used to train hierarchical coefficient models.
+    """
+    __tablename__ = "raw_performance_scores"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Timestamp when data was captured
+    captured_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), index=True)
+    
+    # Asset reference
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    
+    # Market classification (TSE, INTL, CRYPTO)
+    market = Column(String(20), nullable=False, index=True)
+    
+    # Exchange identifier (TEHRAN_STOCK, NASDAQ, BINANCE, etc.)
+    exchange = Column(String(50), nullable=False, index=True)
+    
+    # Performance context/metadata
+    context = Column(JSONB, default={})  # Market regime, volatility regime, etc.
+    
+    # Dimension scores (from ScoringService)
+    dimension_scores = Column(JSONB, nullable=False)  # {fundamental: 0.8, technical: 0.7, ...}
+    sub_dimension_scores = Column(JSONB, nullable=False)  # {fundamental_price_history: 0.9, ...}
+    aspect_scores = Column(JSONB, nullable=False)  # {fundamental_aspect_1: 0.85, ...}
+    sub_aspect_scores = Column(JSONB, nullable=False)  # Detailed scores
+    
+    # Target performance metrics (future period returns)
+    target_return = Column(Numeric(20, 8))  # Next period return
+    target_volatility = Column(Numeric(10, 6))  # Future realized volatility
+    target_sharpe = Column(Numeric(8, 4))  # Future Sharpe ratio
+    
+    # Market-specific target metrics
+    target_price_change = Column(Numeric(10, 6))  # For all markets
+    target_volume_change = Column(Numeric(10, 4))  # Volume change
+    
+    # Crypto-specific metrics
+    target_bitcoin_correlation = Column(Numeric(8, 6))  # BTC correlation
+    target_market_sentiment = Column(Numeric(5, 2))  # Market sentiment score
+    
+    # Data quality flags
+    data_quality = Column(String(20), default="VALIDATED", 
+                         comment="RAW, VALIDATED, CLEANED, EXCLUDED")
+    validation_status = Column(String(20), default="PENDING")
+    validation_notes = Column(Text)
+    
+    # Processing flags
+    is_processed = Column(Boolean, default=False, index=True)
+    processing_errors = Column(JSONB, default={})
+    
+    # Metadata
+    ingestion_id = Column(String(100), index=True)
+    source_system = Column(String(50), default="SCORING_SERVICE")
+    
+    __table_args__ = (
+        UniqueConstraint('asset_id', 'captured_at', 'market', name='uix_raw_perf_unique',
+                        deferrable=True),
+        Index('idx_raw_perf_asset_time', 'asset_id', 'captured_at'),
+        Index('idx_raw_perf_market', 'market', 'exchange'),
+        Index('idx_raw_perf_captured', 'captured_at'),
+        Index('idx_raw_perf_processed', 'is_processed'),
+    )
+
+
+class ProcessedFeatureData(Base):
+    """Processed feature data for ML model training.
+    
+    Contains feature-engineered data ready for coefficient learning models.
+    """
+    __tablename__ = "processed_feature_data"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # References
+    raw_data_id = Column(UUID(as_uuid=True), ForeignKey("raw_performance_scores.id"), nullable=False)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True)
+    
+    # Processing timestamp
+    processed_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), index=True)
+    
+    # Market info
+    market = Column(String(20), nullable=False, index=True)
+    exchange = Column(String(50), nullable=False)
+    
+    # Feature vector (L2-normalized, fixed length for model compatibility)
+    feature_vector = Column(Array(Numeric(20, 8)), nullable=False)
+    
+    # Processed/restructured scores by hierarchy level
+    dimension_features = Column(JSONB, nullable=False)  # Processed dimension scores
+    sub_dimension_features = Column(JSONB, nullable=False)  # Processed sub-dimension features
+    aspect_features = Column(JSONB, nullable=False)  # Processed aspect features
+    sub_aspect_features = Column(JSONB, nullable=False)  # Processed sub-aspect features
+    
+    # Target values (what we're trying to predict)
+    target_values = Column(JSONB, nullable=False)
+    
+    # Feature engineering metadata
+    features_used = Column(JSONB, default={})  # Which features were selected
+    preprocessing_steps = Column(JSONB, default={})  # Transformations applied
+    normalization_params = Column(JSONB, default={})  # Mean, std, min, max used
+    
+    # Quality metrics
+    is_valid = Column(Boolean, default=True, index=True)
+    quality_score = Column(Numeric(5, 2), default=100.0)  # 0-100 quality rating
+    validation_errors = Column(JSONB, default={})
+    
+    # Model metadata
+    model_version = Column(String(50), default="v1.0.0")
+    feature_schema_version = Column(String(20), default="1.0")
+    
+    __table_args__ = (
+        UniqueConstraint('raw_data_id', 'processed_at', name='uix_processed_unique'),
+        Index('idx_proc_asset_market', 'asset_id', 'market'),
+        Index('idx_proc_feature_vector', 'feature_vector'),
+        Index('idx_proc_valid', 'is_valid'),
+        Index('idx_proc_processed_at', 'processed_at'),
+    )
+
+
+class CoefficientAdjustment(Base):
+    """Tracks coefficient adjustments over time for audit and analysis."""
+    __tablename__ = "coefficient_adjustments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Adjustment cycle/timestamp
+    adjustment_cycle = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), index=True)
+    
+    # Asset context (nullable for global adjustments)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    
+    # Hierarchy level
+    level = Column(String(20), nullable=False, index=True)  # dimensions, sub_dimensions, aspects, sub_aspects
+    
+    # Feature key (name of the weight being adjusted)
+    feature_key = Column(String(100), nullable=False)
+    
+    # Weight values
+    old_weight = Column(Numeric(8, 6), nullable=False)
+    new_weight = Column(Numeric(8, 6), nullable=False)
+    weight_change = Column(Numeric(8, 6))  # new - old
+    
+    # Adjustment reason
+    adjustment_code = Column(String(50), nullable=False)  # PERFORMANCE, DRIFT, MANUAL, etc.
+    adjustment_reason = Column(Text)
+    
+    # Confidence in the adjustment
+    confidence_score = Column(Numeric(5, 2), default=100.0)
+    
+    # Implementation details
+    model_version = Column(String(50))
+    training_samples = Column(Integer)
+    performance_improvement = Column(Numeric(8, 6))
+    
+    # Metadata
+    created_by = Column(String(50), default="system")
+    implementation_version = Column(String(20), nullable=False)
+    
+    __table_args__ = (
+        Index('idx_adj_cycle_level', 'adjustment_cycle', 'level'),
+        Index('idx_adj_feature_key', 'feature_key'),
+        Index('idx_adj_asset', 'asset_id'),
+    )
+
+
+class CoefficientHistory(Base):
+    """Historical record of all coefficient changes for auditing."""
+    __tablename__ = "coefficient_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Timestamp of coefficient state
+    effective_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), index=True)
+    
+    # Asset context
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    
+    # Market context
+    market = Column(String(20), nullable=False)
+    exchange = Column(String(50), nullable=False)
+    
+    # Complete coefficient snapshot
+    coefficients = Column(JSONB, nullable=False)  # Full weight dictionary
+    
+    # Source
+    source = Column(String(50), default="ML_TRAINING")  # ML_TRAINING, MANUAL, FALLBACK
+    model_version = Column(String(50))
+    
+    # Validation
+    is_valid = Column(Boolean, default=True)
+    validation_notes = Column(Text)
+    
+    __table_args__ = (
+        Index('idx_hist_asset_time', 'asset_id', 'effective_at'),
+        Index('idx_hist_market', 'market'),
+        Index('idx_hist_effective', 'effective_at'),
+    )

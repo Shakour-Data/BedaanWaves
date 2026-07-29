@@ -446,8 +446,12 @@ class CoefficientLearningService(MLService):
                     k: 1.0 / n_features for k, v in level_coefficients.items()
                 }
             
-            # Store learned coefficients
-            self.learned_coefficients[level] = level_coefficients
+            # Store learned coefficients with validation
+            self.learned_coefficients[level] = self._normalize_coefficients(level_coefficients)
+            
+            # Validate coefficients
+            if not self._validate_coefficients(self.learned_coefficients[level]):
+                self.logger.warning(f"Trained coefficients for {level} failed validation")
             
             # Save model and scaler to disk
             await self._save_level_model(level, model, scaler, feature_names, level_coefficients)
@@ -509,7 +513,94 @@ class CoefficientLearningService(MLService):
         Returns:
             Dictionary mapping item names to their weights (summing to 1.0)
         """
-        return self.learned_coefficients.get(level, {}).copy()
+        coeffs = self.learned_coefficients.get(level, {}).copy()
+        # Validate and normalize before returning
+        if coeffs:
+            coeffs = self._normalize_coefficients(coeffs)
+            if not self._validate_coefficients(coeffs):
+                self.logger.warning(f"Coefficients for {level} failed validation after normalization")
+        return coeffs
+    
+    def _normalize_coefficients(self, coefficients: Dict[str, float]) -> Dict[str, float]:
+        """
+        Normalize coefficients to ensure:
+        - All values are non-negative (>= 0)
+        - All values are <= 1
+        - Sum equals exactly 1.0
+        
+        Args:
+            coefficients: Dictionary of coefficient values
+            
+        Returns:
+            Normalized coefficients dictionary
+        """
+        if not coefficients:
+            return coefficients
+        
+        # Clamp values to [0, 1] range
+        clamped = {k: max(0.0, min(1.0, float(v))) for k, v in coefficients.items()}
+        
+        # Normalize to sum to 1.0
+        total = sum(clamped.values())
+        if total > 0:
+            normalized = {k: v / total for k, v in clamped.items()}
+        else:
+            # Fallback to uniform distribution if all values are zero
+            n = len(clamped)
+            normalized = {k: 1.0 / n for k in clamped.keys()}
+        
+        # Final validation and rounding to avoid floating point issues
+        result = {}
+        for k, v in normalized.items():
+            result[k] = round(max(0.0, min(1.0, v)), 6)
+        
+        # Ensure exact sum of 1.0 by adjusting the largest value
+        diff = 1.0 - sum(result.values())
+        if abs(diff) > 1e-9:
+            # Find the largest coefficient and adjust it
+            max_key = max(result, key=result.get)
+            result[max_key] = round(result[max_key] + diff, 6)
+            # Ensure it's still in valid range
+            result[max_key] = max(0.0, min(1.0, result[max_key]))
+        
+        return result
+    
+    def _validate_coefficients(self, coefficients: Dict[str, float]) -> bool:
+        """
+        Validate that coefficients meet all constraints:
+        - All values are in [0, 1] range
+        - Sum equals 1.0 (within floating point tolerance)
+        - No negative values
+        - No values > 1
+        
+        Args:
+            coefficients: Dictionary of coefficient values
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        if not coefficients:
+            return False
+        
+        # Check all values are in [0, 1] range
+        for key, value in coefficients.items():
+            if not isinstance(value, (int, float)):
+                self.logger.error(f"Coefficient {key} is not numeric: {value}")
+                return False
+            if value < 0.0:
+                self.logger.error(f"Coefficient {key} is negative: {value}")
+                return False
+            if value > 1.0:
+                self.logger.error(f"Coefficient {key} exceeds 1.0: {value}")
+                return False
+        
+        # Check sum is approximately 1.0
+        total = sum(coefficients.values())
+        if abs(total - 1.0) > 1e-6:
+            self.logger.error(f"Coefficient sum is {total}, expected 1.0")
+            return False
+        
+        return True
     
     def get_all_coefficients(self) -> Dict[str, Dict[str, float]]:
         """Get learned coefficients for all hierarchy levels"""

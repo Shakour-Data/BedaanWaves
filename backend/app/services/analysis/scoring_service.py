@@ -313,13 +313,16 @@ class ScoringService(AnalysisService):
         for dim in self.DIMENSIONS:  # Use the canonical list for iteration
             dim_data = data.get(dim, {})
             score = await self._score_dimension(dim, dim_data, market)
+            # Validate score is within [0, 100] range
+            score = max(0.0, min(100.0, score))
             scores["dimension_scores"][dim] = score
             
             # Apply weight (default to 0.0 if dimension not in weights)
             weight = normalized_weights.get(dim, 0.0)
             weighted_sum += score * weight
         
-        scores["overall_score"] = round(weighted_sum, 2)
+        # Validate overall score is within [0, 100] range
+        scores["overall_score"] = round(max(0.0, min(100.0, weighted_sum)), 2)
         scores["grade"] = self._assign_grade(scores["overall_score"])
         scores["signals"] = self._generate_signals(scores["dimension_scores"])
         
