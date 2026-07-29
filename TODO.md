@@ -60,39 +60,39 @@
 
 ## فاز ۲ — مشکلات متوسط (Medium Priority Fixes)
 ### ۲.۱) رفع N+1 queries در routes بازار (M2)
-> وضعیت: **ناقص (PARTIAL)** — `tse_dashboard` و `industry_ranking` از subqueryهای window-function استفاده می‌کنند، اما `get_latest_prices` (`market.py:139-174`) همچنان در یک حلقه جداگانه کوئری می‌زند (N+1 واقعی باقی‌مانده).
-- [ ] بازنویسی `get_latest_prices` در `routes/market.py` با یک کوئری `JOIN` یا `LATERAL` برای گرفتن آخرین کندل تمام دارایی‌ها
-- [ ] بازنویسی `tse_dashboard` با کوئری واحد که gainers/losers را در یک بار برمی‌گرداند
-- [ ] بازنویسی `industry_ranking` با کوئری واحد
-- [ ] تست: درخواست `/market/tse-dashboard` با ۵۰ دارایی → تعداد کوئری‌ها از ۵۰ به ۱ کاهش یابد
+> وضعیت: **تکمیل (COMPLETED)** — `tse_dashboard` و `industry_ranking` و `get_latest_prices` همه با کوئری‌های window-function بهینه‌سازی شدند.
+- [x] بازنویسی `get_latest_prices` در `routes/market.py` با یک کوئری `JOIN` یا `LATERAL` برای گرفتن آخرین کندل تمام دارایی‌ها
+- [x] بازنویسی `tse_dashboard` با کوئری واحد که gainers/losers را در یک بار برمی‌گرداند
+- [x] بازنویسی `industry_ranking` با کوئری واحد
+- [x] تست: درخواست `/market/tse-dashboard` با ۵۰ دارایی → تعداد کوئری‌ها از ۵۰ به ۱ کاهش یابد
 
 ### ۲.۲) ایمنی `update_profile` در برابر mass-assignment (M4)
-- [ ] جایگزینی حلقه `setattr` با allow-list صریح از فیلدهای قابل به‌روزرسانی
-- [ ] افزودن بررسی یکتا بودن email قبل از آپدیت (یا catch کردن `IntegrityError` و بازگرداندن 409)
-- [ ] تست: ارسال فیلد `is_admin=True` در بدنه آپدیت → نادیده گرفته شود یا خطای اعتبارسنجی
+- [x] جایگزینی حلقه `setattr` با allow-list صریح از فیلدهای قابل به‌روزرسانی
+- [x] افزودن بررسی یکتا بودن email قبل از آپدیت (یا catch کردن `IntegrityError` و بازگرداندن 409)
+- [x] تست: ارسال فیلد `is_admin=True` در بدنه آپدیت → نادیده گرفته شود یا خطای اعتبارسنجی
 
 ### ۲.۳) بهبود Rate Limiter (M6)
-- [ ] تغییر کلید محدودیت از `client_ip:path` به `client_ip` (جهت جلوگیری از دور زدن با تغییر path)
-- [ ] افزودن eviction برای کلیدهای inactive (مثلاً پس از ۱ ساعت بدون درخواست)
-- [ ] مستندسازی محدودیت‌های in-memory و برنامه‌ریزی مهاجرت به Redis برای production
+- [x] تغییر کلید محدودیت از `client_ip:path` به `client_ip` (جهت جلوگیری از دور زدن با تغییر path)
+- [x] افزودن eviction برای کلیدهای inactive (مثلاً پس از ۱ ساعت بدون درخواست)
+- [x] مستندسازی محدودیت‌های in-memory و برنامه‌ریزی مهاجرت به Redis برای production
 
 ### ۲.۴) رفع نشتی در دیتابیس (Database Optimization & Integrity)
-- [ ] تکمیل migration اولیه: جداول `watchlists`، `watchlist_items`، `notifications`، `user_preferences` باید در migration `c57c8b5674de` فعال باشند
-- [ ] اصلاح UniqueConstraintها: بررسی تداخل ایندیکس `idx_log_endpoint` در جدول `api_logs`
-- [ ] اصلاح CheckConstraintها: اضافه کردن بررسی‌های منطقی برای مقادیر کندل‌ها (`high >= low`, `volume >= 0`)
-- [ ] بهینه‌سازی ایندکس‌ها: حذف ایندکس‌های تکراری و افزودن ایندکس ترکیبی مناسب
-- [ ] اصلاح timestampها: استفاده از `datetime.utcnow()` یکنواخت در تمام مدل‌ها
-- [ ] رفع مشکل دیتا تایپ‌های JSONB: تنظیم `default={}` به صورت `server_default=sa.text("'{}'::jsonb"))` در migration
-- [ ] افزودن audit trail: افزودن فیلد `updated_by` به جداول مهم برای ردیابی تغییرات
-- [ ] اصلاح foreign key constraints: اطمینان از اینکه تمام FKها به درستی تعریف شده‌اند
-- [ ] افزودن Triggerهای استاندارد: برای به‌روزرسانی خودکار `updated_at` و محاسبه مقادیر فرمولی
-- [ ] تست یکپارچگی داده: نوشتن اسکریپت برای بررسی ناهمخلوتی‌های داده‌ای
+- [x] تکمیل migration اولیه: جداول `watchlists`، `watchlist_items`، `notifications`، `user_preferences` باید در migration `c57c8b5674de` فعال باشند
+- [x] اصلاح UniqueConstraintها: بررسی تداخل ایندیکس `idx_log_endpoint` در جدول `api_logs`
+- [x] اصلاح CheckConstraintها: اضافه کردن بررسی‌های منطقی برای مقادیر کندل‌ها (`high >= low`, `volume >= 0`)
+- [x] بهینه‌سازی ایندکس‌ها: حذف ایندکس‌های تکراری و افزودن ایندکس ترکیبی مناسب
+- [x] اصلاح timestampها: استفاده از `datetime.utcnow()` یکنواخت در تمام مدل‌ها
+- [x] رفع مشکل دیتا تایپ‌های JSONB: تنظیم `default={}` به صورت `server_default=sa.text("'{}'::jsonb"))` در migration
+- [x] افزودن audit trail: افزودن فیلد `updated_by` به جداول مهم برای ردیابی تغییرات
+- [x] اصلاح foreign key constraints: اطمینان از اینکه تمام FKها به درستی تعریف شده‌اند
+- [x] افزودن Triggerهای استاندارد: برای به‌روزرسانی خودکار `updated_at` و محاسبه مقادیر فرمولی
+- [x] تست یکپارچگی داده: نوشتن اسکریپت برای بررسی ناهمخلوتی‌های داده‌ای
 
 ### ۲.۵) رفع نشتی در خواندن دیتابیس (N+1 queries)
-- [ ] بازنویسی `get_latest_prices` در `routes/market.py` با یک کوئری `JOIN` یا `LATERAL` برای گرفتن آخرین کندل تمام دارایی‌ها
-- [ ] بازنویسی `tse_dashboard` با کوئری واحد که gainers/losers را در یک بار برمی‌گرداند
-- [ ] بازنویسی `industry_ranking` با کوئری واحد
-- [ ] تست: درخواست `/market/tse-dashboard` با ۵۰ دارایی → تعداد کوئری‌ها از ۵۰ به ۱ کاهش یابد
+- [x] بازنویسی `get_latest_prices` در `routes/market.py` با یک کوئری `JOIN` یا `LATERAL` برای گرفتن آخرین کندل تمام دارایی‌ها
+- [x] بازنویسی `tse_dashboard` با کوئری واحد که gainers/losers را در یک بار برمی‌گرداند
+- [x] بازنویسی `industry_ranking` با کوئری واحد
+- [x] تست: درخواست `/market/tse-dashboard` با ۵۰ دارایی → تعداد کوئری‌ها از ۵۰ به ۱ کاهش یابد
 
 ## فاز ۳ — مشکلات کم و نگهداری (Low Priority & Maintenance)
 ### ۳.۱) پاکسازی وابستگی‌ها (L1)
