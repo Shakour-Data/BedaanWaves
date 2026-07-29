@@ -175,8 +175,9 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Unified Bedaan Ecosystem - Market Analysis & AI Trading Platform",
-    docs_url="/api/v1/docs",
-    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs" if settings.ENVIRONMENT != "production" else None,
+    redoc_url="/api/v1/redoc" if settings.ENVIRONMENT != "production" else None,
+    openapi_url="/api/v1/openapi.json" if settings.ENVIRONMENT != "production" else None,
     lifespan=lifespan,
 )
 
