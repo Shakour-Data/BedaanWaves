@@ -271,13 +271,39 @@ async def tse_dashboard(
     Returns:
         TSE market overview snapshot
     """
-    assets = (
-        await db.execute(
-            select(Asset).where(Asset.market == "TSE", Asset.active == True)
+    # Single query that retrieves assets and their latest candles in one statement
+    query = (
+        select(
+            Asset.id,
+            Asset.symbol,
+            Asset.name,
+            Candle.close.label("latest_close"),
+            func.lead(Candle.close, 1).over(
+                partition_by=Candle.asset_id,
+                order_by=Candle.timestamp.desc()
+            ).label("previous_close")
         )
-    ).scalars().all()
+        .join(Candle, Asset.id == Candle.asset_id)
+        .where(
+            and_(
+                Asset.market == "TSE",
+                Asset.active == True,
+                Candle.timeframe == "1d"
+            )
+        )
+        .group_by(
+            Asset.id,
+            Asset.symbol,
+            Asset.name,
+            Candle.close
+        )
+        .order_by(Asset.symbol)
+    )
 
-    if not assets:
+    result = await db.execute(query)
+    rows = result.all()
+
+    if not rows:
         return {
             "status": "success",
             "market": "TSE",
@@ -288,66 +314,20 @@ async def tse_dashboard(
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    asset_ids = [a.id for a in assets]
-    Candle = candle_model_for_market("TSE")
-
-    ranked = (
-        select(
-            Candle.asset_id,
-            Candle.close,
-            func.row_number()
-            .over(
-                partition_by=Candle.asset_id,
-                order_by=Candle.timestamp.desc(),
-            )
-            .label("rn"),
-        )
-        .where(
-            and_(
-                Candle.asset_id.in_(asset_ids),
-                Candle.timeframe == "1d",
-            )
-        )
-        .subquery()
-    )
-
-    rows = (
-        await db.execute(
-            select(ranked)
-            .where(ranked.c.rn <= 2)
-            .order_by(ranked.c.asset_id, ranked.c.rn)
-        )
-    ).all()
-
-    candles_by_asset: Dict[str, list] = defaultdict(list)
-    for row in rows:
-        candles_by_asset[str(row.asset_id)].append(row)
-
     result_rows = []
-    for asset in assets:
-        asset_candles = candles_by_asset.get(str(asset.id), [])
-        asset_candles.sort(key=lambda r: r.rn)
+    for row in rows:
+        latest_close = float(row.latest_close)
+        previous_close = float(row.previous_close) if row.previous_close is not None else latest_close
+        change_pct = ((latest_close - previous_close) / previous_close * 100) if previous_close else 0.0
 
-        last_close = float(asset_candles[0].close) if len(asset_candles) >= 1 else None
-        change_pct = None
-        if len(asset_candles) >= 2:
-            older, newer = asset_candles[1], asset_candles[0]
-            base = float(older.close)
-            change_pct = (float(newer.close) - base) / base * 100 if base else 0.0
-        elif len(asset_candles) == 1:
-            change_pct = 0.0
+        result_rows.append({
+            "symbol": row.symbol,
+            "name": row.name,
+            "last_close": latest_close,
+            "change_pct": round(change_pct, 2),
+        })
 
-        result_rows.append(
-            {
-                "symbol": asset.symbol,
-                "name": asset.name,
-                "last_close": last_close,
-                "change_pct": round(change_pct, 2) if change_pct is not None else None,
-            }
-        )
-
-    ranked_change = [r for r in result_rows if r["change_pct"] is not None]
-    ranked_change.sort(key=lambda x: x["change_pct"], reverse=True)
+    ranked_change = sorted(result_rows, key=lambda x: x["change_pct"], reverse=True)
     avg_change = sum(r["change_pct"] for r in ranked_change) / len(ranked_change) if ranked_change else 0.0
 
     return {
@@ -375,29 +355,12 @@ async def industry_ranking(
     Returns:
         Industries ranked by average change %, each with member count
     """
-    assets = (
-        await db.execute(
-            select(Asset).where(
-                Asset.market == "TSE", Asset.active == True, Asset.industry.isnot(None)
-            )
-        )
-    ).scalars().all()
-
-    if not assets:
-        return {
-            "status": "success",
-            "market": "TSE",
-            "ranked_industries": 0,
-            "ranking": [],
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-    asset_ids = [a.id for a in assets]
-    Candle = candle_model_for_market("TSE")
-
-    ranked = (
+    # Single optimized query: join assets with candles, compute latest and previous close
+    query = (
         select(
-            Candle.asset_id,
+            Asset.industry,
+            Asset.id,
+            Asset.symbol,
             Candle.close,
             func.row_number()
             .over(
@@ -406,36 +369,62 @@ async def industry_ranking(
             )
             .label("rn"),
         )
+        .join(Candle, Asset.id == Candle.asset_id)
         .where(
             and_(
-                Candle.asset_id.in_(asset_ids),
+                Asset.market == "TSE",
+                Asset.active == True,
+                Asset.industry.isnot(None),
                 Candle.timeframe == "1d",
             )
         )
-        .subquery()
     )
 
-    rows = (
-        await db.execute(
-            select(ranked)
-            .where(ranked.c.rn <= 2)
-            .order_by(ranked.c.asset_id, ranked.c.rn)
-        )
-    ).all()
+    result = await db.execute(query)
+    rows = result.all()
 
-    candles_by_asset: Dict[str, list] = defaultdict(list)
+    if not rows:
+        return {
+            "status": "success",
+            "market": "TSE",
+            "ranked_industries": 0,
+            "ranking": [],
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    # Separate latest and previous close per asset
+    asset_rows: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        candles_by_asset[str(row.asset_id)].append(row)
+        if row.rn == 1:
+            latest = row.close
+        elif row.rn == 2:
+            previous = row.close
+        else:
+            continue
+        if row.industry not in asset_rows:
+            asset_rows[row.industry] = {}
+        if row.rn == 1:
+            asset_rows[row.industry][str(row.id)] = {
+                "symbol": row.symbol,
+                "latest": latest,
+                "previous": None,
+            }
+        elif row.rn == 2:
+            entry = asset_rows[row.industry].get(str(row.id))
+            if entry:
+                entry["previous"] = previous
+
+    # Remove assets without a latest close
+    for ind, assets in asset_rows.items():
+        asset_rows[ind] = {k: v for k, v in assets.items() if v["latest"] is not None}
 
     industry_changes: Dict[str, List[float]] = {}
-    for asset in assets:
-        asset_candles = candles_by_asset.get(str(asset.id), [])
-        asset_candles.sort(key=lambda r: r.rn)
-        if len(asset_candles) >= 2:
-            older, newer = asset_candles[1], asset_candles[0]
-            base = float(older.close)
-            change = (float(newer.close) - base) / base * 100 if base else 0.0
-            industry_changes.setdefault(asset.industry, []).append(change)
+    for industry, assets in asset_rows.items():
+        for data in assets.values():
+            latest = float(data["latest"])
+            previous = float(data["previous"]) if data["previous"] is not None else latest
+            change = ((latest - previous) / previous * 100) if previous else 0.0
+            industry_changes.setdefault(industry, []).append(change)
 
     ranking = []
     for industry, changes in industry_changes.items():
