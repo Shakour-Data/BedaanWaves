@@ -22,6 +22,7 @@ from app.services.system.metrics_service import MetricsService
 from app.services.system.queue_service import QueueService
 from app.services.crypto.crypto_ingestion_service import CryptoIngestionService
 from app.services.data.market_data_processing import MarketDataProcessingService
+from app.services.ml.coefficient_learning_service import CoefficientLearningService
 from sqlalchemy import select
 
 # Configure logging
@@ -52,25 +53,35 @@ async def lifespan(app: FastAPI):
             )
     
     await init_db()
-
+    
     container = get_global_container()
+    
+    # Register core services
     container.register_instance("scheduler", SchedulerService())
     container.register_instance("metrics", MetricsService())
     container.register_instance("queue", QueueService())
     container.register_instance("crypto_ingestion", CryptoIngestionService())
     container.register_instance("market_data_processing", MarketDataProcessingService())
-
+    
+    # Register ML coefficient learning service
+    coefficient_service = CoefficientLearningService()
+    container.register_instance("coefficient_learning_service", coefficient_service)
+    
+    # Initialize services
     scheduler = container.get("scheduler")
     metrics = container.get("metrics")
     queue = container.get("queue")
     crypto_ingestion = container.get("crypto_ingestion")
     market_data_processing = container.get("market_data_processing")
+    coefficient_service = container.get("coefficient_learning_service")
+    
     await scheduler.initialize()
     await metrics.initialize()
     await queue.initialize()
     await crypto_ingestion.initialize()
     await market_data_processing.initialize()
-
+    await coefficient_service.initialize()
+    
     # Register crypto data pipeline jobs
     from app.db.base import async_session_maker
     from app.models.models import Asset
@@ -110,10 +121,45 @@ async def lifespan(app: FastAPI):
         coroutine_func=run_crypto_pipeline,
         interval_seconds=300,  # 5 minutes
     )
-yield
-
+    
+    # Register coefficient learning job: run daily after market close (22:00 Tehran time)
+    async def update_coefficients():
+        """Update ML coefficients using latest performance data"""
+        try:
+            # This would typically fetch historical performance data from the database
+            # For now, we'll use a placeholder that returns empty list (will use fallback weights)
+            # In a real implementation, this would query the database for:
+            # - Historical dimension/sub-dimension/aspect/sub-aspect scores
+            # - Corresponding future performance metrics (returns, Sharpe ratio, etc.)
+            
+            # Placeholder: get performance data from database/service
+            performance_data = []  # TODO: Implement actual data retrieval
+            
+            if len(performance_data) >= coefficient_service.min_samples_for_training:
+                logger.info(f"Training coefficient models with {len(performance_data)} samples")
+                await coefficient_service.learn_coefficients(performance_data)
+            else:
+                logger.info(f"Insufficient data for coefficient training: {len(performance_data)} samples")
+                
+        except Exception as e:
+            logger.error(f"Error updating coefficients: {e}")
+    
+    # Schedule daily coefficient update at 22:00 Tehran time (UTC+3:30)
+    # Which is 18:30 UTC
+    # We'll run it every 24 hours for simplicity (exact cron scheduling would be more complex)
+    scheduler.register_job(
+        name="coefficient_learning_update",
+        coroutine_func=update_coefficients,
+        interval_seconds=24 * 60 * 60,  # 24 hours
+    )
+    
+    logger.info("All services initialized successfully")
+    
+    yield
+    
     # Shutdown
     logger.info("Shutting down application")
+    await coefficient_service.shutdown()
     await scheduler.shutdown()
     await metrics.shutdown()
     await queue.shutdown()
@@ -193,11 +239,11 @@ app.include_router(ml.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(users.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(watchlists.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(notifications.router, prefix=api_v1_prefix, dependencies=auth_guard)
-app.include_router(live.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(specialized.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(system.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(crypto.router, prefix=api_v1_prefix, dependencies=auth_guard)
 app.include_router(intl.router, prefix=api_v1_prefix, dependencies=auth_guard)
+
 
 # Error Handlers
 @app.exception_handler(RuntimeError)
