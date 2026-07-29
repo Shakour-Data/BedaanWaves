@@ -577,3 +577,65 @@ async def scoring_analysis(
         "hierarchy": service.get_hierarchy_info(),
         "timestamp": datetime.utcnow().isoformat(),
     }
+
+
+@router.post("/scoring/rank", response_model=dict)
+async def score_and_rank_stocks(
+    data: dict = Body(...),
+) -> dict:
+    """
+    Score and rank multiple stocks based on 6D criteria.
+    
+    Request body must include:
+        stocks: List[Dict] - List of stock data objects, each containing:
+            - ticker: str
+            - technical: dict (optional)
+            - fundamental: dict (optional)
+            - sentiment: dict (optional)
+            - risk: dict (optional)
+            - macro: dict (optional)
+            - ai: dict (optional)
+        dimension: str (optional) - Specific dimension to rank by (fundamental, technical, sentiment, risk, macro, ai)
+                     If not provided, ranks by overall score
+        limit: int (optional, default: 10) - Number of top stocks to return
+    
+    Legacy compatibility:
+        - growth: dict (optional) will be mapped to macro if macro is missing
+        - momentum: dict (optional) will be mapped to ai if ai is missing
+        
+    Returns:
+        List of scored and ranked stocks with their scores, grades, and hierarchy info
+    """
+    stocks_data = data.get("stocks", [])
+    dimension = data.get("dimension")
+    limit = data.get("limit", 10)
+    
+    if not stocks_data:
+        raise HTTPException(status_code=400, detail="No stocks provided")
+        
+    if limit < 1 or limit > 100:
+        raise HTTPException(status_code=400, detail="Limit must be between 1 and 100")
+    
+    # Map legacy keys for each stock
+    processed_stocks = []
+    for stock_data in stocks_data:
+        stock_data = dict(stock_data)  # shallow copy
+        if "macro" not in stock_data and "growth" in stock_data:
+            stock_data["macro"] = stock_data.get("growth")
+        if "ai" not in stock_data and "momentum" in stock_data:
+            stock_data["ai"] = stock_data.get("momentum")
+        processed_stocks.append(stock_data)
+    
+    service = ScoringService()
+    await service.initialize()
+    ranked_stocks = await service.rank_stocks(processed_stocks, dimension=dimension, limit=limit)
+    
+    return {
+        "status": "success",
+        "count": len(ranked_stocks),
+        "dimension": dimension or "overall_score",
+        "limit": limit,
+        "stocks": ranked_stocks,
+        "hierarchy": service.get_hierarchy_info(),
+        "timestamp": datetime.utcnow().isoformat(),
+    }

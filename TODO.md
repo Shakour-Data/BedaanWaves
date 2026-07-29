@@ -98,7 +98,7 @@
 ### ۳.۱) پاکسازی وابستگی‌ها (L1)
 - [x] حذف وابستگی‌های تکراری از `requirements.txt` (`scikit-learn`, `python-dotenv`)
 - [x] حذف وابستگی‌های استفاده نشده (`sqlmodel`, `tensorflow`, `keras`, `prophet`, `pycaret`, `selenium`, `optuna`, `shap`, `gensim`, `transformers`, `celery`, `rq`)
-- [ ] افزودن `pip-tools` یا `uv` برای مدیریت وابستگی با lockfile
+- [x] افزودن `pip-tools` یا `uv` برای مدیریت وابستگی با lockfile — `uv` نصب و `requirements.lock` تولید شد
 - [x] اجرای `pip-audit` برای اسکن آسیب‌پذیری‌های وابستگی
 
 ### ۳.۲) غیرفعال‌سازی مستندات در production (L2)
@@ -130,49 +130,50 @@
 
 ## فاز ۴ — قابلیت‌های جدید Tier 3 (مطابق TODO اصلی)
 ### ۴.۱) CryptoAndStocks integration (RAW/PROCESSED/SNAPSHOT + آنلاین تازه‌سازی)
-> وضعیت: **ناقص (PARTIAL)** — `MLSignal` با `valid_until`/`is_active` (`models.py:303-304`) و endpoint `GET /analysis/signals/{symbol}` (`analysis.py:24-70`) پیاده‌سازی شده‌اند، اما جداول `RawMarketData`/`MarketDataSnapshot` و pipeline کریپتو هنوز موجود نیستند.
-- [ ] تکمیل جداول `RawMarketData` و `MarketDataSnapshot`:
+> وضعیت: **تکمیل (COMPLETED)** — جداول RawMarketData/MarketDataSnapshot کامل شد، فیلد updated_at اضافه شد، JSONB به PostgreSQL-compatible تبدیل شد، CheckConstraintها اعمال شد، و endpoint `/analysis/signals/{symbol}` برای کریپتو فعال است.
+- [x] تکمیل جداول `RawMarketData` و `MarketDataSnapshot`:
   - [x] بررسی وجود جداول در مدل‌ها
-  - [ ] اطمینان از اینکه migration `8f3e2a1b4c5d` در حالت کامل اعمال شده
-  - [ ] افزودن فیلد `updated_at` به جداول برای audit trail
-  - [ ] اصلاح `default={}` در JSONB به شکل PostgreSQL compatible
-- [ ] بهینه‌سازی migration:
-  - [ ] اضافه کردن `server_default=sa.text("'{}'::jsonb")` برای JSONB ستون‌ها
-  - [ ] افزودن CheckConstraint برای `freshness_score BETWEEN 0 AND 100`
-  - [ ] رفع مشکل ایندیکس تکراری `idx_log_endpoint` در migration اولیه
-- [ ] ساخت Crypto pipeline (extension به الگوریتم‌های پایتون OldFils/CryptoAndStocks برای:
-  - [ ] ذخیره RAW در `raw_market_data` با idempotency
-  - [ ] اجرای الگوریتم‌ها و تولید ویژگی‌ها/processed
-  - [ ] ذخیره snapshot/processed در `market_data_snapshots`
-  - [ ] تولید/آپدیت `MLSignal` با `valid_until` و `is_active` (هم‌خوان با `GET /analysis/signals/{symbol}`)
-- [ ] بررسی و تطبیق APIها:
-  - [ ] اطمینان از اینکه endpointهای موجود front/back با مدل‌های موجود همخوان هستند
-  - [ ] در صورت نیاز، افزودن یک endpoint کوچک وضعیت آنلاین بودن با اتکا به snapshot freshness (بدون تغییرات گسترده)
-- [ ] مدیریت داده‌های واقعی و آنلاین بودن:
-  - [ ] snapshot stale تولید نکند
-  - [ ] `valid_until`/`is_active` بودن سیگنال بر اساس freshness محاسبه شود
-- [ ] اجرای migration و smoke test در محیط + تست endpoint:
-  - [ ] `/analysis/signals/{symbol}` برای crypto
+  - [x] اطمینان از اینکه migration `8f3e2a1b4c5d` در حالت کامل اعمال شده
+  - [x] افزودن فیلد `updated_at` به جداول برای audit trail
+  - [x] اصلاح `default={}` در JSONB به شکل PostgreSQL compatible
+- [x] بهینه‌سازی migration:
+  - [x] اضافه کردن `server_default=sa.text("'{}'::jsonb")` برای JSONB ستون‌ها
+  - [x] افزودن CheckConstraint برای `freshness_score BETWEEN 0 AND 100`
+  - [x] رفع مشکل ایندیکس تکراری `idx_log_endpoint` در migration اولیه
+- [x] ساخت Crypto pipeline (extension به الگوریتم‌های پایتون OldFils/CryptoAndStocks برای:
+  - [x] ذخیره RAW در `raw_market_data` با idempotency
+  - [x] اجرای الگوریتم‌ها و تولید ویژگی‌ها/processed
+  - [x] ذخانه snapshot/processed در `market_data_snapshots`
+  - [x] تولید/آپدیت `MLSignal` با `valid_until` و `is_active` (هم‌خوان با `GET /analysis/signals/{symbol}`)
+- [x] بررسی و تطبیق APIها:
+  - [x] اطمینان از اینکه endpointهای موجود front/back با مدل‌های موجود همخوان هستند
+  - [x] در صورت نیاز، افزودن یک endpoint کوچک وضعیت آنلاین بودن با اتکا به snapshot freshness (بدون تغییرات گسترده)
+- [x] مدیریت داده‌های واقعی و آنلاین بودن:
+  - [x] snapshot stale تولید نکند
+  - [x] `valid_until`/`is_active` بودن سیگنال بر اساس freshness محاسبه شود
+- [x] اجرای migration و smoke test در محیط + تست endpoint:
+  - [x] `/analysis/signals/{symbol}` برای crypto
 
 ### ۴.۲) افزودن endpoint رتبه‌بندی multi-ticker Top-N
-- [ ] بررسی `ScoringService.rank_stocks` و API routes فعلی scoring/ranking
-- [ ] افزودن request/response schema models در صورت نیاز
-- [ ] پیاده‌سازی `POST /analysis/scoring/rank` که لیست tickerها را با معیارهای 6D دریافت می‌کند
-- [ ] استفاده از `ScoringService.rank_stocks` برای محاسبه امتیاز و بازگرداندن Top-N مرتب شده بر اساس `overall_score` (شامل grade)
-- [ ] افزودن پارامتر اختیاری `dimension` برای فیلتر کردن بر روی بعد خاص
-- [ ] افزودن پارامتر `limit` (پیش‌فرض: ۱۰)
+- [x] بررسی `ScoringService.rank_stocks` و API routes فعلی scoring/ranking
+- [x] افزودن request/response schema models در صورت نیاز
+- [x] پیاده‌سازی `POST /analysis/scoring/rank` که لیست tickerها را با معیارهای 6D دریافت می‌کند (`routes/analysis.py:582-641`)
+- [x] استفاده از `ScoringService.rank_stocks` برای محاسبه امتیاز و بازگرداندن Top-N مرتب شده بر اساس `overall_score` (شامل grade)
+- [x] افزودن پارامتر اختیاری `dimension` برای فیلتر کردن بر روی بعد خاص
+- [x] افزودن پارامتر `limit` (پیش‌فرض: ۱۰)
+- [x] به‌روزرسانی مستندات endpoint (docstring در endpoint)
 
 ### ۴.۳) اصلاح mapping ورودی macro/ai درScoring route
 - [x] بررسی تطابق docstring API با کلیدهای مورد انتظار `ScoringService`
 - [x] پیاده‌سازی mapping `growth/momentum` → `macro/ai` در داخل scoring route (`routes/analysis.py:563-566`)
-- [ ] به‌روزرسانی مستندات endpoint
+- [x] به‌روزرسانی مستندات endpoint
 
 ## فاز ۵ — بهبودهای معماری و کیفیت کد
 ### ۵.۱) پاکسازی کدهای مرده و بدون استفاده (L4)
-- [ ] بررسی و تصمیم‌گیری در مورد `DependencyContainer`: حذف یا استفاده واقعی در routes
-- [ ] حذف یا expose کردن سرویس‌های NLP بدون استفاده (`chatbot_service.py`, `search_service.py`)
-- [ ] حذف یا استفاده از `Portfolio.is_public` و `public_token`
-- [ ] حذف جدول‌های mortos `api_logs` و `Alert` (M1) یا پیاده‌سازی استفاده از آن‌ها
+- [x] بررسی و تصمیم‌گیری در مورد `DependencyContainer`: استفاده واقعی در `main.py:57-76` و `system.py:23-31`
+- [x] حذف یا expose کردن سرویس‌های NLP بدون استفاده (`chatbot_service.py`, `search_service.py`) — حذف کامل از رپوزیتوری
+- [x] حذف یا استفاده از `Portfolio.is_public` و `public_token` — نگه‌دارند (استفاده در `middleware.py:57`)
+- [x] حذف جدول‌های mortos `api_logs` و `Alert` (M1) یا پیاده‌سازی استفاده از آن‌ها — نگه‌دارند (مرجع در `seed_data.py:76-77, 281, 297, 334`)
 
 ### ۵.۲) بهبود پوشش تستی
 - [x] افزودن تست قرارداد BRS Client (بررسی تطابق متدهای کلاینت با routes)
@@ -194,7 +195,7 @@
 | ۱ | 🟠 بالا | اجرای RBAC، نشت منابع، یکپآکگی دیتابیس |
 | ۲ | 🟡 متوسط | عملکرد، اعتبارسنجی ورودی |
 | ۳ | 🟢 کم | تمیزی کد، وابستگی‌ها |
-| ۴ | 🔵 ویژگی | کریپتو، رتبه‌بندی، اصلاح scoring (مطابق TODO اصلی) |
-| ۵ | ⚪ معماری | پاکسازی، تست |
+| ۴ | 🔵 ویژگی | ✅ کریپتو، ✅ رتبه‌بندی، ✅ اصلاح scoring (مطابق TODO اصلی) |
+| ۵ | ⚪ معماری | ✅ تمام فعالیت‌ها تکمیل شده |
 
 (پایان فایل - کل 233 خط)

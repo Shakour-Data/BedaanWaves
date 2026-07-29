@@ -841,8 +841,10 @@ class RawMarketData(Base):
     source_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
 
     # Ingestion metadata
-    ingested_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    ingested_at = Column(DateTime(timezone=True), default=datetime.now(timezone=utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone=utc), onupdate=datetime.now(timezone=utc))
     ingestion_id = Column(String(100))  # idempotency key
+
 
     # Quality
     data_quality = Column(String(10), default="RAW")  # RAW, VALIDATED
@@ -901,7 +903,7 @@ class MarketDataSnapshot(Base):
     volume_ratio = Column(Numeric(8, 4))  # current volume / volume_ma_7
 
     # ML features (JSONB for flexibility)
-    ml_features = Column("features", JSONB, default={})
+    ml_features = Column("features", JSONB, server_default=sa.text("'{}'::jsonb"))
 
     # Source
     source = Column(String(20), default="BRS")  # BRS, COINGECKO, BINANCE
@@ -911,6 +913,7 @@ class MarketDataSnapshot(Base):
     freshness_score = Column(Numeric(5, 2))  # 0-100
 
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     asset = relationship("Asset")
 
