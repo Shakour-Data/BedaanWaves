@@ -381,3 +381,71 @@ class PreferenceResponse(BaseModel):
     key: str
     value: Any
 
+
+class FundamentalAnalysisRequest(BaseModel):
+    ticker: str = Field(..., min_length=1, max_length=50)
+    financials: Optional[Dict[str, Any]] = Field(default=None)
+
+
+class ScoringAnalysisRequest(BaseModel):
+    ticker: str = Field(..., min_length=1, max_length=50)
+    fundamental: Optional[Dict[str, Any]] = None
+    technical: Optional[Dict[str, Any]] = None
+    sentiment: Optional[Dict[str, Any]] = None
+    risk: Optional[Dict[str, Any]] = None
+    macro: Optional[Dict[str, Any]] = None
+    ai: Optional[Dict[str, Any]] = None
+    growth: Optional[Dict[str, Any]] = Field(default=None, alias="growth")
+    momentum: Optional[Dict[str, Any]] = Field(default=None, alias="momentum")
+
+    class Config:
+        populate_by_name = True
+
+
+class RecommendationRequest(BaseModel):
+    ticker: Optional[str] = None
+    market: Optional[str] = None
+    sector: Optional[str] = None
+    asset_class: Optional[str] = None
+    risk_tolerance: Optional[str] = None
+    investment_horizon: Optional[int] = None
+    budget: Optional[Decimal] = None
+
+
+class OptimizeRequest(BaseModel):
+    assets: List[Dict[str, Any]] = Field(..., min_length=1)
+    risk_tolerance: Optional[str] = None
+    target_return: Optional[Decimal] = None
+    constraints: Optional[Dict[str, Any]] = None
+
+
+class ForecastRequest(BaseModel):
+    ticker: str = Field(..., min_length=1, max_length=50)
+    horizon: int = Field(default=30, ge=1, le=365)
+    model: Optional[str] = None
+
+
+class ScreenRequest(BaseModel):
+    criteria: Dict[str, Any] = Field(default_factory=dict)
+    universe: Optional[List[Dict[str, Any]]] = None
+    market: Optional[str] = None
+
+
+class CompareRequest(BaseModel):
+    symbols: List[Dict[str, Any]] = Field(..., min_length=1)
+
+
+class CorrelationRequest(BaseModel):
+    returns_map: Dict[str, List[float]] = Field(..., min_length=1)
+    high_threshold: float = Field(default=0.7, ge=-1, le=1)
+    low_threshold: float = Field(default=-0.7, ge=-1, le=1)
+
+
+class CalendarEventCreate(BaseModel):
+    date: str = Field(..., description="ISO date (YYYY-MM-DD)")
+    type: str = Field(..., min_length=1, max_length=50)
+    title: str = Field(..., min_length=1, max_length=255)
+    symbol: Optional[str] = None
+    description: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+

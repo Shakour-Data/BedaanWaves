@@ -96,37 +96,37 @@
 
 ## فاز ۳ — مشکلات کم و نگهداری (Low Priority & Maintenance)
 ### ۳.۱) پاکسازی وابستگی‌ها (L1)
-- [ ] حذف وابستگی‌های تکراری از `requirements.txt` (`scikit-learn`, `python-dotenv`)
-- [ ] حذف وابستگی‌های استفاده نشده (`sqlmodel`, `tensorflow`, `keras`, `prophet`, `pycaret`, `selenium`, `optuna`, `shap`, `gensim`, `transformers`, `celery`, `rq`)
+- [x] حذف وابستگی‌های تکراری از `requirements.txt` (`scikit-learn`, `python-dotenv`)
+- [x] حذف وابستگی‌های استفاده نشده (`sqlmodel`, `tensorflow`, `keras`, `prophet`, `pycaret`, `selenium`, `optuna`, `shap`, `gensim`, `transformers`, `celery`, `rq`)
 - [ ] افزودن `pip-tools` یا `uv` برای مدیریت وابستگی با lockfile
-- [ ] اجرای `pip-audit` برای اسکن آسیب‌پذیری‌های وابستگی
+- [x] اجرای `pip-audit` برای اسکن آسیب‌پذیری‌های وابستگی
 
 ### ۳.۲) غیرفعال‌سازی مستندات در production (L2)
-- [ ] تغییر پیش‌فرض `DEBUG` در `config.py` به `False`
-- [ ] شرطی کردن `docs_url` و `redoc_url` در `main.py` بر اساس `ENVIRONMENT`
+- [x] تغییر پیش‌فرض `DEBUG` در `config.py` به `False`
+- [x] شرطی کردن `docs_url` و `redoc_url` در `main.py` بر اساس `ENVIRONMENT`
 
 ### ۳.۳) تعریف Pydantic schemas برای بدنه‌های dict (L3)
-- [ ] ساخت schemas برای endpoint‌هایی که `dict` قبول می‌کنند:
+- [x] ساخت schemas برای endpoint‌هایی که `dict` قبول می‌کنند:
   - `routes/analysis.py`: `/fundamental`, `/scoring`
   - `routes/ml.py`: `/predict`, `/recommendation`, `/optimize`, `/forecast`
   - `routes/specialized.py`: `/screen`, `/compare`, `/correlation`, `/calendar/events`
-- [ ] تست: ارسال داده نامعتبر → 422 به جای خطای داخلی
+- [x] تست: ارسال داده نامعتبر → 422 به جای خطای داخلی
 
 ### ۳.۴) اعتبارسنجی و تمیزکردن مدل‌ها و مایگریشن‌ها (Data Integrity)
-- [ ] بازتولید migration با `alembic revision --autogenerate` برای اطمینان از تطابق کامل مدل‌ها و دیتابیس
-- [ ] بررسی و اصلاح دیتا تایپ‌های نامناسب (مانند `String(5)` برای `market`)
-- [ ] اضافه کردن `NOT NULL` constraints برای فیلدهای ضروری که nullable هستند
-- [ ] بررسی و اصلاح `default` های رشته‌ای در JSONB ستون‌ها
-- [ ] اضافه کردن `CheckConstraint` برای `high >= low` در تمام جداول کندل
-- [ ] بررسی و اصلاح foreign key constraints: اطمینان از اینکه تمام FKها به درستی تعریف شده‌اند
-- [ ] افزودن Triggerهای استاندارد: برای به‌روزرسانی خودکار `updated_at` و محاسبه مقادیر فرمولی
-- [ ] تست یکپارچگی داده: نوشتن اسکریپت برای بررسی ناهمخلوتی‌های داده‌ای
+- [x] بازتولید migration با `alembic revision --autogenerate` برای اطمینان از تطابق کامل مدل‌ها و دیتابیس
+- [x] بررسی و اصلاح دیتا تایپ‌های نامناسب (مانند `String(5)` برای `market`)
+- [x] اضافه کردن `NOT NULL` constraints برای فیلدهای ضروری که nullable هستند
+- [x] بررسی و اصلاح `default` های رشته‌ای در JSONB ستون‌ها
+- [x] اضافه کردن `CheckConstraint` برای `high >= low` در تمام جداول کندل
+- [x] بررسی و اصلاح foreign key constraints: اطمینان از اینکه تمام FKها به درستی تعریف شده‌اند
+- [x] افزودن Triggerهای استاندارد: برای به‌روزرسانی خودکار `updated_at` و محاسبه مقادیر فرمولی
+- [x] تست یکپارچگی داده: نوشتن اسکریپت برای بررسی ناهمخلوتی‌های داده‌ای
 
 ### ۳.۵) بهنامهٔ ایندکس‌ها برای پرسش‌های پرکاربرد (Index Optimization)
-- [ ] اضافه کردن compound index برای پرسش‌های `get_latest_prices` (`asset_id`, `timeframe`, `timestamp`)
-- [ ] اضافه کردن composite index برای `market_data_snapshots` بر اساس استفاده اصلی
-- [ ] بررسی ایندکس‌های اضافه شده و حذف آنها
-- [ ] افزودن توضیح در کامنت‌های کد RobertsSteven
+- [x] اضافه کردن compound index برای پرسش‌های `get_latest_prices` (`asset_id`, `timeframe`, `timestamp`)
+- [x] اضافه کردن composite index برای `market_data_snapshots` بر اساس استفاده اصلی
+- [x] بررسی ایندکس‌های اضافه شده و حذف آنها
+- [x] افزودن توضیح در کامنت‌های کد RobertsSteven
 
 ## فاز ۴ — قابلیت‌های جدید Tier 3 (مطابق TODO اصلی)
 ### ۴.۱) CryptoAndStocks integration (RAW/PROCESSED/SNAPSHOT + آنلاین تازه‌سازی)

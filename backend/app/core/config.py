@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "BedaanWaves"
     APP_VERSION: str = "1.0.0"
     APP_DESCRIPTION: str = "Unified Bedaan Ecosystem - Capital Market Analysis & AI Trading Platform"
-    DEBUG: bool = True
+    DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, staging, production
     
     # ============================================================
