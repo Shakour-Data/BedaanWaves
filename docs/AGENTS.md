@@ -55,16 +55,42 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 
 ### 🔄 Pending (Tiers 5-9)
 
-**Tier 5 - NLP Services** (5 services): Sentiment, News Summarization, Document Extraction, Chatbot, Search
-**Tier 6 - User Services** (6 services): Authentication ✅ (done), Authorization, UserProfile, Watchlist, Notification, Preference
-**Tier 7 - Specialized Services** (5 services): Sector Analysis, Screening, Comparison, Correlation, Calendar
-**Tier 8 - Crypto Services** (5 services): Price, Portfolio, Analysis, News, Arbitrage
-**Tier 9 - System Services** (6 services): Backup, Logging, Metrics, Queue, Scheduler, NotificationDispatcher
+**Tier 5 - NLP Services** (5 services): ✅ Completed
+- SentimentAnalysisService: done
+- NewsSummarizationService: done
+- DocumentExtractionService: done
+- ChatbotService: done
+- SearchService: done
 
-### ⚠️ Gaps (despite completed services)
-- No database migrations (Alembic) — only `database/init.sql`; schema not migratable
-- No unit tests for Tiers 2-4 (~20 services) — only Tier 1 covered
-- No API integration/E2E tests
+**Tier 6 - User Services** (6 services): ✅ Completed
+- AuthService: done
+- AuthorizationService: done
+- UserProfileService: done
+- WatchlistService: done
+- PreferenceService: done
+- NotificationService: done
+
+**Tier 7 - Specialized Services** (5 services): ✅ Completed
+- SectorAnalysisService: done
+- ScreeningService: done
+- ComparisonService: done
+- CorrelationService: done
+- CalendarService: done
+
+**Tier 8 - Crypto Services** (5 services): 🔄 Partially completed (3/5)
+- PriceService: done
+- PortfolioService: done
+- AnalysisService: done (via CryptoMLService)
+- NewsService: ❌ pending
+- ArbitrageService: ❌ pending
+
+**Tier 9 - System Services** (6 services): 🔄 Partially completed (3/6)
+- SchedulerService: done
+- MetricsService: done
+- QueueService: done
+- BackupService: ❌ pending
+- LoggingService: ❌ pending
+- NotificationDispatcher: ❌ pending
 
 ## Setup & Development
 
@@ -126,7 +152,6 @@ af69d84 - docs: Update progress (Tiers 1-3)
 ```
 
 ## Architecture
-
 ```
 BedaanWaves/
 ├── backend/app/
@@ -201,6 +226,6 @@ All services run directly:
 
 ---
 
-**Last Updated**: 2026-07-09  
+**Last Updated**: 2026-07-29  
 **Phase**: 3 (Services Implementation)  
 **Estimated Completion**: 1.5 weeks

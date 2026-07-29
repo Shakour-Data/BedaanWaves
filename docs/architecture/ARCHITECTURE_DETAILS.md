@@ -1,5 +1,9 @@
 # Architecture Details: Technical Specifications
 
+**Status**: Historical planning document (July 9, 2026), updated deployment section for current BedaanWaves implementation  
+**Note**: No Docker policy — all services run directly on local machine  
+**API Base URL**: `http://localhost:8000/api/v1`
+
 ---
 
 ## Table of Contents
@@ -9,7 +13,7 @@
 3. [Backend Services](#backend-services)
 4. [Frontend Architecture](#frontend-architecture)
 5. [Integration Patterns](#integration-patterns)
-6. [Deployment & DevOps](#deployment--devops)
+6. [Deployment & Operations](#deployment--operations)
 
 ---
 
@@ -327,9 +331,11 @@ def downgrade():
 
 ### RESTful API Design
 
+> **Note**: BedaanWaves has a "No Docker" policy. All services run directly on the machine. The API serves on `http://localhost:8000` (configurable via `settings.API_HOST` and `settings.API_PORT`).
+
 #### Base URL
 ```
-http://api.bedaan.local/v1
+http://localhost:8000/api/v1
 ```
 
 #### Authentication
@@ -1085,98 +1091,96 @@ export function MyComponent() {
 
 ---
 
-## Deployment & DevOps
+## Deployment & Operations
 
-### Docker Containerization
+### No Docker Policy (BedaanWaves)
 
-```dockerfile
-# Dockerfile for API Service
-FROM python:3.11-slim
+**All services run directly on the local machine — no containerization required.**
 
-WORKDIR /app
+This is a deliberate architectural decision for BedaanWaves:
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+- **Backend**: FastAPI with Uvicorn running directly on host
+- **Database**: PostgreSQL (local install, required)
+- **Cache**: Redis (optional, memory fallback via CacheService)
+- **No Docker, No Kubernetes, No containerization**
 
-COPY . .
+### Local Development Setup
 
-EXPOSE 3000
-ENV PYTHONUNBUFFERED=1
+```bash
+# 1. Install PostgreSQL locally
+# Windows: Download from postgresql.org
+# Linux: sudo apt-get install postgresql-14
+# macOS: brew install postgresql@14
 
-CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "3000"]
+# 2. Create database
+createdb bedaanwaves
+
+# 3. Run migrations
+cd backend
+alembic upgrade head
+
+# 4. Install Python dependencies
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# 5. Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# 6. Run development server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-```dockerfile
-# Dockerfile for Frontend
-FROM node:20-alpine
+### Production Deployment (Direct Execution)
 
-WORKDIR /app
+```bash
+# 1. Use a process manager (systemd, supervisor, or PM2)
+# Example systemd service: /etc/systemd/system/bedaanwaves.service
 
-COPY package*.json ./
-RUN npm ci
+[Unit]
+Description=BedaanWaves API
+After=network.target postgresql.service
 
-COPY . .
-RUN npm run build
+[Service]
+Type=exec
+User=bedaanwaves
+WorkingDirectory=/opt/bedaanwaves/backend
+Environment=PATH=/opt/bedaanwaves/backend/venv/bin
+EnvironmentFile=/opt/bedaanwaves/backend/.env
+ExecStart=/opt/bedaanwaves/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
 
-EXPOSE 3005
-
-CMD ["npm", "start"]
+[Install]
+WantedBy=multi-user.target
 ```
 
-### Kubernetes Deployment
+```bash
+# 2. Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable bedaanwaves
+sudo systemctl start bedaanwaves
+```
+
+### Health Checks
+
+```bash
+# API health
+curl http://localhost:8000/health
+
+# Database connectivity
+curl http://localhost:8000/api/v1/system/health/db
+
+# Cache status
+curl http://localhost:8000/api/v1/system/health/cache
+```
+
+### CI/CD Pipeline (GitHub Actions - Testing Only)
 
 ```yaml
-# k8s/api-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: bedaan-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: bedaan-api
-  template:
-    metadata:
-      labels:
-        app: bedaan-api
-    spec:
-      containers:
-      - name: api
-        image: bedaan/api:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: db-secret
-              key: url
-        - name: BRS_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: api-secret
-              key: brs-key
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-```
-
-### CI/CD Pipeline
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
+# .github/workflows/test.yml
+name: Test
 
 on:
   push:
@@ -1192,36 +1196,37 @@ jobs:
         image: postgres:14
         env:
           POSTGRES_PASSWORD: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        
     - name: Run tests
-      run: npm test
-    
-    - name: Run linter
-      run: npm run lint
-    
-    - name: Build
-      run: npm run build
-
-  deploy:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Build and push Docker image
       run: |
-        docker build -t bedaan/api:latest .
-        docker push bedaan/api:latest
-    
-    - name: Deploy to Kubernetes
+        cd backend
+        pytest --cov=app --cov-report=xml
+        
+    - name: Run linting
       run: |
-        kubectl apply -f k8s/
-        kubectl rollout status deployment/bedaan-api
+        cd backend
+        black --check .
+        flake8 .
+        mypy app
 ```
 
 ---

@@ -1,5 +1,7 @@
 # Comprehensive Software Ecosystem Integration Framework
 
+> ⚠️ **HISTORICAL DOCUMENT** — This file was created July 9, 2026 for planning purposes. The actual BedaanWaves implementation has progressed significantly. The project has a **No Docker policy** — all services run directly on the local machine. For current implementation status, see [README_INTEGRATION.md](README_INTEGRATION.md) and [AGENTS.md](../AGENTS.md).
+
 **Project Portfolio Analysis**: Bedaan4D-ML, Bedaan6D-project, Bedaan_4D_AI, CryptoAndStocks
 
 **Document Version**: 1.0  
