@@ -156,6 +156,12 @@ class ConfigService(BaseService):
             'news_api_url': self.get('NEWS_API_URL', 'https://newsapi.org'),
             'news_api_key': self.get('NEWS_API_KEY', ''),
             'nlp_model': self.get('NLP_MODEL', 'persian-bert'),
+            # ML Coefficient Learning Configuration
+            'ml_coefficients_enabled': self.get_bool('ML_COEFFICIENTS_ENABLED', True),
+            'ml_coefficients_retrain_interval_hours': self.get_int('ML_COEFFICIENTS_RETRAIN_INTERVAL_HOURS', 24),
+            'ml_coefficients_min_samples': self.get_int('ML_COEFFICIENTS_MIN_SAMPLES', 50),
+            'ml_coefficients_validation_split': self.get_float('ML_COEFFICIENTS_VALIDATION_SPLIT', 0.2),
+            'ml_coefficients_alert_threshold': self.get_float('ML_COEFFICIENTS_ALERT_THRESHOLD', 0.1),
         }
     
     # Get methods with type conversion
