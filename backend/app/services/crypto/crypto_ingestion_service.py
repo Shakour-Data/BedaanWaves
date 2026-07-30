@@ -258,6 +258,77 @@ class CryptoIngestionService(DataService):
         assets = [asset]
         return await self.ingest_raw_data(assets, session)
 
+    async def ingest_crypto_fundamental_data(
+        self,
+        assets: List[Any],
+        session: Any,
+    ) -> int:
+        """
+        Fetch fundamental market data (market cap, supply, volume) from CoinGecko
+        and store them in raw_market_data table for fundamental analysis.
+        """
+        stored_count = 0
+
+        for asset in assets:
+            asset_id = asset.id
+            symbol = asset.symbol.upper()
+            raw_symbol = _sanitize_symbol(symbol)
+            exchange = "COINGECKO"
+
+            try:
+                fundamental_data = await self._fetch_fundamental_data(raw_symbol)
+                await self._store_raw_market_data(
+                    session,
+                    asset_id,
+                    raw_symbol,
+                    exchange,
+                    "FUNDAMENTAL",
+                    fundamental_data,
+                )
+                stored_count += 1
+            except Exception as exc:
+                self.logger.warning(f"Failed to ingest fundamental data for {symbol}: {exc}")
+
+        await session.commit()
+        return stored_count
+
+    async def _fetch_fundamental_data(self, crypto_id: str) -> Dict[str, Any]:
+        """Fetch fundamental market data from CoinGecko API."""
+        try:
+            raw = await _fetch_coingecko_market_data(crypto_id)
+            market_data = raw.get("market_data", {})
+
+            current_price = market_data.get("current_price", {})
+            usd_price = current_price.get("usd", 0.0) if current_price else 0.0
+
+            market_cap = market_data.get("market_cap", {})
+            usd_mcap = market_cap.get("usd", 0.0) if market_cap else 0.0
+
+            total_volume = market_data.get("total_volume", {})
+            usd_volume = total_volume.get("usd", 0.0) if total_volume else 0.0
+
+            circulating_supply = market_data.get("circulating_supply", 0.0) or 0.0
+            total_supply = market_data.get("total_supply", 0.0) or 0.0
+
+            price_change_24h = market_data.get("price_change_percentage_24h", 0.0) or 0.0
+            market_cap_change_24h = market_data.get("market_cap_change_percentage_24h", 0.0) or 0.0
+
+            return {
+                "price": usd_price,
+                "market_cap": usd_mcap,
+                "total_volume": usd_volume,
+                "circulating_supply": circulating_supply,
+                "total_supply": total_supply,
+                "price_change_24h_pct": float(price_change_24h),
+                "market_cap_change_24h_pct": float(market_cap_change_24h),
+                "timestamp": datetime.utcnow().replace(tzinfo=utc),
+            }
+        except Exception as exc:
+            self.logger.error(f"Error fetching fundamental data for {crypto_id}: {exc}")
+            raise
+
+    async def ingest_symbol(self, symbol: str, session: Any) -> int:
+
     async def _lookup_asset_by_symbol(self, session: Any, symbol: str) -> Any:
         """
         Look up asset by symbol (case-insensitive).
