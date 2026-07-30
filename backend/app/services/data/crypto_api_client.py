@@ -124,3 +124,11 @@ class CryptoApiClient(ExternalAPIService):
         """Search crypto assets on CoinGecko."""
         data = await self._request("/search", {"query": query})
         return data.get("coins", [])
+
+    async def get_market_data(self, symbol: str) -> Dict[str, Any]:
+        """Get detailed market data from CoinGecko including market cap, supply, volume."""
+        symbol = symbol.lower()
+        return await self._request(
+            f"/coins/{symbol}",
+            {"localization": "false", "tickers": "false", "market_data": "true", "community_data": "false", "developer_data": "false", "sparkline": "false"},
+        )
