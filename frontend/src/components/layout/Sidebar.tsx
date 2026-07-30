@@ -22,11 +22,11 @@ export function Sidebar() {
     ? [
         { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },
         { href: "/stocks", label: "سهام", icon: "🏢", ready: true },
-        { href: "/portfolio", label: "پورتفولیو", icon: "💼", ready: false },
-        { href: "/analysis", label: "تحلیل", icon: "🔮", ready: false },
-        { href: "/news", label: "اخبار", icon: "📰", ready: false },
-        { href: "/alerts", label: "هشدارها", icon: "🔔", ready: false },
-        { href: "/settings", label: "تنظیمات", icon: "⚙️", ready: false },
+        { href: "/portfolio", label: "پورتفولیو", icon: "💼", ready: true },
+        { href: "/analysis", label: "تحلیل", icon: "🔮", ready: true },
+        { href: "/news", label: "اخبار", icon: "📰", ready: true },
+        { href: "/alerts", label: "هشدارها", icon: "🔔", ready: true },
+        { href: "/settings", label: "تنظیمات", icon: "⚙️", ready: true },
       ]
     : [
         { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },

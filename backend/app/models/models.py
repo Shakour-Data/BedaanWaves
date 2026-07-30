@@ -1171,3 +1171,428 @@ class CoefficientHistory(Base):
         Index('idx_hist_market', 'market'),
         Index('idx_hist_effective', 'effective_at'),
     )
+
+
+# ===========================================================================
+# 18. User Market Settings (Country/Index/Industry Selection)
+# ===========================================================================
+class UserMarketSetting(Base):
+    """User market settings for country, index, and industry selection."""
+    __tablename__ = "user_market_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    # Selection fields
+    countries = Column(JSONB, default=[])
+    indices = Column(JSONB, default=[])
+    industries = Column(JSONB, default=[])
+    regions = Column(JSONB, default=[])
+    exchanges = Column(JSONB, default=[])
+    currencies = Column(JSONB, default=[])
+
+    # Metadata
+    last_validated = Column(DateTime, default=datetime.utcnow)
+    validation_hash = Column(String(64))
+    is_default = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', name='uix_user_market_settings'),
+        Index('idx_market_settings_user', 'user_id'),
+    )
+
+
+class UserMarketConfig(Base):
+    """User market configuration for specific filtering scenarios."""
+    __tablename__ = "user_market_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    config_name = Column(String(100), nullable=False)
+    country = Column(String(50))
+    country_indices = Column(JSONB, default=[])
+    selected_industries = Column(JSONB, default=[])
+    included_symbols = Column(JSONB, default=[])
+
+    # Filters
+    price_range = Column(JSONB)
+    volume_range = Column(JSONB)
+    change_filter = Column(JSONB)
+    market_cap_filter = Column(JSONB)
+
+    # Metadata
+    last_calc = Column(DateTime, default=datetime.utcnow)
+    is_default = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'config_name', name='uix_user_market_config'),
+        Index('idx_market_config_user', 'user_id'),
+    )
+
+
+# ===========================================================================
+# 19. User Crypto Settings (Custom Selection from Top 300)
+# ===========================================================================
+class UserCryptoSetting(Base):
+    """User cryptocurrency settings for custom selection."""
+    __tablename__ = "user_crypto_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    # Selection fields
+    selected_cryptos = Column(JSONB, default=[])
+    excluded_cryptos = Column(JSONB, default=[])
+    custom_watchlist = Column(JSONB, default=[])
+
+    # Exchange and filters
+    exchange_source = Column(String(50), default="binance")
+    min_volume_24h = Column(Numeric(20, 8), default=1000000)
+    min_market_cap = Column(Numeric(20, 8), default=50000000)
+    price_change_filter = Column(String(20), default="all")
+
+    # Metadata
+    last_validated = Column(DateTime, default=datetime.utcnow)
+    validation_hash = Column(String(64))
+    is_default = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', name='uix_user_crypto_settings'),
+        Index('idx_crypto_settings_user', 'user_id'),
+    )
+
+
+class UserCryptoConfig(Base):
+    """User crypto configuration for specific filtering scenarios."""
+    __tablename__ = "user_crypto_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    config_name = Column(String(100), nullable=False)
+    included_symbols = Column(JSONB, default=[])
+    excluded_symbols = Column(JSONB, default=[])
+
+    # Exchange and filters
+    exchange_source = Column(String(50), default="binance")
+    min_volume_24h = Column(Numeric(20, 8))
+    min_market_cap = Column(Numeric(20, 8))
+    price_range = Column(JSONB)
+    change_filter = Column(JSONB)
+
+    # Metadata
+    last_calc = Column(DateTime, default=datetime.utcnow)
+    is_default = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'config_name', name='uix_user_crypto_config'),
+        Index('idx_crypto_config_user', 'user_id'),
+    )
+
+
+# ===========================================================================
+# 20. User Filtered Scoring Results
+# ===========================================================================
+class UserScoringResult(Base):
+    """Scoring results filtered by user preferences."""
+    __tablename__ = "user_scoring_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    source = Column(String(100), nullable=False)
+    symbol = Column(String(50), nullable=False)
+    country = Column(String(50))
+    industry = Column(String(50))
+    exchange = Column(String(50))
+
+    score = Column(Numeric(10, 6))
+    rank = Column(Integer)
+    data_date = Column(Date, nullable=False)
+
+    criteria_scores = Column(JSONB)
+    user_preferences = Column(JSONB)
+    recommendations = Column(JSONB)
+    metadata = Column(JSONB)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'symbol', 'data_date', name='uix_user_scoring'),
+        Index('idx_scoring_user', 'user_id'),
+        Index('idx_scoring_user_date', 'user_id', 'data_date'),
+        Index('idx_scoring_user_rank', 'user_id', 'rank'),
+    )
+
+
+# ===========================================================================
+# 21. Data Validation Records
+# ===========================================================================
+class ValidationRecord(Base):
+    """Data validation record."""
+    __tablename__ = "validation_records"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_id = Column(String(100), nullable=False, index=True)
+    validation_date = Column(DateTime, nullable=False, index=True)
+    validation_type = Column(String(50), nullable=False)
+    is_valid = Column(Boolean, nullable=False)
+    details = Column(JSONB)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_validation_source', 'source_id'),
+        Index('idx_validation_type', 'validation_type'),
+    )
+
+
+class SourceAuthenticity(Base):
+    """Data source authenticity record."""
+    __tablename__ = "source_authenticity"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_name = Column(String(100), nullable=False, index=True)
+    authenticity_score = Column(Numeric(5, 2), nullable=False)
+    verification_status = Column(String(50), nullable=False)
+    verification_timestamp = Column(DateTime, nullable=False, index=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_authenticity_source', 'source_name'),
+        Index('idx_authenticity_timestamp', 'verification_timestamp'),
+    )
+
+
+class CrossSourceConsistency(Base):
+    """Cross-source consistency record."""
+    __tablename__ = "cross_source_consistency"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_a_id = Column(String(100), nullable=False, index=True)
+    source_b_id = Column(String(100), nullable=False, index=True)
+    data_type = Column(String(50), nullable=False)
+    consistency_metric = Column(Numeric(5, 2), nullable=False)
+    validation_timestamp = Column(DateTime, nullable=False, index=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_consistency_sources', 'source_a_id', 'source_b_id'),
+        Index('idx_consistency_timestamp', 'validation_timestamp'),
+    )
+
+
+# ===========================================================================
+# 22. Data Sources Registry
+# ===========================================================================
+class DataSource(Base):
+    """Data source registry."""
+    __tablename__ = "data_sources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_name = Column(String(100), nullable=False, unique=True)
+    source_type = Column(String(50), nullable=False)
+    base_url = Column(String(500))
+    api_key_required = Column(Boolean, default=False)
+    auth_token = Column(String(500))
+    data_format = Column(String(50))
+    last_verification = Column(DateTime)
+    verification_count = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    metadata = Column(JSONB)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_datasource_type', 'source_type'),
+        Index('idx_datasource_active', 'is_active'),
+    )
+
+
+# ===========================================================================
+# 23. Historical Data Import Log
+# ===========================================================================
+class HistoricalDataImportLog(Base):
+    """Historical data import log."""
+    __tablename__ = "historical_data_import_log"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    import_batch_id = Column(String(100), nullable=False, index=True)
+    source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"))
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    records_imported = Column(Integer, default=0)
+    records_updated = Column(Integer, default=0)
+    validation_results = Column(JSONB)
+    import_status = Column(String(50), default="pending")
+    error_message = Column(Text)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_import_batch', 'import_batch_id'),
+        Index('idx_import_status', 'import_status'),
+    )
+
+
+# ===========================================================================
+# 24. Cryptocurrencies Master List
+# ===========================================================================
+class Cryptocurrency(Base):
+    """Cryptocurrency master list."""
+    __tablename__ = "cryptocurrencies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    symbol = Column(String(20), nullable=False, unique=True, index=True)
+    name = Column(String(200), nullable=False)
+    exchange = Column(String(50))
+    market_cap = Column(Numeric(20, 8))
+    volume_24h = Column(Numeric(20, 8))
+    price_usd = Column(Numeric(20, 8))
+    price_change_24h = Column(Numeric(10, 6))
+    price_change_7d = Column(Numeric(10, 6))
+    market_cap_rank = Column(Integer)
+    circulating_supply = Column(Numeric(20, 8))
+    max_supply = Column(Numeric(20, 8))
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    metadata = Column(JSONB)
+
+    __table_args__ = (
+        Index('idx_crypto_symbol', 'symbol'),
+        Index('idx_crypto_market_cap_rank', 'market_cap_rank'),
+        Index('idx_crypto_market_cap', 'market_cap'),
+    )
+
+
+# ===========================================================================
+# 25. Countries List
+# ===========================================================================
+class Country(Base):
+    """Countries list for market selection."""
+    __tablename__ = "countries"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False, unique=True)
+    iso_code = Column(String(10), nullable=False, unique=True)
+    stock_exchange = Column(String(100))
+    currency_code = Column(String(10))
+    timezone = Column(String(50))
+    is_active = Column(Boolean, default=True)
+    metadata = Column(JSONB)
+    last_verified = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_country_code', 'iso_code'),
+        Index('idx_country_active', 'is_active'),
+    )
+
+
+# ===========================================================================
+# 26. Industries List
+# ===========================================================================
+class Industry(Base):
+    """Industries list for sector filtering."""
+    __tablename__ = "industries"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False, unique=True)
+    sector = Column(String(100))
+    etf_ticker = Column(String(20))
+    is_active = Column(Boolean, default=True)
+    metadata = Column(JSONB)
+    last_verified = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_industry_sector', 'sector'),
+        Index('idx_industry_active', 'is_active'),
+    )
+
+
+# ===========================================================================
+# 27. Market Indices
+# ===========================================================================
+class MarketIndex(Base):
+    """Market indices for stock market tracking."""
+    __tablename__ = "market_indices"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    symbol = Column(String(50), nullable=False, unique=True, index=True)
+    name = Column(String(200), nullable=False)
+    exchange = Column(String(100))
+    country = Column(String(50))
+    base_value = Column(Numeric(20, 8))
+    current_value = Column(Numeric(20, 8))
+    change_percent = Column(Numeric(10, 6))
+    volume = Column(Numeric(18, 8))
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    metadata = Column(JSONB)
+    is_active = Column(Boolean, default=True)
+
+    __table_args__ = (
+        Index('idx_index_country', 'country'),
+        Index('idx_index_exchange', 'exchange'),
+        Index('idx_index_active', 'is_active'),
+    )
+
+
+# ===========================================================================
+# 28. User Favorites
+# ===========================================================================
+class UserFavorite(Base):
+    """User favorite assets."""
+    __tablename__ = "user_favorites"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    source = Column(String(100), nullable=False)
+    symbol = Column(String(50), nullable=False)
+    category = Column(String(50))
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'source', 'symbol', name='uix_user_favorite'),
+        Index('idx_favorite_user', 'user_id'),
+        Index('idx_favorite_category', 'category'),
+    )
+
+
+# ===========================================================================
+# 29. User Alerts
+# ===========================================================================
+class UserAlert(Base):
+    """User alert configuration."""
+    __tablename__ = "user_alerts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    symbol = Column(String(50), nullable=False)
+    alert_type = Column(String(50), nullable=False)
+    alert_condition = Column(JSONB, nullable=False)
+    is_active = Column(Boolean, default=True)
+    notify_method = Column(JSONB, default={"email": True, "push": True, "sms": False})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_triggered = Column(DateTime)
+
+    __table_args__ = (
+        Index('idx_alert_user', 'user_id'),
+        Index('idx_alert_symbol', 'symbol'),
+        Index('idx_alert_active', 'is_active'),
+    )

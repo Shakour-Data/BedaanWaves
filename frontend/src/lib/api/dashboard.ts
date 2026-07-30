@@ -1,23 +1,11 @@
 /**
  * dashboard-api.ts
  * ---------------------------------------------------------------------------
- * لایه‌ی دسترسی به داده برای داشبورد. داده‌های زنده را از بک‌اند (که روی
- * پایگاهِ seed شده اجرا می‌شود) دریافت می‌کند و در صورت در دسترس نبودن API،
- * به داده‌های نمایشی (mock) بازمی‌گردد تا داشبورد همیشه رندر شود.
+ * لایه‌ی دسترسی به داده برای داشبورد. داده‌های زنده را از بک‌اند دریافت می‌کند.
  */
 
 import { apiClient } from "@/lib/api";
-import {
-  marketStats as mockMarketStats,
-  topMovers as mockTopMovers,
-  watchlist as mockWatchlist,
-  signals as mockSignals,
-  news as mockNews,
-  type AssetRow,
-  type MarketStat,
-  type SignalRow,
-  type NewsItem,
-} from "@/lib/dashboard-data";
+import type { AssetRow, MarketStat, SignalRow, NewsItem } from "@/lib/dashboard-data";
 
 export interface DashboardData {
   marketStats: MarketStat[];
@@ -25,67 +13,220 @@ export interface DashboardData {
   watchlist: AssetRow[];
   signals: SignalRow[];
   news: NewsItem[];
-  /** true اگر حداقل بخشی از داده به‌صورت زنده از API دریافت شده باشد */
   live: boolean;
 }
 
-const WATCHLIST_SYMBOLS = mockWatchlist.map((w) => w.symbol);
-
-interface TseDashboard {
-  average_change_pct: number;
+interface TseDashboardResponse {
+  status: string;
+  market: string;
   total_symbols: number;
+  average_change_pct: number;
   top_gainers: { symbol: string; name: string; last_close: number; change_pct: number }[];
   top_losers: { symbol: string; name: string; last_close: number; change_pct: number }[];
+  timestamp: string;
 }
 
-async function fetchTopMovers(): Promise<AssetRow[] | null> {
+interface MarketOverviewResponse {
+  status: string;
+  market: string;
+  total_assets: number;
+  sectors: Record<string, number>;
+  timestamp: string;
+}
+
+interface SignalsSummaryResponse {
+  status: string;
+  timestamp: string;
+  total_signals: number;
+  summary: Record<string, number>;
+  average_confidence: Record<string, number>;
+}
+
+interface TopPerformersResponse {
+  status: string;
+  timestamp: string;
+  data: { symbol: string; name: string; change_percent: number; current_price: number; volume: number }[];
+}
+
+interface NewsResponse {
+  status: string;
+  count: number;
+  data: { title: string; source: string; published_at: string }[];
+}
+
+interface WatchlistResponse {
+  id: string;
+  name: string;
+  description: string | null;
+  is_default: boolean;
+  items: { asset: { symbol: string; name: string; market: string } }[];
+}
+
+interface LatestPricesResponse {
+  status: string;
+  timestamp: string;
+  data: Record<string, { price: number; change_pct: number; volume: number }>;
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 1) return "همین الان";
+  if (minutes < 60) return `${minutes} دقیقه پیش`;
+  if (hours < 24) return `${hours} ساعت پیش`;
+  return `${days} روز پیش`;
+}
+
+async function fetchMarketStats(): Promise<MarketStat[]> {
   try {
-    const data = await apiClient.get<TseDashboard>("/market/tse-dashboard");
-    const map = (r: TseDashboard["top_gainers"][number]): AssetRow => ({
-      symbol: r.symbol,
-      name: r.name,
-      market: "TSE",
-      price: r.last_close,
-      changePct: r.change_pct,
-    });
-    const gainers = (data.top_gainers ?? []).map(map);
-    const losers = (data.top_losers ?? []).map(map);
-    return [...gainers, ...losers].slice(0, 6);
+    const [tseOverview, tseDashboard] = await Promise.all([
+      apiClient.get<MarketOverviewResponse>("/market/market-overview?market=TSE").catch(() => null),
+      apiClient.get<TseDashboardResponse>("/market/tse-dashboard").catch(() => null),
+    ]);
+
+    const stats: MarketStat[] = [];
+
+    if (tseDashboard?.status === "success") {
+      stats.push(
+        { label: "شاخص کل بورس", value: tseDashboard.total_symbols.toLocaleString("fa-IR"), changePct: tseDashboard.average_change_pct },
+        { label: "بهترین کسب‌کننده", value: tseDashboard.top_gainers[0]?.change_pct.toFixed(2) + "٪", changePct: tseDashboard.top_gainers[0]?.change_pct ?? 0 },
+      );
+    }
+
+    if (tseOverview?.status === "success") {
+      stats.push(
+        { label: "نمادهای فعال بورس", value: tseOverview.total_assets.toLocaleString("fa-IR"), changePct: 0 },
+      );
+    }
+
+    return stats.length ? stats : [
+      { label: "شاخص کل بورس", value: "—", changePct: 0 },
+      { label: "نمادهای فعال", value: "—", changePct: 0 },
+    ];
   } catch {
-    return null;
+    return [
+      { label: "شاخص کل بورس", value: "—", changePct: 0 },
+      { label: "نمادهای فعال", value: "—", changePct: 0 },
+    ];
   }
 }
 
-async function fetchWatchlist(): Promise<AssetRow[] | null> {
+async function fetchTopMovers(): Promise<AssetRow[]> {
   try {
-    const res = await apiClient.get<{ data: Record<string, { price: number; change_pct: number }> }>(
-      `/market/latest-prices?${WATCHLIST_SYMBOLS.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`,
-    );
-    const prices = res.data ?? {};
-    const rows = mockWatchlist
-      .filter((w) => prices[w.symbol])
-      .map((w) => ({
-        ...w,
-        price: prices[w.symbol].price,
-        changePct: prices[w.symbol].change_pct,
-      }));
-    return rows.length ? rows : null;
+    const data = await apiClient.get<TseDashboardResponse>("/market/tse-dashboard");
+    if (data.status !== "success") return [];
+
+    const map = (r: TseDashboardResponse["top_gainers"][number]): AssetRow => ({
+      symbol: r.symbol, name: r.name, market: "TSE",
+      price: r.last_close, changePct: r.change_pct,
+    });
+
+    const gainers = (data.top_gainers ?? []).map(map);
+    const losers = (data.top_losers ?? []).map(map);
+    return [...gainers, ...losers].slice(0, 10);
   } catch {
-    return null;
+    return [];
+  }
+}
+
+async function fetchWatchlist(): Promise<AssetRow[]> {
+  try {
+    const watchlists = await apiClient.get<WatchlistResponse[]>("/watchlists");
+    const defaultWatchlist = watchlists.find((w) => w.is_default);
+    if (!defaultWatchlist?.items?.length) return [];
+
+    const symbols = defaultWatchlist.items.map((item) => item.asset.symbol);
+    const prices = await apiClient.get<LatestPricesResponse>(
+      `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+    );
+
+    return defaultWatchlist.items
+      .filter((item) => prices.data?.[item.asset.symbol])
+      .map((item) => ({
+        symbol: item.asset.symbol,
+        name: item.asset.name,
+        market: item.asset.market as AssetRow["market"],
+        price: prices.data[item.asset.symbol].price,
+        changePct: prices.data[item.asset.symbol].change_pct,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchSignals(): Promise<SignalRow[]> {
+  try {
+    const data = await apiClient.get<SignalsSummaryResponse>("/analysis/signals-summary?min_confidence=0.6");
+    if (data.status !== "success") return [];
+
+    const symbols = Object.entries(data.summary ?? {})
+      .filter(([, count]) => Number(count) > 0)
+      .sort(([, a], [, b]) => Number(b) - Number(a))
+      .slice(0, 5)
+      .map(([type]) => type);
+
+    const allSignals: SignalRow[] = [];
+    for (const type of symbols) {
+      try {
+        const typeSignals = await apiClient.get<any>(`/analysis/signals-summary?min_confidence=0.6`);
+        if (typeSignals.status === "success") {
+          const signals = (typeSignals.data?.summary || [])
+            .filter((s: any) => s.signal_type === type)
+            .slice(0, 2);
+          for (const s of signals) {
+            allSignals.push({
+              symbol: s.asset?.symbol || s.symbol,
+              type: s.signal_type,
+              confidence: s.confidence,
+              model: s.model_name || "ML",
+            });
+          }
+        }
+      } catch {}
+    }
+
+    return allSignals.slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchNews(): Promise<NewsItem[]> {
+  try {
+    const data = await apiClient.get<NewsResponse>("/news/market?limit=10");
+    if (data.status !== "success") return [];
+
+    return (data.data ?? []).map((n) => ({
+      title: n.title,
+      source: n.source,
+      time: formatTimeAgo(n.published_at),
+    }));
+  } catch {
+    return [];
   }
 }
 
 export async function fetchDashboardData(): Promise<DashboardData> {
-  const [movers, watch] = await Promise.all([fetchTopMovers(), fetchWatchlist()]);
+  const [marketStats, topMovers, watchlist, signals, news] = await Promise.all([
+    fetchMarketStats(),
+    fetchTopMovers(),
+    fetchWatchlist(),
+    fetchSignals(),
+    fetchNews(),
+  ]);
 
-  const live = movers !== null || watch !== null;
+  const live = [marketStats, topMovers, watchlist, signals, news].some(
+    (d) => Array.isArray(d) ? d.length > 0 : true
+  );
 
   return {
-    marketStats: mockMarketStats,
-    topMovers: movers ?? mockTopMovers,
-    watchlist: watch ?? mockWatchlist,
-    signals: mockSignals,
-    news: mockNews,
+    marketStats,
+    topMovers,
+    watchlist,
+    signals,
+    news,
     live,
   };
 }
