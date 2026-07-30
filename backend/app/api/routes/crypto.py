@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 
 from app.services.data.crypto_api_client import CryptoApiClient
 from app.services.crypto import CryptoPriceService
+from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/market/crypto", tags=["crypto"])
@@ -70,6 +71,32 @@ async def get_binance_depth(symbol: str = Query("BTCUSDT"), limit: int = Query(1
     finally:
         if not client.session.closed:
             await client.shutdown()
+
+
+@router.get("/fundamental/{symbol}")
+async def get_crypto_fundamental(symbol: str):
+    """
+    Get fundamental analysis for a crypto asset (CoinGecko).
+    
+    Args:
+        symbol (str): Cryptocurrency symbol (e.g., 'bitcoin', 'ethereum')
+        
+    Returns:
+        Fundamental metrics including market cap, supply, volume, liquidity ratios, and assessments
+    """
+    client = CryptoApiClient()
+    await client.initialize()
+    service = CryptoFundamentalAnalysisService(crypto_client=client)
+    await service.initialize()
+    try:
+        data = await service.analyze({"symbol": symbol})
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return {
+        "status": "success",
+        "symbol": symbol,
+        "data": data
+    }
 
 
 @router.get("/search", response_model=dict)
