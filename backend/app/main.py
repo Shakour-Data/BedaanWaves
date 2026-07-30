@@ -23,6 +23,7 @@ from app.services.system.queue_service import QueueService
 from app.services.crypto.crypto_ingestion_service import CryptoIngestionService
 from app.services.data.market_data_processing import MarketDataProcessingService
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
+from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
 from sqlalchemy import select
 
 # Configure logging
