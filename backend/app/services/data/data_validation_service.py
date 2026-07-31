@@ -408,8 +408,6 @@ class DataValidationService(CachedService):
             # Cache result for 15 minutes
             self.set_cached(cache_key, consistency_result, 900)
             return consistency_result
-            if condition else _[1]
-            # Conditional expression: if condition then _ else _[1]
         except Exception as e:
             self.logger.error(f"Error checking cross-source consistency for {symbol}: {str(e)}")
             return {
