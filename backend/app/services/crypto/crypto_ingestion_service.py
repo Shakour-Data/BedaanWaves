@@ -25,6 +25,70 @@ SESSION_TIMEOUT = 30  # seconds
 
 
 # ----------------------------------------------------------------------
+# Circuit Breaker Pattern for API Resilience
+# ----------------------------------------------------------------------
+class CircuitBreaker:
+    """Circuit breaker for API calls to prevent cascading failures."""
+    
+    def __init__(self, failure_threshold: int = 5, timeout: int = 60, expected_exception: type = Exception):
+        Exception):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.expected_exception = expected_exception
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+    
+    def __call__(self, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if self.state == "OPEN":
+                if self.last_failure_threshold: int = 5, timeout: int = 60, expected_exception: type = Exception):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.expected_exception = expected_exception
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+    
+    async def call(self, func, *args, **kwargs):
+        """Execute function with circuit breaker protection."""
+        if self.state == "OPEN":
+            if self._should_attempt_reset():
+                self.state = "HALF_OPEN"
+            else:
+                raise Exception("Circuit breaker is OPEN - blocking call")
+        
+        try:
+            result = await func(*args, **kwargs)
+            self._on_success()
+            return result
+        except self.expected_exception as exc:
+            self._on_failure()
+            raise exc
+    
+    def _should_attempt_reset(self) -> bool:
+        """Check if enough time has passed to attempt reset."""
+        return (
+            self.last_failure_time is not None and 
+            time.time() - self.last_failure_time >= self.timeout
+        )
+    
+    def _on_success(self) -> None:
+        """Reset circuit breaker on successful call."""
+        self.failure_count = 0
+        self.state = "CLOSED"
+    
+    def _on_failure(self) -> None:
+        """Record failure and potentially open circuit."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = "OPEN"
+
+
+# ----------------------------------------------------------------------
 # Helper Functions
 # ----------------------------------------------------------------------
 def _sanitize_symbol(raw_symbol: str) -> str:
@@ -77,7 +141,7 @@ class FallbackDataSource:
         self.primary_source = "coingecko"
         self.secondary_sources = ["coinmarketcap", "crypto_compare"]
         self.rate_limit_tracker: Dict[str, tuple] = {}
-        self.max_retries = 3
+        self.max_retries = 5
         self.backoff_factor = 1.5
 
     async def get_fundamental_data(self, crypto_id: str, symbol: str) -> Dict[str, Any]:
