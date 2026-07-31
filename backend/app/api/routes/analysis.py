@@ -17,6 +17,12 @@ from app.services.analysis.momentum_service import MomentumService
 from app.services.analysis.volatility_service import VolatilityService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
+from app.services.data.financial_data_ingest_service import (
+    FinancialDataIngestService,
+    MarketType,
+    FinancialStatementType,
+)
+from app.services.data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
 from app.core.rate_limiting import RateLimiter, rate_limit
 
 logger = logging.getLogger(__name__)
@@ -421,7 +427,7 @@ async def fundamental_analysis(
     Perform fundamental analysis for a ticker.
     
     Path parameter:
-        symbol: Asset symbol (e.g., 'AAPL', 'MSFT')
+        symbol: Asset symbol (e.g., 'AAPL', 'MSFT', 'فملی')
     """
     # Look up asset by symbol
     asset_result = await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
@@ -429,21 +435,34 @@ async def fundamental_analysis(
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
     
-    # Fetch financial data using StockFundamentalDataIngestionService
-    from app.services.data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
-    stock_service = StockFundamentalDataIngestionService()
-    await stock_service.initialize()
+    # Determine market from asset data
+    market_type = None
+    if asset.market:
+        try:
+            market_type = MarketType(asset.market)
+        except ValueError:
+            market_type = MarketType.US  # fallback
+    
+    # Fetch financial data using FinancialDataIngestService
+    financial_ingest_service = FinancialDataIngestService()
+    await financial_ingest_service.initialize()
     
     try:
         # Get financial data for the asset
-        financial_data = await stock_service.fetch_financial_data(symbol)
+        financial_data = await financial_ingest_service.get_latest_fundamentals(
+            asset_id=asset.symbol,
+            market=market_type or MarketType.US,
+        )
+        financials = financial_data.get("financials", {})
         
         # Perform fundamental analysis
-        service = FundamentalAnalysisService()
+        service = FundamentalAnalysisService(data_ingest_service=financial_ingest_service)
         await service.initialize()
         result = await service.analyze({
             "ticker": symbol,
-            "financials": financial_data
+            "market": market_type.value if market_type else None,
+            "financials": financials,
+            "use_ingestion": False  # Already fetched above
         })
         
         return {
@@ -455,7 +474,7 @@ async def fundamental_analysis(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     finally:
-        await stock_service.shutdown()
+        await financial_ingest_service.shutdown()
 
 
 @router.get("/momentum/{symbol}", response_model=dict)
