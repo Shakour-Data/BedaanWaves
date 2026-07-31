@@ -112,9 +112,7 @@ export default function NewsPage() {
 
         {/* News List */}
         <div className="lg:col-span-3">
-          <TarotCard icon="📰" title={`اخبار ${selectedSource ? `از ${selectedSource}` : "همه"} includes {
-            selectedSource ? selectedSource : "همه"
-          }`}>
+          <TarotCard icon="📰" title={selectedSource ? `اخبار از ${selectedSource}` : "همه اخبار"}>
             <NewsList items={filteredNews} />
           </TarotCard>
         </div>
