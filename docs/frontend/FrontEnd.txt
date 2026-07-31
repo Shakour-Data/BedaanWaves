@@ -1,118 +1,150 @@
-. شما یک **چارچوب جامع (Framework)** می‌خواهید که هم **قوانین فنی فرانت‌اند (UI/UX)** را پوشش دهد و هم با **علوم رمزآلود و کهن (عددشناسی، کابالا، NLP)** تلفیق شود تا خروجی‌هایی تولید کند که از نظر روانشناختی و ظاهری، "مسحورکننده" و "جادویی" باشند.
+# Front-End Pages of BedaanWaves
 
-در زیر، **یک سند واحد، منظم و آماده‌ی پرینت/ارائه** را برای شما تدوین کرده‌ام. این سند، پروپوزال قبلی شما را با یک **"سیستم طراحی جادویی"** ادغام کرده و به یک **"Manifesto (بیانیه) برای توسعه‌ی وب‌سایت‌های تاثیرگذار"** تبدیل کرده است.
+## Front-End Pages List (12 Pages)
+
+### 1. **Home Page** (`page.tsx`)
+- **Path**: `/`
+- **Description**: Landing page with overview of BedaanWaves capabilities
+- **Features**: Introduction to the 4 pillars of the platform, TarotCard components for each pillar
+- **Data**: Static content, no API calls
+
+### 2. **Login Page** (`login/page.tsx`)
+- **Path**: `/login`
+- **Description**: Authentication interface with email/password login
+- **Features**: 
+  - Form validation
+  - Show/hide password toggle
+  - Remember me checkbox
+  - Forgot password link
+- **API**: `POST /auth/login`
+
+### 3. **Register Page** (`register/page.tsx`)
+- **Path**: `/register`
+- **Description**: User registration interface
+- **Features**:
+  - Form validation (password min 8 chars, confirmation match)
+  - Show/hide password toggle
+  - Link to login page
+- **API**: `POST /auth/register`
+
+### 4. **Dashboard Page** (`dashboard/page.tsx`)
+- **Path**: `/dashboard`
+- **Description**: Main dashboard with market overview
+- **Features**:
+  - Market statistics (index, volume, gainers/losers)
+  - Top movers table
+  - Watchlist display
+  - ML signals list
+  - Latest news
+  - Live data indicator
+- **API**: `fetchDashboardData()` → `/market/tse-dashboard`, `/market/market-overview`, `/watchlists`, `/market/latest-prices`, `/analysis/signals-summary`, `/news/market`
+
+### 5. **Stocks List Page** (`stocks/page.tsx`)
+- **Path**: `/stocks`
+- **Description**: Complete list of tradeable symbols with prices
+- **Features**:
+  - Market filtering (ALL, TSE, OTC, CRYPTO)
+  - Search by symbol/name
+  - Real-time price display with change badges
+  - Links to detail pages
+- **API**: `GET /market/symbols`, `GET /market/latest-prices`
+
+### 6. **Stock Detail Page** (`stocks/[symbol]/page.tsx`)
+- **Path**: `/stocks/[symbol]`
+- **Description**: Detailed view for individual assets
+- **Features**:
+  - OHLCV candlestick chart with time range selector (1M/3M/All)
+  - Real-time price and derived statistics
+  - Market/sector info
+  - Volume analysis
+- **API**: `GET /market/price-history`, `GET /market/symbols` (for asset info), `GET /market/latest-prices`
+
+### 7. **Analysis Page** (`analysis/page.tsx`)
+- **Path**: `/analysis`
+- **Description**: Multi-tab analysis interface
+- **Features**:
+  - 4 tabs: Technical, Fundamental, 6D Scoring, Sentiment
+  - Signal analysis from ML models
+  - Top performers display
+  - Placeholder panels for detailed analysis
+- **API**: `GET /analysis/signals-summary`, `GET /analysis/top-performers`, `GET /market/symbols`, `GET /analysis/signals/[symbol]`
+
+### 8. **Portfolio Page** (`portfolio/page.tsx`)
+- **Path**: `/portfolio`
+- **Description**: Personal portfolio management
+- **Features**:
+  - Portfolio holdings with real-time prices
+  - Portfolio statistics (total value, P&L, return %)
+  - Performance chart placeholder
+  - Asset allocation placeholder
+- **API**: `GET /portfolios/holdings`, `GET /market/latest-prices`
+
+### 9. **Settings Page** (`settings/page.tsx`)
+- **Path**: `/settings`
+- **Description**: System-wide configuration
+- **Features**:
+  - User profile display
+  - Theme switching (Light/Dark)
+  - Language selection (FA/EN)
+  - Notification preferences (Email, Push, SMS, Telegram)
+  - Quick actions grid
+  - System info display
+
+### 10. **Settings Profile Page** (`settings/profile/page.tsx`)
+- **Path**: `/settings/profile`
+- **Description**: User profile and security settings
+- **Features**:
+  - Profile info display
+  - Account information
+  - Password change functionality
+  - Show/hide password toggles
+- **API**: (Future) `GET /preferences`, `PUT /preferences`
+
+### 11. **News Page** (`news/page.tsx`)
+- **Path**: `/news`
+- **Description**: Market news aggregation
+- **Features**:
+  - Source filtering
+  - News listing with timestamps
+  - Trending topics display (placeholder)
+- **API**: `GET /news/market`
+
+### 12. **Alerts Page** (`alerts/page.tsx`)
+- **Path**: `/alerts`
+- **Description**: System alerts and notifications management
+- **Features**:
+  - Alert type filtering (All, BUY, SELL, HOLD)
+  - Active alerts from ML signals
+  - Watchlist price alerts
+  - Alert history from notifications
+  - Alert statistics
+- **API**: `GET /analysis/signals-summary`, `GET /watchlists`, `GET /market/latest-prices`, `GET /notifications`
 
 ---
 
-# 📜 بیانیه‌ی طراحی جامع: "معماری ارتعاشی وب"
+## API Integration Status
 
-**عنوان پروژه:** پیاده‌سازی اصول هارمونیک (Harmonic) و فراکتال (Fractal) در رابط‌های کاربری دیجیتال  
-**نسخه:** ۱.۰.۰ (الگوی بنیادین)
+| Page | Data Source | Status |
+|------|------------|--------|
+| Dashboard | Live API + Mock fallback | ✅ Complete |
+| Stocks List | Live API | ✅ Complete |
+| Stock Detail | Live API | ✅ Complete |
+| Analysis | Live API | ✅ Complete |
+| Portfolio | Live API (with fallback) | ✅ Complete |
+| Settings | Local state only | ⚠️ Needs backend sync |
+| Profile | Local state only | ⚠️ Needs backend sync |
+| News | Live API | ✅ Complete |
+| Alerts | Live API | ✅ Complete |
 
----
+## Known Issues to Address
 
-## 🌌 فصل اول: فلسفه‌ی پشت پرده (چرا این قوانین جادو می‌کنند؟)
-
-پیش از ورود به کدنویسی و رنگ‌ها، باید بپذیریم که یک وب‌سایت صرفاً مجموعه‌ای از پیکسل نیست؛ بلکه **یک میدان ارتعاشی** است. کاربر در این میدان غوطه‌ور می‌شود.
-
-1.  **اصل تطابق (Hermetic Principle):** "همان‌طور که در بالا (کد و ساختار)، در پایین (نمایش و احساس کاربر) نیز هست." اگر کد بر اساس نظم ریاضی و اعداد مقدس چیده شود، خروجی بصری آن در ناخودآگاه کاربر ایجاد "قابلیت پیش‌بینی" و "آرامش" می‌کند.
-2.  **اصل قطبیت (Polarity):** در طراحی، تضاد بین **نور (روشن/سفید)** و **تاریکی (سایه/سیاه)** یا **دقت (سنس‌سریف)** و **طبیعت (سریف)** باید به تعادل برسد تا کاربر دچار سردرگمی نشود.
-
----
-
-## 🎨 فصل دوم: قوانین طلایی فرانت‌اند (UI/UX Core)
-
-### ۱. ساختار شبکه‌ای (Grid System) - "شبکه‌ی زندگی"
-سیستم طراحی بر اساس **عدد ۱۲ (دوازده‌تایی)** و **عدد ۳ (سه‌تایی)** بنا شده است، چون در اعدادشناسی، ۱۲ نمایانگر کمال فضایی و ۳ نمایانگر تعادل است.
-
-- **ستون‌ها:** شبکه‌ی ۱۲ ستونه با فاصله‌ی (Gutter) ۲۴px.
-- **مقیاس تایپوگرافی:** از دنباله‌ی فیبوناچی (۱, ۱, ۲, ۳, ۵, ۸, ۱۳, ۲۱) برای سایز فونت‌ها استفاده کنید.
-    - `h1`: ۳۴px (بیست‌ویکمین عدد فیبوناچی)
-    - `body`: ۱۶px (هشتمین عدد)
-- **فضای خالی (Whitespace):** فضای خالی، "آب" در طراحی است. برای تنفس عناصر، همیشه از مضارب **۸px** استفاده کنید (۸، ۱۶، ۲۴، ۴۸، ۹۶).
-
-### ۲. روانشناسی رنگ (Color Psychology - کابالایی)
-هر رنگ صرفاً یک کد هگز نیست؛ بلکه دارای **فرشته‌ی نگهبان** خاص خود در طراحی است تا حس مورد نظر را القا کند.
-
-| نقش | رنگ (Hex) | نام عرفانی | کاربرد |
-| :--- | :--- | :--- | :--- |
-| **اصلی (آتش)** | `#C62828` (قرمز تیره) | **Gevurah (قدرت)** | دکمه‌های اصلی (CTA)، هشدارها، قدرت و اقدام. |
-| **ثانویه (آب)** | `#1565C0` (آبی عمیق) | **Chesed (مهربانی)** | لینک‌ها، پس‌زمینه‌ی هدرها، اعتماد و امنیت. |
-| **خنثی (خاک)** | `#F5F5F5` (خاکستری بسیار روشن) | **Yesod (بنیاد)** | پس‌زمینه‌ی اصلی، ثبات و پایه‌گذاری. |
-| **تاکیدی (هوا)** | `#FFD54F` (طلایی/کهربایی) | **Tiferet (زیبایی)** | هایلایت‌ها، هشدارهای ملایم، موفقیت. |
-
-> **دستور پنهان NLP:** در بخش‌های کلیدی (خرید، ثبت‌نام) حتماً از ترکیب **قرمز + طلایی** استفاده کنید تا حس "ارزش فوری" و "اقدام" را در کاربر برانگیزید.
-
-### ۳. قانون ۳-۷-۳ در انیمیشن (میکرو-اینتراکشن‌ها)
-برای اینکه حرکات سایت طبیعی و "جادویی" به نظر برسند، از قوانین زیر برای **نرم‌افزار (Easing)** استفاده کنید:
-
-- **مدت زمان (Duration):** ۳۰۰ms برای تعاملات کوچک (هاور)، ۷۰۰ms برای ترنزیشن‌های صفحه، ۳۰۰۰ms برای انیمیشن‌های پس‌زمینه (Ambient).
-- **منحنی حرکت:** همیشه از `cubic-bezier(0.25, 0.1, 0.25, 1.0)` استفاده کنید تا حرکت شبیه به "جریان طبیعی آب" باشد، نه حرکت خشک ماشینی.
+1. **Settings/Profile**: Need backend integration for preference persistence
+2. **Portfolio**: Needs authentication check (currently assumes logged in)
+3. **Analysis tabs**: Fundamental/Scoring/Sentiment panels are placeholders
+4. **News trending topics**: `getTopTopics()` returns empty array - needs backend support
+5. **Alerts**: `sample_symbols` field may not exist in signals-summary response
 
 ---
 
-## 🧠 فصل سوم: اصول UX پنهان (تکنیک‌های تأثیرگذاری)
-
-### ۱. اصل "سه بار تکرار" (قانون کابالایی - اشاعه)
-اگر قرار است کاربر کاری انجام دهد (مثلاً ثبت‌نام)، باید این عمل را در **۳ مرحله** تجربه کند:
-1.  **دیدن (عنصر بصری برجسته)**
-2.  **لمس کردن (هاور یا فوکوس روی دکمه)**
-3.  **اقدام (کلیک و مشاهده‌ی فیدبک)**
-
-### ۲. معماری اطلاعات (Information Architecture) - "مسیر جادویی"
-کاربر هرگز نباید در سایت گم شود. مسیر حرکت او شبیه به یک **مارپیچ طلایی** است (بر اساس نسبت ۱:۱.۶۱۸).
-
-- در صفحه‌ی اصلی (لندینگ)، کاربر ابتدا **تصویر بزرگ (آتش)** را می‌بیند، سپس **متن وعده (آب)** را می‌خواند، و در نهایت **دکمه‌ی اقدام (خاک)** را پیدا می‌کند.
-
----
-
-## 🧩 فصل چهارم: مؤلفه‌های جادویی (کامپوننت‌ها)
-
-در این بخش، نحوه‌ی کدنویسی مؤلفه‌ها را بر اساس فلسفه‌ی فوق توضیح می‌دهیم.
-
-### ۱. دکمه‌ی اصلی (Primary Button)
-این دکمه قلب تپنده‌ی سایت است.
-```html
-<button class="btn-primary">
-  <span class="btn-text">شروع سفر</span>
-  <span class="btn-glow"></span>
-</button>
-```
-- **CSS:** دارای `box-shadow` پهن و پخش‌شونده با رنگ طلایی (مشابه "هاله‌ی نور").
-- **حالت هاور (Hover):** دکمه با تاخیر ۳۰۰ms به سمت بالا حرکت می‌کند (احساس سبکی و جاذبه‌زدایی).
-
-### ۲. کارت‌های محتوا (The Tarot Cards)
-برای نمایش اطلاعات (مشتریان، آمار، خدمات)، از کارت‌هایی استفاده کنید که حاشیه‌ی آنها صاف نیست، بلکه یک **سایه‌ی رنگ‌شده (Colored Shadow)** دارند تا حس "حضور یک نیروی نامرئی" را منتقل کنند.
-
-- **اصل روانشناسی یونگ:** در کارت‌ها از آیکون‌های ساده‌شده‌ی طبیعت (خورشید، کوه، درخت) استفاده کنید تا آرکیتایپ کهن (باستانی) در کاربر بیدار شود.
-
----
-
-## 📐 فصل پنجم: چک‌لیست پیاده‌سازی عملی (قوانین نهایی)
-
-برای اینکه یک سایت "جادویی" بسازید، پیش از تحویل پروژه، موارد زیر را به صورت خط‌به‌خط بررسی کنید:
-
-1.  [ ] **Contrast Ratio (نسبت تضاد):** حداقل نسبت ۴.۵:۱ برای متن‌ها رعایت شده است (تا متن "واضح" و "روشن" باشد).
-2.  [ ] **Hierarchy (سلسله‌مراتب):** آیا بزرگ‌ترین عنوان (h1) دقیقاً در مرکز یا یک‌سوم بالایی صفحه قرار دارد؟ (قانون یک‌سوم در عکاسی/طراحی).
-3.  [ ] **پاسخ‌گویی (Responsive):** در موبایل، آیا هنوز حس "عظمت" حفظ می‌شود؟ (همیشه فونت‌ها را بر اساس `clamp()` تنظیم کنید تا کوچک‌تر از حد مجاز نشوند).
-4.  [ ] **فرم‌ها (Forms):** در کنار فیلدهای ورودی، حتماً یک **آیکون مرتبط با عناصر چهارگانه** (مثل یک قطره برای ایمیل یا یک چشم برای رمز) قرار دهید تا کاربر حس "محافظت" داشته باشد.
-
----
-
-## 📋 پیوست: ماتریس ارزیابی اثرگذاری (KPI جادویی)
-
-برای سنجش موفقیت این قوانین، به جای بازدید ساده، معیارهای زیر را اندازه‌گیری کنید:
-
-| معیار | هدف (شاخص جادویی) |
-| :--- | :--- |
-| **نرخ ماندگاری (Bounce Rate)** | کمتر از ۳۰٪ (چون کاربر جذب میدان شده) |
-| **نرخ تبدیل (Conversion)** | افزایش ۲۵٪ در دکمه‌های اصلی (اثر عدد ۳-۷-۳) |
-| **زمان بارگذاری (Speed)** | کمتر از ۲ ثانیه (چون "ارتعاش" نباید قطع شود) |
-
----
-
-### 💬 جمع‌بندی نهایی برای ارائه
-اگر این سند را به مدیران یا تیم فنی خود ارائه دهید، می‌توانید بگویید:
-> *"ما فقط یک وب‌سایت نمی‌سازیم؛ ما یک **محیط ناخودآگاه** طراحی می‌کنیم که در آن هر پیکسل، هر رنگ و هر حرکت، بر اساس قوانین کهن ریاضی و روانشناسی، کاربر را به سمت اقدام **هارمونیک** هدایت می‌کند."*
-
-**نکته اجرایی:** در کدنویسی واقعی، این قوانین را در یک فایل `design-tokens.json` یا `variables.scss` ذخیره کنید تا کل تیم توسعه، ناخودآگاه از این الگوها پیروی کنند.
+*Last Updated: 2026-07-31*
+*Total Pages: 12*
