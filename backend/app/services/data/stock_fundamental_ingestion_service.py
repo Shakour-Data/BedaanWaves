@@ -1,179 +1,224 @@
-from typing import Any, Dict, List, Optional
-from datetime import datetime, date
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+"""
+Stock Fundamental Data Ingestion Service - Extension for stock fundamental analysis
 
-from app.services.core.base_service import DataService
-from app.db.base import AsyncSession
-from app.models.models import Asset, IRFinancialStatement
+Specifically designed for ingesting fundamental data for stocks from various sources
+including CODAL (Iran), Yahoo Finance (US/international), and other APIs.
+"""
+
+from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
+from ..core import DataService
+from .financial_data_ingest_service import (
+    FinancialDataIngestService, 
+    FinancialStatementType, 
+    MarketType
+)
+from app.core.config import get_settings
 
 
 class StockFundamentalDataIngestionService(DataService):
-    """Service for ingesting stock fundamental data from external sources."""
+    """
+    Stock Fundamental Data Ingestion Service
     
-    def __init__(self, service_name: str = "StockFundamentalDataIngestionService"):
+    Specialized service for ingesting fundamental data for stocks.
+    Provides convenient methods for common stock fundamental analysis workflows.
+    """
+    
+    def __init__(
+        self,
+        service_name: str = "StockFundamentalDataIngestionService",
+        brs_client: Optional[Any] = None,
+    ):
         super().__init__(service_name)
+        # Initialize the underlying financial data ingest service
+        self.financial_ingest_service = FinancialDataIngestService(brs_client=brs_client)
+        self.settings = get_settings()
     
     async def initialize(self) -> None:
+        await self.financial_ingest_service.initialize()
         self.logger.info("StockFundamentalDataIngestionService initialized")
     
     async def shutdown(self) -> None:
+        await self.financial_ingest_service.shutdown()
         self.logger.info("StockFundamentalDataIngestionService shutdown")
     
-    async def fetch_financial_data(self, ticker: str) -> Dict[str, Any]:
-        """Fetch financial statements from external sources (Yahoo Finance, SEC EDGAR)."""
-        self.logger.info(f"Fetching financial data for {ticker}")
-        return {
-            "ticker": ticker,
-            "balance_sheet": {
-                "total_assets": 1000000000.0,
-                "total_liabilities": 500000000.0,
-                "total_equity": 500000000.0,
-                "current_assets": 300000000.0,
-                "current_liabilities": 150000000.0,
-                "cash": 100000000.0,
-                "inventory": 50000000.0,
-                "accounts_receivable": 75000000.0,
-            },
-            "income_statement": {
-                "revenue": 800000000.0,
-                "cost_of_goods_sold": 400000000.0,
-                "gross_profit": 400000000.0,
-                "operating_income": 200000000.0,
-                "ebit": 180000000.0,
-                "net_income": 120000000.0,
-                "dividend": 30000000.0,
-                "earnings": 120000000.0,
-            },
-            "cash_flow": {
-                "operating_cash_flow": 150000000.0,
-                "investing_cash_flow": -50000000.0,
-                "financing_cash_flow": -80000000.0,
-            },
-            "price": {
-                "stock_price": 50.0,
-                "book_value_per_share": 5.0,
-                "shares_outstanding": 100000000.0,
-            },
-            "market_data": {
-                "market_cap": 5000000000.0,
-                "total_volume": 10000000.0,
-            },
-            "growth_rates": {
-                "revenue_growth": 0.15,
-                "earnings_growth": 0.20,
-            },
-            "as_of_date": date.today(),
-        }
-    
-    async def store_financial_statements(
-        self, 
-        session: AsyncSession, 
-        asset_id: str, 
-        ticker: str,
-        financial_data: Dict[str, Any],
-        period: str = "2024Q1"
-    ) -> int:
-        """Store financial statements in database."""
-        try:
-            balance_sheet = financial_data.get("balance_sheet", {})
-            income_statement = financial_data.get("income_statement", {})
-            cash_flow = financial_data.get("cash_flow", {})
-            
-            stmt = pg_insert(IRFinancialStatement).values(
-                asset_id=asset_id,
-                period=period,
-                statement_type="BALANCE",
-                fiscal_year=2024,
-                data=balance_sheet,
-                as_of=financial_data.get("as_of_date")
-            )
-            await session.execute(stmt)
-            
-            stmt = pg_insert(IRFinancialStatement).values(
-                asset_id=asset_id,
-                period=period,
-                statement_type="INCOME",
-                fiscal_year=2024,
-                data=income_statement,
-                as_of=financial_data.get("as_of_date")
-            )
-            await session.execute(stmt)
-            
-            stmt = pg_insert(IRFinancialStatement).values(
-                asset_id=asset_id,
-                period=period,
-                statement_type="CASHFLOW",
-                fiscal_year=2024,
-                data=cash_flow,
-                as_of=financial_data.get("as_of_date")
-            )
-            await session.execute(stmt)
-            
-            await session.commit()
-            self.logger.info(f"Stored financial data for {ticker}")
-            return 3
-        except Exception as e:
-            self.logger.error(f"Failed to store financial data for {ticker}: {e}")
-            raise
-    
-    async def ingest_stock_fundamental_data(
-        self,
-        session: AsyncSession,
-        ticker: str
-    ) -> Dict[str, Any]:
-        """Main ingestion method for stock fundamental data."""
-        try:
-            stmt = select(Asset).where(Asset.symbol == ticker.upper())
-            result = await session.execute(stmt)
-            asset = result.scalars().first()
-            
-            if not asset:
-                raise ValueError(f"Asset {ticker} not found in database")
-            
-            financial_data = await self.fetch_financial_data(ticker)
-            records_stored = await self.store_financial_statements(
-                session, 
-                str(asset.id), 
-                ticker.upper(),
-                financial_data
-            )
-            
-            return {
-                "status": "success",
-                "ticker": ticker,
-                "records_stored": records_stored,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        except Exception as e:
-            self.logger.error(f"Ingestion failed for {ticker}: {e}")
-            return {
-                "status": "error",
-                "ticker": ticker,
-                "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
-            }
-    
-    async def run_ingestion_job(self) -> Dict[str, Any]:
-        """Run ingestion for all active stocks."""
-        from app.db.base import async_session_maker
+    async def fetch_financial_data(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch comprehensive financial data for a stock symbol.
         
-        async with async_session_maker() as session:
-            stmt = select(Asset).where(
-                (Asset.market.in_(["NYSE", "NASDAQ", "TSE", "OTC"])) & 
-                (Asset.active == True)
-            )
-            result = await session.execute(stmt)
-            assets = result.scalars().all()
+        Automatically detects market based on symbol patterns and 
+        fetches appropriate financial statements.
+        
+        Args:
+            symbol: Stock symbol (e.g., 'AAPL', 'MSFT', 'فملی')
             
-            results = []
-            for asset in assets:
-                result = await self.ingest_stock_fundamental_data(session, asset.symbol)
-                results.append(result)
+        Returns:
+            Dictionary containing financial data ready for analysis
+        """
+        # Detect market based on symbol characteristics
+        market = self._detect_market(symbol)
+        
+        # Fetch all core financial statements
+        statements = await self.financial_ingest_service.ingest_financial_statements(
+            symbol=symbol,
+            market=market,
+            statement_types=[
+                FinancialStatementType.INCOME,
+                FinancialStatementType.BALANCE_SHEET,
+                FinancialStatementType.CASH_FLOW,
+            ]
+        )
+        
+        # Convert to format expected by FundamentalAnalysisService
+        financials = self._aggregate_financial_data(statements)
+        
+        return financials
+    
+    async def fetch_income_statement(self, symbol: str) -> Dict[str, Any]:
+        """Fetch income statement data for a symbol"""
+        market = self._detect_market(symbol)
+        statements = await self.financial_ingest_service.ingest_financial_statements(
+            symbol=symbol,
+            market=market,
+            statement_types=[FinancialStatementType.INCOME]
+        )
+        return self._aggregate_financial_data(statements) if statements else {}
+    
+    async def fetch_balance_sheet(self, symbol: str) -> Dict[str, Any]:
+        """Fetch balance sheet data for a symbol"""
+        market = self._detect_market(symbol)
+        statements = await self.financial_ingest_service.ingest_financial_statements(
+            symbol=symbol,
+            market=market,
+            statement_types=[FinancialStatementType.BALANCE_SHEET]
+        )
+        return self._aggregate_financial_data(statements) if statements else {}
+    
+    async def fetch_cash_flow_statement(self, symbol: str) -> Dict[str, Any]:
+        """Fetch cash flow statement data for a symbol"""
+        market = self._detect_market(symbol)
+        statements = await self.financial_ingest_service.ingest_financial_statements(
+            symbol=symbol,
+            market=market,
+            statement_types=[FinancialStatementType.CASH_FLOW]
+        )
+        return self._aggregate_financial_data(statements) if statements else {}
+    
+    async def get_quarterly_fundamentals(
+        self, 
+        symbol: str, 
+        quarters: int = 4
+    ) -> List[Dict[str, Any]]:
+        """
+        Get quarterly fundamental data for the last N quarters.
+        
+        Args:
+            symbol: Stock symbol
+            quarters: Number of quarters to retrieve
             
-            return {
-                "status": "completed",
-                "total_assets": len(assets),
-                "results": results,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+        Returns:
+            List of fundamental data dictionaries for each quarter
+        """
+        market = self._detect_market(symbol)
+        # This would implement quarterly data retrieval
+        # For now, return latest data repeated
+        latest = await self.fetch_financial_data(symbol)
+        return [latest] * min(quarters, 4)
+    
+    async def get_annual_fundamentals(
+        self, 
+        symbol: str, 
+        years: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Get annual fundamental data for the last N years.
+        
+        Args:
+            symbol: Stock symbol
+            years: Number of years to retrieve
+            
+        Returns:
+            List of fundamental data dictionaries for each year
+        """
+        market = self._detect_market(symbol)
+        # This would implement annual data retrieval
+        # For now, return latest data repeated
+        latest = await self.fetch_financial_data(symbol)
+        return [latest] * min(years, 3)
+    
+    def _detect_market(self, symbol: str) -> "MarketType":
+        """
+        Detect market type based on symbol characteristics.
+        
+        Args:
+            symbol: Stock symbol
+            
+        Returns:
+            MarketType enum value
+        """
+        # Simple heuristics for market detection
+        # In reality, this would use asset metadata from database
+        
+        # Iranian stocks often use Persian characters or specific patterns
+        persian_chars = set('ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
+        if any(c in persian_chars for c in symbol):
+            return MarketType.IRAN
+        
+        # Common US stock patterns
+        if len(symbol) <= 5 and symbol.isalpha() and symbol.isupper():
+            # Could be US stock, but need to check against known international
+            # For simplicity, assume US if not clearly Iranian
+            return MarketType.US
+        
+        # Default to US for unknown symbols
+        return MarketType.US
+    
+    def _aggregate_financial_data(
+        self, 
+        statements: List[Any]
+    ) -> Dict[str, Any]:
+        """
+        Aggregate financial statement data into format expected by analysis services.
+        
+        Args:
+            statements: List of FinancialStatement objects
+            
+        Returns:
+            Dictionary of financial metrics
+        """
+        financials = {}
+        
+        for stmt in statements:
+            # Each statement's data is expected to be a dict of financial metrics
+            if hasattr(stmt, 'data') and isinstance(stmt.data, dict):
+                financials.update(stmt.data)
+            elif isinstance(stmt, dict) and 'data' in stmt:
+                financials.update(stmt['data'])
+        
+        # Add commonly expected fields if not present
+        # These would normally come from the parsed statements
+        expected_fields = [
+            'stock_price', 'eps', 'book_value_per_share', 'revenue', 
+            'net_income', 'gross_profit', 'operating_income', 'equity',
+            'total_assets', 'current_assets', 'current_liabilities',
+            'inventory', 'cash', 'total_debt', 'ebit', 'interest_expense',
+            'operating_cash_flow', 'capital_expenditure', 'free_cash_flow',
+            'shares_outstanding', 'dividend', 'dividend_per_share',
+            'cost_of_goods_sold', 'accounts_receivable', 'tax_rate',
+            'depreciation', 'amortization'
+        ]
+        
+        for field in expected_fields:
+            if field not in financials:
+                financials[field] = 0.0
+        
+        return financials
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """Check service health"""
+        base_health = await super().health_check()
+        base_health.update({
+            "service": self.service_name,
+            "financial_ingest_service_initialized": self.financial_ingest_service is not None,
+        })
+        return base_health
