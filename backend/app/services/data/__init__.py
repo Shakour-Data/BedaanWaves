@@ -10,6 +10,8 @@ Services for data management and external API integration:
 - NewsService: News data integration
 - CryptoApiClient: Cryptocurrency market data
 - IntlApiClient: International stock exchange data
+- FinancialDataIngestService: Financial statements from multiple sources
+- StockFundamentalDataIngestionService: Stock fundamental data ingestion
 """
 
 from .brs_api_client import BrsApiClient
@@ -20,6 +22,14 @@ from .history_service import HistoryService
 from .news_service import NewsService
 from .crypto_api_client import CryptoApiClient
 from .intl_api_client import IntlApiClient
+from .financial_data_ingest_service import (
+    FinancialDataIngestService,
+    FinancialStatementType,
+    MarketType,
+    FinancialStatement,
+    FinancialDataProvider,
+)
+from .stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
 
 __all__ = [
     "BrsApiClient",
@@ -30,4 +40,10 @@ __all__ = [
     "NewsService",
     "CryptoApiClient",
     "IntlApiClient",
+    "FinancialDataIngestService",
+    "StockFundamentalDataIngestionService",
+    "FinancialStatementType",
+    "MarketType",
+    "FinancialStatement",
+    "FinancialDataProvider",
 ]
