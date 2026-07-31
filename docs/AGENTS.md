@@ -4,7 +4,7 @@
 
 BedaanWaves is a unified capital market analysis platform consolidating 5 legacy projects into a single, optimized system.
 
-- **Framework**: FastAPI, SQLAlchemy
+- **Framework**: FastAPI, SQLAlchemy 2.0
 - **Database**: PostgreSQL (local, required)
 - **Python**: 3.11+
 - **No Docker**: All services run directly on local machine
@@ -19,12 +19,13 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - `E:\Shakour\BedaanProjects\OldFils\Bedaan6D-project`
 - `E:\Shakour\BedaanProjects\OldFils\CryptoAndStocks`
 
-**Active Scope**: `E:\Shakour\BedaanProjects\BedaanWaves` only
+**Active Scope**: `E:\Shakour\BedaanProjects\OldFils\BedaanWaves` only
 
 ## Implementation Status
 
 ### ✅ Completed (Master Implementation: 100%)
-**Tier 1: Core Services** (6 services, 1,270 LOC)
+
+**Tier 1: Core Services** (6 services)
 - DependencyContainer: IoC/DI management
 - ConfigService: Centralized configuration
 - LoggerService: Structured logging
@@ -32,7 +33,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - DatabaseService: Connection pooling
 - HealthChecker: System monitoring
 
-**Tier 2: Data Services** (13 services, 1050 LOC)
+**Tier 2: Data Services** (13 services)
 - BrsApiClient: Tehran Stock Exchange API
 - StockService: Stock data management
 - MarketService: Market data aggregation
@@ -44,19 +45,19 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - IntlApiClient: International market APIs
 - CryptoApiClient: Crypto exchange APIs
 - DataValidationService: Data integrity validation
-- FinancialDataIngestService: Multi-source financial statement ingestion (CODAL, Yahoo Finance, Alpha Vantage
+- FinancialDataIngestService: Multi-source financial statement ingestion (CODAL, Yahoo Finance, Alpha Vantage)
 - StockFundamentalDataIngestionService: Stock fundamental data pipeline for Iran/US/International markets
 
 **Tier 3: Analysis Services** (7 services)
 - ScoringService: 6D scoring, 305-node hierarchy
-- TechnicalAnalysisService: 50+ indicators
+- TechnicalAnalysisService: 50+ indicators with live dashboard
 - FundamentalAnalysisService: 20+ ratios with global market support (Iran, US, International)
-- RiskAnalysisService: VaR, Sharpe, stress testing
-- MomentumService: Momentum analysis
-- VolatilityService: Volatility forecasting
-- UserFilteredScoringService: Custom scoring based on user selections
+- RiskAnalysisService: VaR, Sharpe, stress testing (production-ready)
+- MomentumService: Momentum analysis (live signals)
+- VolatilityService: Volatility forecasting (production-ready)
+- UserFilteredScoringService: Custom scoring based on user selections (live API)
 
-**Tier 4: ML Services** (9 services)
+**Tier 4: ML Services** (9 services) - COMPLETED
 - PredictionService: Price prediction models
 - PatternRecognitionService: Chart pattern detection
 - AnomalyDetectionService: Outlier detection
@@ -67,7 +68,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - CryptoMLService: Crypto-specific ML models
 - UserFilteredRecommendationService: Recommendations filtered by user preferences
 
-**Tier 5: NLP Services** (6 services)
+**Tier 5: NLP Services** (6 services) - COMPLETED
 - SentimentAnalysisService: News sentiment analysis
 - NewsSummarizationService: Text summarization
 - DocumentExtractionService: PDF/text extraction
@@ -75,7 +76,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - SearchService: Semantic search
 - MultiLanguageNewsService: Country-specific news with language detection
 
-**Tier 6: User Services** (8 services)
+**Tier 6: User Services** (8 services) - COMPLETED
 - AuthService: Authentication with JWT
 - AuthorizationService: RBAC
 - UserProfileService: User profiles and KYC
@@ -85,7 +86,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - UserMarketSettingsService: Country/index/industry selection
 - UserCryptoSettingsService: Cryptocurrency selection preferences
 
-**Tier 7: Specialized Services** (7 services)
+**Tier 7: Specialized Services** (7 services) - COMPLETED
 - SectorAnalysisService: Sector performance
 - ScreeningService: Stock screening filters
 - ComparisonService: Peer benchmarking
@@ -94,7 +95,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - InternationalMarketService: Multi-country data integration
 - SectorFilterService: Industry-based filtering
 
-**Tier 8: Crypto Services** (8 services)
+**Tier 8: Crypto Services** (8 services) - COMPLETED
 - PriceService: Real-time crypto price feeds
 - PortfolioService: Crypto portfolio management
 - CryptoIngestionService: Exchange data ingestion
@@ -104,7 +105,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - CryptoAnalysisService: On-chain metrics analysis
 - ArbitrageService: Cross-exchange price monitoring
 
-**Tier 9: System Services** (8 services)
+**Tier 9: System Services** (8 services) - COMPLETED
 - SchedulerService: Task scheduling pipeline
 - MetricsService: Performance monitoring
 - QueueService: Message queuing system
@@ -128,14 +129,15 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 # Create PostgreSQL database
 createdb bedaanwaves
 
-# Run migrations (when ready)
-# alembic upgrade head
+# Run migrations
+cd backend
+alembic upgrade head
 ```
 
 ### Backend Setup
 ```bash
 cd backend
-pip install -r requirements.txt
+pip install -e .  # Install from pyproject.toml
 ```
 
 ### Environment
@@ -164,18 +166,20 @@ JWT_SECRET=your-secret-key-change-in-production
 All work is committed to master branch:
 - Tier implementations are committed separately
 - Each commit includes comprehensive feature description
-- Progress tracked in REWRITE_PROGRESS.md
+- Progress tracked in docs/TODO.md
 
 ### Recent Commits
 ```
-fd2346e - chore: update database schema, models, docs and frontend adaptations
-f5d6aa4 - feat(specialized/user): add international market, sector filter and user settings services
-dd6f3ba - feat(analysis): add user filtered scoring and data validation services
-6072d9b - feat(system): add data integrity and settings migration services
-aa97e1d - feat(frontend): add alerts, analysis, news, portfolio, and settings pages
-e88555e - feat(crypto): add crypto market cap and custom selection services
-dfdbde7 - feat(nlp): add multilingual news service
-41ff9f4 - feat(ml): add user filtered recommendation service
+7a09ed7 - Update crypto_ingestion_service.py
+b66dedf - Update init__.py
+cc0eba2 - Update init__.py
+92bdb4d - Add financial_data_ingest_service.py
+c881e7a - Update TODO.md
+11a8bd0 - Update AGENTS.md
+36d36ea - Update stock_fundamental_ingestion_service.py
+8fac24a - Update init__.py
+7129f9f - Update fundamental_service.py
+8f69185 - Update analysis.py
 ```
 
 ## Architecture
@@ -186,12 +190,12 @@ BedaanWaves/
 │   │   ├── core/          # Tier 1: Foundation
 │   │   ├── data/          # Tier 2: Data access
 │   │   ├── analysis/      # Tier 3: Analysis
-│   │   ├── ml/            # Tier 4: ML (pending)
-│   │   ├── nlp/           # Tier 5: NLP (pending)
-│   │   ├── user/          # Tier 6: User (pending)
-│   │   ├── specialized/   # Tier 7: Specialized (pending)
-│   │   ├── crypto/        # Tier 8: Crypto (pending)
-│   │   └── system/        # Tier 9: System (pending)
+│   │   ├── ml/            # Tier 4: ML (completed)
+│   │   ├── nlp/           # Tier 5: NLP (completed)
+│   │   ├── user/          # Tier 6: User (completed)
+│   │   ├── specialized/   # Tier 7: Specialized (completed)
+│   │   ├── crypto/        # Tier 8: Crypto (completed)
+│   │   └── system/        # Tier 9: System (completed)
 │   ├── api/routes/        # FastAPI routes
 │   ├── models/            # SQLAlchemy models
 │   ├── schemas/           # Pydantic schemas
@@ -200,7 +204,7 @@ BedaanWaves/
 ├── frontend/              # Next.js 16+
 ├── docs/                  # Documentation
 │   ├── AGENTS.md          # This file
-│   └── REWRITE_PROGRESS.md # Progress tracking
+│   └── TODO.md            # Task tracking
 └── kilo.json              # Kilo config
 ```
 
