@@ -26,6 +26,8 @@ export function Sidebar() {
         { href: "/analysis", label: "تحلیل", icon: "🔮", ready: true },
         { href: "/news", label: "اخبار", icon: "📰", ready: true },
         { href: "/alerts", label: "هشدارها", icon: "🔔", ready: true },
+        { href: "/scoring", label: "امتیازدهی", icon: "🧮", ready: true },
+        { href: "/methodology", label: "روش‌شناسی", icon: "📚", ready: true },
         { href: "/settings", label: "تنظیمات", icon: "⚙️", ready: true },
       ]
     : [
