@@ -78,45 +78,41 @@ backend/
 │   │   ├── exceptions.py       # Custom exceptions
 │   │   └── constants.py        # Constants and enums
 │   │
-│   ├── services/               # 50+ Business Services (9 Tiers)
+│   ├── services/               # 48+ Business Services (9 Tiers)
 │   │   ├── core/               # Tier 1: Core (DI, Config, Logging, Cache, DB, Health)
 │   │   ├── data/               # Tier 2: Data (APIs, Data Management)
-│   │   ├── analysis/           # Tier 3: Analysis (Scoring, Technical, Fundamental, Risk)
-│   │   ├── ml/                 # Tier 4: ML (Prediction, Anomaly, Clustering)
-│   │   ├── nlp/                # Tier 5: NLP (Sentiment, News, Entity, Summary)
-│   │   ├── user/               # Tier 6: User (Auth, Portfolio, Alerts)
-│   │   ├── specialized/        # Tier 7: Specialized (Hierarchy, Backtest, Optimization)
-│   │   ├── crypto/             # Tier 8: Crypto (Multi-asset)
-│   │   └── system/             # Tier 9: System (Monitoring, Backup, Recovery)
+│   │   ├── analysis/           # Tier 3: Analysis (Scoring, Technical, Fundamental, Risk, Momentum, Volatility)
+│   │   ├── ml/                 # Tier 4: ML (Prediction, Pattern Recognition, Anomaly, Recommendation, Portfolio Optimization, Time Series, Coefficient Learning, Crypto ML, User Filtered Recommendation)
+│   │   ├── nlp/                # Tier 5: NLP (Sentiment, News Summarization, Document Extraction, Chatbot, Search, Multi-Language News)
+│   │   ├── user/               # Tier 6: User (Auth, Authorization, Profile, Watchlist, Notification, Preferences, Market Settings, Crypto Settings)
+│   │   ├── specialized/        # Tier 7: Specialized (Sector Analysis, Screening, Comparison, Correlation, Calendar, International Market, Sector Filter)
+│   │   ├── crypto/             # Tier 8: Crypto (Price, Portfolio, Ingestion, ML, Custom Selection, Market Cap, News, Arbitrage)
+│   │   └── system/             # Tier 9: System (Scheduler, Metrics, Queue, Backup, Logging, Notification Dispatcher, Data Integrity, Settings Migration)
 │   │
 │   ├── models/                 # SQLAlchemy ORM models
-│   │   ├── base.py            # Base model class
-│   │   ├── assets.py          # Stock/Crypto models
-│   │   ├── market_data.py     # OHLCV data
-│   │   ├── analysis.py        # Analysis results
-│   │   ├── users.py           # User data
-│   │   └── system.py          # Audit, logs, metrics
+│   │   └── models.py           # All models in single file
 │   │
 │   ├── schemas/               # Pydantic request/response schemas
-│   │   ├── stock.py
-│   │   ├── market.py
-│   │   ├── analysis.py
-│   │   ├── portfolio.py
-│   │   ├── user.py
-│   │   └── crypto.py
+│   │   └── schemas.py         # All schemas in single file
 │   │
-│   ├── api/                   # 16+ API routers
+│   ├── api/                   # 16 API routers
 │   │   ├── routes/
 │   │   │   ├── auth.py        # Authentication
 │   │   │   ├── stocks.py      # Stock endpoints
 │   │   │   ├── market.py      # Market overview
 │   │   │   ├── analysis.py    # Analysis results
 │   │   │   ├── portfolio.py   # Portfolio management
-│   │   │   ├── alerts.py      # Alerts
-│   │   │   ├── ranking.py     # Stock ranking
+│   │   │   ├── history.py     # Historical data
 │   │   │   ├── news.py        # News search
+│   │   │   ├── ml.py          # Machine Learning
+│   │   │   ├── users.py       # User management
+│   │   │   ├── watchlists.py  # Watchlist management
+│   │   │   ├── notifications.py # Notifications
+│   │   │   ├── specialized.py # Specialized analysis
+│   │   │   ├── system.py      # System routes
 │   │   │   ├── crypto.py      # Cryptocurrency
-│   │   │   └── health.py      # System health
+│   │   │   ├── intl.py        # International markets
+│   │   │   └── live.py        # Live data
 │   │   └── middleware/        # Middleware stack
 │   │       ├── cors.py
 │   │       ├── auth.py
@@ -127,13 +123,7 @@ backend/
 │   ├── db/                    # Database
 │   │   ├── base.py            # DB initialization
 │   │   ├── session.py         # Session management
-│   │   └── migrations/        # Alembic migrations
-│   │
-│   ├── utils/                 # Utility functions
-│   │   ├── cache.py
-│   │   ├── timing.py
-│   │   ├── validation.py
-│   │   └── helpers.py
+│   │   └── alembic/           # Alembic migrations
 │   │
 │   └── main.py                # FastAPI app entry point
 │
@@ -150,9 +140,9 @@ backend/
 #### Tier 1: Core Services (Foundation)
 ```
 ├── DependencyContainer      - IoC/DI pattern implementation
-├── ConfigService            - Centralized configuration
+├── ConfigService            - Centralized configuration via config.py
 ├── LoggerService            - Structured logging with JSON format
-├── CacheService             - Redis caching with TTL
+├── CacheService             - Redis/memory caching with TTL
 ├── DatabaseService          - Connection pooling & management
 └── HealthChecker            - System health monitoring
 ```
@@ -160,78 +150,101 @@ backend/
 #### Tier 2: Data Services (API Integration)
 ```
 ├── BrsApiClient             - Tehran Stock Exchange integration
-├── StockService             - Stock data management (1379 lines)
+├── StockService             - Stock data management
 ├── MarketService            - Market-wide analysis
 ├── PortfolioService         - Portfolio operations
 ├── HistoryService           - Time-series data
-└── NewsService              - News aggregation
+├── NewsService              - News aggregation
+├── IntlApiClient            - International market APIs
+├── CryptoApiClient          - Crypto exchange APIs
+├── IngestionService         - Data ingestion pipelines
+├── MarketDataProcessing     - Data cleaning pipelines
+├── FinancialDataIngestService - Multi-source financial statement ingestion
+├── StockFundamentalDataIngestionService - Stock fundamental data pipeline
+└── DataValidationService    - Data integrity validation
 ```
 
 #### Tier 3: Analysis Services (Intelligence)
 ```
 ├── ScoringService           - 6D scoring (305-node hierarchy)
 ├── TechnicalAnalysisService - 50+ technical indicators
-├── FundamentalAnalysisService - Fundamental metrics
+├── FundamentalAnalysisService - Fundamental metrics & ratios
+├── CryptoFundamentalAnalysisService - Crypto fundamental analysis
 ├── RiskAnalysisService      - Risk assessment
 ├── MomentumService          - Momentum indicators
-└── VolatilityService        - Volatility metrics
+├── VolatilityService        - Volatility metrics
+├── UserFilteredScoringService - Custom scoring based on user selections
 ```
 
 #### Tier 4: ML Services (Prediction)
 ```
-├── MLService                - Model training/inference
-├── PricePredictionService   - Time-series forecasting
-├── AnomalyDetectionService  - Outlier detection
-├── ClusteringService        - Pattern clustering
-├── EnsembleService          - Model ensemble voting
-└── FeatureEngineeringService - Feature creation
+├── PredictionService        - Price prediction models
+├── PatternRecognitionService - Chart pattern detection
+├── AnomalyDetectionService   - Outlier detection
+├── RecommendationService    - Stock recommendations
+├── PortfolioOptimizationService - Efficient frontier optimization
+├── TimeSeriesForecastingService - ARIMA, LSTM, Prophet models
+├── CoefficientLearningService - Dynamic coefficient learning
+├── CryptoMLService          - Crypto-specific ML models
+└── UserFilteredRecommendationService - Recommendations filtered by user preferences
 ```
 
 #### Tier 5: NLP Services (Sentiment)
 ```
 ├── SentimentAnalysisService - Persian sentiment analysis
-├── NewsAnalysisService      - News processing
-├── NLPService               - NLP utilities
-├── EntityExtractionService  - Named entity recognition
-└── SummarizationService     - Text summarization
+├── NewsSummarizationService - Text summarization
+├── DocumentExtractionService - PDF/text extraction
+├── ChatbotService           - Conversational AI
+├── SearchService            - Semantic search
+└── MultiLanguageNewsService - Country-specific news with language detection
 ```
 
 #### Tier 6: User Services (Personalization)
 ```
-├── UserService              - User management
 ├── AuthService              - JWT authentication
-├── SubscriptionService      - Subscription management
-├── PreferenceService        - User preferences
-├── AlertService             - Alert management
-└── NotificationService      - Multi-channel notifications
+├── AuthorizationService     - RBAC
+├── UserProfileService       - User profiles and KYC
+├── WatchlistService         - Watchlist management
+├── PreferenceService        - User customization
+├── NotificationService      - Multi-channel notifications
+├── UserMarketSettingsService - Country/index/industry selection
+└── UserCryptoSettingsService - Cryptocurrency selection preferences
 ```
 
 #### Tier 7: Specialized Services (Advanced)
 ```
-├── HierarchyService         - 305-node hierarchy management
-├── AssistantService         - AI recommendations
-├── BacktestService          - Strategy backtesting
-├── PortfolioOptimizationService - Modern Portfolio Theory
-└── RegressionService        - Statistical regression
+├── SectorAnalysisService    - Sector performance & ranking
+├── ScreeningService         - Stock screening filters
+├── ComparisonService        - Peer benchmarking
+├── CorrelationService       - Cross-asset correlation
+├── CalendarService          - Market calendar integration
+├── InternationalMarketService - Multi-country data integration
+└── SectorFilterService      - Industry-based filtering
 ```
 
 #### Tier 8: Crypto Services (Multi-Asset)
 ```
-├── CryptoAnalysisService    - Cryptocurrency analysis
-├── ChainAnalysisService     - Blockchain analysis
-├── DeFiService              - DeFi protocol analysis
-├── TransactionService       - On-chain transactions
-└── WalletService            - Wallet monitoring
+├── CryptoPriceService       - Real-time crypto price feeds
+├── CryptoPortfolioService   - Crypto portfolio management
+├── CryptoIngestionService   - Exchange data ingestion
+├── CryptoMLService          - Crypto-specific ML analysis (Analysis tier)
+├── CustomCryptoSelectionService - User-defined selection from top 300
+├── CryptoMarketCapService   - Market cap-based filtering
+├── CryptoAnalysisService    - On-chain metrics analysis
+├── NewsService (Crypto)     - Crypto-specific news integration
+└── ArbitrageService         - Cross-exchange price monitoring
 ```
 
 #### Tier 9: System Services (Operations)
 ```
-├── DataRecoveryService      - Data recovery procedures
-├── BackupService            - Automated backups
-├── AuditService             - Audit logging
-├── PerformanceMonitor       - Performance tracking
-├── ErrorHandler             - Exception handling
-└── RateLimiter              - API rate limiting
+├── SchedulerService         - Task scheduling pipeline
+├── MetricsService           - Performance monitoring
+├── QueueService             - Message queuing system
+├── BackupService            - Database/file backups
+├── LoggingService           - Centralized logging aggregation
+├── NotificationDispatcher   - Multi-channel notifications
+├── DataIntegrityService     - Historical data validation
+└── SettingsMigrationService - User preference migration
 ```
 
 ---
@@ -382,14 +395,13 @@ Forex:            Available via partner APIs
 
 ---
 
-## 🔌 API Routes (16+ Routers)
+## 🔌 API Routes (16 Routers)
 
 ### Authentication
 ```
 POST   /api/v1/auth/register          # Register new user
 POST   /api/v1/auth/login             # Login
 POST   /api/v1/auth/refresh           # Refresh token
-POST   /api/v1/auth/logout            # Logout
 ```
 
 ### Stocks
@@ -398,23 +410,6 @@ GET    /api/v1/stocks/list            # List all stocks
 GET    /api/v1/stocks/{symbol}        # Stock details
 GET    /api/v1/stocks/{symbol}/history    # Price history
 GET    /api/v1/stocks/{symbol}/analysis   # Technical analysis
-GET    /api/v1/stocks/{symbol}/fundamental # Fundamental data
-```
-
-### Analysis
-```
-GET    /api/v1/analysis/scores/{symbol}   # 6D scores
-GET    /api/v1/analysis/signals/{symbol}  # Technical signals
-GET    /api/v1/analysis/predict/{symbol}  # ML prediction
-GET    /api/v1/analysis/backtest          # Backtest results
-```
-
-### Portfolio
-```
-POST   /api/v1/portfolio/create           # Create portfolio
-GET    /api/v1/portfolio/{id}             # Portfolio details
-POST   /api/v1/portfolio/{id}/add         # Add holding
-GET    /api/v1/portfolio/{id}/optimization # Optimization
 ```
 
 ### Market
@@ -422,28 +417,129 @@ GET    /api/v1/portfolio/{id}/optimization # Optimization
 GET    /api/v1/market/overview        # Market overview
 GET    /api/v1/market/indices         # Index data
 GET    /api/v1/market/sectors         # Sector analysis
+GET    /api/v1/market/tse-dashboard   # TSE dashboard
+GET    /api/v1/market/latest-prices   # Latest prices
+GET    /api/v1/market/price-history    # Historical price data
+GET    /api/v1/market/industry-ranking  # Industry ranking
 ```
 
-### Cryptocurrency
+### Analysis / Signals
 ```
-GET    /api/v1/crypto/list            # Crypto list
-GET    /api/v1/crypto/{symbol}        # Crypto details
-GET    /api/v1/crypto/{symbol}/chart  # Price chart
+GET    /api/v1/analysis/signals/{symbol}   # ML signals
+GET    /api/v1/analysis/signals-summary    # Signals summary
+GET    /api/v1/analysis/top-performers    # Top performers
+GET    /api/v1/analysis/risk-analysis/{symbol}  # Risk metrics
+GET    /api/v1/analysis/technical/{symbol}     # Technical indicators
+GET    /api/v1/analysis/risk/{symbol}          # Risk analysis
+GET    /api/v1/analysis/fundamental/{symbol}   # Fundamental analysis
+GET    /api/v1/analysis/momentum/{symbol}      # Momentum analysis
+GET    /api/v1/analysis/volatility/{symbol}    # Volatility analysis
+POST   /api/v1/analysis/scoring                # 6D scoring
+POST   /api/v1/analysis/scoring/rank           # Score and rank
+GET    /api/v1/analysis/fundamental/batch      # Batch fundamental analysis
+GET    /api/v1/analysis/fundamental/crypto/{crypto_id} # Crypto fundamental
+GET    /api/v1/analysis/fundamentals/health    # Fundamental services health
 ```
 
-### Alerts
+### Portfolio
 ```
-POST   /api/v1/alerts/create          # Create alert
-GET    /api/v1/alerts                 # List alerts
-PUT    /api/v1/alerts/{id}            # Update alert
-DELETE /api/v1/alerts/{id}            # Delete alert
+GET    /api/v1/portfolio                 # List portfolios
+POST   /api/v1/portfolio                 # Create portfolio
+GET    /api/v1/portfolio/{id}            # Portfolio details
+POST   /api/v1/portfolio/{id}/add        # Add holding
+GET    /api/v1/portfolio/{id}/optimization # Optimization
+```
+
+### History
+```
+GET    /api/v1/history/symbol/{symbol}    # Historical data for symbol
+```
+
+### News
+```
+GET    /api/v1/news/market                # Market news
+GET    /api/v1/news/{ticker}              # News for specific ticker
+GET    /api/v1/news/search                # Search news
+```
+
+### Machine Learning
+```
+GET    /api/v1/ml/predict/{symbol}        # Price prediction
+POST   /api/v1/ml/recommend/{symbol}      # Investment recommendation
+POST   /api/v1/ml/patterns/{symbol}       # Pattern detection
+POST   /api/v1/ml/anomaly/{symbol}        # Anomaly detection
+GET    /api/v1/ml/portfolio/optimize      # Portfolio optimization
+POST   /api/v1/ml/timeseries/forecast     # Time series forecasting
+```
+
+### Users
+```
+GET    /api/v1/users                     # List users
+GET    /api/v1/users/{id}                # User details
+PUT    /api/v1/users/{id}                # Update user
+DELETE /api/v1/users/{id}                # Delete user
+```
+
+### Watchlists
+```
+GET    /api/v1/watchlists                # List watchlists
+POST   /api/v1/watchlists                # Create watchlist
+GET    /api/v1/watchlists/{id}           # Get watchlist
+PUT    /api/v1/watchlists/{id}           # Update watchlist
+DELETE /api/v1/watchlists/{id}           # Delete watchlist
+```
+
+### Notifications
+```
+GET    /api/v1/notifications             # List notifications
+POST   /api/v1/notifications/preferences # Update preferences
+```
+
+### Specialized
+```
+GET    /api/v1/specialized/sector/{sector}  # Sector analysis
+POST   /api/v1/specialized/screen            # Stock screening
+GET    /api/v1/specialized/compare             # Compare stocks
+GET    /api/v1/specialized/correlation         # Correlation analysis
+GET    /api/v1/specialized/calendar            # Market calendar
+GET    /api/v1/specialized/international       # International markets
+GET    /api/v1/specialized/sector-filter       # Sector filtering
 ```
 
 ### System
 ```
-GET    /api/v1/health                 # Health check
-GET    /api/v1/metrics                # Metrics
-GET    /api/v1/system/status          # System status
+GET    /api/v1/system/health                 # Health check
+GET    /api/v1/system/metrics                # System metrics
+GET    /api/v1/system/status                  # System status
+POST   /api/v1/system/backup                  # Trigger backup
+GET    /api/v1/system/backup/status           # Backup status
+POST   /api/v1/system/settings/migrate        # Migrate settings
+```
+
+### Cryptocurrency
+```
+GET    /api/v1/crypto/list                    # List cryptocurrencies
+GET    /api/v1/crypto/{symbol}                # Crypto details
+GET    /api/v1/crypto/{symbol}/price          # Current price
+GET    /api/v1/crypto/{symbol}/ohlc           # OHLC data
+GET    /api/v1/crypto/{symbol}/ticker         # 24h ticker
+GET    /api/v1/crypto/{symbol}/depth            # Order book depth
+GET    /api/v1/crypto/search                   # Search cryptocurrencies
+GET    /api/v1/crypto/fundamental/{symbol}     # Crypto fundamental analysis
+```
+
+### International
+```
+GET    /api/v1/intl/markets                 # List international markets
+GET    /api/v1/intl/{market}/overview        # Market overview
+GET    /api/v1/intl/{market}/indices         # Market indices
+```
+
+### Live Data
+```
+GET    /api/v1/live/price/{symbol}          # Real-time price
+GET    /api/v1/live/prices                    # Multiple real-time prices
+WS     /ws/market/stream                      # Market data WebSocket
 ```
 
 ---
