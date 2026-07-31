@@ -32,7 +32,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - DatabaseService: Connection pooling
 - HealthChecker: System monitoring
 
-**Tier 2: Data Services** (11 services, 930 LOC)
+**Tier 2: Data Services** (13 services, 1050 LOC)
 - BrsApiClient: Tehran Stock Exchange API
 - StockService: Stock data management
 - MarketService: Market data aggregation
@@ -44,11 +44,13 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - IntlApiClient: International market APIs
 - CryptoApiClient: Crypto exchange APIs
 - DataValidationService: Data integrity validation
+- FinancialDataIngestService: Multi-source financial statement ingestion (CODAL, Yahoo Finance, Alpha Vantage
+- StockFundamentalDataIngestionService: Stock fundamental data pipeline for Iran/US/International markets
 
 **Tier 3: Analysis Services** (7 services)
 - ScoringService: 6D scoring, 305-node hierarchy
 - TechnicalAnalysisService: 50+ indicators
-- FundamentalAnalysisService: 20+ ratios
+- FundamentalAnalysisService: 20+ ratios with global market support (Iran, US, International)
 - RiskAnalysisService: VaR, Sharpe, stress testing
 - MomentumService: Momentum analysis
 - VolatilityService: Volatility forecasting
@@ -251,6 +253,6 @@ All services run directly:
 
 ---
 
-**Last Updated**: 2026-07-29  
-**Phase**: 3 (Services Implementation)  
-**Estimated Completion**: 1.5 weeks
+**Last Updated**: 2026-07-31  
+**Phase**: 4 (Fundamental Analysis Completion)  
+**Estimated Completion**: 2 weeks
