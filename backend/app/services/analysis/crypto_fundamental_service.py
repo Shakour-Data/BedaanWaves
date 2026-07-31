@@ -19,6 +19,9 @@ class CryptoFundamentalAnalysisService(AnalysisService):
     ):
         super().__init__(service_name)
         self.crypto_client = crypto_client
+        self.historical_data: Dict[str, deque] = {}
+        self.peer_metrics_cache: Dict[str, Dict[str, Any]] = {}
+        self.max_history_size = 1000
 
     async def initialize(self) -> None:
         if not self.crypto_client:
@@ -31,6 +34,14 @@ class CryptoFundamentalAnalysisService(AnalysisService):
     async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         ticker = data.get("ticker", data.get("symbol", "UNKNOWN"))
         crypto_client = data.get("crypto_client") or self.crypto_client
+        use_cache = data.get("use_cache", True)
+
+        if use_cache:
+            cache_key = f"fundamental:{ticker}"
+            cached_result = self.cache_get(cache_key)
+            if cached_result:
+                self.logger.info(f"Cache hit for {ticker}")
+                return cached_result
 
         if crypto_client is None:
             raise RuntimeError("CryptoApiClient is not initialized")
@@ -42,7 +53,7 @@ class CryptoFundamentalAnalysisService(AnalysisService):
             await crypto_client.shutdown()
 
         market_data = raw.get("market_data", {})
-
+        
         current_price = market_data.get("current_price", {})
         usd_price = current_price.get("usd", 0.0) if current_price else 0.0
 
@@ -87,7 +98,7 @@ class CryptoFundamentalAnalysisService(AnalysisService):
         else:
             volatility_assessment = "Low Volatility"
 
-        return {
+        result = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": ticker,
             "price_usd": usd_price,
@@ -101,6 +112,11 @@ class CryptoFundamentalAnalysisService(AnalysisService):
             "total_supply": float(supply_data),
             "supply_ratio": supply_ratio,
             "volume_to_market_cap_ratio": liquidity_ratio,
+            "peer_comparison": {
+                "market_cap_percentile": self._calculate_percentile(ticker, "market_cap"),
+                "volume_percentile": self._calculate_percentile(ticker, "volume"),
+                "volatility_percentile": self._calculate_percentile(ticker, "volatility"),
+            },
             "assessment": {
                 "liquidity": liquidity_assessment,
                 "supply": supply_assessment,
@@ -108,3 +124,69 @@ class CryptoFundamentalAnalysisService(AnalysisService):
             },
             "raw": raw,
         }
+        
+        self.cache_set(f"fundamental:{ticker}", result, ttl_seconds=3600)
+        return result
+    
+    def _calculate_liquidity_ratio(self, volume: float, market_cap: float) -> float:
+        """Calculate liquidity ratio (volume / market_cap)."""
+        return volume / market_cap if market_cap > 0 else 0.0
+    
+    def _calculate_supply_ratio(self, circulating_supply: float, total_supply: float) -> float:
+        """Calculate circulating supply ratio."""
+        return circulating_supply / total_supply if total_supply > 0 else 0.0
+    
+    def _assess_liquidity(self, liquidity_ratio: float) -> str:
+        """Assess liquidity level based on ratio."""
+        if liquidity_ratio > 0.05:
+            return "High Liquidity"
+        elif liquidity_ratio > 0.01:
+            return "Moderate Liquidity"
+        else:
+            return "Low Liquidity"
+    
+    def _assess_supply(self, supply_ratio: float) -> str:
+        """Assess supply level based on ratio."""
+        if supply_ratio > 0.5:
+            return "High Circulating Supply"
+        elif supply_ratio > 0.0:
+            return "Moderate Circulating Supply"
+        else:
+            return "Low / Unreleased Supply"
+    
+    def _assess_volatility(self, price_change_pct: float) -> str:
+        """Assess volatility level based on price change percentage."""
+        if abs(float(price_change_pct)) > 5:
+            return "High Volatility"
+        elif abs(float(price_change_pct)) > 1:
+            return "Moderate Volatility"
+        else:
+            return "Low Volatility"
+
+    def _calculate_percentile(self, ticker: str, metric: str) -> Optional[float]:
+        """Calculate percentile ranking for a given ticker and metric."""
+        if metric not in self.peer_metrics_cache:
+            return None
+        peers = self.peer_metrics_cache[metric]
+        if not peers or ticker not in [p["ticker"] for p in peers]:
+            return None
+        # Sort by metric value descending (higher is better)
+        sorted_peers = sorted(peers, key=lambda x: x["value"], reverse=True)
+        rank = next((i for i, p in enumerate(sorted_peers) if p["ticker"] == ticker), None)
+        if rank is None:
+            return None
+        return 100.0 * (len(sorted_peers) - rank) / len(sorted_peers)
+
+    async def update_peer_metrics(self, ticker: str, metrics: Dict[str, float]) -> None:
+        """Update peer metrics cache with new values for a ticker."""
+        for metric_name, value in metrics.items():
+            if metric_name not in self.peer_metrics_cache:
+                self.peer_metrics_cache[metric_name] = []
+            # Remove existing entry for this ticker
+            self.peer_metrics_cache[metric_name] = [
+                p for p in self.peer_metrics_cache[metric_name] if p["ticker"] != ticker
+            ]
+            self.peer_metrics_cache[metric_name].append({"ticker": ticker, "value": value})
+            # Keep only top 1000 entries
+            if len(self.peer_metrics_cache[metric_name]) > self.max_history_size:
+                self.peer_metrics_cache[metric_name] = self.peer_metrics_cache[metric_name][-self.max_history_size:]
