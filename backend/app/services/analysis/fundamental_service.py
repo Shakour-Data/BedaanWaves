@@ -1,19 +1,40 @@
 """
 Fundamental Analysis Service - Tier 3 Analysis Service
 
-Fundamental financial analysis and ratio calculations.
+Fundamental financial analysis and ratio calculations for global markets:
+- Iranian market (via CODAL/BRS API)
+- US markets (via Yahoo Finance, Alpha Vantage)
+- International markets (via various providers)
+- Cryptocurrencies (via CoinGecko, on-chain data)
 """
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+from enum import Enum
+
 from ..core import AnalysisService
+from ..data.financial_data_ingest_service import (
+    FinancialDataIngestService,
+    FinancialStatementType,
+    MarketType,
+    FinancialStatement,
+)
+
+
+class AssetClass(str, Enum):
+    """Asset classification for fundamental analysis"""
+    EQUITY = "EQUITY"
+    ETF = "ETF"
+    CRYPTO = "CRYPTO"
+    COMMODITY = "COMMODITY"
+    BOND = "BOND"
 
 
 class FundamentalAnalysisService(AnalysisService):
     """
-    Fundamental analysis service.
-
-    Provides:
+    Fundamental analysis service for global markets.
+    
+    Provides comprehensive financial analysis:
     - Financial ratios (P/E, PB, ROE, ROA, Debt-to-Equity, Interest Coverage, FCF Yield)
     - Profitability analysis (Gross Margin, Op Margin, Net Margin, ROE, ROA, ROIC)
     - Liquidity analysis (Current Ratio, Quick Ratio, Cash Ratio)
@@ -22,10 +43,18 @@ class FundamentalAnalysisService(AnalysisService):
     - Dividend analysis (Yield, Payout Ratio, Growth Rate)
     - Trend analysis (YoY, QoQ comparisons)
     - Health score framework
+    - Market comparisons and peer analysis
     """
 
-    def __init__(self, service_name: str = "FundamentalAnalysisService"):
+    def __init__(
+        self, 
+        service_name: str = "FundamentalAnalysisService",
+        data_ingest_service: Optional[FinancialDataIngestService] = None,
+    ):
         super().__init__(service_name)
+        self.data_ingest_service = data_ingest_service
+        self.market_type: Optional[MarketType] = None
+        self.asset_class: Optional[AssetClass] = None
 
     async def initialize(self) -> None:
         self.logger.info("FundamentalAnalysisService initialized")
@@ -34,12 +63,43 @@ class FundamentalAnalysisService(AnalysisService):
         self.logger.info("FundamentalAnalysisService shutdown")
 
     async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        financials = data.get("financials", {})
+        """
+        Perform fundamental analysis for a symbol.
+        
+        Args:
+            data: Analysis input containing:
+                - ticker: Stock symbol (e.g., 'AAPL', 'MSFT', 'فملی')
+                - financials: Pre-loaded financial data (optional)
+                - market: Market type override (optional)
+                - asset_class: Asset class (optional, auto-detected)
+                - use_ingestion: Auto-fetch data via ingestion service (default: True)
+        
+        Returns:
+            Comprehensive fundamental analysis with ratios, assessment, and health score.
+        """
         ticker = data.get("ticker", "UNKNOWN")
-
+        market_override = data.get("market")
+        use_ingestion = data.get("use_ingestion", True)
+        
+        # Detect or use specified market
+        if market_override:
+            if isinstance(market_override, str):
+                self.market_type = MarketType(market_override)
+            else:
+                self.market_type = market_override
+        else:
+            self.market_type = self._detect_market(ticker)
+        
+        # Get financial data
+        financials = data.get("financials", {})
+        
+        if use_ingestion and not financials:
+            financials = await self._fetch_financials(ticker)
+        
         analysis = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": ticker,
+            "market": self.market_type.value if self.market_type else "UNKNOWN",
             "ratios": {},
             "assessment": "",
             "health_score": 0.0,
@@ -85,8 +145,33 @@ class FundamentalAnalysisService(AnalysisService):
             analysis["assessment"] = "Weak"
         else:
             analysis["assessment"] = "Distressed"
-
+        
         return analysis
+    
+    async def _fetch_financials(self, ticker: str) -> Dict[str, Any]:
+        """Fetch financial data via ingestion service."""
+        if self.data_ingest_service is None:
+            self.logger.warning("No ingestion service available; returning empty financials")
+            return {}
+        
+        try:
+            result = await self.data_ingest_service.get_latest_fundamentals(
+                asset_id=ticker,
+                market=self.market_type or MarketType.US,
+            )
+            return result.get("financials", {})
+        except Exception as e:
+            self.logger.error(f"Failed to fetch financials for {ticker}: {e}")
+            return {}
+    
+    def _detect_market(self, ticker: str) -> MarketType:
+        """Detect market type based on symbol characteristics."""
+        persian_chars = set('ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
+        if any(c in persian_chars for c in ticker):
+            return MarketType.IRAN
+        if len(ticker) <= 5 and ticker.isalpha() and ticker.isupper():
+            return MarketType.US
+        return MarketType.INTERNATIONAL
 
     async def _calculate_valuation_ratios(self, financials: Dict[str, Any]) -> Dict[str, float]:
         return {
