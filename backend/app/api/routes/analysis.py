@@ -16,6 +16,8 @@ from app.services.analysis.fundamental_service import FundamentalAnalysisService
 from app.services.analysis.momentum_service import MomentumService
 from app.services.analysis.volatility_service import VolatilityService
 from app.services.analysis.scoring_service import ScoringService
+from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
+from app.core.rate_limiting import RateLimiter, rate_limit
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -409,30 +411,51 @@ async def risk_analysis(
     }
 
 
-@router.post("/fundamental", response_model=dict)
+@router.get("/fundamental/{symbol}", response_model=dict)
+@rate_limit(limit=10, window=60)  # 10 requests per minute
 async def fundamental_analysis(
-    data: dict = Body(...),
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
     Perform fundamental analysis for a ticker.
     
-    Request body:
-        ticker: Asset symbol
-        financials: Financial data dict
+    Path parameter:
+        symbol: Asset symbol (e.g., 'AAPL', 'MSFT')
     """
-    ticker = data.get("ticker", "UNKNOWN")
-    financials = data.get("financials", {})
-
-    service = FundamentalAnalysisService()
-    await service.initialize()
-    result = await service.analyze({"ticker": ticker, "financials": financials})
-
-    return {
-        "status": "success",
-        "symbol": ticker,
-        "fundamental": result,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+    # Look up asset by symbol
+    asset_result = await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
+    asset = asset_result.scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+    
+    # Fetch financial data using StockFundamentalDataIngestionService
+    from app.services.data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
+    stock_service = StockFundamentalDataIngestionService()
+    await stock_service.initialize()
+    
+    try:
+        # Get financial data for the asset
+        financial_data = await stock_service.fetch_financial_data(symbol)
+        
+        # Perform fundamental analysis
+        service = FundamentalAnalysisService()
+        await service.initialize()
+        result = await service.analyze({
+            "ticker": symbol,
+            "financials": financial_data
+        })
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "fundamental": result,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    finally:
+        await stock_service.shutdown()
 
 
 @router.get("/momentum/{symbol}", response_model=dict)
@@ -637,5 +660,118 @@ async def score_and_rank_stocks(
         "limit": limit,
         "stocks": ranked_stocks,
         "hierarchy": service.get_hierarchy_info(),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/fundamental/batch", response_model=dict)
+@rate_limit(limit=5, window=60)  # 5 batch requests per minute
+async def batch_fundamental_analysis(
+    symbols: str = Query(..., description="Comma-separated list of symbols"),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Perform batch fundamental analysis for multiple symbols.
+    
+    Query parameter:
+        symbols: Comma-separated list of stock symbols (e.g., 'AAPL,MSFT,GOOGL')
+        
+    Returns:
+        Fundamental analysis results for each symbol
+    """
+    symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
+    
+    if len(symbol_list) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 symbols per batch request")
+    
+    results = {}
+    errors = {}
+    
+    for symbol in symbol_list:
+        try:
+            asset_result = await db.execute(
+                select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
+            )
+            asset = asset_result.scalars().first()
+            
+            if not asset:
+                errors[symbol] = f"Asset {symbol} not found"
+                continue
+            
+            from app.services.data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
+            stock_service = StockFundamentalDataIngestionService()
+            await stock_service.initialize()
+            
+            try:
+                financial_data = await stock_service.fetch_financial_data(symbol)
+                
+                service = FundamentalAnalysisService()
+                await service.initialize()
+                result = await service.analyze({
+                    "ticker": symbol,
+                    "financials": financial_data
+                })
+                
+                results[symbol] = {
+                    "status": "success",
+                    "fundamental": result,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            finally:
+                await stock_service.shutdown()
+                
+        except Exception as exc:
+            errors[symbol] = str(exc)
+    
+    return {
+        "status": "success",
+        "total_requested": len(symbol_list),
+        "successful": len(results),
+        "failed": len(errors),
+        "results": results,
+        "errors": errors,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/fundamental/crypto/{crypto_id}", response_model=dict)
+async def crypto_fundamental_analysis(
+    crypto_id: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Perform fundamental analysis for a cryptocurrency.
+    
+    Path parameter:
+        crypto_id: CoinGecko crypto ID (e.g., 'bitcoin', 'ethereum')
+        
+    Returns:
+        Fundamental analysis for the cryptocurrency
+    """
+    try:
+        service = CryptoFundamentalAnalysisService()
+        await service.initialize()
+        result = await service.analyze({"ticker": crypto_id, "use_cache": True})
+        
+        return {
+            "status": "success",
+            "crypto_id": crypto_id,
+            "fundamental": result,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/fundamentals/health", response_model=dict)
+async def fundamental_analysis_health() -> dict:
+    """Health check for fundamental analysis services."""
+    return {
+        "status": "healthy",
+        "services": {
+            "fundamental_analysis": True,
+            "crypto_fundamental": True,
+            "stock_fundamental_ingestion": True,
+        },
         "timestamp": datetime.utcnow().isoformat(),
     }
