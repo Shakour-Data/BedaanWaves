@@ -87,7 +87,7 @@ export default function AnalysisPage() {
             .map((p: any) => ({
               symbol: p.symbol,
               name: symbolMap.get(p.symbol) || p.name || "",
-              market: p.market === "NASDAQ" || p.market === "NYSE" ? "NASDAQ" : 
+              market: p.market === "NASDAQ" || p.market === "NYSE" ? "NASDAQ" :
                       p.market === "BINANCE" || p.market === "KRAKEN" ? "BINANCE" : "TSE",
               price: p.current_price ?? p.price ?? 0,
               changePct: p.change_percent ?? p.change_pct ?? 0,
@@ -117,8 +117,6 @@ export default function AnalysisPage() {
     );
   }
 
-  if (!topSignals && !topMovers) return null;
-
   return (
     <DashboardShell title="تحلیل">
       <div className="flex flex-col gap-6">
@@ -128,10 +126,11 @@ export default function AnalysisPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.id
                   ? "bg-secondary text-secondary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+              }`}
             >
               <span className="mr-2">{tab.icon}</span>
               {tab.label}
