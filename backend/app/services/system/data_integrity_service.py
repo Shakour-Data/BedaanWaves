@@ -8,7 +8,7 @@ and monitors data quality across all sources in the BedaanWaves platform.
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 from app.services.data.data_validation_service import DataValidationService
 from app.services.data.brs_api_client import BrsApiClient
 from app.services.data.crypto_api_client import CryptoApiClient
