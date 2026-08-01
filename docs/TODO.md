@@ -487,6 +487,29 @@ All fundamental analysis components are now complete and operational. The system
 
 ---
 
+- ⏳ [TODO-N6] Design concurrent ingestion pipeline for high-throughput API data processing.
+  **Activities:**
+  - [ ] Profile synchronous ingest bottlenecks in BrsApiClient/CryptoApiClient/IntlApiClient.
+  - [ ] Refactor data clients to async (httpx + asyncpg); integrate asyncio.Semaphore backpressure.
+  - [ ] Add connection-pool tuning and horizontal scaling (per-exchange sharding) in IngestionService.
+  - [ ] Wire pipeline into QueueService (TODO-N4) for burst absorption.
+  - [ ] Load-test at 10k symbols/sec; set queue-depth alert thresholds.
+- ⏳ [TODO-N7] Implement schema versioning and validation framework to detect and handle schema drift.
+  **Activities:**
+  - [ ] Create SchemaRegistry with versioned crypto/stock schemas + hash digests.
+  - [ ] Extend DataValidationService with drift detection (added/removed/null fields).
+  - [ ] Implement graceful degradation with fallback defaults for missing fields.
+  - [ ] Add CI contract tests comparing live API responses to registered schemas.
+  - [ ] Trigger DataIntegrityService alerts + lineage logging on drift (TODO-Z17).
+- ⏳ [TODO-N8] Add ML model version registry and drift detection monitoring.
+  **Activities:**
+  - [ ] Build ModelRegistry (training data version, git hash, validation metrics) in PredictionService/ML services.
+  - [ ] Store immutable artifacts in local artifact store.
+  - [ ] Add PSI/KS drift detectors comparing live vs. training distributions.
+  - [ ] Alert MetricsService when drift > thresholds; auto-flag models for review.
+  - [ ] Add A/B + rollback capability; document runbook (TODO-P2).
+
+
 ## 📊 Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1-2)
