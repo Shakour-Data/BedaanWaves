@@ -8,7 +8,7 @@ countries, indices, industries, and cryptocurrencies.
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 from app.services.ml.recommendation_service import RecommendationService
 from app.services.analysis.scoring_service import ScoringService
 import logging
