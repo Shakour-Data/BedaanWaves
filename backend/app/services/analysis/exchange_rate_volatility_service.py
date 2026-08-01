@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 
 
 class ExchangeRateVolatilityService(AnalysisService):
@@ -129,4 +129,4 @@ class ExchangeRateVolatilityService(AnalysisService):
         }
 
 
-DependencyContainer.register("ExchangeRateVolatilityService", ExchangeRateVolatilityService)
+get_global_container().register("ExchangeRateVolatilityService", ExchangeRateVolatilityService, singleton=True)
