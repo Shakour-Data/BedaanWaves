@@ -3,7 +3,7 @@ import numpy as np
 from scipy import stats
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 
 
 class StructuralBreakDetectionService(AnalysisService):
@@ -148,4 +148,4 @@ class StructuralBreakDetectionService(AnalysisService):
         }
 
 
-DependencyContainer.get_global_container().register("StructuralBreakDetectionService", StructuralBreakDetectionService, singleton=True)
+get_global_container().register("StructuralBreakDetectionService", StructuralBreakDetectionService, singleton=True)
