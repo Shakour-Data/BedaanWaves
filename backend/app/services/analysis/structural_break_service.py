@@ -148,4 +148,4 @@ class StructuralBreakDetectionService(AnalysisService):
         }
 
 
-DependencyContainer.register("StructuralBreakDetectionService", StructuralBreakDetectionService)
+DependencyContainer.get_global_container().register("StructuralBreakDetectionService", StructuralBreakDetectionService, singleton=True)

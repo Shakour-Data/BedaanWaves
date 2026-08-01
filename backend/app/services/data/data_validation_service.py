@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, date
 import hashlib
 import json
 import asyncio
-from app.core import CachedService
+from app.services.core.base_service import CachedService
 from app.services.data.brs_api_client import BrsApiClient
 from app.services.data.crypto_api_client import CryptoApiClient
 from app.services.data.intl_api_client import IntlApiClient
