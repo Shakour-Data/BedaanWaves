@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from ..core import BaseService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 
 
 class MetricTaxonomyService(BaseService):
@@ -132,7 +132,7 @@ class MetricTaxonomyService(BaseService):
         return normalized
 
 
-DependencyContainer.register("MetricTaxonomyService", MetricTaxonomyService)
+get_global_container().register("MetricTaxonomyService", MetricTaxonomyService, singleton=True)
 
 
 # Test the taxonomy service
