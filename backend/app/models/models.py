@@ -11,9 +11,11 @@
 from sqlalchemy import (
     Column, String, Integer, Float, DateTime, Boolean, JSON, ForeignKey,
     BigInteger, Numeric, Index, UniqueConstraint, CheckConstraint, Text, Date, Time,
+    text, ARRAY,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, declared_attr
+import sqlalchemy as sa
 from datetime import datetime, date, timezone
 import uuid
 
@@ -841,8 +843,8 @@ class RawMarketData(Base):
     source_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
 
     # Ingestion metadata
-    ingested_at = Column(DateTime(timezone=True), default=datetime.now(timezone=utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone=utc), onupdate=datetime.now(timezone=utc))
+    ingested_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     ingestion_id = Column(String(100))  # idempotency key
 
 
@@ -1059,7 +1061,7 @@ class ProcessedFeatureData(Base):
     exchange = Column(String(50), nullable=False)
     
     # Feature vector (L2-normalized, fixed length for model compatibility)
-    feature_vector = Column(Array(Numeric(20, 8)), nullable=False)
+    feature_vector = Column(ARRAY(Numeric(20, 8)), nullable=False)
     
     # Processed/restructured scores by hierarchy level
     dimension_features = Column(JSONB, nullable=False)  # Processed dimension scores
@@ -1326,7 +1328,7 @@ class UserScoringResult(Base):
     criteria_scores = Column(JSONB)
     user_preferences = Column(JSONB)
     recommendations = Column(JSONB)
-    metadata = Column(JSONB)
+    description = Column(JSONB)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1415,7 +1417,7 @@ class DataSource(Base):
     last_verification = Column(DateTime)
     verification_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    metadata = Column(JSONB)
+    info = Column(JSONB)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1472,7 +1474,7 @@ class Cryptocurrency(Base):
     circulating_supply = Column(Numeric(20, 8))
     max_supply = Column(Numeric(20, 8))
     last_updated = Column(DateTime, default=datetime.utcnow)
-    metadata = Column(JSONB)
+    extra_data = Column(JSONB)
 
     __table_args__ = (
         Index('idx_crypto_symbol', 'symbol'),
@@ -1495,7 +1497,7 @@ class Country(Base):
     currency_code = Column(String(10))
     timezone = Column(String(50))
     is_active = Column(Boolean, default=True)
-    metadata = Column(JSONB)
+    extra_data = Column(JSONB)
     last_verified = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
@@ -1516,7 +1518,7 @@ class Industry(Base):
     sector = Column(String(100))
     etf_ticker = Column(String(20))
     is_active = Column(Boolean, default=True)
-    metadata = Column(JSONB)
+    extra_data = Column(JSONB)
     last_verified = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
@@ -1542,7 +1544,7 @@ class MarketIndex(Base):
     change_percent = Column(Numeric(10, 6))
     volume = Column(Numeric(18, 8))
     last_updated = Column(DateTime, default=datetime.utcnow)
-    metadata = Column(JSONB)
+    extra_data = Column(JSONB)
     is_active = Column(Boolean, default=True)
 
     __table_args__ = (
