@@ -164,6 +164,6 @@ class MulticollinearityMitigationService(AnalysisService):
         return dict(zip(names, importance.tolist()))
 
 
-DependencyContainer.register(
-    "MulticollinearityMitigationService", MulticollinearityMitigationService
+get_global_container().register(
+    "MulticollinearityMitigationService", MulticollinearityMitigationService, singleton=True
 )
