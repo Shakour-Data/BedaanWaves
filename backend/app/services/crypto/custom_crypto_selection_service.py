@@ -8,7 +8,7 @@ Manages user-defined cryptocurrency portfolios and selections.
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 import logging
 
 class CustomCryptoSelectionService(BaseService):
