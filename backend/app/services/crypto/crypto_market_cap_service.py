@@ -8,7 +8,7 @@ Supports filtering by market cap tiers, volume, and other metrics.
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 import logging
 
 class CryptoMarketCapService(BaseService):
