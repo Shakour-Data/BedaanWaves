@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 
 
 class CryptoIndustryMapperService(AnalysisService):
