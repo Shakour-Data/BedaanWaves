@@ -7,7 +7,7 @@ Supports both extractive and abstractive summarization approaches.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
-from ..core import BaseService
+from app.services.core.base_service import BaseService
 
 
 class NewsSummarizationService(BaseService):
