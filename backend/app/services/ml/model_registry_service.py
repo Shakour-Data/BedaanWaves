@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core import BaseService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 from ..core.database_service import DatabaseService
 from ..core.config import get_settings
 
@@ -214,11 +214,11 @@ class ModelRegistry(BaseService):
 async def model_registry_factory(database: DatabaseService) -> ModelRegistry:
     registry = ModelRegistry(database=database)
     await registry.initialize()
-    DependencyContainer.register_instance("ModelRegistry", registry)
+    get_global_container().register_instance("ModelRegistry", registry)
     return registry
 
 
-DependencyContainer.register_factory(
+get_global_container().register_factory(
     "ModelRegistry",
     model_registry_factory,
     singleton=True,
