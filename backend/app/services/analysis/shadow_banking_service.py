@@ -4,7 +4,7 @@ import numpy as np
 import aiohttp
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -113,4 +113,4 @@ class ShadowBankingMetricsService(AnalysisService):
         }
 
 
-DependencyContainer.register("ShadowBankingMetricsService", ShadowBankingMetricsService)
+get_global_container().register("ShadowBankingMetricsService", ShadowBankingMetricsService, singleton=True)
