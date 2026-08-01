@@ -164,4 +164,4 @@ class BehavioralEconomicsService(AnalysisService):
             return {"error": str(e)}
 
 
-DependencyContainer.register("BehavioralEconomicsService", BehavioralEconomicsService)
+DependencyContainer.get_global_container().register("BehavioralEconomicsService", BehavioralEconomicsService, singleton=True)

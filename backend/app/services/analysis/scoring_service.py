@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from ..core import AnalysisService
 from ..ml import CoefficientLearningService
-from app.core.dependency_container import get_global_container
+from app.services.core.dependency_container import get_global_container
 
 
 class ScoringService(AnalysisService):

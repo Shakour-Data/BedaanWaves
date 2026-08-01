@@ -124,4 +124,4 @@ class CryptoIndustryMapperService(AnalysisService):
         }
 
 
-DependencyContainer.register("CryptoIndustryMapperService", CryptoIndustryMapperService)
+DependencyContainer.get_global_container().register("CryptoIndustryMapperService", CryptoIndustryMapperService, singleton=True)
