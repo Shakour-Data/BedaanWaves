@@ -8,7 +8,7 @@ translation, and country-specific news categorization.
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
 from app.services.nlp.news_summarization_service import NewsSummarizationService
 import logging
