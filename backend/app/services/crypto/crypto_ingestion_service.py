@@ -31,7 +31,6 @@ class CircuitBreaker:
     """Circuit breaker for API calls to prevent cascading failures."""
     
     def __init__(self, failure_threshold: int = 5, timeout: int = 60, expected_exception: type = Exception):
-        Exception):
         self.failure_threshold = failure_threshold
         self.timeout = timeout
         self.expected_exception = expected_exception
@@ -41,15 +40,12 @@ class CircuitBreaker:
     
     def __call__(self, func):
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+def wrapper(*args, **kwargs):
             if self.state == "OPEN":
-                if self.last_failure_threshold: int = 5, timeout: int = 60, expected_exception: type = Exception):
-        self.failure_threshold = failure_threshold
-        self.timeout = timeout
-        self.expected_exception = expected_exception
-        self.failure_count = 0
-        self.last_failure_time = None
-        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+                if self._should_attempt_reset():
+                    self.state = "HALF_OPEN"
+                else:
+                    raise Exception("Circuit breaker is OPEN - blocking call")
     
     async def call(self, func, *args, **kwargs):
         """Execute function with circuit breaker protection."""
