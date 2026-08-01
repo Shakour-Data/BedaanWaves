@@ -133,29 +133,3 @@ class MetricTaxonomyService(BaseService):
 
 
 get_global_container().register("MetricTaxonomyService", MetricTaxonomyService, singleton=True)
-
-
-# Test the taxonomy service
-async def test_taxonomy():
-    service = MetricTaxonomyService()
-    await service.initialize()
-    
-    # Test mappings
-    assert service.map_crypto_to_stock_metric("market_cap") == "market_cap"
-    assert service.map_crypto_to_stock_metric("velocity") == "velocity"
-    assert service.map_stock_to_crypto_metric("pe_ratio") == "nvt_ratio"
-    
-    # Test validation
-    assert service.validate_mapping("market_cap", "market_cap") == True
-    assert service.validate_mapping("price", "market_cap") == False
-    
-    # Test normalization
-    crypto_data = {"market_cap": 1000000, "volume_24h": 50000}
-    stock_data = {"market_cap": 2000000, "trading_volume": 75000}
-    result = await service.normalize_cross_asset(crypto_data, stock_data)
-    assert "comparisons" in result
-    
-    service.shutdown()
-
-import asyncio
-asyncio.run(test_taxonomy())
