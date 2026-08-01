@@ -4,7 +4,7 @@ from enum import Enum
 import numpy as np
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 
 
 class MetricType(str, Enum):
@@ -154,4 +154,4 @@ class UnifiedDataModelService(AnalysisService):
         return expression in self.metric_algebra.values()
 
 
-DependencyContainer.register("UnifiedDataModelService", UnifiedDataModelService)
+get_global_container().register("UnifiedDataModelService", UnifiedDataModelService, singleton=True)
