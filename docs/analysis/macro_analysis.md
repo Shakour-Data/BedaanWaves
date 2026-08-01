@@ -5,311 +5,146 @@ Macro analysis evaluates securities based on broader economic and market factors
 
 **Important**: The coefficient/weight of each dimension, sub-dimension, aspect, and sub-aspect is dynamically determined through machine learning models and is **not static**. The CoefficientLearningService continuously optimizes these weights based on backtest performance, regime changes, and evolving market conditions.
 
----
-
-## Detailed Hierarchical Structure
-
-| Level | Dimension / Aspect / Sub-Aspect |
-|-------|-----------------------------------|
-| **Level 1** | **Macro** (10% weight) |
-| **Level 2** | `Macro_Fundamentals`, `Monetary_Policy`, `Global_Environment` |
-| **Level 3 – Macro_Fundamentals** | GDP, Inflation, Labor Market, Fiscal Policy |
-| **Level 4 – GDP Sub-Aspects** | `Real_GDP_QoQ`, `Real_GDP_YoY`, `GDP_Per_Capita`, `Sectoral_Contribution`, `Output_Gap`, `Potential_GDP_Growth`, `Industrial_Production_Index`, `Capacity_Utilization` |
-| **Level 4 – Inflation Sub-Aspects** | `CPI_Headline`, `CPI_Core`, `PPI`, `GDP_Deflator`, `Import_Price_Index`, `Wage_Growth`, `Inflation_Expectations_1Y`, `Inflation_Expectations_5Y` |
-| **Level 4 – Labor Market Sub-Aspects** | `Unemployment_Rate`, `Labor_Force_Participation`, `Job_Openings_Rate`, `Wage_Price_Spiral_Index`, `Youth_Unemployment` |
-| **Level 4 – Fiscal Policy Sub-Aspects** | `Govt_Debt_to_GDP`, `Primary_Deficit`, `Fiscal_Impulse`, `Tax_Revenue_Growth`, `Subsidy_Burden` |
-| **Level 3 – Monetary_Policy** | Policy Rates, Liquidity, Policy Transmission |
-| **Level 4 – Policy Rates Sub-Aspects** | `Key_Policy_Rate`, `Repo_Rate`, `Reverse_Repo`, `Interbank_Overnight_Rate`, `Policy_Rate_Forward_Guidance` |
-| **Level 4 – Liquidity Sub-Aspects** | `Reserve_Requirements`, `OMO_Volume`, `Standing_Facility_Usage`, `Bank_Reserve_Balances`, `Liquidity_Coverage_Ratio` |
-| **Level 4 – Transmission Sub-Aspects** | `Credit_Growth`, `Bank_Lending_Rates`, `Bond_Yield_Transmission`, `FX_Intervention_Volume`, `Policy_Shock_Index` |
-| **Level 3 – Global_Environment** | External Sector, Commodity Cycle, Geopolitical Risk |
-| **Level 4 – External Sub-Aspects** | `Current_Account_Balance`, `FX_Reserves`, `Real_Effective_Exchange_Rate`, `Trade_Weighted_Dollar`, `Capital_Flows` |
-| **Level 4 – Commodity Sub-Aspects** | `Oil_Price_Brent`, `Oil_Price_WTI`, `Gas_Price_Hub`, `Metals_Index`, `Agriculture_Index`, `Energy_Intensity_GDP` |
-| **Level 4 – Geopolitical Sub-Aspects** | `Sanctions_Index`, `Conflict_Proximity`, `Trade_Restriction_Score`, `Diplomatic_Risk`, `Supply_Chain_Disruption_Index` |
-
----
+## Hierarchical Structure
+- **Level 1**: Macro
+- **Level 2**: GDP growth, Inflation rates, Interest rates, Currency exchange rates, Commodity prices
+- **Level 3**: Economic indicators, Market conditions, Policy environment, Global factors
+- **Level 4**: Leading indicators, Coincident indicators, Lagging indicators, Composite indices
 
 ## Data Sources
-- National statistics bureaus (SCI for Iran, BEA for US, Eurostat, etc.)  
-- Central banks (CBI, Fed, ECB, BoJ, BoE) – policy communications, rate decisions, reports  
-- International organizations (IMF, World Bank, OECD, BIS) – Article IV, WEO, GFSR  
-- Government releases – budget statements, fiscal updates  
-- Commodity exchanges (NYMEX, ICE, SHFE, DCE) – futures curves, inventories  
-- Forex markets (EBS, Reuters, CME FX) – spot, forwards, options  
-- Global databases (FRED, OECD Stat, CEIC, Bloomberg Terminal)  
-- Real-time indicator feeds (PMI, tankan, ISM, flash PMIs)  
+- National statistics bureaus and central banks
+- International organizations (IMF, World Bank, OECD)
+- Government economic reports and releases
+- Central bank policy communications
+- Commodity exchanges and futures markets
+- Forex and currency markets
+- Global economic databases (FRED, OECD Data)
+- Real-time economic indicator feeds
 
----
+## Key Metrics Analyzed
 
-## Key Metrics Analyzed (Expanded)
+### GDP and Economic Growth
+- **GDP Growth Rate**: Quarterly and annual economic expansion
+- **GDP Per Capita**: Economic output per person
+- **Industrial Production Index**: Manufacturing and industrial output
+- **Capacity Utilization**: Economy operating at what percentage
+- **Productivity Growth**: Efficiency improvements
+- **Consumer Spending**: Household consumption trends
+- **Business Investment**: Capital expenditure trends
+- **Export/Import Growth**: Trade balance dynamics
 
-### GDP & Growth
-- **Real GDP Growth** (QoQ, YoY, SAAR)  
-- **Output Gap** (actual vs. potential GDP)  
-- **Industrial Production** (manufacturing, mining, utilities)  
-- **Capacity Utilization** (manufacturing, total industry)  
-- **Sectoral Contributions** (services, industry, agriculture)  
+### Inflation Metrics
+- **Consumer Price Index (CPI)**: Retail price changes
+- **Core CPI**: CPI excluding food and energy
+- **Producer Price Index (PPI)**: Wholesale price changes
+- **GDP Deflator**: Economy-wide price level
+- **Import/Export Prices**: Trade-related inflation
+- **Wage Growth**: Labor cost inflation
+- **Asset Price Inflation**: Real estate, stocks, commodities
+- **Helicopter Money**: Direct monetary transmission
 
-### Inflation
-- **CPI** (headline, core, super-core)  
-- **PPI** (intermediate, finished goods)  
-- **GDP Deflator**  
-- **Inflation Expectations** (survey-based, market-based breakevens)  
-- **Wage Growth** (nominal, real, unit labor costs)  
+### Interest Rate Environment
+- **Policy Interest Rate**: Central bank benchmark rate
+- **Yield Curve**: Term structure of interest rates
+- **Federal Funds Rate**: US interest rate impact
+- **Repo Rate**: Short-term borrowing costs
+- **Money Supply Growth**: Monetary expansion rate
+- **Banking Sector Lending Rates**: Credit cost transmission
+- **Bond Market Yields**: Safe asset returns
+- **Term Premium**: Extra return for longer maturities
 
-### Monetary Policy
-- **Policy Rate** (effective federal funds, key rate, deposit facility)  
-- **Yield Curve** (2s10s, 3m10y, OIS curves)  
-- **Money Supply** (M0, M1, M2, M3, credit aggregates)  
-- **Central Bank Balance Sheet** (assets, liabilities, maturity profile)  
-- **Forward Guidance** (dot plot, policy statement analysis via NLP)  
+### Currency Exchange Rates
+- **Nominal Exchange Rate**: Price relationship between currencies
+- **Real Effective Exchange Rate**: Trade-weighted exchange rate
+- **Currency Volatility**: Exchange rate fluctuation intensity
+- **Carry Trade Opportunities**: Interest rate differentials
+- **Currency Reserves**: Central bank foreign asset holdings
+- **Trade Balance Impact**: Export competitiveness
+- **Import Price Transmission**: Imported inflation
+- **Currency Correlation**: Exchange rate co-movement
 
-### Exchange Rates & External
-- **Nominal & Real Effective Exchange Rate** (trade-weighted)  
-- **FX Reserves** (composition, adequacy metrics)  
-- **Current Account** (goods, services, primary/secondary income)  
-- **Capital Flows** (FDI, portfolio, other investment)  
-- **Carry Trade Metrics** (interest rate differentials, rollover risk)  
+### Commodity Prices
+- **Energy Prices**: Oil, natural gas, energy sector impact
+- **Metal Prices**: Base and precious metals
+- **Agricultural Commodities**: Food price trends
+- **Soft Commodities**: Non-energy agricultural products
+- **Commodity Index**: Broad commodity price measures
+- **Commodity Volatility**: Price fluctuation severity
+- **Inventory Levels**: Supply glut vs. tight markets
+- **Weather Impact**: Agricultural supply disruption risk
 
-### Commodity & Geopolitical
-- **Energy** (Brent, WTI, Henry Hub, JKM LNG)  
-- **Metals** (copper, aluminum, iron ore, gold, silver)  
-- **Agriculture** (wheat, corn, soybeans, sugar)  
-- **Sanctions & Trade** (restriction indices, transaction costs)  
-- **Supply Chain** (GSCPI, PMI suppliers' delivery times)  
+## Regional and Geographic Analysis
 
----
+### Iran-Specific Factors
+- **Iran GDP Growth**: Domestic economic expansion
+- **Sanctions Impact**: International trade restrictions
+- **Currency Devaluation**: Rial exchange rate pressures
+- **Inflation Rate**: Domestic price level changes
+- **Oil Exports**: Energy revenue flows
+- **Subsidy Removal**: Government fiscal policy impact
+
+### Global Market Factors
+- **US Dollar Strength**: Currency impact on global markets
+- **Federal Reserve Policy**: Global monetary conditions
+- **Global Trade Flows**: International commerce trends
+- **Geopolitical Tensions**: Conflict impact on markets
+- **Supply Chain Disruptions**: Global production challenges
+- **Climate Policy**: Environmental regulation impact
+- **Demographic Trends**: Population and age structure changes
+
+## Leading Indicators Analysis
+- **PMI (Purchasing Managers Index)**: Early economic activity gauge
+- **Consumer Confidence**: Future expectations measurement
+- **Building Permits**: Future construction activity
+- **Stock Market Performance**: Wealth effect on economy
+- **Credit Conditions**: Lending availability and terms
+- **Money Market Conditions**: Liquidity in short-term markets
+- **Commodity Price Trends**: Early supply/demand signals
+- **Yield Curve Steepness/Flatness**: Economic cycle prediction
+
+## Analysis Process
+1. **Indicator Selection**: Choose relevant macro indicators
+2. **Data Collection**: Gather real-time and historical data
+3. **Normalization**: Adjust for different scales and units
+4. **Trend Analysis**: Identify direction and momentum
+5. **Correlation Mapping**: Link economic factors to security performance
+6. **Regime Detection**: Identify current economic phase
+7. **Impact Assessment**: Estimate sector and security impact
+8. **Score Normalization**: Convert to 0-100 scale
+9. **Weight Application**: Apply ML-optimized weights
+10. **Integration**: Combine with other macro sub-dimensions
 
 ## Machine Learning Integration
-- **Time Series Forecasting**: ARIMA, ETS, Prophet, LSTM, TFT for GDP, CPI, rates  
-- **Cointegration & VECM**: Long-run relationships (e.g., GDP–credit, CPI–wages)  
-- **Factor Models**: PCA on macro panel, dynamic factor models (DFM)  
-- **Causal Inference**: PC algorithm, DoWhy for policy shock identification  
-- **Regime Detection**: HMM, MS-VAR for business cycle phases  
-- **Scenario Generation**: Monte Carlo, GAN-based stress scenarios  
-- **NLP for Policy**: BERT/FinBERT on central bank minutes, speeches  
-- **Network Analysis**: Spillover indices, VAR-connectedness across countries  
-
----
-
-## BPMN Workflow Diagram
-
-```mermaid
-flowchart TD
-    subgraph Data_Collection["📥 Data Collection"]
-        A1[National Statistics] --> A2[Central Bank Feeds]
-        A3[Intl Organizations] --> A4[Commodity Prices]
-        A5[FX Markets] --> A6[Policy Communications]
-    end
-
-    subgraph Normalization["🔧 Normalization & Alignment"]
-        A2 --> B1[Frequency Conversion]
-        B1 --> B2[Calendar Alignment]
-        B2 --> B3[Base Year Rebasing]
-        B3 --> B4[Unit Harmonization]
-    end
-
-    subgraph Feature_Engineering["⚙️ Feature Engineering"]
-        B4 --> C1[Leading/Coincident/Lagging Tagging]
-        C1 --> C2[Output Gap Estimation]
-        C2 --> C3[Inflation Expectations Extraction]
-        C3 --> C4[Policy Stance Scoring]
-        C4 --> C5[External Vulnerability Index]
-    end
-
-    subgraph Modeling["🧠 Macro Modeling"]
-        C5 --> D1[Time-Series Forecasting]
-        D1 --> D2[VAR / DFM / FAVAR]
-        D2 --> D3[Regime Switching HMM]
-        D3 --> D4[Scenario Simulation]
-        D4 --> D5[Policy Shock Decomposition]
-    end
-
-    subgraph Scoring["📊 Scoring & Output"]
-        D5 --> E1[Raw Macro Score]
-        E1 --> E2[Dynamic Weighting (CoefficientLearningService)]
-        E2 --> E3[Normalized Score 0-100]
-        E3 --> E4[Cycle Phase Label]
-        E3 --> E5[Sector Rotation Signal]
-    end
-
-    subgraph Monitoring["📈 Monitoring"]
-        E4 --> F1[Real-Time Indicator Tracker]
-        F1 --> D1
-        F1 --> D3
-    end
-
-    style Data_Collection fill:#e3f2fd
-    style Normalization fill:#e8f5e9
-    style Feature_Engineering fill:#fff3e0
-    style Modeling fill:#fce4ec
-    style Scoring fill:#e0f2f1
-    style Monitoring fill:#f3e5f5
-```
-
----
-
-## Data Flow Diagram (DFD)
-
-```mermaid
-graph LR
-    subgraph External_Sources
-        ES1[Statistical Agencies] --> IL
-        ES2[Central Banks] --> IL
-        ES3[IMF/OECD] --> IL
-        ES4[Commodity Exchanges] --> IL
-        ES5[FX Venues] --> IL
-    end
-
-    subgraph Ingestion_Layer
-        IL[Ingestion Pipeline] --> NL[Normalization Layer]
-    end
-
-    subgraph Processing_Layer
-        NL --> FL[Feature Store]
-        FL --> ME[Macro Engine]
-        ME --> WE[Weighting Engine]
-    end
-
-    subgraph Output_Layer
-        WE --> SL[Score Library]
-        SL --> API[REST/GraphQL API]
-        SL --> WS[WebSocket Feed]
-        SL --> ST[Storage]
-    end
-
-    subgraph Consumers
-        API --> C1[Dashboard]
-        API --> C2[Portfolio Optimizer]
-        WS --> C3[Real-Time Alerts]
-    end
-
-    style External_Sources fill:#bbdefb
-    style Ingestion_Layer fill:#c8e6c9
-    style Processing_Layer fill:#ffe0b2
-    style Output_Layer fill:#f8bbd0
-    style Consumers fill:#d1c4e9
-```
-
----
-
-## UML Class Diagram (Macro Domain)
-
-```mermaid
-classDiagram
-    class MacroIndicator {
-        «abstract»
-        +String code
-        +String name
-        +Frequency freq
-        +Double value
-        +LocalDate obsDate
-        +Double transform()
-    }
-
-    class GDPIndicator {
-        +Double realGdpQoQ
-        +Double realGdpYoY
-        +Double outputGap
-        +Double potentialGrowth
-        +Double estimatePotentialGDP()
-    }
-
-    class InflationIndicator {
-        +Double cpiHeadline
-        +Double cpiCore
-        +Double ppi
-        +Double expectations1y
-        +Double expectations5y
-        +Double computeRealRate()
-    }
-
-    class PolicyIndicator {
-        +Double policyRate
-        +Double repoRate
-        +Double reserveReq
-        +Double balanceSheetSize
-        +String stance
-        +Double computePolicyImpulse()
-    }
-
-    class ExternalIndicator {
-        +Double currentAccount
-        +Double fxReserves
-        +Double reer
-        +Double capitalFlows
-        +Double computeVulnerability()
-    }
-
-    class MacroScorer {
-        +CoefficientLearningService coeffService
-        +MacroScore score(MacroFeatures)
-        +CyclePhase classifyCycle(MacroScore)
-    }
-
-    class MacroScore {
-        +Double overall
-        +Map~String,Double~ subScores
-        +CyclePhase phase
-        +LocalDateTime asOf
-    }
-
-    class CyclePhase {
-        <<enumeration>>
-        DEFLATIONARY_RECESSION
-        LATE_CYCLE
-        MIDDLE_CYCLE
-        EARLY_CYCLE
-        EARLY_EXPANSION
-        STRONG_EXPANSION
-    }
-
-    class CoefficientLearningService {
-        +Map~String,Double~ loadWeights()
-        +void updateFromBacktest(List~BacktestResult~)
-    }
-
-    MacroIndicator <|-- GDPIndicator
-    MacroIndicator <|-- InflationIndicator
-    MacroIndicator <|-- PolicyIndicator
-    MacroIndicator <|-- ExternalIndicator
-    MacroScorer --> CoefficientLearningService
-    MacroScorer --> MacroScore
-    MacroScore --> CyclePhase
-```
-
----
+- **Time Series Forecasting**: ARIMA, LSTM, Prophet models
+- **Cointegration Analysis**: Long-term economic relationship modeling
+- **Factor Models**: Systematic risk factor identification
+- **Causal Inference**: Understanding economic driver relationships
+- **Event Detection**: Identifying regime changes and policy shifts
+- **Sentiment Analysis**: Central bank communication interpretation
+- **Network Analysis**: Economic indicator interdependencies
+- **Scenario Generation**: Monte Carlo macroeconomic scenarios
 
 ## Output Interpretation
+Macro analysis produces economy-cycle positioning:
+- **0-19**: Deflationary recession (downward cycle)
+- **20-39**: Late cycle (market peak conditions)
+- **40-54**: Middle cycle (stable growth)
+- **55-69**: Early cycle (expansion beginning)
+- **70-84**: Early expansion (recovery underway)
+- **85-100**: Strong expansion (peak growth phase)
 
-| Macro Score | Cycle Phase | Typical Sector Allocation |
-|-------------|-------------|---------------------------|
-| 0–19 | Deflationary Recession | Long Duration Bonds, Defensive Equities, Cash |
-| 20–39 | Late Cycle | Quality Growth, Low-Volatility, Short Duration |
-| 40–54 | Middle Cycle | Balanced, Broad Market |
-| 55–69 | Early Cycle | Cyclicals, Small Caps, Financials |
-| 70–84 | Early Expansion | Commodities, Industrials, EM |
-| 85–100 | Strong Expansion | Momentum, High Beta, Real Assets |
+## Economic Regime Classification
+- **Normal Cycle**: Balanced economic conditions
+- **Late Cycle**: Approaching recession with tightening monetary
+- **Recession**: Economic contraction and weak demand
+- **Early Recovery**: Stabilizing economy with improving sentiment
+- **Mid-Expansion**: Solid growth with moderate inflation
+- **Late Expansion**: Strong growth approaching overheating
 
----
-
-## Iran-Specific Enhancements
-- **Sanctions Index**: Quantifies trade restriction severity (0–100) using transaction data and vessel tracking.  
-- **FX Dual Rate Model**: Parallel market vs. official rate divergence as stress indicator.  
-- **Budget Rule Monitor**: Oil revenue vs. expenditure rule compliance tracker.  
-- **Subsidy Reform Tracker**: Price liberalization progress and inflation pass-through.  
-
----
-
-## Integration with Other 6D Dimensions
-| From Macro → To | Signal Provided |
-|-----------------|-----------------|
-| Fundamental | Earnings sensitivity to GDP, inflation pass-through to margins |
-| Technical | Regime-dependent indicator reliability (e.g., RSI in trending vs. ranging) |
-| Sentiment | Central bank credibility index from communication analysis |
-| Risk | Correlation regime shifts, tail-dependence parameters |
-| AI | Macro regime as conditioning variable for LSTM/Transformer models |
-
----
+## Sector Rotation Implications
+Macro scores indicate optimal sector allocations:
+- **High Macro Scores**: Cyclical stocks, commodities, financials benefit
+- **Low Macro Scores**: Defensive stocks, utilities, bonds outperform
+- **Transition Periods**: Mixed signals requiring careful positioning
 
 This dimension provides essential context for understanding the broader economic environment that drives all other dimensions of the 6D scoring system, helping investors position for favorable macro conditions.
