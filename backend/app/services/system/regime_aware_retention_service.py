@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
 from ..core import BaseService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 from ..database.database_service import DatabaseService
 from app.core.config import get_settings
 
@@ -94,4 +94,4 @@ class RegimeAwareRetentionService(DatabaseService):
         return False
 
 
-DependencyContainer.register("RegimeAwareRetentionService", RegimeAwareRetentionService)
+get_global_container().register("RegimeAwareRetentionService", RegimeAwareRetentionService, singleton=True)
