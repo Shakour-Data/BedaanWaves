@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import asyncio
 import json
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 from app.services.user.preference_service import PreferenceService
 import logging
 
