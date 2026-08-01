@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -156,4 +156,4 @@ class HistoricalRegimeCompressionService(AnalysisService):
         return self.fingerprint_db
 
 
-DependencyContainer.register("HistoricalRegimeCompressionService", HistoricalRegimeCompressionService)
+get_global_container().register("HistoricalRegimeCompressionService", HistoricalRegimeCompressionService, singleton=True)
