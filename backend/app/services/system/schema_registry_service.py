@@ -8,7 +8,7 @@ import aiofiles
 from aioredis import Redis
 
 from ..core import ExternalAPIService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 from ..core.config import get_settings
 from ..core.database_service import DatabaseService
 
@@ -121,11 +121,11 @@ async def schema_registry_factory(
 ) -> SchemaRegistry:
     registry = SchemaRegistry(database, redis)
     await registry.initialize()
-    DependencyContainer.register_instance("SchemaRegistry", registry)
+    get_global_container().register_instance("SchemaRegistry", registry)
     return registry
 
 
-DependencyContainer.register_factory(
+get_global_container().register_factory(
     "SchemaRegistry",
     schema_registry_factory,
     singleton=True,
