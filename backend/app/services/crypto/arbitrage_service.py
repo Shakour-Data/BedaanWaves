@@ -4,16 +4,14 @@ Crypto Arbitrage Service - Tier 8 Complete Implementation
 from decimal import Decimal, getcontext
 from typing import Any, Dict, List, Optional
 import asyncio
+import logging
 
 from ..data.crypto_api_client import CryptoApiClient
-from ..core.logging_service import getLogger
-
-logger = getLogger(__name__)
 
 class CryptoArbitrageService:
     def __init__(self, service_name: str = "CryptoArbitrageService"):
         self.service_name = service_name
-        self.logger = logger
+        self.logger = logging.getLogger(service_name)
         self.price_client = CryptoApiClient()
         getcontext().prec = 12  # High precision for financial calculations
 
