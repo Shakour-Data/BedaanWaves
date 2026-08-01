@@ -8,7 +8,7 @@ indices, industries, and cryptocurrencies.
 from typing import Dict, List, Optional, Any
 from datetime import datetime, date
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.data.stock_service import StockService
 from app.services.data.crypto_api_client import CryptoApiClient
