@@ -16,9 +16,8 @@ from .portfolio_service import CryptoPortfolioService
 from .crypto_market_cap_service import CryptoMarketCapService
 from .custom_crypto_selection_service import CustomCryptoSelectionService
 from .news_service import CryptoNewsService
-from .arbitrage_service import ArbitrageService
-from .analysis_service import CryptoAnalysisService
-from .ingestion_service import CryptoIngestionService
+from .arbitrage_service import CryptoArbitrageService as ArbitrageService
+from .crypto_ingestion_service import CryptoIngestionService
 
 __all__ = [
     "CryptoApiClient",
@@ -28,7 +27,6 @@ __all__ = [
     "CustomCryptoSelectionService",
     "CryptoNewsService",
     "ArbitrageService",
-    "CryptoAnalysisService",
     "CryptoIngestionService",
 ]
 
