@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 
 
 class CurrencyRegimeClassifier(AnalysisService):
@@ -132,4 +132,4 @@ class CurrencyRegimeClassifier(AnalysisService):
         return path
 
 
-DependencyContainer.register("CurrencyRegimeClassifier", CurrencyRegimeClassifier)
+get_global_container().register("CurrencyRegimeClassifier", CurrencyRegimeClassifier, singleton=True)
