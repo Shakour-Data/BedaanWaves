@@ -4,7 +4,7 @@ import aiohttp
 import numpy as np
 
 from ..core import AnalysisService
-from ..core.dependency_container import DependencyContainer
+from ..core.dependency_container import get_global_container
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -164,4 +164,4 @@ class BehavioralEconomicsService(AnalysisService):
             return {"error": str(e)}
 
 
-DependencyContainer.get_global_container().register("BehavioralEconomicsService", BehavioralEconomicsService, singleton=True)
+get_global_container().register("BehavioralEconomicsService", BehavioralEconomicsService, singleton=True)
