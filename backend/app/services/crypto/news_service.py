@@ -5,6 +5,7 @@ import aiohttp
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from ..core import CachedService
 from ..data.crypto_api_client import CryptoApiClient
 from ..nlp.sentiment_analysis_service import SentimentAnalysisService
 
