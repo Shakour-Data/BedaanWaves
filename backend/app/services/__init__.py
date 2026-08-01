@@ -56,9 +56,7 @@ from .analysis.user_filtered_scoring_service import UserFilteredScoringService
 from .nlp.sentiment_analysis_service import SentimentAnalysisService
 from .nlp.news_summarization_service import NewsSummarizationService
 from .nlp.document_extraction_service import DocumentExtractionService
-from .nlp.chatbot_service import ChatbotService
-from .nlp.search_service import SearchService
-from .nlp.multilingual_news_service import MultiLanguageNewsService
+from .nlp.multilingual_news_service import MultilingualNewsService
 
 # Tier 8: Crypto Services
 from .crypto.price_service import CryptoPriceService
@@ -114,9 +112,7 @@ __all__ = [
     "SentimentAnalysisService",
     "NewsSummarizationService",
     "DocumentExtractionService",
-    "ChatbotService",
-    "SearchService",
-    "MultiLanguageNewsService",
+    "MultilingualNewsService",
     # Tier 8: Crypto
     "CryptoPriceService",
     "CryptoPortfolioService",
