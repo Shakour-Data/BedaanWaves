@@ -8,7 +8,7 @@ Enables users to analyze and compare markets across different countries.
 from typing import Dict, List, Optional, Any
 from datetime import datetime, date
 import asyncio
-from app.core import BaseService
+from app.services.core.base_service import BaseService
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 import logging
