@@ -161,7 +161,8 @@ class AlphaVantageProvider(FinancialDataProvider):
     def __init__(self):
         self.base_url = "https://www.alphavantage.co/query"
         self.settings = get_settings()
-        self.api_key = self.settings.ALPHA_VANTAGE_API_KEY
+        # Use getattr with default None for optional API key
+        self.api_key = getattr(self.settings, 'ALPHA_VANTAGE_API_KEY', None)
     
     async def fetch_financial_statements(
         self,
