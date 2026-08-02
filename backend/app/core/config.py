@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     # ============================================================
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
+    JWT_SECRET: str = "your-jwt-secret"
+    JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
@@ -151,6 +153,10 @@ class Settings(BaseSettings):
     CODAL_API_KEY: Optional[str] = None
     CODAL_REFRESH_INTERVAL_HOURS: int = 24
     
+    # External Financial APIs
+    ALPHA_VANTAGE_API_KEY: Optional[str] = None
+    ALPHA_VANTAGE_BASE_URL: str = "https://www.alphavantage.co/query"
+    
     # News APIs
     NEWS_SOURCES: List[str] = ["tehran-news", "financial-news", "market-news"]
     NEWS_REFRESH_INTERVAL_MINUTES: int = 30
@@ -160,6 +166,11 @@ class Settings(BaseSettings):
     COINGECKO_API_BASE_URL: str = "https://api.coingecko.com/api/v3"
     BINANCE_API_BASE_URL: str = "https://api.binance.com/api/v3"
     CRYPTO_REFRESH_INTERVAL_MINUTES: int = 5
+    
+    # Machine Learning
+    ML_MODEL_PATH: str = "./models"
+    ML_MODELS_DIR: str = "./models"
+    ML_MODELS_VERSION: str = "1.0.0"
     
     # ============================================================
     # MACHINE LEARNING CONFIGURATION (Bedaan4D-ML)
@@ -301,6 +312,7 @@ class Settings(BaseSettings):
     BACKUP_INTERVAL_HOURS: int = 24
     BACKUP_RETENTION_DAYS: int = 30
     BACKUP_PATH: str = "./backups"
+    ARCHIVE_PATH: str = "./data/archive"
     
     # ============================================================
     # CRYPTO FEATURES (CryptoAndStocks Integration)
