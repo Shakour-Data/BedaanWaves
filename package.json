@@ -21,10 +21,12 @@
     "lint:frontend": "cd frontend && eslint . --max-warnings=0"
   },
   "dependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "tinyglobby": "^0.2.17"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=18.0.0",
