@@ -81,10 +81,13 @@ function formatTimeAgo(dateStr: string): string {
 
 async function fetchMarketStats(): Promise<MarketStat[]> {
   try {
-    const [tseOverview, tseDashboard] = await Promise.all([
+    const [tseOverviewRes, tseDashboardRes] = await Promise.all([
       apiClient.get<MarketOverviewResponse>("/market/market-overview?market=TSE").catch(() => null),
       apiClient.get<TseDashboardResponse>("/market/tse-dashboard").catch(() => null),
     ]);
+
+    const tseOverview = tseOverviewRes?.data
+    const tseDashboard = tseDashboardRes?.data
 
     const stats: MarketStat[] = [];
 
@@ -115,7 +118,8 @@ async function fetchMarketStats(): Promise<MarketStat[]> {
 
 async function fetchTopMovers(): Promise<AssetRow[]> {
   try {
-    const data = await apiClient.get<TseDashboardResponse>("/market/tse-dashboard");
+    const res = await apiClient.get<TseDashboardResponse>("/market/tse-dashboard");
+    const data = res.data;
     if (data.status !== "success") return [];
 
     const map = (r: TseDashboardResponse["top_gainers"][number]): AssetRow => ({
@@ -133,23 +137,25 @@ async function fetchTopMovers(): Promise<AssetRow[]> {
 
 async function fetchWatchlist(): Promise<AssetRow[]> {
   try {
-    const watchlists = await apiClient.get<WatchlistResponse[]>("/watchlists");
+    const watchlistsRes = await apiClient.get<WatchlistResponse[]>("/watchlists");
+    const watchlists = watchlistsRes.data;
     const defaultWatchlist = watchlists.find((w) => w.is_default);
     if (!defaultWatchlist?.items?.length) return [];
 
     const symbols = defaultWatchlist.items.map((item) => item.asset.symbol);
-    const prices = await apiClient.get<LatestPricesResponse>(
+    const pricesRes = await apiClient.get<LatestPricesResponse>(
       `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
     );
+    const pricesData = pricesRes.data?.data ?? {};
 
     return defaultWatchlist.items
-      .filter((item) => prices.data?.[item.asset.symbol])
+      .filter((item) => pricesData[item.asset.symbol])
       .map((item) => ({
         symbol: item.asset.symbol,
         name: item.asset.name,
         market: item.asset.market as AssetRow["market"],
-        price: prices.data[item.asset.symbol].price,
-        changePct: prices.data[item.asset.symbol].change_pct,
+        price: pricesData[item.asset.symbol].price,
+        changePct: pricesData[item.asset.symbol].change_pct,
       }));
   } catch {
     return [];
@@ -158,7 +164,8 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
 
 async function fetchSignals(): Promise<SignalRow[]> {
   try {
-    const data = await apiClient.get<SignalsSummaryResponse>("/analysis/signals-summary?min_confidence=0.6");
+    const res = await apiClient.get<SignalsSummaryResponse>("/analysis/signals-summary?min_confidence=0.6");
+    const data = res.data;
     if (data.status !== "success") return [];
 
     const symbols = Object.entries(data.summary ?? {})
@@ -170,9 +177,10 @@ async function fetchSignals(): Promise<SignalRow[]> {
     const allSignals: SignalRow[] = [];
     for (const type of symbols) {
       try {
-        const typeSignals = await apiClient.get<any>(`/analysis/signals-summary?min_confidence=0.6`);
-        if (typeSignals.status === "success") {
-          const signals = (typeSignals.data?.summary || [])
+        const typeRes = await apiClient.get<any>(`/analysis/signals-summary?min_confidence=0.6&signal_type=${type}`);
+        const typeData = typeRes.data;
+        if (typeData?.status === "success") {
+          const signals = (typeData.data?.summary || [])
             .filter((s: any) => s.signal_type === type)
             .slice(0, 2);
           for (const s of signals) {
@@ -195,7 +203,8 @@ async function fetchSignals(): Promise<SignalRow[]> {
 
 async function fetchNews(): Promise<NewsItem[]> {
   try {
-    const data = await apiClient.get<NewsResponse>("/news/market?limit=10");
+    const res = await apiClient.get<NewsResponse>("/news/market?limit=10");
+    const data = res.data;
     if (data.status !== "success") return [];
 
     return (data.data ?? []).map((n) => ({
