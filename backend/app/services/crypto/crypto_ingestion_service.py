@@ -9,13 +9,13 @@ from typing import Any, Dict, List, Optional
 import aiohttp
 from pytz import utc
 
+import logging
 from ..core.base_service import DataService
 from ..core.config import get_settings
-from ..core.logging_service import getLogger
-from ..db.base import async_session_maker
-from ..models.models import RawMarketData, Asset
+from ...db.base import async_session_maker
+from ...models.models import RawMarketData, Asset
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------
 # Configuration & Constants
@@ -40,7 +40,7 @@ class CircuitBreaker:
     
     def __call__(self, func):
         @functools.wraps(func)
-def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             if self.state == "OPEN":
                 if self._should_attempt_reset():
                     self.state = "HALF_OPEN"
