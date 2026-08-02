@@ -86,12 +86,13 @@ class CryptoIndustryMapperService(AnalysisService):
 
     async def classify_asset(self, symbol: str) -> Dict[str, str]:
         """Classify a single asset into the 5-tier hierarchy."""
+        symbol_lower = str(symbol).lower()
         classification = {
-            "layer": self.LAYER_MAP.get(symbol, "other"),
-            "function": self.FUNCTION_MAP.get(symbol, "other"),
-            "usage": self.USAGE_MAP.get(symbol, "trading"),
-            "risk_profile": self._determine_risk_profile(symbol),
-            "theme": self.THEME_MAP.get(symbol, "other"),
+            "layer": self.LAYER_MAP.get(symbol_lower, "other"),
+            "function": self.FUNCTION_MAP.get(symbol_lower, "other"),
+            "usage": self.USAGE_MAP.get(symbol_lower, "trading"),
+            "risk_profile": self._determine_risk_profile(symbol_lower),
+            "theme": self.THEME_MAP.get(symbol_lower, "other"),
         }
         return classification
 
@@ -99,7 +100,7 @@ class CryptoIndustryMapperService(AnalysisService):
         """Infer risk profile from known market characteristics."""
         low_risk = {"usdc", "usdt", "dai", "busd"}
         medium_risk = {"xrp", "ltc", "link", "matic"}
-        high_risk = {"btc", "eth", "sol", "avax", "dot"}
+        high_risk = {"btc", "eth", "sol", "avax", "dot", "xmr"}
 
         if symbol in low_risk:
             return "low"
@@ -124,4 +125,4 @@ class CryptoIndustryMapperService(AnalysisService):
         }
 
 
-DependencyContainer.get_global_container().register("CryptoIndustryMapperService", CryptoIndustryMapperService, singleton=True)
+get_global_container().register("CryptoIndustryMapperService", CryptoIndustryMapperService, singleton=True)
