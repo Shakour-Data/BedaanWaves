@@ -61,3 +61,7 @@ docs/postgre.txt
 docs/BourseApi.txt
 docs/init_docs/BourseApi.txt
 docs/init_docs/postgre.txt
+
+# Frontend build artifacts and config files
+frontend/next-env.d.ts
+frontend/.next/
