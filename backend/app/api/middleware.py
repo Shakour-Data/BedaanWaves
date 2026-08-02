@@ -1,6 +1,6 @@
 """Global API Middleware
 
-Provides three FastAPI/Starlette middlewares:
+Provides four FastAPI/Starlette middlewares:
 
 * ``CorrelationIdMiddleware``  - attaches a request id (X-Correlation-ID) used for
   tracing and request logging.
@@ -9,8 +9,10 @@ Provides three FastAPI/Starlette middlewares:
   protected API path (with a configurable public allow-list).
 * ``RateLimitMiddleware``     - in-memory sliding-window rate limiting keyed by
   client IP, honoring the ``RATE_LIMIT_*`` configuration.
+* ``RequestLoggingMiddleware`` - logs incoming requests and responses with timing.
 """
 
+import logging
 import time
 import uuid
 from collections import deque
@@ -180,3 +182,45 @@ def protected_dependencies() -> List:
     from app.api.dependencies import get_current_active_user
 
     return [Depends(get_current_active_user)]
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Log incoming requests and responses."""
+
+    def __init__(self, app, *, enabled: bool = True):
+        super().__init__(app)
+        self.enabled = enabled
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if not self.enabled:
+            return await call_next(request)
+
+        start_time = time.monotonic()
+        
+        # Log incoming request
+        correlation_id = getattr(request.state, 'correlation_id', 'unknown')
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Request: {request.method} {request.url.path} "
+            f"[correlation_id={correlation_id}] "
+            f"client={_client_ip(request)}"
+        )
+
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            process_time = time.monotonic() - start_time
+            logger.error(
+                f"Request failed: {request.method} {request.url.path} "
+                f"[correlation_id={correlation_id}] "
+                f"duration={process_time:.3f}s error={str(e)}"
+            )
+            raise
+
+        process_time = time.monotonic() - start_time
+        logger.info(
+            f"Response: {request.method} {request.url.path} "
+            f"[correlation_id={correlation_id}] "
+            f"status={response.status_code} duration={process_time:.3f}s"
+        )
+        return response
