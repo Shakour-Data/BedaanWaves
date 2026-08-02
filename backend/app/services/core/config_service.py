@@ -242,3 +242,16 @@ class ConfigService(BaseService):
     def is_debug(self) -> bool:
         """Check if debug mode is enabled"""
         return self._config.get('debug', False)
+    
+    @staticmethod
+    def get_settings():
+        """Get default configuration settings"""
+        return {
+            'environment': 'development',
+            'debug': True,
+            'log_level': 'INFO'
+        }
+
+    def is_debug(self) -> bool:
+        """Check if debug mode is enabled"""
+        return self._config.get('debug', False)
