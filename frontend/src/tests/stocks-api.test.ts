@@ -1,19 +1,11 @@
 import { vi } from 'vitest'
-import {
-  fetchSymbols,
-  fetchAsset,
-  fetchPriceHistory,
-  fetchLatestPrices,
-  fetchLatestPrice,
-  type Asset,
-  type AssetRow,
-  type Candle
-} from '@/lib/api/stocks'
+import { fetchSymbols, fetchAsset, fetchPriceHistory, fetchLatestPrices, fetchLatestPrice } from '@/lib/api/stocks'
+import { apiClient } from '@/lib/api'
 
 vi.mock('@/lib/api')
 
 describe('Stocks API Service', () => {
-  const mockAssets: Asset[] = [
+  const mockAssets = [
     {
       id: '1',
       symbol: 'AAPL',
@@ -44,45 +36,12 @@ describe('Stocks API Service', () => {
     }
   ]
 
-  const mockLatestPrices = {
-    status: 'success',
-    timestamp: '2023-01-01T12:00:00Z',
-    data: {
-      AAPL: {
-        price: 150.25,
-        change: 2.50,
-        change_pct: 1.69,
-        volume: 50000000,
-        timestamp: '2023-01-01T12:00:00Z'
-      },
-      GOOGL: {
-        price: 2800.75,
-        change: -15.25,
-        change_pct: -0.54,
-        volume: 1500000,
-        timestamp: '2023-01-01T12:00:00Z'
-      }
-    }
-  }
-
-  const mockCandles = [{
-    timestamp: '2023-01-01T00:00:00Z',
-    timeframe: '1d',
-    open: 100.0,
-    high: 110.0,
-    low: 95.0,
-    close: 105.0,
-    volume: 1000000,
-    turnover?: number | string | null,
-    transactions?: number | null
-  }]
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   describe('fetchSymbols', () => {
-    it('should fetch symbols with filters', async () => {
+    it('should return mock assets when called', async () => {
       ;(apiClient.get as any).mockResolvedValueOnce({ data: mockAssets })
       
       const result = await fetchSymbols({ 
@@ -93,6 +52,7 @@ describe('Stocks API Service', () => {
       })
       
       expect(result).toEqual(mockAssets)
+      expect(apiClient.get).toHaveBeenCalled()
     })
 
     it('should fetch symbols without filters', async () => {
@@ -105,7 +65,7 @@ describe('Stocks API Service', () => {
   })
 
   describe('fetchAsset', () => {
-    it('should return asset when found', async () => {
+    it('should find asset when it exists', async () => {
       ;(apiClient.get as any).mockResolvedValueOnce({ data: mockAssets })
       
       const result = await fetchAsset('AAPL')
@@ -123,8 +83,20 @@ describe('Stocks API Service', () => {
   })
 
   describe('fetchPriceHistory', () => {
-    it('should fetch and transform price history correctly', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockCandles })
+    it('should transform raw candles to Candle array', async () => {
+      const mockRawCandles = [{
+        timestamp: '2023-01-01T00:00:00Z',
+        timeframe: '1d' as const,
+        open: 100.0,
+        high: 110.0,
+        low: 95.0,
+        close: 105.0,
+        volume: 1000000,
+        turnover: 10500000,
+        transactions: 1500
+      }]
+
+      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockRawCandles })
       
       const result = await fetchPriceHistory({ symbol: 'AAPL', timeframe: '1d', limit: 100 })
       
@@ -133,8 +105,7 @@ describe('Stocks API Service', () => {
       )
       
       expect(result).toHaveLength(1)
-      const resultItem = result[0]
-      expect(resultItem).toEqual({
+      expect(result[0]).toEqual({
         timestamp: '2023-01-01T00:00:00Z',
         timeframe: '1d',
         open: 100.0,
@@ -142,15 +113,15 @@ describe('Stocks API Service', () => {
         low: 95.0,
         close: 105.0,
         volume: 1000000,
-        turnover: null,
-        transactions: null,
+        turnover: 10500000,
+        transactions: 1500
       })
     })
 
     it('should handle null/undefined values in price history', async () => {
       const mockDataWithNulls = [{
         timestamp: '2023-01-01T00:00:00Z',
-        timeframe: '1d',
+        timeframe: '1d' as const,
         open: null,
         high: '110.0',
         low: 95,
@@ -180,28 +151,28 @@ describe('Stocks API Service', () => {
 
   describe('fetchLatestPrices', () => {
     it('should fetch latest prices for multiple symbols', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({
+      const mockResponse = {
+        status: 'success',
+        timestamp: '2023-01-01',
         data: {
-          status: 'success',
-          timestamp: '2023-01-01',
-          data: {
-            AAPL: {
-              price: 150.25,
-              change: 2.50,
-              change_pct: 1.69,
-              volume: 50000000,
-              timestamp: '2023-01-01T12:00:00Z'
-            },
-            GOOGL: {
-              price: 2800.75,
-              change: -15.25,
-              change_pct: -0.54,
-              volume: 1500000,
-              timestamp: '2023-01-01T12:00:00Z'
-            }
+          AAPL: {
+            price: 150.25,
+            change: 2.50,
+            change_pct: 1.69,
+            volume: 50000000,
+            timestamp: '2023-01-01T12:00:00Z'
+          },
+          GOOGL: {
+            price: 2800.75,
+            change: -15.25,
+            change_pct: -0.54,
+            volume: 1500000,
+            timestamp: '2023-01-01T12:00:00Z'
           }
         }
-      })
+      }
+      
+      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockResponse })
       
       const result = await fetchLatestPrices(['AAPL', 'GOOGL'])
       
@@ -234,21 +205,21 @@ describe('Stocks API Service', () => {
 
   describe('fetchLatestPrice', () => {
     it('should fetch latest price for single symbol', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({
+      const mockResponse = {
+        status: 'success',
+        timestamp: '2023-01-01',
         data: {
-          status: 'success',
-          timestamp: '2023-01-01',
-          data: {
-            AAPL: {
-              price: 150.25,
-              change: 2.50,
-              change_pct: 1.69,
-              volume: 50000000,
-              timestamp: '2023-01-01T12:00:00Z'
-            }
+          AAPL: {
+            price: 150.25,
+            change: 2.50,
+            change_pct: 1.69,
+            volume: 50000000,
+            timestamp: '2023-01-01T12:00:00Z'
           }
         }
-      })
+      }
+      
+      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockResponse })
       
       const result = await fetchLatestPrice('AAPL')
       
