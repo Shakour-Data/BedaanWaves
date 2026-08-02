@@ -41,7 +41,8 @@ class CoefficientLearningService(MLService):
     def __init__(self, service_name: str = "coefficient_learning_service"):
         super().__init__(service_name)
         self.settings = get_settings()
-        self.models_dir = Path(self.settings.ML_MODELS_DIR) / "coefficients"
+        models_dir = getattr(self.settings, 'ML_MODELS_DIR', './models')
+        self.models_dir = Path(models_dir) / "coefficients"
         self.models_dir.mkdir(parents=True, exist_ok=True)
         
         # Hierarchical models for each level
