@@ -452,10 +452,7 @@ class DataIntegrityService(BaseService):
             cons_rate = cc.get("consistency_rate", 0)
             if cons_rate < 95:
                 recommendations.append(
-                    f"Investigate data source inconsistencies"
-```
-
-Let me fix the remaining inconsistencies "
+                    f"Investigate data source inconsistencies "
                     f"(current consistency: {cons_rate}%)"
                 )
         
