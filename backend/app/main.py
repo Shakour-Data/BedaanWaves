@@ -10,11 +10,10 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.db.base import engine
 from app.services.core.dependency_container import DependencyContainer
-from app.middleware import (
+from app.api.middleware import (
     CorrelationIdMiddleware,
     RateLimitMiddleware,
     AuthGuardMiddleware,
-    RequestLoggingMiddleware,
 )
 from app.api.routes import (
     auth_router,
