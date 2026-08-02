@@ -32,32 +32,31 @@ describe('SignalList', () => {
 
   it('renders signal list with correct data', () => {
     render(<SignalList signals={mockSignals} />)
-    
+
     // Check symbols are rendered
-    expect(screen.getByText('TEST1')).toBeInTheDocument()
-    expect(screen.getByText('TEST2')).toBeInTheDocument()
-    expect(screen.getByText('TEST3')).toBeInTheDocument()
-    
+    expect(screen.getByText('TEST1')).not.toBeNull()
+    expect(screen.getByText('TEST2')).not.toBeNull()
+    expect(screen.getByText('TEST3')).not.toBeNull()
+
     // Check signal types are translated
-    expect(screen.getByText('خرید')).toBeInTheDocument()
-    expect(screen.getByText('فروش')).toBeInTheDocument()
-    expect(screen.getByText('نگهداری')).toBeInTheDocument()
-    
-    // Check confidence values are formatted - use partial match
-    expect(screen.getByText(/اطمینان/)).toBeInTheDocument()
-    expect(screen.getByText(/85\.5%/)).toBeInTheDocument()
-    expect(screen.getByText(/72\.3%/)).toBeInTheDocument()
-    expect(screen.getByText(/55\.0%/)).toBeInTheDocument()
-    
+    expect(screen.getByText('خرید')).not.toBeNull()
+    expect(screen.getByText('فروش')).not.toBeNull()
+    expect(screen.getByText('نگهداری')).not.toBeNull()
+
+    // Check confidence values are formatted - use more specific text to avoid duplicates
+    expect(screen.getByText(/اطمینان 85\.5/)).not.toBeNull()
+    expect(screen.getByText(/اطمینان 72\.3/)).not.toBeNull()
+    expect(screen.getByText(/اطمینان 55\.0/)).not.toBeNull()
+
     // Check model names are displayed
-    expect(screen.getByText('ScoringService-6D')).toBeInTheDocument()
-    expect(screen.getByText('RiskAnalysisService')).toBeInTheDocument()
-    expect(screen.getByText('MomentumService')).toBeInTheDocument()
+    expect(screen.getByText('ScoringService-6D')).not.toBeNull()
+    expect(screen.getByText('RiskAnalysisService')).not.toBeNull()
+    expect(screen.getByText('MomentumService')).not.toBeNull()
   })
 
   it('handles empty signals array', () => {
     render(<SignalList signals={[]} />)
-    
+
     // Should render an empty list
     const list = screen.getByRole('list')
     expect(list.children).toHaveLength(0)
@@ -66,27 +65,27 @@ describe('SignalList', () => {
   it('displays correct styling for BUY signals', () => {
     const buySignal = [{ ...mockSignals[0], type: 'BUY' as const }]
     render(<SignalList signals={buySignal} />)
-    
+
     const badge = screen.getByText('خرید')
-    expect(badge).toHaveClass(TYPE_STYLE.BUY.bg)
-    expect(badge).toHaveClass(TYPE_STYLE.BUY.text)
+    expect(badge.className).toContain(TYPE_STYLE.BUY.bg)
+    expect(badge.className).toContain(TYPE_STYLE.BUY.text)
   })
 
   it('displays correct styling for SELL signals', () => {
     const sellSignal = [{ ...mockSignals[1], type: 'SELL' as const }]
     render(<SignalList signals={sellSignal} />)
-    
+
     const badge = screen.getByText('فروش')
-    expect(badge).toHaveClass(TYPE_STYLE.SELL.bg)
-    expect(badge).toHaveClass(TYPE_STYLE.SELL.text)
+    expect(badge.className).toContain(TYPE_STYLE.SELL.bg)
+    expect(badge.className).toContain(TYPE_STYLE.SELL.text)
   })
 
   it('displays correct styling for HOLD signals', () => {
     const holdSignal = [{ ...mockSignals[2], type: 'HOLD' as const }]
     render(<SignalList signals={holdSignal} />)
-    
+
     const badge = screen.getByText('نگهداری')
-    expect(badge).toHaveClass(TYPE_STYLE.HOLD.bg)
-    expect(badge).toHaveClass(TYPE_STYLE.HOLD.text)
+    expect(badge.className).toContain(TYPE_STYLE.HOLD.bg)
+    expect(badge.className).toContain(TYPE_STYLE.HOLD.text)
   })
 })
