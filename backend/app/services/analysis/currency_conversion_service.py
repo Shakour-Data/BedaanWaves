@@ -14,8 +14,6 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
-class CurrencyConversionService(ConvertibleType = float | int
-
 class CurrencyConversionService(AnalysisService):
     """Transparent currency conversion framework with audit trails and confidence intervals."""
 
@@ -129,12 +127,20 @@ class CurrencyConversionService(AnalysisService):
                 }
             
             # Complete audit trail
-            audit_entry["methodology"] = {
-                "methodology": methodology,
-                "exchange_rate_source": rate_data.get("source", "unknown"),
-                "exchange_rate_timestamp": rate_data.get("timestamp"),
-                "volatility_model": "garch_1_1" if 'rate_data' in locals() and "volatility" in rate_data else "constant_volatility"
-            }
+            if from_currency == to_currency:
+                audit_entry["methodology"] = {
+                    "methodology": methodology,
+                    "exchange_rate_source": "identity",
+                    "exchange_rate_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "volatility_model": "none"
+                }
+            else:
+                audit_entry["methodology"] = {
+                    "methodology": methodology,
+                    "exchange_rate_source": rate_data.get("source", "unknown"),
+                    "exchange_rate_timestamp": rate_data.get("timestamp"),
+                    "volatility_model": "garch_1_1" if "volatility" in rate_data else "constant_volatility"
+                }
             
             audit_entry["result"] = {
                 "converted_amount": result,
@@ -224,7 +230,7 @@ class CurrencyConversionService(AnalysisService):
         
         if from_method == "direct" and to_method == "direct":
             return "direct_pair"
-        elif from_method == "managed_float in [from_method, to_method]:
+        elif from_method == "managed_float" or to_method == "managed_float":
             return "managed_float_adjustment"
         else:
             return "cross_rate_via_usd"
