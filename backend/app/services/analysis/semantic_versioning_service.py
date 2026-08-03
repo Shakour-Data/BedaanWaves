@@ -31,6 +31,10 @@ class SemanticVersioningService(AnalysisService):
         """Initialize with historical version records."""
         self.logger.info("SemanticVersioningService initialized with version tracking")
 
+    async def shutdown(self) -> None:
+        """Shutdown service."""
+        self.logger.info("SemanticVersioningService shutdown")
+
     async def update_version(self, context: str, new_version: str) -> Dict[str, Any]:
         """Update version with semantic versioning rules."""
         # Validate version format (MAJOR.MINOR.PATCH-regime or MAJOR.MINOR.PATCH-type)
