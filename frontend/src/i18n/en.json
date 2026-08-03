@@ -1,0 +1,30 @@
+{
+  "signup": {
+    "title": "Sign Up",
+    "name": "Display Name",
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "submit_button": "Sign Up",
+    "already_have_account": "Already have an account?",
+    "login_link": "Login",
+    "error_invalid_email": "Invalid email address",
+    "error_password_length": "Password must be at least 8 characters",
+    "error_password_match": "Passwords do not match",
+    "error_server": "Registration failed. Please try again."
+  },
+  "login": {
+    "title": "Login",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "submit_button": "Login",
+    "forgot_password": "Forgot password?",
+    "error_invalid_credentials": "Invalid email or password",
+    "error_server": "Login failed. Please try again."
+  },
+  "auth": {
+    "error_authentication": "User not found",
+    "error_invalid_credentials": "Invalid email or password"
+  }
+}
