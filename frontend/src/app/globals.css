@@ -95,9 +95,62 @@
   }
 }
 
-/* ===========================================================================
-   کامپوننت‌های جادویی
-   =========================================================================== */
+/* RTL Support for Persian */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .text-left {
+  text-align: right;
+}
+
+[dir="rtl"] .text-right {
+  text-align: left;
+}
+
+[dir="rtl"] .ms-auto {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+[dir="rtl"] .ps-10 {
+  padding-right: 2.5rem;
+  padding-left: 0;
+}
+
+[dir="rtl"] .left-3 {
+  left: auto;
+  right: 0.75rem;
+}
+
+[dir="rtl"] .right-3 {
+  right: auto;
+  left: 0.75rem;
+}
+
+[dir="rtl"] .inset-y-0 {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+
+[dir="rtl"] .inset-y-0.right-3 {
+  inset-inline-start: auto;
+  inset-inline-end: 0.75rem;
+}
+
+[dir="rtl"] .inset-y-0.left-3 {
+  inset-inline-start: 0.75rem;
+  inset-inline-end: auto;
+}
+
+/* Ensure proper flex direction for RTL */
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .flex-row-reverse {
+  flex-direction: row;
+}
 @layer components {
   /* دکمه‌ی اصلی: هاله‌ی نور طلایی + حرکت به بالا در هاور (۳۰۰ms) */
   .btn-primary {
