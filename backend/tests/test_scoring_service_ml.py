@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from app.services.analysis.scoring_service import ScoringService
-from app.core.dependency_container import get_global_container
+from app.services.core.dependency_container import get_global_container
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
 
 
@@ -127,7 +127,7 @@ class TestScoringServiceMLIntegration:
         # Mock _score_dimension to return deterministic values
         with patch.object(scoring_service, '_score_dimension', side_effect=[70, 60, 75, 80, 90, 85]):
             # Act
-            result = scoring_service.analyze(data)
+            result = await scoring_service.analyze(data)
             
             # Assert that overall_score is calculated using ML weights
             # (We can't easily capture internal weighted_sum without inspecting implementation)
@@ -157,7 +157,7 @@ class TestScoringServiceMLIntegration:
         }
         
         # Act
-        result = scoring_service.analyze(data)
+        result = await scoring_service.analyze(data)
         
         # Assert basic structure
         assert isinstance(result, dict)

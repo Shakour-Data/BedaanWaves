@@ -42,6 +42,8 @@ class ScoringService(AnalysisService):
         "ai": 0.10,
     }
     
+    DIMENSIONS = ['fundamental', 'technical', 'sentiment', 'risk', 'macro', 'ai']
+    
     def __init__(self, service_name: str = "ScoringService"):
         super().__init__(service_name)
         self._hierarchy: Dict[str, Dict[str, Any]] = {}
@@ -218,7 +220,7 @@ class ScoringService(AnalysisService):
             if ml_weights and len(ml_weights) > 0:
                 # Validate that weights sum to approximately 1.0
                 total = sum(ml_weights.values())
-                if 0.8 <= total <= 1.2:  # Allow some tolerance
+                if 0.9 <= total <= 1.1:  # Sum must be close to 1.0
                     self.logger.debug(f"Using ML weights for {level}: {ml_weights}")
                     return ml_weights
                 else:

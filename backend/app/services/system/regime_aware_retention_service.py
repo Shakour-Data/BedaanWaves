@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from ..core import BaseService
 from ..core.dependency_container import get_global_container
-from ..database.database_service import DatabaseService
+from ..core.database_service import DatabaseService
 from app.core.config import get_settings
 
 settings = get_settings()
