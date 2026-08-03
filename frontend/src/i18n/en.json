@@ -1,30 +1,56 @@
 {
-  "signup": {
-    "title": "Sign Up",
-    "name": "Display Name",
-    "email": "Email",
-    "password": "Password",
-    "confirm_password": "Confirm Password",
-    "submit_button": "Sign Up",
-    "already_have_account": "Already have an account?",
-    "login_link": "Login",
-    "error_invalid_email": "Invalid email address",
-    "error_password_length": "Password must be at least 8 characters",
-    "error_password_match": "Passwords do not match",
-    "error_server": "Registration failed. Please try again."
-  },
-  "login": {
-    "title": "Login",
-    "username": "Username",
-    "email": "Email",
-    "password": "Password",
-    "submit_button": "Login",
-    "forgot_password": "Forgot password?",
-    "error_invalid_credentials": "Invalid email or password",
-    "error_server": "Login failed. Please try again."
-  },
-  "auth": {
-    "error_authentication": "User not found",
-    "error_invalid_credentials": "Invalid email or password"
+  "app": {
+    "title": "BedaanWaves",
+    "subtitle": "Market Oscillation Architecture",
+    "nav": {
+      "dashboard": "Dashboard",
+      "stocks": "Stocks",
+      "analysis": "Analysis",
+      "portfolio": "Portfolio",
+      "alerts": "Alerts",
+      "news": "News",
+      "methodology": "Methodology",
+      "help": "Help",
+      "settings": "Settings"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "live": "Live Market Data"
+    },
+    "stocks": {
+      "title": "Stocks",
+      "symbol": "Symbol",
+      "name": "Name",
+      "market": "Market",
+      "price": "Price",
+      "change": "Change",
+      "loading": "Loading stocks..."
+    },
+    "analysis": {
+      "title": "Market Analysis",
+      "type": "Analysis Type",
+      "loading": "Loading analysis..."
+    },
+    "auth": {
+      "login": "Login",
+      "register": "Register",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Submit",
+      "signup": "Sign Up",
+      "already_have_account": "Already have an account?",
+      "login_link": "Login",
+      "language": "Language",
+      "remember_me": "Remember me",
+      "forgot_password": "Forgot password?",
+      "no_account": "Don't have an account?",
+      "show_password": "Show password",
+      "hide_password": "Hide password",
+      "loading": "Loading...",
+      "error_authentication": "Authentication failed",
+      "error_invalid_credentials": "Invalid username or password",
+      "error_server": "Server error. Please try again."
+    }
   }
 }
