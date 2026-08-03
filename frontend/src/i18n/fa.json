@@ -1,30 +1,56 @@
 {
-  "signup": {
-    "title": "ثبت‌نام",
-    "name": "نام نمایشی",
-    "email": "ایمیل",
-    "password": "پسورد",
-    "confirm_password": "تکرار پسورد",
-    "submit_button": "ثبت‌نام",
-    "already_have_account": "حساب دارید؟",
-    "login_link": "ورود",
-    "error_invalid_email": "آدرس ایمیل معتبر نیست",
-    "error_password_length": "پسورد باید حداقل ۸ کاراکتر باشد",
-    "error_password_match": "پسوردها Tau نباشند",
-    "error_server": "خطا در ثبت نام. لطفاً دوباره سعی کنید."
-  },
-  "login": {
-    "title": "ورود",
-    "username": "نام کاربری",
-    "email": "ایمیل",
-    "password": "پسورد",
-    "submit_button": "ورود",
-    "forgot_password": "فراموشی رمز؟",
-    "error_invalid_credentials": "نام کاربری یا رمز عبور نادرست است",
-    "error_server": "خطا در ورود. لطفاً دوباره سعی کنید."
-  },
-  "auth": {
-    "error_authentication": "کاربری وجود ندارد",
-    "error_invalid_credentials": "نام کاربری یا رمز عبور نادرست است"
+  "app": {
+    "title": "بیدان ویبس",
+    "subtitle": "معماری ارتعاشی بازار سرمایه",
+    "nav": {
+      "dashboard": "داشبورد",
+      "stocks": "سهام",
+      "analysis": "تحلیل",
+      "portfolio": "پرتفوی",
+      "alerts": "هشدارها",
+      "news": "اخبار",
+      "methodology": "روش‌شناسی",
+      "help": "راهنما",
+      "settings": "تنظیمات"
+    },
+    "dashboard": {
+      "title": "داشبورد",
+      "live": "داده‌های زنده بازار"
+    },
+    "stocks": {
+      "title": "سهام",
+      "symbol": "نماد",
+      "name": "نام",
+      "market": "بازار",
+      "price": "قیمت",
+      "change": "تغییر",
+      "loading": "در حال بارگذاری سهام..."
+    },
+    "analysis": {
+      "title": "تحلیل بازار",
+      "type": "نوع تحلیل",
+      "loading": "در حال بارگذاری تحلیل..."
+    },
+    "auth": {
+      "login": "ورود",
+      "register": "ثبت‌نام",
+      "username": "نام کاربری",
+      "email": "ایمیل",
+      "password": "پسورد",
+      "submit": "ارسال",
+      "signup": "ثبت‌نام",
+      "already_have_account": "حساب دارید؟",
+      "login_link": "ورود",
+      "language": "زبان",
+      "remember_me": "مرا به خاطر بسپار",
+      "forgot_password": "فراموشی رمز؟",
+      "no_account": "حساب ندارید؟",
+      "show_password": "نمایش رمز",
+      "hide_password": "مخفی کردن رمز",
+      "loading": "در حال بارگذاری...",
+      "error_authentication": "ورود ناموفق بود",
+      "error_invalid_credentials": "نام کاربری یا رمز عبور نادرست است",
+      "error_server": "خطا در سرور لطفاً مجدداً تلاش کنید."
+    }
   }
 }
