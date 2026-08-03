@@ -4,6 +4,7 @@ import aiohttp
 import numpy as np
 import pandas as pd
 from collections import deque
+import logging
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
