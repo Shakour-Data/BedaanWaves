@@ -7,7 +7,7 @@ from app.services.analysis.semantic_versioning_service import SemanticVersioning
 class TestSemanticVersioningInitialization:
     async def test_default_service_name(self):
         service = SemanticVersioningService()
-        assert service.get_service_name() == "SemanticVersioningService"
+        assert service.service_name == "SemanticVersioningService"
 
     async def test_initialize_logs(self, caplog):
         service = SemanticVersioningService()
@@ -32,4 +32,3 @@ class TestSemanticVersioningMethods:
         await service.check_version_compatibility("1.0.1", "1.0.0")  # Higher patch
         await service.check_version_compatibility("0.9.9", "1.0.0")  # Lower minor
         await service.check_version_compatibility("2.0.0", "1.0.0")  # Higher major
-}
