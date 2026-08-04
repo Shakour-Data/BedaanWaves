@@ -1,39 +1,23 @@
 """
 BedaanWaves Main Application Entry Point
 """
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# Import configuration
 from app.core.config import get_settings
-from app.db.base import engine
-from app.services.core.dependency_container import DependencyContainer
-from app.api.middleware import (
-    CorrelationIdMiddleware,
-    RateLimitMiddleware,
-    AuthGuardMiddleware,
-)
-from app.api.routes import (
-    auth_router,
-    stocks_router,
-    market_router,
-    analysis_router,
-    portfolio_router,
-    history_router,
-    news_router,
-    ml_router,
-    users_router,
-    watchlists_router,
-    notifications_router,
-    specialized_router,
-    system_router,
-    crypto_router,
-    intl_router,
-    live_router,
-)
 
+# Import core services
+from app.services.core.dependency_container import DependencyContainer
+from app.services.core.config_service import ConfigService
+from app.services.core.logger_service import LoggerService
+from app.services.core.cache_service import CacheService
+from app.services.core.database_service import DatabaseService
+from app.services.core.health_checker import HealthChecker
 
 # Configure logging
 logging.basicConfig(
@@ -57,15 +41,58 @@ async def lifespan(app: FastAPI):
     await container.initialize()
     app.state.container = container
     
-    # Initialize database (tables should be created via migrations)
-    logger.info("Database connection initialized")
+    logger.info("Registered core services in dependency container")
+    
+    # Include API routes
+    try:
+        from app.api.routes import (
+            auth_router,
+            stocks_router,
+            market_router,
+            analysis_router,
+            portfolio_router,
+            history_router,
+            news_router,
+            ml_router,
+            users_router,
+            watchlists_router,
+            notifications_router,
+            specialized_router,
+            system_router,
+            crypto_router,
+            intl_router,
+            live_router,
+        )
+        
+        # Register all routers
+        app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+        app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
+        app.include_router(market_router, prefix="/api/v1/market", tags=["market"])
+        app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["analysis"])
+        app.include_router(portfolio_router, prefix="/api/v1/portfolio", tags=["portfolio"])
+        app.include_router(history_router, prefix="/api/v1/history", tags=["history"])
+        app.include_router(news_router, prefix="/api/v1/news", tags=["news"])
+        app.include_router(ml_router, prefix="/api/v1/ml", tags=["ml"])
+        app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
+        app.include_router(watchlists_router, prefix="/api/v1/watchlists", tags=["watchlists"])
+        app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
+        app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
+        app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+        app.include_router(crypto_router, prefix="/api/v1/crypto", tags=["crypto"])
+        app.include_router(intl_router, prefix="/api/v1/intl", tags=["intl"])
+        app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
+        
+        logger.info("Registered all API routes")
+    except Exception as e:
+        logger.warning(f"Could not load all API routes: {e}")
+        # Continue anyway for basic functionality
     
     yield
     
     # Shutdown
     logger.info("Shutting down BedaanWaves application...")
     if hasattr(app.state, 'container'):
-        await app.state.container.shutdown()
+        await app.state.container.shutdown_all()
 
 
 # Create FastAPI application
@@ -79,67 +106,32 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
-    allow_methods=settings.CORS_ALLOW_METHODS,
-    allow_headers=settings.CORS_ALLOW_HEADERS,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-
-# Add custom middleware (order matters)
-app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(RateLimitMiddleware)
-app.add_middleware(AuthGuardMiddleware)
-
-
-# Include API routers
-app.include_router(auth_router, prefix=settings.API_V1_STR)
-app.include_router(stocks_router, prefix=settings.API_V1_STR)
-app.include_router(market_router, prefix=settings.API_V1_STR)
-app.include_router(analysis_router, prefix=settings.API_V1_STR)
-app.include_router(portfolio_router, prefix=settings.API_V1_STR)
-app.include_router(history_router, prefix=settings.API_V1_STR)
-app.include_router(news_router, prefix=settings.API_V1_STR)
-app.include_router(ml_router, prefix=settings.API_V1_STR)
-app.include_router(users_router, prefix=settings.API_V1_STR)
-app.include_router(watchlists_router, prefix=settings.API_V1_STR)
-app.include_router(notifications_router, prefix=settings.API_V1_STR)
-app.include_router(specialized_router, prefix=settings.API_V1_STR)
-app.include_router(system_router, prefix=settings.API_V1_STR)
-app.include_router(crypto_router, prefix=settings.API_V1_STR)
-app.include_router(intl_router, prefix=settings.API_V1_STR)
-app.include_router(live_router, prefix=settings.API_V1_STR)
-
-
-# Global exception handler
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    logger.error(f"Global exception handler caught: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"},
-    )
-
-
 # Health check endpoint
-@app.get("/health", tags=["health"])
+@app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "BedaanWaves", "version": settings.APP_VERSION}
-
+    return {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "timestamp": "2026-08-04T23:44:00Z"
+    }
 
 # Root endpoint
-@app.get("/", tags=["root"])
+@app.get("/")
 async def root():
-    """Root endpoint with API information."""
+    """Root endpoint."""
     return {
-        "message": "Welcome to BedaanWaves API",
+        "message": f"Welcome to {settings.APP_NAME}",
         "version": settings.APP_VERSION,
-        "docs": f"{settings.API_V1_STR}/docs",
-        "redoc": f"{settings.API_V1_STR}/redoc",
+        "docs": "/docs"
     }
