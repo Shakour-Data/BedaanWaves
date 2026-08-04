@@ -40,47 +40,47 @@ class UserProfileService:
             if owns:
                 await session.close()
 
-async def update_profile(
-    self, user_id: UUID, data: Dict, session=None
-) -> Optional[User]:
-    """Apply non-null ``data`` fields to the user and persist.
+    async def update_profile(
+        self, user_id: UUID, data: Dict, session=None
+    ) -> Optional[User]:
+        """Apply non-null ``data`` fields to the user and persist.
 
-    Uses allow-list validation to prevent mass-assignment vulnerabilities.
-    Handles email uniqueness constraint violations.
+        Uses allow-list validation to prevent mass-assignment vulnerabilities.
+        Handles email uniqueness constraint violations.
 
-    Returns the updated User, or ``None`` when the user does not exist.
-    """
-    session = session or self.session_factory()
-    owns = session is None
-    try:
-        result = await session.execute(select(User).where(User.id == user_id))
-        user = result.scalars().first()
-        if user is None:
-            return None
+        Returns the updated User, or ``None`` when the user does not exist.
+        """
+        session = session or self.session_factory()
+        owns = session is None
+        try:
+            result = await session.execute(select(User).where(User.id == user_id))
+            user = result.scalars().first()
+            if user is None:
+                return None
 
-        # Apply only allowed fields using explicit validation
-        for field, value in data.items():
-            if field in self.ALLOWED_FIELDS and value is not None:
-                setattr(user, field, value)
+            # Apply only allowed fields using explicit validation
+            for field, value in data.items():
+                if field in self.ALLOWED_FIELDS and value is not None:
+                    setattr(user, field, value)
 
-        await session.commit()
-        await session.refresh(user)
-        return user
-    except IntegrityError as exc:
-        await session.rollback()
-        # Check if it's an email uniqueness violation
-        if "users_email_key" in str(exc) or "duplicate key value violates unique constraint" in str(exc):
+            await session.commit()
+            await session.refresh(user)
+            return user
+        except IntegrityError as exc:
+            await session.rollback()
+            # Check if it's an email uniqueness violation
+            if "users_email_key" in str(exc) or "duplicate key value violates unique constraint" in str(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email address already in use"
+                )
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email address already in use"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database integrity error"
             )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database integrity error"
-        )
-    finally:
-        if owns:
-            await session.close()
+        finally:
+            if owns:
+                await session.close()
 
 
 user_profile_service = UserProfileService()
