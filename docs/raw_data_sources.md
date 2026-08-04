@@ -3,19 +3,32 @@
 ![Architecture Diagram](https://via.placeholder.com/600x200?text=Raw+Data+Sources+Architecture)
 
 ## 1. Tehran Stock Exchange (BrsApiClient)
-- **Source Type**: Equity Market Data
+- **Source Type**: Iranian Equity Market
 - **Data Types**:
   - Real-time price feeds
   - Trading volumes
   - Market depth
   - Order book data
-- **Access**: Real-time API integration
+- **Access**: Real-time API integration via BrsApi.ir
 - **Diagram**:
   ```
-  [BrsApiClient] → [Database]
+  [BrsApiClient] → [Currency Converter] → [Analysis]
   ```
 
-## 2. Financial Data Pipeline
+## 2. Nasdaq Stock Market (NasdaqApiClient)
+- **Source Type**: US Equity Market
+- **Data Types**:
+  - Real-time stock prices
+  - Market indices (^IXIC, ^NDX, ^GSPC, ^DJI, ^RUT)
+  - Trading volumes
+  - Historical data
+- **Access**: yfinance API integration
+- **Diagram**:
+  ```
+  [yfinance API] → [Currency Converter] → [Analysis]
+  ```
+
+## 3. Financial Data Pipeline
 - **Sources**:
   - CODAL (Iranian Stock Exchange)
   - Yahoo Finance
@@ -30,7 +43,7 @@
   [Yahoo API] → [Validation] → [Standardized Format]
   ```
 
-## 3. Cryptocurrency Feeds
+## 4. Cryptocurrency Feeds
 - **Sources**:
   - CoinGecko
   - Binance
@@ -44,19 +57,21 @@
   [Exchange APIs] → [Blockchain Data] → [Analysis]
   ```
 
-## 4. International Markets
+## 5. Global Financial Data
 - **Sources**:
-  - NASDAQ API
   - Bloomberg API
+  - Yahoo Finance
+  - Alpha Vantage
 - **Data Types**:
+  - International stock data
   - FX rates
   - Global indices
 - **Diagram**:
   ```
-  [NASDAQ] → [FX Conversion] → [Analysis]
+  [Global APIs] → [Data Normalizer] → [Analysis]
   ```
 
-## 5. News & Events
+## 6. News & Events
 - **Sources**:
   - Yahoo News API
   - Reuters API
@@ -68,7 +83,7 @@
   [News APIs] → [NLP Processing] → [Correlation Analysis]
   ```
 
-## 6. SEC Filings (SECRestAPIClient - In Development)
+## 7. SEC Filings (SECRestAPIClient - In Development)
 - **Current Status**: Under development (TODO-H2)
 - **Expected Features**:
   - 10-K/10-Q/8-K filing retrieval
@@ -78,9 +93,39 @@
   - API implementation pending
   - Rate limiting considerations
 
-![SEC Access Diagram](https://via.placeholder.com/400x150?text=SEC+API+Access)
+## Data Normalization & Currency Conversion
+- **Currency Conversion Service**:
+  - Multi-currency support (USD, IRR, EUR, etc.)
+  - Confidence intervals (±2σ) for conversions
+  - PPP-adjusted inflation framework
+- **Cross-Asset Normalization**:
+  - Unified metric taxonomy
+  - Semantic annotations (flow/stocks, nominal/real)
+  - Temporal alignment for analysis
 
-## Data Flow Architecture
+## Multi-Market Data Flow Architecture
 ```
-[Raw Sources] → [Validation] → [Standardized] → [Analysis]
+[Global Sources] ──→ [Data Normalization Layer] ──→ [Analysis Engine]
+       │                    │
+       ├── Tehran Stock Exchange
+       ├── Nasdaq Stock Market
+       ├── Cryptocurrencies
+       └── Global Financial Data
 ```
+
+## Supported Markets
+| Market Type | Status | Primary Source | Tickers Supported |
+|-------------|--------|----------------|-------------------|
+| Tehran Stock Exchange | Active | BRS API | Iranian tickers (فملی, خودرو, etc.) |
+| Nasdaq | Active | yfinance | AAPL, MSFT, GOOGL, etc. |
+| Cryptocurrency | Active | CoinGecko/Binance | BTC, ETH, etc. |
+| Global Stocks | Active | Yahoo/Alpha Vantage | International symbols |
+| SEC Filings | In Development | EDGAR API | US public companies |
+
+## Future Integrations
+- Forex markets
+- Bond markets
+- Commodity exchanges
+- Emerging markets
+
+![SEC Access Diagram](https://via.placeholder.com/400x150?text=SEC+API+Access)
