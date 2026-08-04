@@ -25,10 +25,15 @@ class PredictionService(MLService):
     async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
         features = training_data.get("features", [])
         labels = training_data.get("labels", [])
+        self._metrics["calls"] += 1
         if len(features) != len(labels) or not features:
+            self._metrics["errors"] += 1
             raise ValueError("Invalid training data")
+        import time; start = time.perf_counter()
         self.features = features
         self.model = {"trained": True, "samples": len(features)}
+        duration = (time.perf_counter() - start) * 1000
+        self._track_metric(True, duration)
         return {"status": "trained", "samples": len(features), "metrics": {"mse": 0.0}}
 
     async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
