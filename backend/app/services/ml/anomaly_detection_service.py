@@ -2,7 +2,7 @@
 
 Market anomaly detection and unusual activity spotting.
 """
-
+import math
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from ..core import MLService
@@ -13,6 +13,7 @@ class AnomalyDetectionService(MLService):
 
     def __init__(self, service_name: str = "AnomalyDetectionService"):
         super().__init__(service_name)
+        self._min_training_samples = 5
 
     async def initialize(self) -> None:
         self.logger.info("AnomalyDetectionService initialized")
@@ -25,6 +26,11 @@ class AnomalyDetectionService(MLService):
         values = training_data.get("values", [])
         if not values:
             raise ValueError("No training data provided")
+        if len(values) < self._min_training_samples:
+            raise ValueError(
+                f"Insufficient data for training: {len(values)} samples, "
+                f"minimum required: {self._min_training_samples}"
+            )
         mean = sum(values) / len(values)
         variance = sum((x - mean) ** 2 for x in values) / len(values)
         std = math.sqrt(variance)
@@ -35,12 +41,12 @@ class AnomalyDetectionService(MLService):
         prices = data.get("prices", [])
         returns = data.get("returns", [])
         values = returns or [prices[i] - prices[i-1] for i in range(1, len(prices))]
-        if len(values) < 5 or not self.model:
+        if not self.model:
             raise ValueError("Insufficient data or model not trained")
         mean = self.model["mean"]
         std = self.model["std"]
+        current = values[-1] if values else 0.0
         z_threshold = data.get("z_threshold", 3.0)
-        current = values[-1]
         z_score = (current - mean) / std if std > 0 else 0
         is_anomaly = abs(z_score) > z_threshold
         return {
