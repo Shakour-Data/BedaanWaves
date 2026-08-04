@@ -33,18 +33,22 @@ class RecommendationService(MLService):
         pe = fundamental.get("pe_ratio", 20)
         sharpe = risk.get("sharpe_ratio", 0)
         momentum_score = technical.get("momentum", 0)
+        pe_component = max(0, 100 - pe)
+        momentum_component = max(0, momentum_score * 100)
+        sharpe_component = max(0, min(100, sharpe * 50))
         score = (
-            max(0, 100 - pe) * 0.3
-            + max(0, sharpe * 20) * 0.3
-            + max(0, momentum_score * 10) * 0.4
+            pe_component * 0.45
+            + momentum_component * 0.35
+            + sharpe_component * 0.2
         )
-        if score > 70:
+        score = max(0, min(100, score))
+        if score >= 85:
             recommendation = "STRONG_BUY"
-        elif score > 50:
+        elif score >= 55:
             recommendation = "BUY"
-        elif score > 40:
+        elif score >= 45:
             recommendation = "HOLD"
-        elif score > 25:
+        elif score >= 25:
             recommendation = "SELL"
         else:
             recommendation = "STRONG_SELL"
@@ -54,9 +58,9 @@ class RecommendationService(MLService):
             "score": round(score, 2),
             "confidence": round(min(score / 100, 0.95), 4),
             "factors": {
-                "fundamental_weight": round(max(0, 100 - pe) * 0.3, 2),
-                "risk_weight": round(max(0, sharpe * 20) * 0.3, 2),
-                "momentum_weight": round(max(0, momentum_score * 10) * 0.4, 2),
+                "fundamental_weight": round(pe_component * 0.45, 2),
+                "momentum_weight": round(momentum_component * 0.35, 2),
+                "risk_weight": round(sharpe_component * 0.2, 2),
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
