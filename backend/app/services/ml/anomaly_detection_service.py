@@ -33,7 +33,7 @@ class AnomalyDetectionService(MLService):
             )
         mean = sum(values) / len(values)
         variance = sum((x - mean) ** 2 for x in values) / len(values)
-        std = math.sqrt(variance)
+        std = math.sqrt(variance) if variance > 0 else 1.0
         self.model = {"trained": True, "mean": mean, "std": std}
         return {"status": "trained", "mean": mean, "std": std}
 
@@ -41,8 +41,8 @@ class AnomalyDetectionService(MLService):
         prices = data.get("prices", [])
         returns = data.get("returns", [])
         values = returns or [prices[i] - prices[i-1] for i in range(1, len(prices))]
-        if not self.model:
-            raise ValueError("Insufficient data or model not trained")
+        if not self.model or not self.model.get("trained"):
+            raise ValueError("Model not trained or method called before training")
         mean = self.model["mean"]
         std = self.model["std"]
         current = values[-1] if values else 0.0
