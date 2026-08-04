@@ -120,6 +120,23 @@ class DependencyContainer:
         self._singletons.pop(service_name, None)
         self.logger.info(f"Removed service: {service_name}")
     
+    async def initialize(self) -> None:
+        """Initialize all registered services"""
+        self.logger.info("Initializing all services...")
+        
+        for service_name, instance in self._singletons.items():
+            try:
+                if hasattr(instance, 'initialize'):
+                    if callable(instance.initialize):
+                        await instance.initialize()
+                    self.logger.info(f"Initialized service: {service_name}")
+            except Exception as e:
+                self.logger.error(f"Error initializing {service_name}: {e}")
+                raise
+        
+        self._is_initialized = True
+        self.logger.info("All services initialized")
+    
     async def shutdown_all(self) -> None:
         """Shutdown all services"""
         self.logger.info("Shutting down all services...")
