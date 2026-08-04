@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 import logging
 from datetime import datetime, timezone
 
-from app.core.base_service import ExternalAPIService
+from ..core import ExternalAPIService
 from app.core.config import get_settings
 
 
