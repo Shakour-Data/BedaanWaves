@@ -38,6 +38,21 @@ class CoefficientLearningService(MLService):
     - Level 4: 173 sub-aspects (grouped under aspects)
     """
     
+    # Static fallback weights for each level (used when ML service unavailable or not trained)
+    STATIC_WEIGHTS = {
+        "dimensions": {
+            "fundamental": 0.25,
+            "technical": 0.20,
+            "sentiment": 0.15,
+            "risk": 0.20,
+            "macro": 0.10,
+            "ai": 0.10,
+        },
+        "sub_dimensions": {},  # Will be populated dynamically
+        "aspects": {},         # Will be populated dynamically
+        "sub_aspects": {},     # Will be populated dynamically
+    }
+    
     def __init__(self, service_name: str = "coefficient_learning_service"):
         super().__init__(service_name)
         self.settings = get_settings()
@@ -54,7 +69,12 @@ class CoefficientLearningService(MLService):
         }
         
         # Scalers for feature normalization
-        self.scalers: Dict[str, StandardScaler] = {}
+        self.scalers: Dict[str, StandardScaler] = {
+            "dimensions": None,
+            "sub_dimensions": None,
+            "aspects": None,
+            "sub_aspects": None
+        }
         
         # Feature names for each level (populated during training)
         self.feature_names: Dict[str, List[str]] = {}
@@ -78,33 +98,38 @@ class CoefficientLearningService(MLService):
         
         # Hierarchy mappings (populated from ScoringService)
         self.dimension_names = [
-            "fundamental", "technical", "sentiment", 
+            "fundamental", "technical", "sentiment",
             "risk", "macro", "ai"
         ]
         self.sub_dimension_map = {
-            "fundamental": ["price_history", "ohlcv", "corporate_actions", 
-                           "liquidity", "profitability", "efficiency", 
+            "fundamental": ["price_history", "ohlcv", "corporate_actions",
+                           "liquidity", "profitability", "efficiency",
                            "valuation", "growth", "quality"],
-            "technical": ["moving_averages", "momentum", "volatility", 
+            "technical": ["moving_averages", "momentum", "volatility",
                          "volume", "trend"],
             "sentiment": ["news_sentiment", "social_sentiment", "analyst_sentiment"],
-            "risk": ["market_risk", "credit_risk", "operational_risk", 
+            "risk": ["market_risk", "credit_risk", "operational_risk",
                    "liquidity_risk"],
-            "macro": ["gdp", "inflation", "interest_rates", 
+            "macro": ["gdp", "inflation", "interest_rates",
                      "exchange_rates", "commodity_prices"],
             "ai": ["ml_prediction", "pattern_recognition", "anomaly_detection"]
         }
         # Note: aspects and sub-aspects mappings would be generated from ScoringService hierarchy
+
+        # Coefficient service reference (set by ScoringService during initialization)
+        self._coefficient_service = None
     
     async def initialize(self) -> None:
         """Initialize the coefficient learning service"""
         try:
             await self._load_existing_models()
             self.logger.info(f"{self.service_name} initialized successfully")
+            self._is_initialized = True
         except Exception as e:
             self.logger.error(f"Failed to initialize {self.service_name}: {e}")
             # Initialize with default models if loading fails
             await self._initialize_default_models()
+            self._is_initialized = True
     
     async def shutdown(self) -> None:
         """Shutdown the coefficient learning service"""
@@ -299,10 +324,13 @@ class CoefficientLearningService(MLService):
             self.logger.error(f"Error preparing training data: {e}")
             return {}
     
-    def _extract_features(self, row: pd.Series) -> List[float]:
+    def _extract_features(self, row: Any) -> List[float]:
         """
         Extract features from a performance record for ML model input.
         
+        Args:
+            row: Either a pandas Series or dict containing performance data
+            
         Features include:
         - Historical score statistics (mean, std, trend)
         - Market regime indicators
@@ -310,23 +338,31 @@ class CoefficientLearningService(MLService):
         - Volatility measures
         - Correlation patterns
         """
+        # Convert dict to dict-like if needed
+        if hasattr(row, 'to_dict'):
+            # It's a pandas Series
+            row_dict = row.to_dict()
+        else:
+            # It's already a dict
+            row_dict = row
+        
         features = []
         
         try:
             # Basic statistical features from scores
             for score_type in ['dimension_scores', 'sub_dimension_scores', 
                              'aspect_scores', 'sub_aspect_scores']:
-                if score_type in row and isinstance(row[score_type], dict):
-                    scores = list(row[score_type].values())
+                if score_type in row_dict and isinstance(row_dict[score_type], dict):
+                    scores = list(row_dict[score_type].values())
                     if scores:
                         features.extend([
-                            np.mean(scores),
-                            np.std(scores),
-                            np.median(scores),
-                            np.min(scores),
-                            np.max(scores),
-                            len([s for s in scores if s > 0]),  # positive scores count
-                            len([s for s in scores if s < 0])   # negative scores count
+                            float(np.mean(scores)),
+                            float(np.std(scores)),
+                            float(np.median(scores)),
+                            float(np.min(scores)),
+                            float(np.max(scores)),
+                            float(len([s for s in scores if s > 0])),  # positive scores count
+                            float(len([s for s in scores if s < 0]))   # negative scores count
                         ])
                     else:
                         features.extend([0.0] * 7)
@@ -334,19 +370,19 @@ class CoefficientLearningService(MLService):
                     features.extend([0.0] * 7)
             
             # Temporal features
-            if 'timestamp' in row:
+            if 'timestamp' in row_dict:
                 try:
-                    if isinstance(row['timestamp'], str):
-                        dt = datetime.fromisoformat(row['timestamp'].replace('Z', '+00:00'))
+                    if isinstance(row_dict['timestamp'], str):
+                        dt = datetime.fromisoformat(row_dict['timestamp'].replace('Z', '+00:00'))
                     else:
-                        dt = row['timestamp']
+                        dt = row_dict['timestamp']
                     
                     features.extend([
                         float(dt.weekday()),      # Day of week (0-6)
                         float(dt.month),          # Month (1-12)
                         float(dt.day),            # Day of month (1-31)
                         float(dt.hour),           # Hour (0-23)
-                        1.0 if dt.weekday() >= 5 else 0.0  # Is weekend
+                        1.0 if dt.weekday() >= 5 else 0.0  # Is weekend (Sat=5, Sun=6)
                     ])
                 except:
                     features.extend([0.0] * 5)
@@ -356,14 +392,14 @@ class CoefficientLearningService(MLService):
             # Market features (if available)
             market_features = ['volatility', 'volume', 'price_change', 'market_cap']
             for mf in market_features:
-                features.append(float(row.get(mf, 0.0)))
+                features.append(float(row_dict.get(mf, 0.0)))
             
             # Ensure fixed feature length
             while len(features) < 50:  # Minimum feature size
                 features.append(0.0)
             if len(features) > 50:
                 features = features[:50]  # Truncate if too long
-                
+            
         except Exception as e:
             self.logger.warning(f"Error extracting features: {e}")
             # Return zero vector of expected length
@@ -386,18 +422,28 @@ class CoefficientLearningService(MLService):
             y = training_data["y"]
             feature_names = training_data["feature_names"]
             
+            # Check if we have enough samples
+            if len(X) < self.min_samples_for_training:
+                self.logger.warning(
+                    f"Insufficient data for {level} training: {len(X)} samples. "
+                    f"Minimum required: {self.min_samples_for_training}"
+                )
+                return
+            
             # Split data
             X_train, X_val, y_train, y_val = train_test_split(
                 X, y, test_size=self.validation_split, random_state=42
             )
             
             # Scale features
+            if self.scalers[level] is None:
+                self.scalers[level] = StandardScaler()
             scaler = self.scalers[level]
             X_train_scaled = scaler.fit_transform(X_train)
             X_val_scaled = scaler.transform(X_val)
             
             # Train model
-            model = self.models[level]
+            model = self.models.get(level)
             if model is None:
                 model = RandomForestRegressor(
                     n_estimators=100,
@@ -444,11 +490,12 @@ class CoefficientLearningService(MLService):
                 # Fallback to uniform if all zero
                 n_features = len(level_coefficients)
                 level_coefficients = {
-                    k: 1.0 / n_features for k, v in level_coefficients.items()
+                    k: 1.0 / n_features for k in level_coefficients.keys()
                 }
             
             # Store learned coefficients with validation
             self.learned_coefficients[level] = self._normalize_coefficients(level_coefficients)
+            self.feature_names[level] = feature_names
             
             # Validate coefficients
             if not self._validate_coefficients(self.learned_coefficients[level]):
@@ -464,8 +511,8 @@ class CoefficientLearningService(MLService):
     async def _save_level_model(self, 
                               level: str, 
                               model: Any, 
-                              scaler: StandardScaler,
-                              feature_names: List[str],
+                              scaler: StandardScaler, 
+                              feature_names: List[str], 
                               coefficients: Dict[str, float]) -> None:
         """Save a level's model, scaler, features, and coefficients to disk"""
         try:
@@ -550,21 +597,43 @@ class CoefficientLearningService(MLService):
             n = len(clamped)
             normalized = {k: 1.0 / n for k in clamped.keys()}
         
-        # Final validation and rounding to avoid floating point issues
-        result = {}
-        for k, v in normalized.items():
-            result[k] = round(max(0.0, min(1.0, v)), 6)
+        # Round to 6 decimal places and ensure exact sum of 1.0
+        # Use a proper rounding algorithm that distributes rounding errors
+        items = list(normalized.items())
+        n = len(items)
         
-        # Ensure exact sum of 1.0 by adjusting the largest value
-        diff = 1.0 - sum(result.values())
-        if abs(diff) > 1e-9:
-            # Find the largest coefficient and adjust it
-            max_key = max(result, key=result.get)
-            result[max_key] = round(result[max_key] + diff, 6)
-            # Ensure it's still in valid range
-            result[max_key] = max(0.0, min(1.0, result[max_key]))
+        # Round each value
+        rounded = {}
+        for k, v in items:
+            rounded[k] = round(max(0.0, min(1.0, v)), 6)
         
-        return result
+        # If sum is not exactly 1.0, distribute the difference
+        current_sum = sum(rounded.values())
+        diff = 1.0 - current_sum
+        
+        # Only adjust if difference is significant
+        if abs(diff) > 1e-12 and n > 0:
+            # Sort by original value (descending) to adjust largest first
+            sorted_items = sorted(items, key=lambda x: x[1], reverse=True)
+            
+            # Distribute the diff across all values proportionally
+            # but ensure we don't exceed [0, 1] bounds
+            for i, (k, orig_v) in enumerate(sorted_items):
+                # Calculate proportional adjustment
+                adjustment = diff * (orig_v / total) if total > 0 else diff / n
+                new_val = rounded[k] + adjustment
+                new_val = max(0.0, min(1.0, round(new_val, 6)))
+                rounded[k] = new_val
+            
+            # Final correction for any remaining difference
+            final_sum = sum(rounded.values())
+            final_diff = 1.0 - final_sum
+            if abs(final_diff) > 1e-12:
+                # Add remaining diff to the largest value
+                max_key = max(rounded, key=rounded.get)
+                rounded[max_key] = round(max(0.0, min(1.0, rounded[max_key] + final_diff)), 6)
+        
+        return rounded
     
     def _validate_coefficients(self, coefficients: Dict[str, float]) -> bool:
         """
@@ -609,6 +678,32 @@ class CoefficientLearningService(MLService):
             level: coeffs.copy() 
             for level, coeffs in self.learned_coefficients.items()
         }
+    
+    def _get_dynamic_weights(self, level: str) -> Dict[str, float]:
+        """
+        Get dynamic weights for a hierarchy level.
+        
+        Returns learned coefficients if available and valid, otherwise returns static fallback weights.
+        
+        Args:
+            level: One of 'dimensions', 'sub_dimensions', 'aspects', 'sub_aspects'
+            
+        Returns:
+            Dictionary mapping item names to weights (summing to 1.0)
+        """
+        # Check if we have a trained model for this level
+        if self.is_model_trained(level):
+            learned = self.get_coefficients(level)
+            if learned and self._validate_coefficients(learned):
+                return learned
+        
+        # Fall back to static weights
+        static = self.STATIC_WEIGHTS.get(level, {})
+        if static:
+            return static
+        
+        # Last resort: return empty dict (caller should handle)
+        return {}
     
     def is_model_trained(self, level: str) -> bool:
         """Check if a model has been trained for the given level"""
