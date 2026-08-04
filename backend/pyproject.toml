@@ -61,6 +61,7 @@ dependencies = [
     "redis==5.0.1",
     "requests==2.31.0",
     "httpx==0.25.2",
+    "yfinance==0.2.41",
     "beautifulsoup4==4.12.2",
     "lxml==4.9.3",
     "plotly==5.18.0",
