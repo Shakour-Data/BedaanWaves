@@ -49,6 +49,117 @@ class SchedulerService(BaseService):
         self._running = True
         self._main_task = asyncio.create_task(self._scheduler_loop())
         self.logger.info("SchedulerService initialized")
+        
+        # Automatically register all platform scheduled jobs
+        await self._register_default_jobs()
+    
+    async def _register_default_jobs(self) -> None:
+        """Register all default platform jobs automatically."""
+        # Job: Daily 6D score recalculation (runs every 24 hours)
+        async def daily_score_recalculation_job():
+            from app.services.analysis.scoring_service import ScoringService
+            service = ScoringService()
+            await service.initialize()
+            result = await service.recalculate_all_scores()
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="DailyScoreRecalculation",
+            coroutine_func=daily_score_recalculation_job,
+            interval_seconds=self._score_recalc_interval_hours * 3600,
+        )
+        
+        # Job: Metrics aggregation (runs every 15 minutes)
+        async def metrics_aggregation_job():
+            from app.services.system.metrics_service import MetricsService
+            service = MetricsService()
+            await service.initialize()
+            result = await service.aggregate_metrics()
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="MetricsAggregation",
+            coroutine_func=metrics_aggregation_job,
+            interval_seconds=900,
+        )
+        
+        # Job: Health checks (runs every 5 minutes)
+        async def health_check_job():
+            checker = HealthChecker()
+            await checker.initialize()
+            result = await checker.check_all()
+            await checker.shutdown()
+            return result
+        
+        self.register_job(
+            name="HealthCheck",
+            coroutine_func=health_check_job,
+            interval_seconds=300,
+        )
+        
+        # Job: Cache warming (runs every 30 minutes)
+        async def cache_warming_job():
+            from app.services.core.cache_service import CacheService
+            service = CacheService()
+            await service.initialize()
+            result = await service.warm_cache()
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="CacheWarming",
+            coroutine_func=cache_warming_job,
+            interval_seconds=1800,
+        )
+        
+        # Job: Data ingestion (runs every 6 hours)
+        async def data_ingestion_job():
+            from app.services.data.financial_data_ingest_service import FinancialDataIngestService
+            service = FinancialDataIngestService()
+            await service.initialize()
+            result = await service.ingest_latest_data()
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="DataIngestion",
+            coroutine_func=data_ingestion_job,
+            interval_seconds=21600,  # 6 hours
+        )
+        
+        # Job: Crypto fundamental data ingestion (runs every 6 hours)
+        async def crypto_fundamental_ingestion_job():
+            from app.services.crypto.crypto_ingestion_service import CryptoIngestionService
+            service = CryptoIngestionService()
+            await service.initialize()
+            result = await service.ingest_crypto_fundamental_data(assets=[], session=None)
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="CryptoFundamentalDataRefresh",
+            coroutine_func=crypto_fundamental_ingestion_job,
+            interval_seconds=21600,  # 6 hours
+        )
+        
+        # Job: Data integrity verification (runs every 1 hour)
+        async def data_integrity_job():
+            from app.services.system.data_integrity_service import DataIntegrityService
+            service = DataIntegrityService()
+            await service.initialize()
+            result = await service.verify_integrity()
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="DataIntegrityVerification",
+            coroutine_func=data_integrity_job,
+            interval_seconds=3600,
+        )
+        
+        self.logger.info("Registered all default platform jobs")
     
     async def shutdown(self) -> None:
         self._running = False
