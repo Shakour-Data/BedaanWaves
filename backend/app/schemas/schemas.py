@@ -1,7 +1,7 @@
 """Pydantic Schemas for API"""
 
 from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 from enum import Enum
 from decimal import Decimal
