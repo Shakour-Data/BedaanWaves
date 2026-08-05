@@ -15,11 +15,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..core.base_service import DataService
 from ..core.config import get_settings
-from ..core.logging_service import getLogger
+import logging
 from ..db.base import async_session_maker
 from ..models.models import RawMarketData, MarketDataSnapshot, Asset
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
