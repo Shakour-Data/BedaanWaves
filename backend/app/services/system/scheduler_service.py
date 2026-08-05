@@ -60,7 +60,7 @@ class SchedulerService(BaseService):
             from app.services.analysis.scoring_service import ScoringService
             service = ScoringService()
             await service.initialize()
-            result = await service.recalculate_all_scores()
+            result = await service.analyze({"action": "recalculate_all"})
             await service.shutdown()
             return result
         
@@ -75,7 +75,7 @@ class SchedulerService(BaseService):
             from app.services.system.metrics_service import MetricsService
             service = MetricsService()
             await service.initialize()
-            result = await service.aggregate_metrics()
+            result = service.get_all_metrics()
             await service.shutdown()
             return result
         
@@ -89,7 +89,7 @@ class SchedulerService(BaseService):
         async def health_check_job():
             checker = HealthChecker()
             await checker.initialize()
-            result = await checker.check_all()
+            result = await checker.health_check()
             await checker.shutdown()
             return result
         
@@ -104,7 +104,8 @@ class SchedulerService(BaseService):
             from app.services.core.cache_service import CacheService
             service = CacheService()
             await service.initialize()
-            result = await service.warm_cache()
+            service.clear()
+            result = service.get_stats()
             await service.shutdown()
             return result
         
@@ -119,14 +120,14 @@ class SchedulerService(BaseService):
             from app.services.data.financial_data_ingest_service import FinancialDataIngestService
             service = FinancialDataIngestService()
             await service.initialize()
-            result = await service.ingest_latest_data()
+            result = await service.batch_ingest(symbols=[], market=None)
             await service.shutdown()
             return result
         
         self.register_job(
             name="DataIngestion",
             coroutine_func=data_ingestion_job,
-            interval_seconds=21600,  # 6 hours
+            interval_seconds=21600,
         )
         
         # Job: Crypto fundamental data ingestion (runs every 6 hours)
@@ -141,7 +142,7 @@ class SchedulerService(BaseService):
         self.register_job(
             name="CryptoFundamentalDataRefresh",
             coroutine_func=crypto_fundamental_ingestion_job,
-            interval_seconds=21600,  # 6 hours
+            interval_seconds=21600,
         )
         
         # Job: Data integrity verification (runs every 1 hour)
@@ -149,7 +150,7 @@ class SchedulerService(BaseService):
             from app.services.system.data_integrity_service import DataIntegrityService
             service = DataIntegrityService()
             await service.initialize()
-            result = await service.verify_integrity()
+            result = await service.run_full_integrity_check()
             await service.shutdown()
             return result
         
