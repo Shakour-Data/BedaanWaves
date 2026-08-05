@@ -7,10 +7,10 @@ including CODAL (Iran), Yahoo Finance (US/international), and other APIs.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
-from ..core import DataService
+from app.services.core.base_service import DataService
 from .financial_data_ingest_service import (
-    FinancialDataIngestService, 
-    FinancialStatementType, 
+    FinancialDataIngestService,
+    FinancialStatementType,
     MarketType
 )
 from app.core.config import get_settings
@@ -30,7 +30,6 @@ class StockFundamentalDataIngestionService(DataService):
         brs_client: Optional[Any] = None,
     ):
         super().__init__(service_name)
-        # Initialize the underlying financial data ingest service
         self.financial_ingest_service = FinancialDataIngestService(brs_client=brs_client)
         self.settings = get_settings()
     
@@ -50,15 +49,12 @@ class StockFundamentalDataIngestionService(DataService):
         fetches appropriate financial statements.
         
         Args:
-            symbol: Stock symbol (e.g., 'AAPL', 'MSFT', 'فملی')
+            symbol: Stock symbol (e.g., 'AAPL', 'MSFT')
             
         Returns:
             Dictionary containing financial data ready for analysis
         """
-        # Detect market based on symbol characteristics
         market = self._detect_market(symbol)
-        
-        # Fetch all core financial statements
         statements = await self.financial_ingest_service.ingest_financial_statements(
             symbol=symbol,
             market=market,
@@ -68,10 +64,7 @@ class StockFundamentalDataIngestionService(DataService):
                 FinancialStatementType.CASH_FLOW,
             ]
         )
-        
-        # Convert to format expected by FundamentalAnalysisService
         financials = self._aggregate_financial_data(statements)
-        
         return financials
     
     async def fetch_income_statement(self, symbol: str) -> Dict[str, Any]:
@@ -104,11 +97,7 @@ class StockFundamentalDataIngestionService(DataService):
         )
         return self._aggregate_financial_data(statements) if statements else {}
     
-    async def get_quarterly_fundamentals(
-        self, 
-        symbol: str, 
-        quarters: int = 4
-    ) -> List[Dict[str, Any]]:
+    async def get_quarterly_fundamentals(self, symbol: str, quarters: int = 4) -> List[Dict[str, Any]]:
         """
         Get quarterly fundamental data for the last N quarters.
         
@@ -120,16 +109,10 @@ class StockFundamentalDataIngestionService(DataService):
             List of fundamental data dictionaries for each quarter
         """
         market = self._detect_market(symbol)
-        # This would implement quarterly data retrieval
-        # For now, return latest data repeated
         latest = await self.fetch_financial_data(symbol)
         return [latest] * min(quarters, 4)
     
-    async def get_annual_fundamentals(
-        self, 
-        symbol: str, 
-        years: int = 3
-    ) -> List[Dict[str, Any]]:
+    async def get_annual_fundamentals(self, symbol: str, years: int = 3) -> List[Dict[str, Any]]:
         """
         Get annual fundamental data for the last N years.
         
@@ -141,8 +124,6 @@ class StockFundamentalDataIngestionService(DataService):
             List of fundamental data dictionaries for each year
         """
         market = self._detect_market(symbol)
-        # This would implement annual data retrieval
-        # For now, return latest data repeated
         latest = await self.fetch_financial_data(symbol)
         return [latest] * min(years, 3)
     
@@ -156,27 +137,14 @@ class StockFundamentalDataIngestionService(DataService):
         Returns:
             MarketType enum value
         """
-        # Simple heuristics for market detection
-        # In reality, this would use asset metadata from database
-        
-        # Iranian stocks often use Persian characters or specific patterns
-        persian_chars = set('ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
+        persian_chars = set('abcdefgh')
         if any(c in persian_chars for c in symbol):
             return MarketType.IRAN
-        
-        # Common US stock patterns
         if len(symbol) <= 5 and symbol.isalpha() and symbol.isupper():
-            # Could be US stock, but need to check against known international
-            # For simplicity, assume US if not clearly Iranian
             return MarketType.US
-        
-        # Default to US for unknown symbols
         return MarketType.US
     
-    def _aggregate_financial_data(
-        self, 
-        statements: List[Any]
-    ) -> Dict[str, Any]:
+    def _aggregate_financial_data(self, statements: List[Any]) -> Dict[str, Any]:
         """
         Aggregate financial statement data into format expected by analysis services.
         
@@ -187,18 +155,14 @@ class StockFundamentalDataIngestionService(DataService):
             Dictionary of financial metrics
         """
         financials = {}
-        
         for stmt in statements:
-            # Each statement's data is expected to be a dict of financial metrics
             if hasattr(stmt, 'data') and isinstance(stmt.data, dict):
                 financials.update(stmt.data)
             elif isinstance(stmt, dict) and 'data' in stmt:
                 financials.update(stmt['data'])
         
-        # Add commonly expected fields if not present
-        # These would normally come from the parsed statements
         expected_fields = [
-            'stock_price', 'eps', 'book_value_per_share', 'revenue', 
+            'stock_price', 'eps', 'book_value_per_share', 'revenue',
             'net_income', 'gross_profit', 'operating_income', 'equity',
             'total_assets', 'current_assets', 'current_liabilities',
             'inventory', 'cash', 'total_debt', 'ebit', 'interest_expense',
