@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import json
 import hashlib
 from enum import Enum
-from ...core import DataService
+from app.services.core.base_service import DataService
 from ...core.config import get_settings
 
 class ArchivePolicy(Enum):
