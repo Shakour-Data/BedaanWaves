@@ -6,7 +6,7 @@ User portfolio management.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime
-from ..core import DataService
+from app.services.core.base_service import DataService
 
 
 class PortfolioService(DataService):
