@@ -58,7 +58,7 @@ async def get_binance_ticker(symbol: str = Query("BTCUSDT")):
             await client.shutdown()
 
 
-@router.get("/depth/{symbol}", response_model=dict)
+@router.get("/depth", response_model=dict)
 async def get_binance_depth(
     symbol: str = Query("BTCUSDT"), 
     limit: int = Query(100, ge=1, le=5000)
