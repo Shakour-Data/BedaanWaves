@@ -42,10 +42,9 @@ const mlCoefficients = [
 export default function ScoringPage() {
   const [expandedDim, setExpandedDim] = useState(null);
 
-  return (
+return (
     <DashboardShell title="6D Scoring Methodology">
       <div className="flex flex-col gap-6">
-        {/* Header Section with TarotCard and detailed explanation"}"
         <TarotCard icon="🧮" title="6D Scoring System">
           <div className="space-y-6 padding">
             <p className="text-justify text-muted-foreground">
@@ -54,40 +53,39 @@ export default function ScoringPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {mlCoefficients.map((w, i) => (
-                <div key={i} class="border p-2 rounded bg-muted/30">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm">{w.label}</span>
-                    <div class="flex items-center">
-                      <span class="font-bold text-secondary">{w.defaultWeight}%</span>
-                      {w.mlOptimized && <span class="text-xs text-muted-foreground" title="Optimized by ML">🤖</span>}
+                <div key={i} className="border p-2 rounded bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{w.label}</span>
+                    <div className="flex items-center">
+                      <span className="font-bold text-secondary">{w.defaultWeight}%</span>
+                      {w.mlOptimized && <span className="text-xs text-muted-foreground" title="Optimized by ML">🤖</span>}
                     </div>
                   </div>
                 </div>
-              ))
+              ))}
             </div>
           </div>
         </TarotCard>
 
-        {/* Dimensions with Expandable accordion system"}
         <TarotCard icon="🧩" title="6 Dimensions">
           {dimensionDetails.map((dim, i) => (
-            <div key={dim.id} class="cursor-pointer transition hover:shadow-md">
-              <div class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer">
-                <span class="text-2xl">{dim.icon}</span>
-                <div class="flex-1">
-                  <div class="flex items-center">
-                    <h4 class="font-semibold">{dim.title}</h4>
-                    <span class="px-2 py-1 rounded text-xs font-bold {dim.color}">Weight: {dim.weight}%</span>
+            <div key={dim.id} className="cursor-pointer transition hover:shadow-md">
+              <div className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer">
+                <span className="text-2xl">{dim.icon}</span>
+                <div className="flex-1">
+                  <div className="flex items-center">
+                    <h4 className="font-semibold">{dim.title}</h4>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${dim.color}`}>Weight: {dim.weight}%</span>
                   </div>
-                  <span class="text-xl">{expandedDim === dim.id ? "▼" : "▶"}</span>
+                  <span className="text-xl">{expandedDim === dim.id ? "▼" : "▶"}</span>
                 </div>
 
                 {expandedDim === dim.id && (
-                  <div class="mt-2 ml-8 border-l-2 border-border/50 pl-4">
+                  <div className="mt-2 ml-8 border-l-2 border-border/50 pl-4">
                     {dim.aspects.map((a, j) => (
-                      <div key={j} class="space-y-2">
-                        <div class="font-medium text-sm">{a.name}</div>
-                        <div class="text-xs text-muted-foreground">{a.desc}</div>
+                      <div key={j} className="space-y-2">
+                        <div className="font-medium text-sm">{a.name}</div>
+                        <div className="text-xs text-muted-foreground">{a.desc}</div>
                       </div>
                     ))}
                   </div>
@@ -97,68 +95,64 @@ export default function ScoringPage() {
           ))}
         </TarotCard>
 
-        {/* Grading System"}
         <TarotCard icon="🏆" title="Grading Scale">
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {grades.map((g, i) => (
-              <div key={i} class="text-center p-3 rounded {g.bg} border {g.color}">
-                <div class="font-bold text-lg {g.color}">{g.label}</div>
-                <div class="mt-1 text-sm text-muted-foreground">
-                  {i === 0 ? "≥ 85" : `From ${g.min} to ${grades[i-1]?.min ? grades[i-1].min-1 : "--"`}"
+              <div key={i} className={`text-center p-3 rounded ${g.bg} border ${g.color}`}>
+                <div className={`font-bold text-lg ${g.color}`}>{g.label}</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {i === 0 ? "≥ 85" : `From ${g.min} to ${grades[i-1]?.min ? grades[i-1].min - 1 : "--"}`}
                 </div>
               </div>
-            ))
+            ))}
           </div>
         </TarotCard>
 
-        {/* ML Coefficient Process"}
         <TarotCard icon="🤖" title="Machine Learning Optimization">
-          <div class="space-y-4">
-            <p class="text-sm text-muted-foreground">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
               Static weights serve as fallback values. The ML service dynamically optimizes these weights by:
             </p>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {dimensionDetails.map((dim, i) => (
-                <div key={i} class="border p-2 rounded bg-muted/30">
-                  <div class="flex items-center">
-                    <span class="text-sm">{dim.title}
-                    <span class="text-sm text-right mr-2">Weight: {dim.weight}%</span>
+                <div key={i} className="border p-2 rounded bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{dim.title}</span>
+                    <span className="text-sm text-right mr-2">Weight: {dim.weight}%</span>
                   </div>
-                  <p class="text-xs text-muted-foreground">Optimized weekly based on historical performance data.</p>
+                  <p className="text-xs text-muted-foreground">Optimized weekly based on historical performance data.</p>
                 </div>
-              ))
+              ))}
             </div>
           </div>
         </TarotCard>
 
-        {/* Hierarchical Structure"}
         <TarotCard icon="🔗" title="305-Node Hierarchy">
-          <div class="grid grid-cols-4 gap-4">
-            <div class="p-3 bg-secondary/10 rounded">
-              <div class="text-2xl font-bold">6</div>
-              <div class="text-xs">Dimensions</div>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="p-3 bg-secondary/10 rounded">
+              <div className="text-2xl font-bold">6</div>
+              <div className="text-xs">Dimensions</div>
             </div>
 
-            <div class="p-3 bg-secondary/10 rounded">
-              <div class="text-2xl font-bold">40</div>
-              <div class="text-xs">Sub-Dimensions</div>
+            <div className="p-3 bg-secondary/10 rounded">
+              <div className="text-2xl font-bold">40</div>
+              <div className="text-xs">Sub-Dimensions</div>
             </div>
 
-            <div class="p-3 bg-secondary/10 rounded">
-              <div class="text-2xl font-bold">80</div>
-              <div class="text-xs">Aspects</div>
+            <div className="p-3 bg-secondary/10 rounded">
+              <div className="text-2xl font-bold">80</div>
+              <div className="text-xs">Aspects</div>
             </div>
 
-            <div class="p-3 bg-secondary/10 rounded">
-              <div class="text-2xl font-bold">173</div>
-              <div class="text-xs">Sub-Aspects</div>
+            <div className="p-3 bg-secondary/10 rounded">
+              <div className="text-2xl font-bold">173</div>
+              <div className="text-xs">Sub-Aspects</div>
             </div>
           </div>
         </TarotCard>
 
-        {/* Navigation Buttons"}
-        <div class="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-col md:flex-row gap-3">
           <Link href="/analysis">
             <PrimaryButton className="w-full cursor-pointer">View Current Analysis</PrimaryButton>
           </Link>
