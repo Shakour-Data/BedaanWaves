@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass
 from enum import Enum
 
-from ..core import DataService
+from app.services.core.base_service import DataService
 from .brs_api_client import BrsApiClient
 from app.core.config import get_settings
 
