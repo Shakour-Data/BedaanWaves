@@ -1,0 +1,414 @@
+/* BedaanWaves Custom Swagger UI Theme */
+:root {
+    --bg-color: #0d1117;
+    --text-color: #c9d1d9;
+    --primary-color: #58a6ff;
+    --secondary-color: #238636;
+    --accent-color: #f78166;
+    --border-color: #30363d;
+    --header-bg: #161b22;
+    --code-bg: #161b22;
+    --op-bg: #1c2128;
+    --op-border: #30363d;
+    --model-bg: #161b22;
+    --button-bg: #238636;
+    --button-hover: #2ea043;
+    --link-color: #58a6ff;
+    --success-color: #238636;
+    --error-color: #f85149;
+    --warning-color: #d29922;
+    --info-color: #58a6ff;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;
+}
+
+.swagger-ui .topbar {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+    display: none;
+}
+
+.swagger-ui .topbar .link {
+    color: var(--primary-color);
+}
+
+.swagger-ui .info {
+    background-color: var(--op-bg);
+    border: 1px solid var(--op-border);
+    border-radius: 8px;
+    margin: 20px 0;
+    padding: 20px;
+}
+
+.swagger-ui .info .title {
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.swagger-ui .info .description {
+    color: var(--text-color);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.swagger-ui .scheme-container {
+    background-color: var(--op-bg);
+    border: 1px solid var(--op-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.swagger-ui .opblock {
+    border-color: var(--op-border);
+    background-color: var(--op-bg);
+    border-radius: 8px;
+    margin: 10px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.swagger-ui .opblock:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 16px rgba(88, 166, 255, 0.15);
+}
+
+.swagger-ui .opblock-summary {
+    border-radius: 8px 8px 0 0;
+}
+
+.swagger-ui .opblock-summary_method {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.swagger-ui .opblock-get .opblock-summary_method {
+    background-color: var(--info-color);
+    color: white;
+}
+
+.swagger-ui .opblock-post .opblock-summary_method {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.swagger-ui .opblock-put .opblock-summary_method {
+    background-color: var(--warning-color);
+    color: #0d1117;
+}
+
+.swagger-ui .opblock-delete .opblock-summary_method {
+    background-color: var(--error-color);
+    color: white;
+}
+
+.swagger-ui .opblock-patch .opblock-summary_method {
+    background-color: var(--accent-color);
+    color: #0d1117;
+}
+
+.swagger-ui .opblock-summary_path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+}
+
+.swagger-ui .opblock-summary_description {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.swagger-ui .opblock-description {
+    color: var(--text-color);
+    padding: 15px 20px;
+    background-color: var(--code-bg);
+    border-top: 1px solid var(--op-border);
+}
+
+.swagger-ui .parameters-container {
+    padding: 15px 20px;
+    background-color: var(--code-bg);
+}
+
+.swagger-ui .parameter__name {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--primary-color);
+}
+
+.swagger-ui .parameter__type {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.swagger-ui .parameter__description {
+    color: var(--text-color);
+}
+
+.swagger-ui .btn {
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 10px 20px;
+    transition: all 0.2s ease;
+}
+
+.swagger-ui .btn.execute {
+    background-color: var(--button-bg);
+    border-color: var(--button-bg);
+    color: white;
+}
+
+.swagger-ui .btn.execute:hover {
+    background-color: var(--button-hover);
+    border-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+}
+
+.swagger-ui .btn.try-out {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.swagger-ui .btn.try-out:hover {
+    background-color: #79b8ff;
+    border-color: #79b8ff;
+}
+
+.swagger-ui .btn.curl {
+    background-color: var(--header-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.swagger-ui .btn.curl:hover {
+    background-color: var(--op-bg);
+    border-color: var(--primary-color);
+}
+
+.swagger-ui .responses-wrapper {
+    background-color: var(--code-bg);
+    border-top: 1px solid var(--op-border);
+}
+
+.swagger-ui .response {
+    border-radius: 0 0 8px 8px;
+}
+
+.swagger-ui .response_col_status {
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.swagger-ui .response-col_status {
+    min-width: 100px;
+}
+
+.swagger-ui .response_col_status .status-code {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.swagger-ui .status-200, .status-201, .status-204 {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.swagger-ui .status-400, .status-401, .status-403, .status-404 {
+    background-color: var(--error-color);
+    color: white;
+}
+
+.swagger-ui .status-500, .status-502, .status-503 {
+    background-color: var(--warning-color);
+    color: #0d1117;
+}
+
+.swagger-ui .response_col_description {
+    color: var(--text-color);
+}
+
+.swagger-ui .highlight-code {
+    background-color: var(--code-bg);
+    border: 1px solid var(--op-border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.swagger-ui .microlight {
+    background-color: var(--code-bg);
+    color: var(--text-color);
+}
+
+.swagger-ui .microlight .keyword {
+    color: #ff7b72;
+}
+
+.swagger-ui .microlight .string {
+    color: #a5d6ff;
+}
+
+.swagger-ui .microlight .number {
+    color: #79c0ff;
+}
+
+.swagger-ui .microlight .comment {
+    color: #8b949e;
+}
+
+.swagger-ui .microlight .function {
+    color: #d2a8ff;
+}
+
+.swagger-ui .model-box {
+    background-color: var(--model-bg);
+    border: 1px solid var(--op-border);
+    border-radius: 8px;
+}
+
+.swagger-ui .model-title {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--op-border);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.swagger-ui .model-toggle {
+    color: var(--text-color);
+}
+
+.swagger-ui .model-toggle:hover {
+    color: var(--primary-color);
+}
+
+.swagger-ui .model-container {
+    padding: 15px;
+}
+
+.swagger-ui .prop-name {
+    color: var(--primary-color);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.swagger-ui .prop-type {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.swagger-ui .prop-format {
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.swagger-ui .required-props {
+    color: var(--error-color);
+    font-weight: 600;
+}
+
+.swagger-ui .model-signature {
+    background-color: var(--code-bg);
+    border: 1px solid var(--op-border);
+    border-radius: 6px;
+    padding: 12px;
+    margin: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-color);
+}
+
+.swagger-ui .sidebar {
+    background-color: var(--header-bg);
+    border-right: 1px solid var(--border-color);
+}
+
+.swagger-ui .sidebar .sidebar-link {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.swagger-ui .sidebar .sidebar-link:hover {
+    color: var(--primary-color);
+    background-color: var(--op-bg);
+}
+
+.swagger-ui .sidebar .sidebar-link.active {
+    color: var(--primary-color);
+    background-color: var(--op-bg);
+    border-left: 3px solid var(--primary-color);
+}
+
+.swagger-ui .footer {
+    background-color: var(--header-bg);
+    border-top: 1px solid var(--border-color);
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.swagger-ui .footer .link {
+    color: var(--primary-color);
+}
+
+/* Custom BedaanWaves branding */
+.swagger-ui .info .title::before {
+    content: "🌊 ";
+    font-size: 2rem;
+    margin-right: 8px;
+}
+
+.swagger-ui .info .title::after {
+    content: " Unified Capital Markets";
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--accent-color);
+    margin-left: 12px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.swagger-ui .opblock {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .swagger-ui .info .title {
+        font-size: 1.8rem;
+    }
+    .swagger-ui .opblock-summary_path {
+        font-size: 0.8rem;
+    }
+}
