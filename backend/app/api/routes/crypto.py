@@ -43,7 +43,7 @@ async def get_crypto_ohlc(symbol: str, days: int = Query(7, ge=1, le=365)):
         raise HTTPException(status_code=502, detail=str(exc))
 
 
-@router.get("/ticker/{symbol}", response_model=dict)
+@router.get("/ticker", response_model=dict)
 async def get_binance_ticker(symbol: str = Query("BTCUSDT")):
     """Get 24h ticker from Binance."""
     client = CryptoApiClient()
@@ -59,7 +59,10 @@ async def get_binance_ticker(symbol: str = Query("BTCUSDT")):
 
 
 @router.get("/depth/{symbol}", response_model=dict)
-async def get_binance_depth(symbol: str = Query("BTCUSDT"), limit: int = Query(100, ge=1, le=5000)):
+async def get_binance_depth(
+    symbol: str = Query("BTCUSDT"), 
+    limit: int = Query(100, ge=1, le=5000)
+):
     """Get order book depth from Binance."""
     client = CryptoApiClient()
     await client.initialize()
