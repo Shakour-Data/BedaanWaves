@@ -11,6 +11,9 @@ from fastapi.responses import JSONResponse
 # Import configuration
 from app.core.config import get_settings
 
+# Import middleware
+from app.api.middleware import RateLimitMiddleware
+
 # Import core services
 from app.services.core.dependency_container import DependencyContainer
 from app.services.core.config_service import ConfigService
