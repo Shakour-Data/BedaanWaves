@@ -3,12 +3,12 @@ SEC EDGAR API Integration for filing retrieval - Implementation for TODO-H2
 Provides access to SEC filings including 10-K, 10-Q, and other financial statements.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import aiohttp
 import asyncio
 from datetime import datetime
 from enum import Enum
-from ..core import DataService
+from app.services.core.base_service import DataService
 from app.core.config import get_settings
 from app.services.data.financial_data_ingest_service import (
     FinancialStatementType, 
@@ -21,11 +21,11 @@ class SecFormType(str, Enum):
     INCOME_STATEMENT = "INCOME_STATEMENT"
     BALANCE_SHEET = "BALANCE_SHEET"
     CASH_FLOW = "CASH_FLOW"
-    10K = "10K"
-    10Q = "10Q"
-    8K = "8K"
-    S1 = "S1"
-    DEF 14A = "DEF_14A"
+    FORM_10K = "10K"
+    FORM_10Q = "10Q"
+    FORM_8K = "8K"
+    FORM_S1 = "S1"
+    FORM_DEF_14A = "DEF_14A"
 
 class SECRestAPIClient(DataService):
     """
