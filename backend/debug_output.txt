@@ -1,0 +1,11 @@
+Assets count: 10
+Symbol: فولاد | Market: TSE
+Symbol: فملی | Market: TSE
+Symbol: شستا | Market: TSE
+Symbol: خودرو | Market: TSE
+Symbol: وبملت | Market: TSE
+Symbol: شپنا | Market: TSE
+Symbol: فارس | Market: TSE
+Symbol: ونوک | Market: OTC
+Symbol: BTC | Market: BINANCE
+Symbol: ETH | Market: BINANCE
