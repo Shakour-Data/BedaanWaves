@@ -20,7 +20,7 @@ from app.services.user.auth_service import (
 )
 
 settings = get_settings()
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 # Simple language mapping for error messages
 ERROR_MESSAGES = {
