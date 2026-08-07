@@ -21,7 +21,7 @@ def upgrade() -> None:
     # Create ir_price_candles if not exists - using UUID to match assets.id
     op.execute("""
         CREATE TABLE IF NOT EXISTS ir_price_candles (
-            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             asset_id UUID NOT NULL REFERENCES assets(id),
             timeframe VARCHAR(10) NOT NULL,
             timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -38,7 +38,7 @@ def upgrade() -> None:
     # Create intl_price_candles if not exists
     op.execute("""
         CREATE TABLE IF NOT EXISTS intl_price_candles (
-            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             asset_id UUID NOT NULL REFERENCES assets(id),
             timeframe VARCHAR(10) NOT NULL,
             timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -55,7 +55,7 @@ def upgrade() -> None:
     # Create crypto_price_candles if not exists
     op.execute("""
         CREATE TABLE IF NOT EXISTS crypto_price_candles (
-            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             asset_id UUID NOT NULL REFERENCES assets(id),
             timeframe VARCHAR(10) NOT NULL,
             timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
