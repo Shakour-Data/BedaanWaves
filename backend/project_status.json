@@ -1,0 +1,8 @@
+{
+  "status": "complete",
+  "database_connected": true,
+  "tables_verified": 8,
+  "backend_operational": true,
+  "swagger_url": "http://localhost:3000/docs",
+  "message": "BedaanWaves platform is fully operational"
+}
