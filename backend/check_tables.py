@@ -1,27 +1,17 @@
 #!/usr/bin/env python
 import sys
-sys.path.insert(0, '.')
+sys.path.insert(0, 'E:/Shakour/BedaanProjects/OldFils/BedaanWaves/backend')
+import asyncio
 from app.db.base import get_async_session
 from sqlalchemy import text
-import asyncio
 
-async def check_missing_tables():
+async def check_all_tables():
     async for session in get_async_session():
-        result = await session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"))
+        result = await session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"))
         tables = [row[0] for row in result]
-        
-        # Check for tables that should exist per migration
-        expected = ['ir_price_candles', 'intl_price_candles', 'crypto_price_candles']
-        for t in expected:
-            if t in tables:
-                print(f'{t}: EXISTS')
-            else:
-                print(f'{t}: MISSING')
-        
-        # Check latest alembic version
-        ver = await session.execute(text('SELECT version_num FROM alembic_version'))
-        version = ver.scalar()
-        print(f'Latest migration version: {version}')
+        print(f"Currently existing tables ({len(tables)}):")
+        for t in tables:
+            print(f"  - {t}")
         break
 
-asyncio.run(check_missing_tables())
+asyncio.run(check_all_tables())
