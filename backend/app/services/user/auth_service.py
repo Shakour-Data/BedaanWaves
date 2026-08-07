@@ -5,7 +5,7 @@ from typing import Optional
 from uuid import UUID
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy import select
 
 from app.core.config import get_settings
@@ -13,7 +13,7 @@ from app.db.base import async_session_maker
 from app.models.models import User
 
 settings = get_settings()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+bcrypt_context = bcrypt.PasswordHasher()
 
 
 def hash_password(password: str) -> str:
