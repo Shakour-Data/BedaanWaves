@@ -18,11 +18,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create ir_price_candles if not exists
+    # Create ir_price_candles if not exists - using UUID to match assets.id
     op.execute("""
         CREATE TABLE IF NOT EXISTS ir_price_candles (
-            id SERIAL PRIMARY KEY,
-            asset_id INTEGER NOT NULL REFERENCES assets(id),
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            asset_id UUID NOT NULL REFERENCES assets(id),
             timeframe VARCHAR(10) NOT NULL,
             timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
             open NUMERIC(20, 8) NOT NULL,
@@ -38,15 +38,15 @@ def upgrade() -> None:
     # Create intl_price_candles if not exists
     op.execute("""
         CREATE TABLE IF NOT EXISTS intl_price_candles (
-            id SERIAL PRIMARY KEY,
-            asset_id INTEGER NOT NULL REFERENCES assets(id),
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            asset_id UUID NOT NULL REFERENCES assets(id),
             timeframe VARCHAR(10) NOT NULL,
             timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
             open NUMERIC(20, 8) NOT NULL,
             high NUMERIC(20, 8) NOT NULL,
             low NUMERIC(20, 8) NOT NULL,
             close NUMERIC(20, 8) NOT NULL,
-            volume NUMERIC(20, 8) NOT_NULL,
+            volume NUMERIC(20, 8) NOT NULL,
             turnover NUMERIC(20, 8),
             transactions INTEGER
         )
@@ -55,8 +55,8 @@ def upgrade() -> None:
     # Create crypto_price_candles if not exists
     op.execute("""
         CREATE TABLE IF NOT EXISTS crypto_price_candles (
-            id SERIAL PRIMARY KEY,
-            asset_id INTEGER NOT NULL REFERENCES assets(id),
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            asset_id UUID NOT NULL REFERENCES assets(id),
             timeframe VARCHAR(10) NOT NULL,
             timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
             open NUMERIC(20, 8) NOT NULL,
