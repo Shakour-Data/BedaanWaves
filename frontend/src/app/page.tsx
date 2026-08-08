@@ -1,66 +1,63 @@
 import Link from "next/link";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { TarotCard } from "@/components/ui/TarotCard";
 
-const pillars = [
+const industries = [
   {
-    icon: "🔥",
-    title: "قدرت (Gevurah)",
-    body: "تحلیل‌های پرقدرت و هشدارهای لحظه‌ای بر پایه‌ی ۶ بعد تحلیل.",
+    name: "صنعت‌های فارماویی",
+    desc: "تحلیل‌های پیشرفته و مدرن بیشتر با رویدادهای روزانه و کامل",
   },
   {
-    icon: "💧",
-    title: "مهربانی (Chesed)",
-    body: "مسیری امن و شفاف برای درک بازار و تصمیم‌گیری آگاهانه.",
+    name: "بازارهای تورمی",
+    desc: "آمار تولید و پایش الگوهای رفتاری بازار",
   },
   {
-    icon: "🌿",
-    title: "بنیاد (Yesod)",
-    body: "زیربنایی پایدار از داده‌های بورس تهران تا دارایی‌های دیجیتال.",
-  },
-  {
-    icon: "✨",
-    title: "زیبایی (Tiferet)",
-    body: "تجربه‌ای هارمونیک که کاربر را به سمت اقدام هدایت می‌کند.",
+    name: "پرونده‌های سودآور",
+    desc: "تقسیم‌بندی سودها و درآمدهای اصلی روزانه",
   },
 ];
 
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      {/* مسیر جادویی: تصویر بزرگ (آتش) → متن وعده (آب) → دکمه‌ی اقدام (خاک) */}
-      <section className="flex min-h-screen flex-col items-center justify-start px-3 pt-5 text-center">
-        <p className="text-secondary text-sm font-medium tracking-wide">
-          معماری ارتعاشی بازار سرمایه
-        </p>
-        <h1
-          className="mt-3 max-w-3xl font-bold"
-          style={{ fontSize: "clamp(34px, 6vw, 89px)" }}
-        >
-          هر پیکسل، یک ارتعاش؛ هر حرکت، یک اقدام هارمونیک.
+      <section className="px-4 pt-10 pb-6">
+        <h1 className="text-center text-4xl font-bold text-gray-800 mb-4">
+          BedaanWaves پلتفرم تحلیل بازار سرمایه
         </h1>
-        <p
-          className="mt-3 max-w-2xl text-muted-foreground"
-          style={{ fontSize: "clamp(16px, 2.2vw, 21px)" }}
-        >
-          BedaanWaves میدانی یکپارچه برای تحلیل بازار سرمایه می‌سازد که در آن
-          نظم ریاضی و اعداد مقدس، آرامش و قابلیت پیش‌بینی را در ناخودآگاه شما
-          جاری می‌کند.
+        <p className="text-center text-gray-600 text-lg mb-12 max-w-2xl mx-auto">
+          پلتفرم کاملاً ریاضی و دقیق برای تحلیل بازار سرمایه.
+          با دسترسی به ۱۰ تایی بهترین ایده‌ها، آمار و تحلیل‌های استاندارد
+          بازار.
         </p>
-        <div className="mt-3">
-          <Link href="/dashboard">
-            <PrimaryButton>ورود به داشبورد</PrimaryButton>
-          </Link>
+      </section>
+
+      <section className="px-4 pb-12">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+          پنل‌های اصلی
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {industries.map((item) => (
+            <div
+              key={item.name}
+              className="bg-white rounded-xl shadow-md p-6 border border-gray-200"
+            >
+              <h3 className="text-xl font-semibold text-red-700 mb-2">
+                {item.name}
+              </h3>
+              <p className="text-gray-600 text-sm">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* کارت‌های محتوا (Tarot Cards) - اصل روانشناسی یونگ */}
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-3 px-3 pb-5 sm:grid-cols-2 lg:grid-cols-4">
-        {pillars.map((p) => (
-          <TarotCard key={p.title} icon={p.icon} title={p.title}>
-            <p className="text-muted-foreground text-sm">{p.body}</p>
-          </TarotCard>
-        ))}
+      <section className="px-4 pb-12 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <Link href="/dashboard">
+            <PrimaryButton>بیشتر دسترسی</PrimaryButton>
+          </Link>
+          <p className="text-gray-400 text-sm">
+            سیستم پیش‌فرض: در حال اجرا
+          </p>
+        </div>
       </section>
     </main>
   );
