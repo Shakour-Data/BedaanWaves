@@ -1,81 +1,71 @@
 /**
  * design-tokens.ts
  * ---------------------------------------------------------------------------
- * تک‌نمونه‌های طراحی «معماری ارتعاشی» (Vibrational Design System)
- * همه‌ی تیم توسعه باید از این مقادیر پیروی کند تا خروجی از نظر روان‌شناختی
- * و بصری، «مسحورکننده» و هارمونیک باشد. (سند FrontEnd.txt - فصل پنجم)
- *
- * - رنگ‌ها بر اساس کابالا (آتش/آب/خاک/هوا)
- * - مقیاس تایپوگرافی بر اساس دنباله فیبوناچی (۱،۱،۲،۳،۵،۸،۱۳،۲۱،۳۴…)
- * - فضای خالی بر اساس مضارب ۸ (هشت‌تایی)
- * - انیمیشن بر اساس قانون ۳-۷-۳ و منحنی جریان طبیعی آب
+ * Professional Market Analysis Platform Design System
+ * Clean, financial-focused design tokens for market data visualization
+ * and professional financial interfaces.
  * ---------------------------------------------------------------------------
  */
 
 export const colors = {
-  /** Gevurah (قدرت) - آتش - دکمه‌ها و هشدارها */
-  primary: "#C62828",
-  /** Chesed (مهربانی) - آب - لینک‌ها و هدرها */
-  secondary: "#1565C0",
-  /** Yesod (بنیاد) - خاک - پس‌زمینه اصلی */
-  neutral: "#F5F5F5",
-  /** Tiferet (زیبایی) - هوا - هایلایت و موفقیت */
-  accent: "#FFD54F",
+  // Financial Red - Primary actions, alerts, market movers
+  primary: "#DC2626",
+  // Professional Slate - Secondary elements, borders, muted text
+  secondary: "#64748B",
+  // Light Grey - Background, cards
+  neutral: "#F8FAFC",
+  // Amber - Warnings, highlights
+  accent: "#FBBF24",
 } as const;
 
-/** دسترسی‌پذیری: نسبت تضاد حداقل ۴.۵:۱ برای متن روی پس‌زمینه */
 export const semanticColors = {
   background: colors.neutral,
   surface: "#FFFFFF",
-  foreground: "#1A1A1A",
-  mutedForeground: "#5C5C5C",
-  border: "#E0E0E0",
+  foreground: "#1E293B",
+  mutedForeground: "#64748B",
+  border: "#E2E8F0",
   primaryForeground: "#FFFFFF",
   secondaryForeground: "#FFFFFF",
   accentForeground: "#3D2C00",
   destructive: colors.primary,
-  success: "#2E7D32",
+  success: "#10B981",
+  error: "#EF4444",
+  warning: "#F59E0B",
+  info: "#3B82F6",
 } as const;
 
-/**
- * مقیاس فیبوناچی برای تایپوگرافی.
- * h1 = ۳۴px (بیست‌ویکمین عدد)، body = ۱۶px (هشتمین عدد)
- */
 export const fontSizes = {
-  xs: "13px",
-  sm: "16px",
+  xs: "12px",
+  sm: "14px",
   base: "16px",
-  lg: "21px",
-  xl: "34px",
-  "2xl": "55px",
-  "3xl": "89px",
+  lg: "18px",
+  xl: "20px",
+  "2xl": "24px",
+  "3xl": "30px",
+  "4xl": "36px",
 } as const;
 
-/** فضای خالی بر اساس مضارب ۸ (آبِ طراحی) */
 export const spacing = {
-  1: "8px",
-  2: "16px",
-  3: "24px",
-  4: "48px",
-  5: "96px",
+  1: "4px",
+  2: "8px",
+  3: "12px",
+  4: "16px",
+  5: "24px",
+  6: "32px",
+  8: "48px",
+  10: "64px",
 } as const;
 
-/** شبکه‌ی زندگی: ۱۲ ستونه با فاصله ۲۴px */
 export const grid = {
   columns: 12,
-  gutter: "24px",
+  gutter: "16px",
 } as const;
 
-/**
- * قانون ۳-۷-۳ انیمیشن:
- * ۳۰۰ms تعاملات کوچک، ۷۰۰ms ترنزیشن صفحه، ۳۰۰۰ms انیمیشن پس‌زمینه
- */
 export const motion = {
-  durationFast: "300ms",
-  durationPage: "700ms",
-  durationAmbient: "3000ms",
-  /** منحنی جریان طبیعی آب */
-  easing: "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
+  durationFast: "150ms",
+  durationMedium: "300ms",
+  durationSlow: "500ms",
+  easing: "cubic-bezier(0.4, 0, 0.2, 1)",
 } as const;
 
 export const designTokens = {
