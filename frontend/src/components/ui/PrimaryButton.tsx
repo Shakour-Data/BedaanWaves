@@ -6,8 +6,8 @@ interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * دکمه‌ی اصلی (Primary Button) - «قلب تپنده‌ی سایت»
- * هاله‌ی نور طلایی + حرکت به سمت بالا در هاور (۳۰۰ms). (FrontEnd.txt - فصل چهارم)
+ * Primary Button - Main call-to-action button
+ * Professional styling for primary actions
  */
 export function PrimaryButton({
   children,
