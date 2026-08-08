@@ -3,16 +3,16 @@ import "./globals.css";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const metadata: Metadata = {
-  title: "BedaanWaves | معماری ارتعاشی بازار سرمایه",
+  title: "BedaanWaves | پلتفرم تحلیل بازار سرمایه",
   description:
-    "محیطی ناخودآگاه برای تحلیل بازار سرمایه؛ جایی که هر پیکسل و هر حرکت، کاربر را به سمت اقدام هارمونیک هدایت می‌کند.",
+    "پلتفرم جامع تحلیل بازار سرمایه با دسترسی به داده‌های لحظه‌ای، تحلیل تکنیکال، فاندامنتال و هوش مصنوعی.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" data-scroll-behavior="smooth">
       <body>
         <LanguageSwitcher />
         {children}
