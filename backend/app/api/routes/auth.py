@@ -63,7 +63,8 @@ async def register(
     )
     access = create_access_token({"sub": user.username, "user_id": str(user.id)})
     refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
-    return Token(access_token=access, refresh_token=refresh)
+    expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    return Token(access_token=access, refresh_token=refresh, expires_in=expires_in)
 
 
 @router.post("/login", response_model=Token)
@@ -80,7 +81,8 @@ async def login(
         )
     access = create_access_token({"sub": user.username, "user_id": str(user.id)})
     refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
-    return Token(access_token=access, refresh_token=refresh)
+    expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    return Token(access_token=access, refresh_token=refresh, expires_in=expires_in)
 
 
 @router.post("/refresh", response_model=Token)
@@ -103,4 +105,5 @@ async def refresh_token(
 
     access = create_access_token({"sub": user.username, "user_id": str(user.id)})
     refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
-    return Token(access_token=access, refresh_token=refresh)
+    expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    return Token(access_token=access, refresh_token=refresh, expires_in=expires_in)
