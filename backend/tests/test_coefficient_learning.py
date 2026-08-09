@@ -286,10 +286,13 @@ class TestCoefficientLearningServiceLearnCoefficients:
 class TestCoefficientLearningServiceIntegration:
     """Integration tests for CoefficientLearningService with ScoringService."""
 
-    async def test_get_dynamic_weights_ml_unavailable(self, coefficient_service):
-        """Test getting dynamic weights when ML service is unavailable."""
-        # No coefficient service set
-        weights = coefficient_service._get_dynamic_weights('dimensions')
+    async def test_get_dynamic_weights_ml_unavailable(self):
+        """Test ScoringService falls back to static weights when ML service unavailable."""
+        # Create ScoringService without registering ML service (so it will be unavailable)
+        service = ScoringService()
+        await service.initialize()
+        
+        weights = service._get_dynamic_weights('dimensions')
         # Should fall back to static weights
         assert weights == {
             'fundamental': 0.25,
@@ -300,33 +303,35 @@ class TestCoefficientLearningServiceIntegration:
             'ai': 0.10
         }
 
-    async def test_get_dynamic_weights_ml_available_untrained(self, coefficient_service):
-        """Test getting dynamic weights when ML service available but not trained."""
-        # Mock coefficient service as available but not trained
+    async def test_get_dynamic_weights_ml_available_untrained(self):
+        """Test ScoringService falls back to static weights when ML service available but not trained."""
+        # Create a mock CoefficientLearningService that is not trained
         mock_coeff_service = MagicMock()
         mock_coeff_service.is_model_trained.return_value = False
         
-        # Temporarily replace the service
-        original_service = coefficient_service._coefficient_service
-        coefficient_service._coefficient_service = mock_coeff_service
+        # Register the mock in the global container
+        from app.services.core.dependency_container import get_global_container
+        container = get_global_container()
+        container.register('coefficient_learning_service', lambda: mock_coeff_service)
         
-        try:
-            weights = coefficient_service._get_dynamic_weights('dimensions')
-            # Should fall back to static weights
-            assert weights == {
-                'fundamental': 0.25,
-                'technical': 0.20,
-                'sentiment': 0.15,
-                'risk': 0.20,
-                'macro': 0.10,
-                'ai': 0.10
-            }
-        finally:
-            coefficient_service._coefficient_service = original_service
+        # Create and initialize ScoringService
+        service = ScoringService()
+        await service.initialize()
+        
+        weights = service._get_dynamic_weights('dimensions')
+        # Should fall back to static weights
+        assert weights == {
+            'fundamental': 0.25,
+            'technical': 0.20,
+            'sentiment': 0.15,
+            'risk': 0.20,
+            'macro': 0.10,
+            'ai': 0.10
+        }
 
-    async def test_get_dynamic_weights_ml_available_trained(self, coefficient_service):
-        """Test getting dynamic weights when ML service available and trained."""
-        # Mock coefficient service as available and trained
+    async def test_get_dynamic_weights_ml_available_trained(self):
+        """Test ScoringService gets dynamic weights when ML service available and trained."""
+        # Create a mock CoefficientLearningService that is trained and returns specific weights
         mock_coeff_service = MagicMock()
         mock_coeff_service.is_model_trained.return_value = True
         mock_coeff_service.get_coefficients.return_value = {
@@ -338,27 +343,29 @@ class TestCoefficientLearningServiceIntegration:
             'ai': 0.1
         }
         
-        # Temporarily replace the service
-        original_service = coefficient_service._coefficient_service
-        coefficient_service._coefficient_service = mock_coeff_service
+        # Register the mock in the global container
+        from app.services.core.dependency_container import get_global_container
+        container = get_global_container()
+        container.register('coefficient_learning_service', lambda: mock_coeff_service)
         
-        try:
-            weights = coefficient_service._get_dynamic_weights('dimensions')
-            # Should return ML weights
-            assert weights == {
-                'fundamental': 0.3,
-                'technical': 0.25,
-                'sentiment': 0.1,
-                'risk': 0.15,
-                'macro': 0.1,
-                'ai': 0.1
-            }
-        finally:
-            coefficient_service._coefficient_service = original_service
+        # Create and initialize ScoringService
+        service = ScoringService()
+        await service.initialize()
+        
+        weights = service._get_dynamic_weights('dimensions')
+        # Should return ML weights (note: they must sum to ~1.0 to be accepted)
+        assert weights == {
+            'fundamental': 0.3,
+            'technical': 0.25,
+            'sentiment': 0.1,
+            'risk': 0.15,
+            'macro': 0.1,
+            'ai': 0.1
+        }
 
-    async def test_get_dynamic_weights_ml_invalid_sum(self, coefficient_service):
-        """Test getting dynamic weights when ML weights don't sum to ~1.0."""
-        # Mock coefficient service as available and trained but with bad weights
+    async def test_get_dynamic_weights_ml_invalid_sum(self):
+        """Test ScoringService falls back to static weights when ML weights don't sum to ~1.0."""
+        # Create a mock CoefficientLearningService that returns weights with invalid sum
         mock_coeff_service = MagicMock()
         mock_coeff_service.is_model_trained.return_value = True
         mock_coeff_service.get_coefficients.return_value = {
@@ -370,23 +377,25 @@ class TestCoefficientLearningServiceIntegration:
             'ai': 0.0
         }
         
-        # Temporarily replace the service
-        original_service = coefficient_service._coefficient_service
-        coefficient_service._coefficient_service = mock_coeff_service
+        # Register the mock in the global container
+        from app.services.core.dependency_container import get_global_container
+        container = get_global_container()
+        container.register('coefficient_learning_service', lambda: mock_coeff_service)
         
-        try:
-            weights = coefficient_service._get_dynamic_weights('dimensions')
-            # Should fall back to static weights due to invalid sum
-            assert weights == {
-                'fundamental': 0.25,
-                'technical': 0.20,
-                'sentiment': 0.15,
-                'risk': 0.20,
-                'macro': 0.10,
-                'ai': 0.10
-            }
-        finally:
-            coefficient_service._coefficient_service = original_service
+        # Create and initialize ScoringService
+        service = ScoringService()
+        await service.initialize()
+        
+        weights = service._get_dynamic_weights('dimensions')
+        # Should fall back to static weights due to invalid sum (sum not between 0.9 and 1.1)
+        assert weights == {
+            'fundamental': 0.25,
+            'technical': 0.20,
+            'sentiment': 0.15,
+            'risk': 0.20,
+            'macro': 0.10,
+            'ai': 0.10
+        }
 
 
 @pytest.mark.unit
