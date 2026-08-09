@@ -1,0 +1,38 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: E:\Shakour\BedaanProjects\OldFils\BedaanWaves\backend
+configfile: pytest.ini
+plugins: anyio-4.14.2, dash-4.4.1, asyncio-1.4.0, cov-7.1.0, mock-3.15.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 26 items
+
+tests/test_base_service.py::TestBaseService::test_cannot_instantiate_abstract_base PASSED [  3%]
+tests/test_base_service.py::TestBaseService::test_initial_state PASSED   [  7%]
+tests/test_base_service.py::TestBaseService::test_repr PASSED            [ 11%]
+tests/test_base_service.py::TestBaseService::test_cache_set_and_get PASSED [ 15%]
+tests/test_base_service.py::TestBaseService::test_cache_get_miss PASSED  [ 19%]
+tests/test_base_service.py::TestBaseService::test_cache_clear_single_key PASSED [ 23%]
+tests/test_base_service.py::TestBaseService::test_cache_clear_all PASSED [ 26%]
+tests/test_base_service.py::TestBaseService::test_track_metric_success PASSED [ 30%]
+tests/test_base_service.py::TestBaseService::test_track_metric_failure PASSED [ 34%]
+tests/test_base_service.py::TestBaseService::test_get_metrics_computed_rates PASSED [ 38%]
+tests/test_base_service.py::TestBaseService::test_get_metrics_zero_calls_no_division_error PASSED [ 42%]
+tests/test_base_service.py::TestBaseService::test_health_check PASSED    [ 46%]
+tests/test_base_service.py::TestCachedService::test_set_and_get_cached PASSED [ 50%]
+tests/test_base_service.py::TestCachedService::test_get_cached_missing PASSED [ 53%]
+tests/test_base_service.py::TestCachedService::test_cache_none_ttl_always_valid PASSED [ 57%]
+tests/test_base_service.py::TestCachedService::test_expired_cache_returns_none PASSED [ 61%]
+tests/test_base_service.py::TestDataService::test_unimplemented_methods_raise PASSED [ 65%]
+tests/test_base_service.py::TestAnalysisService::test_analyze PASSED     [ 69%]
+tests/test_base_service.py::TestAnalysisService::test_batch_analyze_handles_errors PASSED [ 73%]
+tests/test_base_service.py::TestAnalysisService::test_default_analyze_raises PASSED [ 76%]
+tests/test_base_service.py::TestMLService::test_initial_model_state PASSED [ 80%]
+tests/test_base_service.py::TestMLService::test_unimplemented_methods_raise PASSED [ 84%]
+tests/test_base_service.py::TestExternalAPIService::test_configuration PASSED [ 88%]
+tests/test_base_service.py::TestExternalAPIService::test_fetch_not_implemented PASSED [ 92%]
+tests/test_base_service.py::TestExternalAPIService::test_handle_rate_limit_backoff PASSED [ 96%]
+tests/test_base_service.py::TestExternalAPIService::test_handle_rate_limit_caps_at_60 PASSED [100%]
+
+======================= 26 passed, 3 warnings in 0.18s ========================
+
