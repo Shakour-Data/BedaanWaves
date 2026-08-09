@@ -1,18 +1,9 @@
 #!/usr/bin/env python
 """
 populate_database.py
-Populates all database tables with synthetic but realistic data for:
-- Price candles (3 years of historical OHLCV)
-- Financial statements
-- News articles
-- Market data snapshots
-- Crypto ML signals
-- Raw market data
+Populates all database tables with realistic synthetic data.
 
-Usage:
-    cd backend && python -m populate_database
-    or
-    python -m app.populate_database
+Fixes: Uses correct model names from app.models.models
 """
 
 import asyncio
@@ -23,7 +14,6 @@ from decimal import Decimal
 import random
 import uuid
 
-# Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.db.base import get_async_session
@@ -32,17 +22,16 @@ from app.models.models import (
     Asset,
     RawMarketData,
     MarketDataSnapshot,
-    PriceCandle,
     CryptoPriceCandle,
     IntlPriceCandle,
     IRPriceCandle,
-    NewsArticle,
-    FinancialStatement,
+    News,
+    IRFinancialStatement,
     Portfolio,
     Position,
     Alert,
     MLSignal,
-    ApiLog,
+    APILog,
     User,
 )
 from sqlalchemy import select, func
@@ -51,22 +40,21 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 async def populate_database():
     """Populates the entire database with realistic synthetic data."""
-    
+
     print("Starting database population...")
-    
+
     async for session in get_async_session():
         try:
             # Check if we already have data
             asset_count = await session.execute(select(func.count()).select_from(Asset))
             count = asset_count.scalar()
             print(f"Existing assets: {count}")
-            
+
             if count > 0:
-                # Clear existing data first for clean regeneration
                 await session.execute("DELETE FROM raw_market_data")
                 await session.execute("DELETE FROM market_data_snapshots")
-                await session.execute("DELETE FROM news_articles")
-                await session.execute("DELETE FROM financial_statements")
+                await session.execute("DELETE FROM news")
+                await session.execute("DELETE FROM ir_financial_statements")
                 await session.execute("DELETE FROM ml_signals")
                 await session.execute("DELETE FROM crypto_price_candles")
                 await session.execute("DELETE FROM intl_price_candles")
@@ -77,72 +65,68 @@ async def populate_database():
             # Get all assets
             result = await session.execute(select(Asset))
             assets = result.scalars().all()
-            
+
             if not assets:
                 print("No assets found. Creating sample assets...")
                 await create_sample_assets(session)
                 result = await session.execute(select(Asset))
                 assets = result.scalars().all()
-            
+
             print(f"Working with {len(assets)} assets")
-            
+
             # Calculate 3-year date range
             end_date = datetime.now()
-            start_date = end_date - timedelta(days=365*3)  # 3 years
+            start_date = end_date - timedelta(days=365 * 3)
             total_days = (end_date - start_date).days
             print(f"Date range: {start_date.date()} to {end_date.date()} ({total_days} days)")
 
             # Populate price candles
             await populate_price_candles(session, assets, start_date, end_date)
-            
+
             # Populate raw market data
             await populate_raw_market_data(session, assets, start_date, end_date)
-            
+
             # Populate market snapshots
             await populate_market_snapshots(session, assets, start_date, end_date)
-            
+
             # Populate financial statements
             await populate_financial_statements(session, assets)
-            
+
             # Populate news articles
             await populate_news_articles(session, assets, start_date, end_date)
-            
+
             # Populate ML signals
             await populate_ml_signals(session, assets)
-            
+
             # Populate other supporting tables
             await populate_other_tables(session, assets)
-            
+
             await session.commit()
             print("Database population completed successfully!")
-            
-            # Print final row counts
+
             await print_final_counts(session)
-            
+
         except Exception as e:
             print(f"Error during population: {e}")
             import traceback
             traceback.print_exc()
             await session.rollback()
-        
-        break  # Exit the session loop
+
+        break
 
 
 async def create_sample_assets(session):
     """Creates sample assets if none exist."""
-    
-    # Tehran Stock Exchange symbols
     tse_symbols = [
         ("TEHRAN1", "TEHRAN1", "EQUITY", "TSE"),
-        ("KHC1", "کاهید", "EQUITY", "TSE"),
-        ("FAZF1", "فازف", "EQUITY", "TSE"),
-        ("KHOD1", "خود", "EQUITY", "TSE"),
-        ("SHAH1", "شهید", "EQUITY", "TSE"),
-        ("MELL1", "ملت", "EQUITY", "TSE"),
-        ("KESH1", "کشد", "EQUITY", "TSE"),
+        ("KHC1", "KHC", "EQUITY", "TSE"),
+        ("FAZF1", "FAZF1", "EQUITY", "TSE"),
+        ("KHOD1", "KHOD1", "EQUITY", "TSE"),
+        ("SHAH1", "SHAH1", "EQUITY", "TSE"),
+        ("MELL1", "MELL1", "EQUITY", "TSE"),
+        ("KESH1", "KESH1", "EQUITY", "TSE"),
     ]
-    
-    # Crypto symbols
+
     crypto_symbols = [
         ("BTCUSD", "Bitcoin", "CRYPTO", "BINANCE"),
         ("ETHUSD", "Ethereum", "CRYPTO", "BINANCE"),
@@ -150,8 +134,7 @@ async def create_sample_assets(session):
         ("XRPUSD", "XRP", "CRYPTO", "BINANCE"),
         ("DOGEUSD", "Dogecoin", "CRYPTO", "BINANCE"),
     ]
-    
-    # International symbols
+
     intl_symbols = [
         ("AAPL", "Apple Inc.", "EQUITY", "NASDAQ"),
         ("GOOGL", "Google LLC", "EQUITY", "NASDAQ"),
@@ -160,9 +143,9 @@ async def create_sample_assets(session):
         ("AMZN", "Amazon.com Inc.", "EQUITY", "NASDAQ"),
         ("JPM", "JPMorgan Chase", "EQUITY", "NYSE"),
     ]
-    
+
     all_symbols = tse_symbols + crypto_symbols + intl_symbols
-    
+
     for symbol, name, asset_class, market in all_symbols:
         asset = Asset(
             symbol=symbol,
@@ -177,19 +160,18 @@ async def create_sample_assets(session):
             updated_at=datetime.utcnow(),
         )
         session.add(asset)
-    
+
     await session.flush()
     print(f"Created {len(all_symbols)} sample assets")
 
 
 async def populate_price_candles(session, assets, start_date, end_date):
     """Populates price candles for all assets over 3 years."""
-    
+
     total_records = 0
     batch_size = 1000
-    
+
     for asset in assets:
-        # Determine candle table based on market
         market = asset.market
         if market in ("TSE", "OTC"):
             CandleModel = IRPriceCandle
@@ -201,30 +183,31 @@ async def populate_price_candles(session, assets, start_date, end_date):
             CandleModel = CryptoPriceCandle
             main_table = "crypto_price_candles"
         else:
-            CandleModel = PriceCandle
+            CandleModel = None
             main_table = "price_candles"
-        
-        # Generate daily candles
+
+        if CandleModel is None:
+            continue
+
         current_date = start_date
         price = random.uniform(100, 5000)
-        
+
         candles = []
-        
+
         while current_date <= end_date:
-            # Simulate realistic price movement
-            volatility = 0.02  # 2% daily volatility
+            volatility = 0.02
             change_percent = random.gauss(0, volatility)
             change_amount = price * change_percent
-            
+
             new_price = price + change_amount
-            new_price = max(new_price, 1.0)  # Prevent negative/zero prices
-            
+            new_price = max(new_price, 1.0)
+
             open_price = price
             close_price = new_price
             high_price = max(open_price, close_price) * (1 + random.random() * 0.01)
             low_price = min(open_price, close_price) * (1 - random.random() * 0.01)
             volume = max(100, int(new_price * 100 * random.uniform(0.5, 2.0)))
-            
+
             candle = CandleModel(
                 asset_id=asset.id,
                 timeframe="1d",
@@ -238,7 +221,7 @@ async def populate_price_candles(session, assets, start_date, end_date):
                 transactions=random.randint(100, 1000)
             )
             candles.append(candle)
-            
+
             if len(candles) >= batch_size:
                 await session.execute(
                     pg_insert(CandleModel).values([
@@ -259,11 +242,10 @@ async def populate_price_candles(session, assets, start_date, end_date):
                 await session.flush()
                 total_records += len(candles)
                 candles = []
-            
+
             price = close_price
             current_date += timedelta(days=1)
-        
-        # Handle weekend gaps for crypto
+
         if market in ("BINANCE", "KRAKEN", "COINBASE") and candles:
             await session.execute(
                 pg_insert(CandleModel).values([
@@ -283,20 +265,19 @@ async def populate_price_candles(session, assets, start_date, end_date):
             )
             await session.flush()
             total_records += len(candles)
-        
+
         if (assets.index(asset) + 1) % 5 == 0:
             print(f"Candles populated for {len(assets[:assets.index(asset)+1])} assets...")
-    
+
     print(f"Total price candles inserted: {total_records}")
 
 
 async def populate_raw_market_data(session, assets, start_date, end_date):
     """Populates raw market data records."""
-    
+
     total_records = 0
     current_time = start_date
-    
-    # Generate raw market data every 15 mins for trading hours
+
     while current_time <= end_date:
         for asset in assets:
             raw_data = RawMarketData(
@@ -315,26 +296,26 @@ async def populate_raw_market_data(session, assets, start_date, end_date):
             )
             session.add(raw_data)
             total_records += 1
-        
+
         if total_records % 5000 == 0:
             await session.flush()
             print(f"Raw market data: {total_records} records inserted...")
-        
+
         current_time += timedelta(minutes=15)
-    
+
     await session.flush()
     print(f"Total raw market data records: {total_records}")
 
 
 async def populate_market_snapshots(session, assets, start_date, end_date):
     """Populates processed market data snapshots."""
-    
+
     total_records = 0
     current_date = start_date
-    
+
     while current_date <= end_date:
-        if current_date.weekday() < 5:  # Only weekdays
-            for asset in assets[:15]:  # Sample subset
+        if current_date.weekday() < 5:
+            for asset in assets[:15]:
                 snapshot = MarketDataSnapshot(
                     asset_id=asset.id,
                     timeframe="1d",
@@ -348,38 +329,35 @@ async def populate_market_snapshots(session, assets, start_date, end_date):
                 )
                 session.add(snapshot)
                 total_records += 1
-                
-                # Add basic technical indicators
+
                 snapshot.indicators = {
                     "rsi": round(random.uniform(20, 80), 2),
                     "macd": round(random.uniform(-5, 5), 4),
                     "bb_upper": round(random.uniform(105, 110), 2),
                     "bb_lower": round(random.uniform(90, 95), 2),
                 }
-        
+
         if total_records % 1000 == 0:
             await session.flush()
             print(f"Market snapshots: {total_records} records inserted...")
-        
+
         current_date += timedelta(days=1)
-    
+
     await session.flush()
     print(f"Total market snapshots inserted: {total_records}")
 
 
 async def populate_financial_statements(session, assets):
     """Populates financial statement data for assets."""
-    
+
     total_records = 0
-    
+
     for asset in assets:
-        # Generate annual financial statements for the last 3 years
         for i in range(3):
             year = datetime.now().year - i
-            quarter = 4  # Annual reports
-            
-            # Balance Sheet data
-            balance_sheet = FinancialStatement(
+            quarter = 4
+
+            balance_sheet = IRFinancialStatement(
                 asset_id=asset.id,
                 statement_type="balance_sheet",
                 period=f"{year}-annual",
@@ -399,9 +377,8 @@ async def populate_financial_statements(session, assets):
             )
             session.add(balance_sheet)
             total_records += 1
-            
-            # Income Statement
-            income_statement = FinancialStatement(
+
+            income_statement = IRFinancialStatement(
                 asset_id=asset.id,
                 statement_type="income_statement",
                 period=f"{year}-annual",
@@ -421,9 +398,8 @@ async def populate_financial_statements(session, assets):
             )
             session.add(income_statement)
             total_records += 1
-            
-            # Cash Flow Statement
-            cash_flow = FinancialStatement(
+
+            cash_flow = IRFinancialStatement(
                 asset_id=asset.id,
                 statement_type="cash_flow_statement",
                 period=f"{year}-annual",
@@ -440,17 +416,17 @@ async def populate_financial_statements(session, assets):
             )
             session.add(cash_flow)
             total_records += 1
-    
+
     await session.flush()
     print(f"Total financial statements inserted: {total_records}")
 
 
 async def populate_news_articles(session, assets, start_date, end_date):
     """Populates news articles for assets."""
-    
+
     total_records = 0
     current_date = start_date
-    
+
     news_headlines = {
         "positive": [
             "Earnings beat expectations",
@@ -474,15 +450,14 @@ async def populate_news_articles(session, assets, start_date, end_date):
             "New hire in executive team"
         ]
     }
-    
+
     while current_date <= end_date:
-        # Generate 1-3 news items per day
         for _ in range(random.randint(1, 3)):
             asset = random.choice(assets)
             sentiment = random.choice(["positive", "negative", "neutral"])
             headline = random.choice(news_headlines[sentiment])
-            
-            news = NewsArticle(
+
+            news = News(
                 asset_id=asset.id,
                 headline=headline,
                 summary=f"Lorem ipsum dolor sit amet, consectetur adipiscing elit. {headline.lower()} for {asset.symbol}.",
@@ -500,27 +475,26 @@ async def populate_news_articles(session, assets, start_date, end_date):
             )
             session.add(news)
             total_records += 1
-        
+
         if total_records % 1000 == 0:
             await session.flush()
             print(f"News articles: {total_records} records inserted...")
-        
+
         current_date += timedelta(days=1)
-    
+
     await session.flush()
     print(f"Total news articles inserted: {total_records}")
 
 
 async def populate_ml_signals(session, assets):
     """Populates ML prediction signals for assets."""
-    
+
     total_records = 0
-    
+
     for asset in assets:
-        # Generate daily ML signals for last 30 days
         for i in range(30):
             timestamp = datetime.utcnow() - timedelta(days=i)
-            
+
             ml_signal = MLSignal(
                 asset_id=asset.id,
                 timestamp=timestamp,
@@ -543,15 +517,14 @@ async def populate_ml_signals(session, assets):
             )
             session.add(ml_signal)
             total_records += 1
-    
+
     await session.flush()
     print(f"Total ML signals inserted: {total_records}")
 
 
 async def populate_other_tables(session, assets):
     """Populates other supporting tables."""
-    
-    # Alerts
+
     for _ in range(50):
         asset = random.choice(assets)
         alert_type = random.choice(["price_above", "price_below", "volume_spike", "news_sentiment"])
@@ -563,8 +536,7 @@ async def populate_other_tables(session, assets):
             triggered=False,
             created_at=datetime.utcnow() - timedelta(days=random.randint(0, 365)),
         ))
-    
-    # Sample users (already may exist, skip if so)
+
     user_count = await session.execute(select(func.count()).select_from(User))
     if user_count.scalar() == 0:
         for i in range(5):
@@ -576,8 +548,7 @@ async def populate_other_tables(session, assets):
                 is_superuser=False,
                 created_at=datetime.utcnow(),
             ))
-    
-    # Sample portfolios and positions
+
     portfolio_count = await session.execute(select(func.count()).select_from(Portfolio))
     if portfolio_count.scalar() == 0:
         for i in range(3):
@@ -591,8 +562,8 @@ async def populate_other_tables(session, assets):
                 updated_at=datetime.utcnow(),
             )
             session.add(portfolio)
-            await session.flush()  # Get portfolio ID
-            
+            await session.flush()
+
             for j in range(random.randint(3, 8)):
                 asset = random.choice(assets)
                 session.add(Position(
@@ -603,31 +574,30 @@ async def populate_other_tables(session, assets):
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 ))
-    
+
     await session.flush()
     print("Other tables populated: alerts, users, portfolios, positions")
 
 
 async def print_final_counts(session):
     """Prints final statistics of the database."""
-    
+
     tables_to_check = [
         ("assets", Asset),
-        ("price_candles", PriceCandle),
         ("ir_price_candles", IRPriceCandle),
         ("intl_price_candles", IntlPriceCandle),
         ("crypto_price_candles", CryptoPriceCandle),
         ("raw_market_data", RawMarketData),
         ("market_data_snapshots", MarketDataSnapshot),
-        ("news_articles", NewsArticle),
-        ("financial_statements", FinancialStatement),
+        ("news", News),
+        ("financial_statements", IRFinancialStatement),
         ("ml_signals", MLSignal),
         ("alerts", Alert),
         ("portfolios", Portfolio),
         ("positions", Position),
         ("users", User),
     ]
-    
+
     print("\n=== DATABASE POPULATION SUMMARY ===")
     for table_name, model in tables_to_check:
         try:
@@ -636,17 +606,7 @@ async def print_final_counts(session):
             print(f"  {table_name}: {total:,} records")
         except Exception as e:
             print(f"  {table_name}: Error counting - {e}")
-    
-    # Verify price history range
-    result = await session.execute(
-        select(func.min(PriceCandle.timestamp), func.max(PriceCandle.timestamp))
-    )
-    min_date, max_date = result.one()
-    if min_date and max_date:
-        print(f"\n  Price data range: {min_date.date()} to {max_date.date()}")
-        days_covered = (max_date.date() - min_date.date()).days
-        print(f"  Total days covered: {days_covered} days ({days_covered/365:.1f} years)")
-    
+
     print("\nDatabase population completed successfully!")
 
 
