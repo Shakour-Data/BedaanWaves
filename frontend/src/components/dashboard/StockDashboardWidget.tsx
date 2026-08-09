@@ -1,4 +1,4 @@
-"use client';
+"use client";
 
 import { useSSELatest } from '@/hooks/useSSE';
 import { exportData } from '@/lib/export';
