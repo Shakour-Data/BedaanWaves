@@ -1,67 +1,51 @@
-# Kilo worktrees and internal files
-.kilo/
-.kilo_temp.tar.gz
-
-# Python cache and build
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
+*.class
 *.so
 .Python
-*.egg-info/
-.eggs/
-*.egg
-
-# Virtual environments
-venv/
-env/
-.venv/
-.env/
-*.env
-.env.example
-
-# Kilo worktrees
-.kilo/worktrees/
-
-# Node modules - regenerate with npm install
-node_modules/
-
-# Build outputs
-dist/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+site-packages/
+venv/
+ENV/
+.venv/
+env/
+.env
 *.log
-*.tsbuildinfo
 
-# OS files
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug*
+.npm
+
+# Frontend
+build/
+dist/
+.next/
+out/
+.nuxt/
+.vercel/
+
+# OS
 .DS_Store
 Thumbs.db
-Desktop.ini
+*.swp
+*.bak
+*.tmp
 
-# IDE and editor files
+# VS Code/JetBrains
 .vscode/
 .idea/
-*.code-workspace
 *.swp
 *.swo
-*~
-
-# Coverage reports
-.coverage
-htmlcov/
-.coverage.*
-
-# Sensitive files (API keys, passwords - do not track)
-.env
-*.env
-.env.example
-
-# Docs
-docs/api/BourseApi.txt
-docs/postgre.txt
-docs/BourseApi.txt
-docs/init_docs/BourseApi.txt
-docs/init_docs/postgre.txt
-
-# Frontend build artifacts and config files
-frontend/next-env.d.ts
-frontend/.next/
