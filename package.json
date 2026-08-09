@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "concurrently": "^8.2.0",
+    "next-i18next": "^16.0.10",
     "tinyglobby": "^0.2.17"
   },
   "devDependencies": {
