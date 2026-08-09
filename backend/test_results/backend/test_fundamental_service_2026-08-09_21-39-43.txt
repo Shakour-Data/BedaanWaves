@@ -1,0 +1,57 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: E:\Shakour\BedaanProjects\OldFils\BedaanWaves\backend
+configfile: pytest.ini
+plugins: anyio-4.14.2, dash-4.4.1, asyncio-1.4.0, cov-7.1.0, mock-3.15.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 36 items
+
+tests/test_fundamental_service.py::TestFundamentalAnalysisServiceInitialization::test_default_service_name PASSED [  2%]
+tests/test_fundamental_service.py::TestFundamentalAnalysisServiceInitialization::test_initialize_logs PASSED [  5%]
+tests/test_fundamental_service.py::TestFundamentalAnalysisServiceInitialization::test_shutdown_logs PASSED [  8%]
+tests/test_fundamental_service.py::TestAnalyze::test_empty_financials_returns_structure PASSED [ 11%]
+tests/test_fundamental_service.py::TestAnalyze::test_full_financials_returns_ratios PASSED [ 13%]
+tests/test_fundamental_service.py::TestValuationRatios::test_pe_ratio_basic PASSED [ 16%]
+tests/test_fundamental_service.py::TestValuationRatios::test_pe_ratio_zero_eps PASSED [ 19%]
+tests/test_fundamental_service.py::TestValuationRatios::test_pe_ratio_negative_eps PASSED [ 22%]
+tests/test_fundamental_service.py::TestValuationRatios::test_pb_ratio_basic PASSED [ 25%]
+tests/test_fundamental_service.py::TestValuationRatios::test_pb_ratio_zero_book_value PASSED [ 27%]
+tests/test_fundamental_service.py::TestValuationRatios::test_peg_ratio_basic PASSED [ 30%]
+tests/test_fundamental_service.py::TestValuationRatios::test_peg_ratio_zero_growth FAILED [ 33%]
+tests/test_fundamental_service.py::TestValuationRatios::test_payout_ratio_basic PASSED [ 36%]
+tests/test_fundamental_service.py::TestValuationRatios::test_payout_ratio_zero_earnings PASSED [ 38%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_gross_margin PASSED [ 41%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_gross_margin_zero_revenue PASSED [ 44%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_operating_margin PASSED [ 47%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_net_margin PASSED [ 50%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_roe PASSED [ 52%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_roe_zero_equity PASSED [ 55%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_roa PASSED [ 58%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_roa_zero_assets PASSED [ 61%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_roic PASSED [ 63%]
+tests/test_fundamental_service.py::TestProfitabilityRatios::test_roic_zero_invested_capital PASSED [ 66%]
+tests/test_fundamental_service.py::TestLiquidityRatios::test_current_ratio PASSED [ 69%]
+tests/test_fundamental_service.py::TestLiquidityRatios::test_current_ratio_zero_liabilities PASSED [ 72%]
+tests/test_fundamental_service.py::TestLiquidityRatios::test_quick_ratio PASSED [ 75%]
+tests/test_fundamental_service.py::TestLiquidityRatios::test_quick_ratio_zero_liabilities PASSED [ 77%]
+tests/test_fundamental_service.py::TestLiquidityRatios::test_cash_ratio PASSED [ 80%]
+tests/test_fundamental_service.py::TestLiquidityRatios::test_cash_ratio_zero_liabilities PASSED [ 83%]
+tests/test_fundamental_service.py::TestEfficiencyRatios::test_asset_turnover PASSED [ 86%]
+tests/test_fundamental_service.py::TestEfficiencyRatios::test_asset_turnover_zero_assets PASSED [ 88%]
+tests/test_fundamental_service.py::TestEfficiencyRatios::test_inventory_turnover PASSED [ 91%]
+tests/test_fundamental_service.py::TestEfficiencyRatios::test_inventory_turnover_zero_inventory PASSED [ 94%]
+tests/test_fundamental_service.py::TestEfficiencyRatios::test_receivables_turnover PASSED [ 97%]
+tests/test_fundamental_service.py::TestEfficiencyRatios::test_receivables_turnover_zero_ar PASSED [100%]
+
+================================== FAILURES ===================================
+_______________ TestValuationRatios.test_peg_ratio_zero_growth ________________
+tests\test_fundamental_service.py:104: in test_peg_ratio_zero_growth
+    assert service._calc_peg_ratio(financials) == 0.0
+E   AssertionError: assert 10.0 == 0.0
+E    +  where 10.0 = _calc_peg_ratio({'stock_price': 100.0, 'eps': 10.0, 'growth_rate': 0.0})
+E    +    where _calc_peg_ratio = <FundamentalAnalysisService: FundamentalAnalysisService>._calc_peg_ratio
+=========================== short test summary info ===========================
+FAILED tests/test_fundamental_service.py::TestValuationRatios::test_peg_ratio_zero_growth
+================== 1 failed, 35 passed, 3 warnings in 1.18s ===================
+
