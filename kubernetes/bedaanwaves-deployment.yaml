@@ -1,0 +1,360 @@
+# BedaanWaves Kubernetes Deployment
+# Deploy on any server supporting Kubernetes
+
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedaanwaves-backend
+  labels:
+    app: bedaanwaves
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: backend
+    spec:
+      containers:
+      - name: backend
+        image: bedaanwaves/backend:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: bedaanwaves-config
+        - secretRef:
+            name: bedaanwaves-secrets
+        resources:
+          limits:
+            memory: "2Gi"
+            cpu: "2"
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+        - name: models-volume
+          mountPath: /app/models
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: bedaanwaves-data-pvc
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: bedaanwaves-models-pvc
+      - name: logs-volume
+        persistentVolumeClail:
+          claimName: bedaanwaves-logs-pvc
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedaanwaves-frontend
+  labels:
+    app: bedaanwaves
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: bedaanwaves/frontend:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "http://bedaanwaves-backend:8000"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+          requests:
+            memory: "256Mi"
+            cpu: "0.5"
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedaanwaves-postgres
+  labels:
+    app: bedaanwaves
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "bedaanwaves"
+        - name: POSTGRES_USER
+          value: "bedaanwaves"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-db-secret
+              key: password
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: bedaanwaves-postgres-pvc
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedaanwaves-redis
+  labels:
+    app: bedaanwaves
+    tier: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: cache
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        command:
+        - redis-server
+        - --appendonly
+        - yes
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: bedaanwaves-redis-pvc
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: bedaanwaves-backend
+spec:
+  selector:
+    app: bedaanwaves
+    tier: backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bedaanwaves-frontend
+spec:
+  selector:
+    app: bedaanwaves
+    tier: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bedaanwaves-postgres
+spec:
+  selector:
+    app: bedaanwaves
+    tier: database
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bedaanwaves-redis
+spec:
+  selector:
+    app: bedaanwaves
+    tier: cache
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+---
+# ConfigMaps
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bedaanwaves-config
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  CACHE_BACKEND: "redis"
+  DB_DRIVER: "postgresql"
+---
+# Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bedaanwaves-secrets
+type: Opaque
+data:
+  JWT_SECRET: eW91ci1qd3Qtc2VjcmV0LWNoYW5nZS1pbi1wcm9kdWN0aW9u
+---
+# Secrets for Database
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bedaanwaves-db-secret
+type: Opaque
+data:
+  password: cG9zdGdyZXMxMjM=
+---
+# Persistent Volume Claims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bedaanwaves-postgres-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bedaanwaves-redis-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bedaanwaves-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bedaanwaves-models-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bedaanwaves-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bedaanwaves-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api.bedaanwaves.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bedaanwaves-backend
+            port:
+              number: 8000
+  - host: bedaanwaves.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bedaanwaves-frontend
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - bedaanwaves.com
+    - api.bedaanwaves.com
+    secretName: bedaanwaves-tls
