@@ -1,0 +1,289 @@
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Requirement already satisfied: fastapi>=0.104.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 4)) (0.141.1)
+Collecting uvicorn>=0.24.0 (from uvicorn[standard]>=0.24.0->-r requirements.txt (line 5))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c7/d5/68e6e9bca63c0badf67002890a46d3784c958de45b65e1275ec583ca1f06/uvicorn-0.52.1-py3-none-any.whl (79 kB)
+Requirement already satisfied: starlette>=0.27.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 6)) (1.6.0)
+Collecting python-multipart>=0.0.6 (from -r requirements.txt (line 7))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl (30 kB)
+Requirement already satisfied: sqlalchemy>=2.0.23 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 12)) (2.0.51)
+Collecting psycopg2-binary>=2.9.9 (from -r requirements.txt (line 13))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/42/ee/dee8dcaad07f735824de3d6563bc67119fa6c28257b17977a8d624f02fab/psycopg2_binary-2.9.12-cp313-cp313-win_amd64.whl (2.8 MB)
+     ---------------------------------------- 2.8/2.8 MB 750.4 kB/s  0:00:03
+Collecting asyncpg>=0.29.0 (from -r requirements.txt (line 14))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/91/66/b25ccb84a246b470eb943b0107c07edcae51804912b824054b3413995a10/asyncpg-0.31.0-cp313-cp313-win_amd64.whl (596 kB)
+     ---------------------------------------- 596.6/596.6 kB 13.7 MB/s  0:00:01
+Collecting alembic>=1.13.0 (from -r requirements.txt (line 15))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/20/89/e62cc37b69ad357cc8ecd6e7367f5245f523d3cbb338a66197212bdf6749/alembic-1.19.1-py3-none-any.whl (265 kB)
+Requirement already satisfied: pandas>=2.1.3 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 20)) (3.0.5)
+Requirement already satisfied: numpy>=1.26.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 21)) (2.5.2)
+Requirement already satisfied: scipy>=1.11.4 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 22)) (1.18.0)
+Collecting polars>=0.19.14 (from -r requirements.txt (line 23))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2b/fe/0888040a24e4504098b85d8ad486b14cb01cf6b030bbe479dfc2dcffc2ac/polars-1.43.2-py3-none-any.whl (847 kB)
+     ---------------------------------------- 847.1/847.1 kB 1.5 MB/s  0:00:00
+Collecting pyarrow>=14.0.0 (from -r requirements.txt (line 24))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7c/31/737f0c3cffcd6af647849477d1dd68045deac2e3963c3f9f211bedc48540/pyarrow-25.0.0-cp313-cp313-win_amd64.whl (27.9 MB)
+     ---------------------------------------- 27.9/27.9 MB 1.8 MB/s  0:00:15
+Requirement already satisfied: scikit-learn>=1.3.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 29)) (1.9.0)
+Collecting xgboost>=2.0.2 (from -r requirements.txt (line 30))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/89/97/838165ec9399aa5e6add044f05b64d877d45125adeda15869021b9e625ce/xgboost-3.4.0-py3-none-win_amd64.whl (48.9 MB)
+     ---------------------------------------- 48.9/48.9 MB 895.8 kB/s  0:00:59
+Requirement already satisfied: joblib>=1.3.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 31)) (1.5.3)
+Collecting statsmodels>=0.14.0 (from -r requirements.txt (line 36))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/98/08/b79f0c614f38e566eebbdcff90c0bcacf3c6ba7a5bbb12183c09c29ca400/statsmodels-0.14.6-cp313-cp313-win_amd64.whl (9.5 MB)
+     ---------------------------------------- 9.5/9.5 MB 984.0 kB/s  0:00:09
+Collecting hazm>=0.7.0 (from -r requirements.txt (line 41))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/14/85/02f95ca414a5d629239a3fde8f4134a2355dd023044219192e48562dee71/hazm-0.12.1-py3-none-any.whl (887 kB)
+     ---------------------------------------- 887.2/887.2 kB 1.5 MB/s  0:00:00
+Collecting nltk>=3.8.1 (from -r requirements.txt (line 42))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/1f/2b/bf677eb32ca6684b270c0d19ab133c2271e9f3375997e5a8dd2b08e3152d/nltk-3.10.2-py3-none-any.whl (1.7 MB)
+     ---------------------------------------- 1.7/1.7 MB 1.0 MB/s  0:00:01
+Collecting python-jose>=3.3.0 (from python-jose[cryptography]>=3.3.0->-r requirements.txt (line 47))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/d9/c3/0bd11992072e6a1c513b16500a5d07f91a24017c5909b02c72c62d7ad024/python_jose-3.5.0-py2.py3-none-any.whl (34 kB)
+Collecting passlib>=1.7.4 (from passlib[bcrypt]>=1.7.4->-r requirements.txt (line 48))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3b/a4/ab6b7589382ca3df236e03faa71deac88cae040af60c071a78d254a62172/passlib-1.7.4-py2.py3-none-any.whl (525 kB)
+     --------------------------------------- 525.6/525.6 kB 830.4 kB/s  0:00:00
+Requirement already satisfied: pydantic>=2.5.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 49)) (2.13.4)
+Requirement already satisfied: pydantic-settings>=2.1.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 50)) (2.15.0)
+Requirement already satisfied: python-dotenv>=1.0.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 51)) (1.2.2)
+Collecting cryptography>=41.0.7 (from -r requirements.txt (line 52))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/32/2e/c9db68a0c4bfa28e310707527c0ee3a2bd254104d2e02e68f368e197aa4c/cryptography-50.0.0-cp311-abi3-win_amd64.whl (3.8 MB)
+     ---------------------------------------- 3.8/3.8 MB 853.7 kB/s  0:00:04
+Collecting email-validator>=2.1.0 (from -r requirements.txt (line 57))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/de/15/545e2b6cf2e3be84bc1ed85613edd75b8aea69807a71c26f4ca6a9258e82/email_validator-2.3.0-py3-none-any.whl (35 kB)
+Collecting marshmallow>=3.20.1 (from -r requirements.txt (line 58))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/43/57/4526ca0e214a3d158690e3393f6d547a2f8070f88d6388ab21d5b0aac8a1/marshmallow-4.3.1-py3-none-any.whl (49 kB)
+Requirement already satisfied: aiohttp>=3.9.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 63)) (3.14.3)
+Requirement already satisfied: aiofiles>=23.2.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 64)) (25.1.0)
+Collecting redis>=5.0.1 (from -r requirements.txt (line 65))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/66/9d/c5731f6e3608663d4d3656fd8d3aecee8b509c3082818f5a13eae925baea/redis-8.1.0-py3-none-any.whl (560 kB)
+     --------------------------------------- 560.6/560.6 kB 886.9 kB/s  0:00:00
+Collecting requests>=2.31.0 (from -r requirements.txt (line 70))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl (73 kB)
+Requirement already satisfied: httpx>=0.25.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 71)) (0.28.1)
+Collecting beautifulsoup4>=4.12.2 (from -r requirements.txt (line 72))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/88/c6/92fcd42f1ba33e1184263f25bfabf3d27c383410470f169e4b8163bf9c17/beautifulsoup4-4.15.0-py3-none-any.whl (109 kB)
+Collecting lxml>=4.9.3 (from -r requirements.txt (line 73))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e6/99/f4ffb024f238eec2131aaa09f3278fb6129cf892741bf68e1fc1afb8c100/lxml-6.1.1-cp313-cp313-win_amd64.whl (4.0 MB)
+     ---------------------------------------- 4.0/4.0 MB 1.1 MB/s  0:00:03
+Collecting plotly>=5.18.0 (from -r requirements.txt (line 78))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/24/18/d8544811ab076f876c4892b3714f5b0dad335e1dc33aef826df431b8325d/plotly-6.9.0-py3-none-any.whl (9.9 MB)
+     ---------------------------------------- 9.9/9.9 MB 1.5 MB/s  0:00:06
+Collecting matplotlib>=3.8.2 (from -r requirements.txt (line 79))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/0d/3a/3d5e1f42dc761bf53401a62a83ff93389b37de9d2c093b2a3aa49ac34f1b/matplotlib-3.11.1-cp313-cp313-win_amd64.whl (9.3 MB)
+     ---------------------------------------- 9.3/9.3 MB 958.2 kB/s  0:00:09
+Collecting seaborn>=0.13.0 (from -r requirements.txt (line 80))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl (294 kB)
+Collecting pillow>=10.1.0 (from -r requirements.txt (line 81))
+  WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='pypi.tuna.tsinghua.edu.cn', port=443): Read timed out. (read timeout=15)")': /packages/a6/9b/7a58e61d62be561da3a356fe2384d4059a6345fc130e23ef1c36a5b81d24/pillow-12.3.0-cp313-cp313-win_amd64.whl
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a6/9b/7a58e61d62be561da3a356fe2384d4059a6345fc130e23ef1c36a5b81d24/pillow-12.3.0-cp313-cp313-win_amd64.whl (7.2 MB)
+     --                                       0.5/7.2 MB 455.2 kB/s eta 0:00:15
+  WARNING: Connection timed out while downloading.
+  WARNING: Attempting to resume incomplete download (524 kB/7.2 MB, attempt 1)
+  Resuming download https://pypi.tuna.tsinghua.edu.cn/packages/a6/9b/7a58e61d62be561da3a356fe2384d4059a6345fc130e23ef1c36a5b81d24/pillow-12.3.0-cp313-cp313-win_amd64.whl (524 kB/7.2 MB)
+     -----                                    1.0/7.2 MB 309.6 kB/s eta 0:00:20
+  WARNING: Connection timed out while downloading.
+  WARNING: Attempting to resume incomplete download (1.0 MB/7.2 MB, attempt 2)
+  Resuming download https://pypi.tuna.tsinghua.edu.cn/packages/a6/9b/7a58e61d62be561da3a356fe2384d4059a6345fc130e23ef1c36a5b81d24/pillow-12.3.0-cp313-cp313-win_amd64.whl (1.0 MB/7.2 MB)
+     ---------------------------------------- 7.2/7.2 MB 475.8 kB/s  0:00:13
+Requirement already satisfied: cachetools>=5.3.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 86)) (7.1.7)
+Collecting diskcache>=5.6.3 (from -r requirements.txt (line 87))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3f/27/4570e78fc0bf5ea0ca45eb1de3818a23787af9b390c0b0a0033a1b8236f9/diskcache-5.6.3-py3-none-any.whl (45 kB)
+Collecting memcache>=0.14.0 (from -r requirements.txt (line 88))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/d1/8a/335bbb909cf713c373ee44a580d6a8a6b370ae914e7b6c088ee06c0e1314/memcache-0.14.0-py3-none-any.whl (10 kB)
+Collecting python-json-logger>=2.0.7 (from -r requirements.txt (line 93))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/27/be/0631a861af4d1c875f096c07d34e9a63639560a717130e7a87cbc82b7e3f/python_json_logger-4.1.0-py3-none-any.whl (15 kB)
+Collecting prometheus-client>=0.19.0 (from -r requirements.txt (line 94))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/eb/a3/b69efbf4143b5b9859b977770bbbabcc2796b702fa69dc40271e45cd5a56/prometheus_client-0.26.0-py3-none-any.whl (64 kB)
+Collecting structlog>=23.2.0 (from -r requirements.txt (line 95))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a9/18/489c97b834dfff9cf2fc2507cede4bcd4b11e67f84bc462acd1992496f86/structlog-26.1.0-py3-none-any.whl (73 kB)
+Collecting rich>=13.7.0 (from -r requirements.txt (line 96))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl (310 kB)
+Collecting psutil>=5.9.8 (from -r requirements.txt (line 97))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b4/90/e2159492b5426be0c1fef7acba807a03511f97c5f86b3caeda6ad92351a7/psutil-7.2.2-cp37-abi3-win_amd64.whl (137 kB)
+Requirement already satisfied: python-dateutil>=2.8.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 102)) (2.9.0.post0)
+Collecting pytz>=2023.3 (from -r requirements.txt (line 103))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/0f/7b/39c34ca613b0b198cb866466651b26b045e2009864c5183c979a3b83f383/pytz-2026.3.post1-py2.py3-none-any.whl (508 kB)
+Collecting tzlocal>=5.2 (from -r requirements.txt (line 104))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9e/a4/017a7a6cbe387d961a688ec31364ae60a5c4e22c96ae9921b79a947c855d/tzlocal-5.4.4-py3-none-any.whl (18 kB)
+Collecting arrow>=1.3.0 (from -r requirements.txt (line 105))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ed/c9/d7977eaacb9df673210491da99e6a247e93df98c715fc43fd136ce1d3d33/arrow-1.4.0-py3-none-any.whl (68 kB)
+Collecting humanize>=4.9.0 (from -r requirements.txt (line 106))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b0/aa/0b7365d30fed43e7a3449aba1fe20a0a7174d9cf13e282af4e69ac825441/humanize-4.16.0-py3-none-any.whl (137 kB)
+Requirement already satisfied: pytest>=7.4.3 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 111)) (9.1.1)
+Requirement already satisfied: pytest-asyncio>=0.21.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 112)) (1.4.0)
+Requirement already satisfied: pytest-cov>=4.1.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 113)) (7.1.0)
+Requirement already satisfied: pytest-mock>=3.12.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 114)) (3.15.1)
+Requirement already satisfied: pytest-env>=1.1.3 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 115)) (1.7.0)
+Requirement already satisfied: faker>=21.0.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from -r requirements.txt (line 116)) (40.36.0)
+Collecting black>=23.12.0 (from -r requirements.txt (line 121))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/49/ad/b4e0d9365ba8ac34f6bbab62a4b1b2dd5d618fac3fa1b8db968c844201b5/black-26.5.1-cp313-cp313-win_amd64.whl (1.5 MB)
+     ---------------------------------------- 1.5/1.5 MB 240.6 kB/s  0:00:06
+Collecting flake8>=6.1.0 (from -r requirements.txt (line 122))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9f/56/13ab06b4f93ca7cac71078fbe37fcea175d3216f31f85c3168a6bbd0bb9a/flake8-7.3.0-py2.py3-none-any.whl (57 kB)
+Collecting isort>=5.13.2 (from -r requirements.txt (line 123))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3e/95/c7c34aa53c16353c56d0b802fba48d5f5caa2cdee7958acbcb795c830416/isort-8.0.1-py3-none-any.whl (89 kB)
+Collecting mypy>=1.7.1 (from -r requirements.txt (line 124))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c0/88/aaa65a93c73d0cdae7e42f8adb302bf6885bb281302084f99d0290a35347/mypy-2.3.0-cp313-cp313-win_amd64.whl (11.2 MB)
+     ---------------------------------------- 11.2/11.2 MB 417.6 kB/s  0:00:27
+Collecting pylint>=3.0.3 (from -r requirements.txt (line 125))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ab/da/acb2e7d4dbd2dfb792d38c0d850481f29ad7049b356d23f56c687d35203b/pylint-4.0.6-py3-none-any.whl (538 kB)
+     --------------------------------------- 538.4/538.4 kB 817.8 kB/s  0:00:00
+Collecting autopep8>=2.0.4 (from -r requirements.txt (line 126))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9e/43/53afb8ba17218f19b77c7834128566c5bbb100a0ad9ba2e8e89d089d7079/autopep8-2.3.2-py2.py3-none-any.whl (45 kB)
+Collecting bandit>=1.7.5 (from -r requirements.txt (line 127))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/05/a4/a26d5b25671d27e03afb5401a0be5899d94ff8fab6a698b1ac5be3ec29ef/bandit-1.9.4-py3-none-any.whl (134 kB)
+Collecting ipython>=8.18.1 (from -r requirements.txt (line 132))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/bc/8e/1239df488393d61076653bfb29f759d0f60cab8e030abdf7c17c31539b51/ipython-9.16.1-py3-none-any.whl (625 kB)
+     --------------------------------------- 626.0/626.0 kB 717.9 kB/s  0:00:00
+Collecting debugpy>=1.8.0 (from -r requirements.txt (line 133))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f8/99/9175103392f84c4b1bf7622888cdc68da07f0ff7d9e581266428f6776033/debugpy-1.8.21-cp313-cp313-win_amd64.whl (5.4 MB)
+     ---------------------------------------- 5.4/5.4 MB 844.7 kB/s  0:00:06
+Collecting ipdb>=0.13.13 (from -r requirements.txt (line 134))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/0c/4c/b075da0092003d9a55cf2ecc1cae9384a1ca4f650d51b00fc59875fe76f6/ipdb-0.13.13-py3-none-any.whl (12 kB)
+Collecting jupyter>=1.0.0 (from -r requirements.txt (line 135))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/38/64/285f20a31679bf547b75602702f7800e74dbabae36ef324f716c02804753/jupyter-1.1.1-py2.py3-none-any.whl (2.7 kB)
+Collecting jupyterlab>=4.0.9 (from -r requirements.txt (line 136))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/63/1f/e39b248c76bb3736bc05a9491a6aa1315414c32dea12f548ecc1b24c758e/jupyterlab-4.6.2-py3-none-any.whl (17.2 MB)
+     ---------------------------------------- 17.2/17.2 MB 947.2 kB/s  0:00:18
+Collecting environs>=10.3.0 (from -r requirements.txt (line 141))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/51/61/5e76e4827bb5fdbe42a88cf387ba1f875868e0e82e9768e2c25ca941d9ed/environs-15.1.0-py3-none-any.whl (17 kB)
+Requirement already satisfied: typing-extensions>=4.8.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from fastapi>=0.104.1->-r requirements.txt (line 4)) (4.16.0)
+Requirement already satisfied: typing-inspection>=0.4.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from fastapi>=0.104.1->-r requirements.txt (line 4)) (0.4.2)
+Requirement already satisfied: annotated-doc>=0.0.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from fastapi>=0.104.1->-r requirements.txt (line 4)) (0.0.5)
+Collecting click>=7.0 (from uvicorn>=0.24.0->uvicorn[standard]>=0.24.0->-r requirements.txt (line 5))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/fb/e2/79c688af8b210d232694e31e59da9f6ec747bae31c3f5946e4e9b98860d5/click-8.4.2-py3-none-any.whl (119 kB)
+Requirement already satisfied: h11>=0.8 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from uvicorn>=0.24.0->uvicorn[standard]>=0.24.0->-r requirements.txt (line 5)) (0.16.0)
+Requirement already satisfied: anyio<5,>=3.6.2 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from starlette>=0.27.0->-r requirements.txt (line 6)) (4.14.2)
+Requirement already satisfied: idna>=2.8 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from anyio<5,>=3.6.2->starlette>=0.27.0->-r requirements.txt (line 6)) (3.18)
+Requirement already satisfied: greenlet>=1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from sqlalchemy>=2.0.23->-r requirements.txt (line 12)) (3.5.4)
+Collecting Mako (from alembic>=1.13.0->-r requirements.txt (line 15))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a5/54/12ed58d458474aaab5c3d180173e745a4fe131bb330370596876d19ff60f/mako-1.4.1-py3-none-any.whl (80 kB)
+Requirement already satisfied: tzdata in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from pandas>=2.1.3->-r requirements.txt (line 20)) (2026.3)
+Collecting polars-runtime-32==1.43.2 (from polars>=0.19.14->-r requirements.txt (line 23))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/29/9e/647401ae8a607bc0cc40ed7b8592d5b1be90ded0dc9b9d6d3aeb03f9524b/polars_runtime_32-1.43.2-cp310-abi3-win_amd64.whl (52.6 MB)
+     ---------------------------------------- 52.6/52.6 MB 854.6 kB/s  0:01:01
+Requirement already satisfied: narwhals>=2.0.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from scikit-learn>=1.3.2->-r requirements.txt (line 29)) (2.24.0)
+Requirement already satisfied: threadpoolctl>=3.5.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from scikit-learn>=1.3.2->-r requirements.txt (line 29)) (3.6.0)
+Collecting patsy>=0.5.6 (from statsmodels>=0.14.0->-r requirements.txt (line 36))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f1/70/ba4b949bdc0490ab78d545459acd7702b211dfccf7eb89bbc1060f52818d/patsy-1.0.2-py2.py3-none-any.whl (233 kB)
+Requirement already satisfied: packaging>=21.3 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from statsmodels>=0.14.0->-r requirements.txt (line 36)) (26.3)
+Collecting flashtext<3.0,>=2.7 (from hazm>=0.7.0->-r requirements.txt (line 41))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/81/d8/2cd0656eae456d615c2f1efbcae8dfca2cb871a31f34ba8925aba47d5e09/flashtext-2.7.tar.gz (14 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting huggingface-hub>=0.25.0 (from hazm>=0.7.0->-r requirements.txt (line 41))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/de/d8/95b735e183957c1f26d94c52977f09d466d55119cbbc1558ea4975e4c216/huggingface_hub-1.27.0-py3-none-any.whl (784 kB)
+     ---------------------------------------- 784.9/784.9 kB 1.6 MB/s  0:00:00
+Collecting python-crfsuite<0.10.0,>=0.9.12 (from hazm>=0.7.0->-r requirements.txt (line 41))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7a/da/282120f8d88def791610ba8310413c6ae3002f945f008979c3e440a6ad88/python_crfsuite-0.9.12-cp313-cp313-win_amd64.whl (303 kB)
+Collecting tqdm<5.0.0,>=4.67.3 (from hazm>=0.7.0->-r requirements.txt (line 41))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f9/1c/01bfd571a64e7f270e6bab5e33777debe0edc56759233ce84f27dec92d14/tqdm-4.70.0-py3-none-any.whl (80 kB)
+Collecting defusedxml (from nltk>=3.8.1->-r requirements.txt (line 42))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl (25 kB)
+Collecting regex>=2021.8.3 (from nltk>=3.8.1->-r requirements.txt (line 42))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b2/80/a11de8404b7272b70acb45c1c05987cce60b45d5693da2e176f0e390d564/regex-2026.7.19-cp313-cp313-win_amd64.whl (277 kB)
+Requirement already satisfied: colorama in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from tqdm<5.0.0,>=4.67.3->hazm>=0.7.0->-r requirements.txt (line 41)) (0.4.6)
+Collecting ecdsa!=0.15 (from python-jose>=3.3.0->python-jose[cryptography]>=3.3.0->-r requirements.txt (line 47))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/51/79/119091c98e2bf49e24ed9f3ae69f816d715d2904aefa6a2baa039a2ba0b0/ecdsa-0.19.2-py2.py3-none-any.whl (150 kB)
+Collecting rsa!=4.1.1,!=4.4,<5.0,>=4.0 (from python-jose>=3.3.0->python-jose[cryptography]>=3.3.0->-r requirements.txt (line 47))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/64/8d/0133e4eb4beed9e425d9a98ed6e081a55d195481b7632472be1af08d2f6b/rsa-4.9.1-py3-none-any.whl (34 kB)
+Collecting pyasn1>=0.5.0 (from python-jose>=3.3.0->python-jose[cryptography]>=3.3.0->-r requirements.txt (line 47))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9a/3b/6163796d69c3977d1e4287bea4a6979161cbbdd170ebb430511e8e1999ce/pyasn1-0.6.4-py3-none-any.whl (84 kB)
+Requirement already satisfied: annotated-types>=0.6.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from pydantic>=2.5.0->-r requirements.txt (line 49)) (0.8.0)
+Requirement already satisfied: pydantic-core==2.46.4 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from pydantic>=2.5.0->-r requirements.txt (line 49)) (2.46.4)
+Collecting cffi>=2.0.0 (from cryptography>=41.0.7->-r requirements.txt (line 52))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/60/a6/8b149b2c3f2e11aaa1618ef64500b45f50f22c57a977a4dff1aff1f91042/cffi-2.1.1-cp313-cp313-win_amd64.whl (185 kB)
+Collecting dnspython>=2.0.0 (from email-validator>=2.1.0->-r requirements.txt (line 57))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ba/5a/18ad964b0086c6e62e2e7500f7edc89e3faa45033c71c1893d34eed2b2de/dnspython-2.8.0-py3-none-any.whl (331 kB)
+Requirement already satisfied: aiohappyeyeballs>=2.5.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (2.7.1)
+Requirement already satisfied: aiosignal>=1.4.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (1.4.0)
+Requirement already satisfied: attrs>=17.3.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (26.1.0)
+Requirement already satisfied: frozenlist>=1.1.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (1.8.0)
+Requirement already satisfied: multidict<7.0,>=4.5 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (6.7.1)
+Requirement already satisfied: propcache>=0.2.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (0.5.2)
+Requirement already satisfied: yarl<2.0,>=1.17.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from aiohttp>=3.9.1->-r requirements.txt (line 63)) (1.24.5)
+Collecting charset_normalizer<4,>=2 (from requests>=2.31.0->-r requirements.txt (line 70))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e8/ef/6953a77c7cf2c2ff9998e6f575ab3e380119f100223381565a4f94c1f836/charset_normalizer-3.4.9-cp313-cp313-win_amd64.whl (161 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.31.0->-r requirements.txt (line 70))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7f/3e/5db95bcf282c52709639744ca2a8b149baccf648e39c8cc87553df9eae0c/urllib3-2.7.0-py3-none-any.whl (131 kB)
+Requirement already satisfied: certifi>=2023.5.7 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from requests>=2.31.0->-r requirements.txt (line 70)) (2026.7.22)
+Requirement already satisfied: httpcore==1.* in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from httpx>=0.25.2->-r requirements.txt (line 71)) (1.0.9)
+Collecting soupsieve>=1.6.1 (from beautifulsoup4>=4.12.2->-r requirements.txt (line 72))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/eb/dc/ad025c1ee131eba60c69f4dd5779b18fcf1e6b21a343e2162a84d5d133c7/soupsieve-2.9.2-py3-none-any.whl (37 kB)
+Collecting contourpy>=1.0.1 (from matplotlib>=3.8.2->-r requirements.txt (line 79))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/18/0b/0098c214843213759692cc638fce7de5c289200a830e5035d1791d7a2338/contourpy-1.3.3-cp313-cp313-win_amd64.whl (226 kB)
+Collecting cycler>=0.10 (from matplotlib>=3.8.2->-r requirements.txt (line 79))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl (8.3 kB)
+Collecting fonttools>=4.28.2 (from matplotlib>=3.8.2->-r requirements.txt (line 79))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/92/46/5177b01f3b4abfdd4409f31cca4ab279c9343a26efbe9ec78c97fc612e02/fonttools-4.63.0-cp313-cp313-win_amd64.whl (2.3 MB)
+     ---------------------------------------- 2.3/2.3 MB 560.8 kB/s  0:00:04
+Collecting kiwisolver>=1.3.1 (from matplotlib>=3.8.2->-r requirements.txt (line 79))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/be/8a/be60e3bbcf513cc5a50f4a3e88e1dcecebb79c1ad607a7222877becaa101/kiwisolver-1.5.0-cp313-cp313-win_amd64.whl (73 kB)
+Collecting pyparsing>=3 (from matplotlib>=3.8.2->-r requirements.txt (line 79))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl (122 kB)
+Collecting anyio<5,>=3.6.2 (from starlette>=0.27.0->-r requirements.txt (line 6))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/19/24/44299477fe7dcc9cb58d0a57d5a7588d6af2ff403fdd2d47a246c91a3246/anyio-3.7.1-py3-none-any.whl (80 kB)
+Collecting hashring<2,>=1.5.1 (from memcache>=0.14.0->-r requirements.txt (line 88))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f4/00/40ab731853b68b74dad64e6a7baf4959e920fea1a2e780212694f91b76cd/hashring-1.5.1-py2.py3-none-any.whl (5.9 kB)
+Collecting sniffio>=1.1 (from anyio<5,>=3.6.2->starlette>=0.27.0->-r requirements.txt (line 6))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl (10 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=13.7.0->-r requirements.txt (line 96))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Requirement already satisfied: pygments<3.0.0,>=2.13.0 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from rich>=13.7.0->-r requirements.txt (line 96)) (2.20.0)
+Requirement already satisfied: six>=1.5 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from python-dateutil>=2.8.2->-r requirements.txt (line 102)) (1.17.0)
+Requirement already satisfied: iniconfig>=1.0.1 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from pytest>=7.4.3->-r requirements.txt (line 111)) (2.3.0)
+Requirement already satisfied: pluggy<2,>=1.5 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from pytest>=7.4.3->-r requirements.txt (line 111)) (1.6.0)
+Requirement already satisfied: coverage>=7.10.6 in e:\shakour\bedaanprojects\oldfils\bedaanwaves\backend\.venv\lib\site-packages (from coverage[toml]>=7.10.6->pytest-cov>=4.1.0->-r requirements.txt (line 113)) (7.15.4)
+Collecting mypy-extensions>=0.4.3 (from black>=23.12.0->-r requirements.txt (line 121))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+Collecting pathspec>=1.0.0 (from black>=23.12.0->-r requirements.txt (line 121))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl (57 kB)
+Collecting platformdirs>=2 (from black>=23.12.0->-r requirements.txt (line 121))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4c/85/9b31b44296cfa3bb56cddb35e6a0f6578bab0b490c0806c0245e32c6110c/platformdirs-4.11.1-py3-none-any.whl (23 kB)
+Collecting pytokens~=0.4.0 (from black>=23.12.0->-r requirements.txt (line 121))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a7/c9/c3161313b4ca0c601eeefabd3d3b576edaa9afdefd32da97210700e47652/pytokens-0.4.1-cp313-cp313-win_amd64.whl (103 kB)
+Collecting mccabe<0.8.0,>=0.7.0 (from flake8>=6.1.0->-r requirements.txt (line 122))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/27/1a/1f68f9ba0c207934b35b86a8ca3aad8395a3d6dd7921c0686e23853ff5a9/mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+Collecting pycodestyle<2.15.0,>=2.14.0 (from flake8>=6.1.0->-r requirements.txt (line 122))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/d7/27/a58ddaf8c588a3ef080db9d0b7e0b97215cee3a45df74f3a94dbbf5c893a/pycodestyle-2.14.0-py2.py3-none-any.whl (31 kB)
+Collecting pyflakes<3.5.0,>=3.4.0 (from flake8>=6.1.0->-r requirements.txt (line 122))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c2/2f/81d580a0fb83baeb066698975cb14a618bdbed7720678566f1b046a95fe8/pyflakes-3.4.0-py2.py3-none-any.whl (63 kB)
+Collecting librt>=0.13.0 (from mypy>=1.7.1->-r requirements.txt (line 124))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/bf/af/64aff4885a40b93132382f2c314647d722574605416504379184ef3045ea/librt-0.15.0-cp313-cp313-win_amd64.whl (126 kB)
+Collecting ast-serialize<1.0.0,>=0.6.0 (from mypy>=1.7.1->-r requirements.txt (line 124))
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl (1.1 MB)
+                                              0.0/1.1 MB ? eta -:--:--
+  WARNING: Connection timed out while downloading.
+  WARNING: Attempting to resume incomplete download (0 bytes/1.1 MB, attempt 1)
+  WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A53AC550>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C74E10>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C75090>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C75310>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C74B90>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Attempting to resume incomplete download (0 bytes/1.1 MB, attempt 2)
+  WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C756D0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C75BD0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C75E50>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C760D0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C76350>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Attempting to resume incomplete download (0 bytes/1.1 MB, attempt 3)
+  WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C765D0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C76AD0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C76D50>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C76FD0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C77250>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Attempting to resume incomplete download (0 bytes/1.1 MB, attempt 4)
+  WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C774D0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C779D0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C77C50>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A8C77ED0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A9324190>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Attempting to resume incomplete download (0 bytes/1.1 MB, attempt 5)
+  WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A9324410>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A9324910>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A9324B90>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
+  WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x000001E4A9324E10>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl
