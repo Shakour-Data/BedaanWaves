@@ -1,0 +1,91 @@
+# BedaanWaves Docker Compose Configuration
+# Deploy on any server supporting Docker
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: bedaanwaves-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - bedaanwaves-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bedaanwaves-frontend
+    restart: always
+    ports:
+      - "80:80"
+    env_file:
+      - .env
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - bedaanwaves-net
+
+  postgres:
+    image: postgres:13
+    container_name: bedaanwaves-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=bedaanwaves
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bedaanwaves-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: bedaanwaves-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - bedaanwaves-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: bedaanwaves-pgadmin
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@bedaanwaves.com
+      - PGADMIN_DEFAULT_PASSWORD=Bedaan123!
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - bedaanwaves-net
+
+networks:
+  bedaanwaves-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
