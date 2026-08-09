@@ -40,7 +40,7 @@ export default function AlertsPage() {
 
         // Build alerts from signals
         const alerts: SignalRow[] = [];
-        if (summaryRes.status === "success") {
+        if (summaryRes.status === "success" as const) {
           const signalTypes = Object.entries(summaryRes.data?.summary ?? {})
             .filter(([, count]) => Number(count) > 0)
             .sort(([, a], [, b]) => Number(b) - Number(a));
