@@ -51,15 +51,16 @@ async def populate_database():
             print(f"Existing assets: {count}")
 
             if count > 0:
-                await session.execute("DELETE FROM raw_market_data")
-                await session.execute("DELETE FROM market_data_snapshots")
-                await session.execute("DELETE FROM news")
-                await session.execute("DELETE FROM ir_financial_statements")
-                await session.execute("DELETE FROM ml_signals")
-                await session.execute("DELETE FROM crypto_price_candles")
-                await session.execute("DELETE FROM intl_price_candles")
-                await session.execute("DELETE FROM ir_price_candles")
-                await session.execute("DELETE FROM price_candles")
+                from sqlalchemy import text
+                await session.execute(text("DELETE FROM raw_market_data"))
+                await session.execute(text("DELETE FROM market_data_snapshots"))
+                await session.execute(text("DELETE FROM news"))
+                await session.execute(text("DELETE FROM ir_financial_statements"))
+                await session.execute(text("DELETE FROM ml_signals"))
+                await session.execute(text("DELETE FROM crypto_price_candles"))
+                await session.execute(text("DELETE FROM intl_price_candles"))
+                await session.execute(text("DELETE FROM ir_price_candles"))
+                await session.execute(text("DELETE FROM price_candles"))
                 print("Cleared existing data tables")
 
             # Get all assets
