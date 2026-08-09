@@ -40,13 +40,13 @@ export default function AlertsPage() {
 
         // Build alerts from signals
         const alerts: SignalRow[] = [];
-        if (summaryRes.status === "success" as const) {
+        if (summaryRes.data?.status === "success") {
           const signalTypes = Object.entries(summaryRes.data?.summary ?? {})
             .filter(([, count]) => Number(count) > 0)
             .sort(([, a], [, b]) => Number(b) - Number(a));
 
           for (const [type, count] of signalTypes) {
-            const typeSymbols = (summaryRes.data?.sample_symbols || {} as Record<string, string[]>)[type] || [];
+            const typeSymbols = ((summaryRes.data as any)?.sample_symbols || {} as Record<string, string[]>)[type] || [];
             for (const symbol of typeSymbols.slice(0, 3)) {
               alerts.push({
                 symbol,
@@ -60,7 +60,8 @@ export default function AlertsPage() {
         setActiveAlerts(alerts.slice(0, 15));
 
         // Build watchlist alerts from default watchlist
-        const defaultWatchlist = watchlistsRes?.find((w) => w.is_default);
+        const watchlists = watchlistsRes.data || [];
+        const defaultWatchlist = watchlists.find((w: any) => w.is_default);
         if (defaultWatchlist?.items?.length) {
           const symbols = defaultWatchlist.items.map((item: any) => item.asset?.symbol).filter(Boolean);
           if (symbols.length) {
@@ -83,7 +84,8 @@ export default function AlertsPage() {
         }
 
         // Build notification history
-        const history = (notificationsRes || [])
+        const notifications = notificationsRes.data || [];
+        const history = notifications
           .filter((n: any) => n.type === "ALERT" || n.type === "SIGNAL" || n.title?.includes("هشدار"))
           .slice(0, 10)
           .map((n: any) => ({
