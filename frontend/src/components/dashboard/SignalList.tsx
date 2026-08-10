@@ -18,11 +18,11 @@ export function SignalList({ signals }: { signals: SignalRow[] }) {
     <ul className="flex flex-col gap-2">
       {signals.map((s) => (
         <li key={`${s.symbol}-${s.model}`} className="flex items-center gap-3">
-          <span className="w-16 font-semibold">{s.symbol}</span>
+          <span className="w-16 font-semibold text-sm text-primary">{s.symbol}</span>
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", TYPE_STYLE[s.type])}>
             {TYPE_LABEL[s.type]}
           </span>
-          <span className="text-sm text-muted-foreground">اطمینان {s.confidence.toFixed(1)}٪</span>
+          <span className="text-sm text-muted-foreground">اطمینان {Math.max(0, Math.min(100, s.confidence)).toFixed(1)}٪</span>
           <span className="ms-auto truncate text-xs text-muted-foreground">{s.model}</span>
         </li>
       ))}
