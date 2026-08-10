@@ -63,15 +63,21 @@ class DatabaseService(BaseService):
     async def initialize(self) -> None:
         """Initialize database service"""
         try:
-            if self.async_mode:
-                self.engine = create_async_engine(
-                    self.database_url,
-                    echo=self.echo,
-                    pool_size=self.pool_size,
-                    max_overflow=self.max_overflow,
-                    pool_pre_ping=True,
-                    pool_recycle=3600,
-                )
+        if self.async_mode:
+            # Use asyncpg driver for async mode
+            if self.database_url.startswith("postgresql://"):
+                db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
+            else:
+                db_url = self.database_url
+            
+            self.engine = create_async_engine(
+                db_url,
+                echo=self.echo,
+                pool_size=self.pool_size,
+                max_overflow=self.max_overflow,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+            )
                 self.session_factory = async_sessionmaker(
                     self.engine,
                     class_=AsyncSession,
