@@ -23,7 +23,9 @@ export function useSSE<T = unknown>(
   const connectionRef = useRef<ReturnType<typeof createSSEConnection<T>> | null>(null);
   const optionsRef = useRef(options);
 
-  optionsRef.current = options;
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const handleMessage = useCallback((event: SSEEvent<T>) => {
     setData(event.data);
