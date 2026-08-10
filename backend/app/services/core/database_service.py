@@ -6,7 +6,7 @@ Integrates with SQLAlchemy for ORM functionality.
 """
 
 from typing import Any, Dict, Optional, List, AsyncGenerator
-from sqlalchemy import create_engine, event, pool
+from sqlalchemy import create_engine, event, pool, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -63,21 +63,21 @@ class DatabaseService(BaseService):
     async def initialize(self) -> None:
         """Initialize database service"""
         try:
-        if self.async_mode:
-            # Use asyncpg driver for async mode
-            if self.database_url.startswith("postgresql://"):
-                db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
-            else:
-                db_url = self.database_url
-            
-            self.engine = create_async_engine(
-                db_url,
-                echo=self.echo,
-                pool_size=self.pool_size,
-                max_overflow=self.max_overflow,
-                pool_pre_ping=True,
-                pool_recycle=3600,
-            )
+            if self.async_mode:
+                # Use asyncpg driver for async mode
+                if self.database_url.startswith("postgresql://"):
+                    db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
+                else:
+                    db_url = self.database_url
+                
+                self.engine = create_async_engine(
+                    db_url,
+                    echo=self.echo,
+                    pool_size=self.pool_size,
+                    max_overflow=self.max_overflow,
+                    pool_pre_ping=True,
+                    pool_recycle=3600,
+                )
                 self.session_factory = async_sessionmaker(
                     self.engine,
                     class_=AsyncSession,
@@ -163,10 +163,10 @@ class DatabaseService(BaseService):
             # Try to get a connection from pool
             if self.async_mode and self.engine:
                 async with self.engine.connect() as conn:
-                    await conn.execute("SELECT 1")
+                    await conn.execute(text("SELECT 1"))
             elif self.engine:
                 with self.engine.connect() as conn:
-                    conn.execute("SELECT 1")
+                    conn.execute(text("SELECT 1"))
             
             return {
                 "service": self.service_name,
