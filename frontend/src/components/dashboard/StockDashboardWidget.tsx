@@ -1,114 +1,162 @@
 "use client";
 
-import { useSSELatest } from '@/hooks/useSSE';
+import { useEffect, useState } from 'react';
 import { exportData } from '@/lib/export';
-import { buildGraphQLQuery, executeGraphQLQuery } from '@/lib/graphql';
+import { Asset, fetchSymbols, fetchLatestPrices, LatestPrice } from '@/lib/api/stocks';
 
-interface StockData {
-  symbol: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  marketCap: number;
-}
+type PriceMap = Record<string, LatestPrice>;
 
 export function StockDashboardWidget() {
-  const realTimePrice = useSSELatest<StockData>('stock_dashboard', '/stocks/events', {
-    onMessage: (event) => {
-      console.log('Real-time stock update:', event.data);
-    },
-  });
+  const [symbols, setSymbols] = useState<Asset[]>([]);
+  const [prices, setPrices] = useState<PriceMap>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const sampleData = [
-    { symbol: 'AAPL', price: 150.25, change: 1.5, changePercent: 1.0, volume: 1000000, marketCap: 2300000000000 },
-    { symbol: 'GOOGL', price: 2800.75, change: -12.3, changePercent: -0.44, volume: 800000, marketCap: 1800000000000 },
-    { symbol: 'MSFT', price: 320.50, change: 8.2, changePercent: 2.62, volume: 1500000, marketCap: 2400000000000 },
-    { symbol: 'AMZN', price: 145.30, change: -2.1, changePercent: -1.43, volume: 900000, marketCap: 1500000000000 },
-    { symbol: 'TSLA', price: 245.80, change: 15.3, changePercent: 6.26, volume: 2000000, marketCap: 700000000000 },
-  ];
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch symbols first
+        const symbolsData = await fetchSymbols({ limit: 20 });
+        setSymbols(symbolsData);
 
-  const handleExport = () => {
-    exportData(sampleData, {
-      filename: `stock-data-${Date.now()}`, 
-      format: 'csv',
-      includeHeaders: true,
-    });
+        if (symbolsData.length > 0) {
+          const priceData = await fetchLatestPrices(symbolsData.map((s) => s.symbol));
+          setPrices(priceData || {});
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    // Set up auto-refresh every 30 seconds for real-time updates
+    const interval = window.setInterval(loadData, 30000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const getMarketLabel = (symbol: string): string => {
+    const price = prices[symbol];
+    return price ? price.symbol : 'TSE';
   };
 
-  const handleExportExcel = () => {
-    exportData(sampleData, {
-      filename: `stock-data-${Date.now()}`, 
-      format: 'xlsx',
-      includeHeaders: true,
-    });
+  const getChangeColor = (changePercent: number): string => {
+    return changePercent >= 0 ? 'text-green-600' : 'text-red-600';
   };
 
-  const handleExportJSON = () => {
-    exportData(sampleData, {
-      filename: `stock-data-${Date.now()}`, 
-      format: 'json',
-      includeHeaders: true,
-    });
+  const getChangeIcon = (changePercent: number): string => {
+    return changePercent >= 0 ? '▲' : '▼';
+  };
+
+  const handleExport = (format: 'csv' | 'xlsx' | 'json') => {
+    try {
+      const timestamp = new Date().toISOString().toLocaleString('fa-IR', {
+        timeZone: 'Asia/Tehran',
+        formatStyle: 'date',
+      });
+      
+      const filename = `stock-data-${timestamp.replace(/:/g, '-')}.${format}`;
+      
+      const dataToExport = symbols.map((symbol) => {
+        const price = prices[symbol.symbol];
+        return {
+          symbol: symbol.symbol,
+          name: symbol.name,
+          market: symbol.market,
+          price: price ? price.price : 0,
+          change_pct: price ? price.change_pct : 0,
+          volume: price ? price.volume : 0,
+        };
+      });
+      
+      exportData(dataToExport, {
+        filename,
+        format,
+        includeHeaders: true,
+      });
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
   };
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Live Stock Dashboard</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Market Dashboard</h2>
         <div className="flex items-center space-x-2">
-          <div className={`h-2 w-2 rounded-full ${realTimePrice ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`h-2 w-2 rounded-full ${loading ? 'bg-blue-500' : 'bg-green-500'}`} />
           <span className="text-sm text-gray-600">
-            {realTimePrice ? 'Connected' : 'Disconnected'}
+            {loading ? 'Loading market data' : 'Market Live'}
           </span>
         </div>
       </div>
 
+      {error && (
+        <div className="p-3 mb-3 text-red-600 bg-red-50 border border-red-200 rounded">
+          Error: {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {sampleData.map((stock) => (
-          <div key={stock.symbol} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start">
-              <h3 className="font-semibold text-gray-900">{stock.symbol}</h3>
-              <span className={`text-sm ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}
-              </span>
+        {symbols.map((symbol) => {
+          const price = prices[symbol.symbol];
+          const displayPrice = price ? price.price.toFixed(2) : '--';
+          const changePct = price ? price.change_pct : 0;
+
+          return (
+            <div key={symbol.symbol} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start">
+                <h3 className="font-semibold text-gray-900">{symbol.symbol}</h3>
+                <span className={`text-sm ${getChangeColor(changePct)}`}>
+                  {getChangeIcon(changePct) } {changePct.toFixed(2)}%
+                </span>
+              </div>
+              <div className="mt-2">
+                <p className="text-2xl font-bold text-gray-900">${displayPrice}</p>
+                <p className={`text-sm ${getChangeColor(changePct)}`}>
+                  {price ? price.change.toFixed(2) : '--'}% {getMarketLabel(symbol.symbol)}
+                </p>
+              </div>
+              <div className="mt-3 text-xs text-gray-500">
+                <p>Volume: {price ? price.volume.toLocaleString() : 'N/A'}</p>
+                <p>Symbol: {symbol.symbol}</p>
+              </div>
             </div>
-            <div className="mt-2">
-              <p className="text-2xl font-bold text-gray-900">
-                ${stock.price.toFixed(2)}
-              </p>
-              <p className={`text-sm ${stock.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-              </p>
-            </div>
-            <div className="mt-3 text-xs text-gray-500">
-              <p>Volume: {stock.volume.toLocaleString()}</p>
-              <p>Market Cap: ${(stock.marketCap / 1e9).toFixed(1)}B</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 flex justify-between items-center">
         <div className="text-sm text-gray-600">
-          Last Update: {realTimePrice ? new Date().toLocaleTimeString() : 'No data'}
+          Last Update: {loading ? 'Real-time' : new Date().toLocaleTimeString('fa-IR', {
+            timeZone: 'Asia/Tehran',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </div>
         <div className="flex space-x-2">
           <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            onClick={() => handleExport('csv')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex-1"
           >
             Export CSV
           </button>
           <button
-            onClick={handleExportExcel}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            onClick={() => handleExport('xlsx')}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex-1"
           >
             Export Excel
           </button>
           <button
-            onClick={handleExportJSON}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+            onClick={() => handleExport('json')}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex-1"
           >
             Export JSON
           </button>
