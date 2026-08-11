@@ -1,0 +1,11 @@
+INFO:     Will watch for changes in these directories: ['E:\\Shakour\\BedaanProjects\\OldFils\\BedaanWaves']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [24664] using StatReload
+INFO:     Started server process [18608]
+INFO:     Waiting for application startup.
+2026-08-11 04:52:26,666 - app.main - INFO - Starting BedaanWaves application...
+2026-08-11 04:52:26,667 - DependencyContainer - INFO - Initializing all services...
+2026-08-11 04:52:26,668 - DependencyContainer - INFO - All services initialized
+2026-08-11 04:52:26,669 - app.main - INFO - Registered core services in dependency container
+2026-08-11 04:52:27,276 - app.main - INFO - Registered all API routes
+INFO:     Application startup complete.
