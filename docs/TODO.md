@@ -1,41 +1,42 @@
-## Pending Tasks for BedaanWaves
+## Prioritized Todo List for BedaanWaves
 
-1. **Final Documentation**
-   - Update API documentation for all services
-   - Write user manuals for frontend/backend interfaces
-   - Document database schema and data models
+### 1. Environment Setup (CRITICAL)
+- [ ] Configure `.env` with production-ready settings (timezone, database credentials, API keys)
+- [ ] Initialize PostgreSQL database with sample data (100+ test records)
+- [ ] Deploy local Redis cache instance
 
-2. **Testing**
-   - Implement unit tests for core services
-   - Run integration tests for critical workflows
-   - Add test coverage reports
+### 2. Testing (CRITICAL)
+- [ ] Write unit tests for core services (DatabaseService, ConfigService)
+- [ ] Implement integration tests for payment flows
+- [ ] Run end-to-end tests for user onboarding
+- [ ] Generate test coverage reports (target 85%+)
 
-3. **Environment Setup**
-   - Configure .env file with production-ready settings
-   - Set up local database with sample data
-   - Configure cache providers (Redis/Memcached)
+### 3. Deployment (HIGH)
+- [ ] Write Docker-free deployment scripts (local/remote)
+- [ ] Set up CI/CD pipeline (GitHub Actions)
+- [ ] Configure domain name and SSL certificates
 
-4. **Monitoring & Logging**
-   - Implement health check endpoints
-   - Set up centralized logging
-   - Configure alerting for errors
+### 4. Documentation (MEDIUM)
+- [ ] Finalize API documentation (Swagger/OpenAPI specs)
+- [ ] Write user manuals for admin dashboard
+- [ ] Document database backup/restore procedures
 
-5. **Deployment**
-   - Write deployment scripts for local/remote
-   - Document rollback procedures
-   - Set up CI/CD pipeline
+### 5. Monitoring & Logging (MEDIUM-HIGH)
+- [ ] Implement health check endpoints for all services
+- [ ] Set up centralized logging (ELK stack)
+- [ ] Configure error alerts via email/SMS
 
-6. **Code Review**
-   - Final review of all service implementations
-   - Optimize performance bottlenecks
-   - Refactor redundant code
+### 6. Compliance (HIGH)
+- [ ] Validate GDPR/IR data handling practices
+- [ ] Document security audit trail
+- [ ] Conduct penetration testing
 
-7. **Compliance**
-   - Validate data privacy measures
-   - Document security practices
-   - Ensure GDPR/IR regulations compliance
+### 7. Code Review (MEDIUM)
+- [ ] Optimize performance bottlenecks in scan service
+- [ ] Refactor redundant code in financial data modules
+- [ ] Final refactoring pass for high-risk components
 
-8. **Utilities**
-   - Add monitoring dashboard
-   - Implement data export/import tools
-   - Create API versioning system
+### 8. Utilities (LOW)
+- [ ] Add monitoring dashboard (real-time metrics)
+- [ ] Implement data export/import API
+- [ ] Create API versioning system (v1/v2)
