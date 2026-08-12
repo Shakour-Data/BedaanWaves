@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 import logging
 
-from app.api.dependencies import get_current_admin_user
+from app.api.dependencies import get_current_admin_user, get_health_checker
 from app.services.core.dependency_container import get_global_container
 from app.services.system.scheduler_service import SchedulerService
 from app.services.system.metrics_service import MetricsService
@@ -16,6 +16,11 @@ router = APIRouter(
     prefix="/system",
     tags=["system"],
     dependencies=[Depends(get_current_admin_user)],
+)
+
+health_router = APIRouter(
+    prefix="/health",
+    tags=["health"],
 )
 
 
@@ -29,9 +34,6 @@ def _get_metrics() -> MetricsService:
 
 def _get_queue() -> QueueService:
     return get_global_container().get("queue")
-
-
-# ---- Scheduler Endpoints ----
 
 @router.get("/scheduler/jobs")
 async def list_scheduler_jobs() -> dict:
