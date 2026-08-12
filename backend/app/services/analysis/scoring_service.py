@@ -90,10 +90,11 @@ class ScoringService(AnalysisService):
             {"id": "d9", "name": "fundamental_profitability", "group": "fundamental", "weight": 0.07},
             {"id": "d10", "name": "fundamental_efficiency", "group": "fundamental", "weight": 0.07},
             {"id": "d11", "name": "fundamental_valuation", "group": "fundamental", "weight": 0.07},
-            {"id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
+            {
+            "id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
         ]
         
-sub_dim_map = {
+        sub_dim_map = {
             "d1": ["price_history", "ohlcv", "corporate_actions"],
             "d2": ["moving_averages", "momentum", "volatility", "volume", "trend"],
             "d3": ["news_sentiment", "social_sentiment", "analyst_sentiment"],
