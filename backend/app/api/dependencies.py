@@ -13,6 +13,8 @@ from app.db.base import async_session_maker
 from app.models.models import User
 from app.schemas.schemas import TokenData
 from app.services.user.authorization_service import authorization_service
+from app.services.core.health_checker import HealthChecker
+from app.services.core.dependency_container import get_global_container
 
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -108,4 +110,10 @@ async def get_route_user_id(request: Request) -> uuid.UUID:
     if user_id is not None:
         return uuid.UUID(str(user_id))
     return uuid.UUID(settings.DEV_USER_ID)
+
+
+def get_health_checker() -> HealthChecker:
+    """Get the global health checker instance."""
+    container = get_global_container()
+    return container.get("health_checker")
 
