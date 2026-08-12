@@ -342,7 +342,7 @@ class FundamentalAnalysisService(AnalysisService):
 
     def _calc_peg_ratio(self, f: Dict[str, Any]) -> float:
         pe_ratio = self._calc_pe_ratio(f)
-        growth_rate = f.get("growth_rate", 1) or 1
+        growth_rate = f.get("growth_rate", 0) or 0
         if growth_rate <= 0 or pe_ratio <= 0:
             return 0.0
         return pe_ratio / growth_rate
