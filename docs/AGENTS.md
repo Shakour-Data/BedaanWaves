@@ -131,6 +131,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 ```bash
 # Python 3.11+
 # PostgreSQL running locally on port 5432
+# Redis running locally on port 6379
 # Virtual environment activated
 ```
 
@@ -150,123 +151,32 @@ cd backend
 pip install -e .  # Install from pyproject.toml
 ```
 
-### Environment
+### Environment Configuration
 Create `.env` in backend directory:
 ```env
-ENVIRONMENT=development
-DEBUG=true
+# Application Environment
+ENVIRONMENT=production
+DEBUG=false
 LOG_LEVEL=INFO
 
+# Database Configuration
 DB_DRIVER=postgresql
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=bedaanwaves
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=your_secure_password
 
+# Redis Configuration
 REDIS_URL=redis://localhost:6379/0
 CACHE_BACKEND=memory
 
-JWT_SECRET=your-secret-key-change-in-production
-```
+# Security Configuration
+JWT_SECRET=your_secure_jwt_secret_9d3e4f6a5b7c8d9e0f1a2b3c4d5e6f7
+REQUIRE_AUTH=true
+DEBUG=false
 
-## Git Workflow
-
-### Commits
-All work is committed to master branch:
-- Tier implementations are committed separately
-- Each commit includes comprehensive feature description
-- Progress tracked in docs/TODO.md
-
-### Recent Commits
-```
-7a09ed7 - Update crypto_ingestion_service.py
-b66dedf - Update init__.py
-cc0eba2 - Update init__.py
-92bdb4d - Add financial_data_ingest_service.py
-c881e7a - Update TODO.md
-11a8bd0 - Update AGENTS.md
-36d36ea - Update stock_fundamental_ingestion_service.py
-8fac24a - Update init__.py
-7129f9f - Update fundamental_service.py
-8f69185 - Update analysis.py
-```
-
-## Architecture
-```
-BedaanWaves/
-├── backend/app/
-│   ├── services/
-│   │   ├── core/          # Tier 1: Foundation
-│   │   ├── data/          # Tier 2: Data access
-│   │   ├── analysis/      # Tier 3: Analysis
-│   │   ├── ml/            # Tier 4: ML (completed)
-│   │   ├── nlp/           # Tier 5: NLP (completed)
-│   │   ├── user/          # Tier 6: User (completed)
-│   │   ├── specialized/   # Tier 7: Specialized (completed)
-│   │   ├── crypto/        # Tier 8: Crypto (completed)
-│   │   └── system/        # Tier 9: System (completed)
-│   ├── api/routes/        # FastAPI routes
-│   ├── models/            # SQLAlchemy models
-│   ├── schemas/           # Pydantic schemas
-│   └── main.py            # Entry point
-├── database/              # Alembic migrations
-├── frontend/              # Next.js 16+
-├── docs/                  # Documentation
-│   ├── AGENTS.md          # This file
-│   └── TODO.md            # Task tracking
-└── kilo.json              # Kilo config
-```
-
-## Development Guidelines
-
-### Code Style
-- Type hints on all functions
-- Comprehensive docstrings
-- Error handling with proper logging
-- Metrics tracking for monitoring
-
-### Service Development
-1. Extend appropriate base class (BaseService, CachedService, DataService, etc.)
-2. Implement `initialize()` and `shutdown()` lifecycle methods
-3. Use DependencyContainer for service registration
-4. Add comprehensive logging
-5. Include metrics collection
-
-### Testing
-- Unit tests in `backend/tests/`
-- Use pytest with coverage
-- Mock external services
-- Test service initialization/shutdown
-
-## Configuration
-
-All configuration via environment variables or `config.py`:
-- 100+ settings organized by category
-- Centralized ConfigService for access
-- Type conversion helpers (get_int, get_bool, etc.)
-- Validation on startup
-
-## Monitoring & Health
-
-HealthChecker service monitors:
-- Database connectivity
-- Cache functionality
-- System memory/disk
-- Service health status
-
-Access health endpoint for system status.
-
-## No Docker Policy
-
-All services run directly:
-- Backend: FastAPI with Uvicorn
-- Database: PostgreSQL (local install)
-- Cache: Redis (optional, memory fallback)
-- No containerization required
-
----
-
-**Last Updated**: 2026-07-31  
-**Phase**: Complete (100% Implementation)  
-**Status**: Production Ready
+# Infrastructure Configuration
+DATABASE_POOL_SIZE=20
+CACHE_POOL_SIZE=20
+REDIS_MAX_CONNECTIONS=50
