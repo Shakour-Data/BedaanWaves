@@ -21,7 +21,6 @@ from . import (
 
 # Export routers with explicit names
 health_router = health.router
-sleep_router = health.router
 
 # Export router references
 __all__ = [
