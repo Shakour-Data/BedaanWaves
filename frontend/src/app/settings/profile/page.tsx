@@ -38,19 +38,30 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // Implement actual save logic here if needed
-      console.log("Saving profile data");
-      // TODO: Add actual API call to save profile data
-    } catch (error) {
-      console.error("Error saving profile:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validatePasswords()) return;
+        
+        setLoading(true);
+        try {
+          const response = await apiClient.post("/user/profile/update", {
+            full_name: fullName,
+            new_password: newPassword,
+          });
+          
+          if (response.ok) {
+            // Success: refresh user data if needed
+            window.location.reload();
+          } else {
+            throw new Error("بروز خطا در ذخیره اطلاعات");
+          }
+        } catch (error) {
+          console.error("Error saving profile:", error);
+          // Handle error (e.g., show toast)
+        } finally {
+          setLoading(false);
+        }
+      };
 
   return (
     <DashboardShell title="پروفایل کاربری">
