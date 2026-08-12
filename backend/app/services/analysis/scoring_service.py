@@ -93,7 +93,7 @@ class ScoringService(AnalysisService):
             {"id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
         ]
         
-        sub_dim_map = {
+sub_dim_map = {
             "d1": ["price_history", "ohlcv", "corporate_actions"],
             "d2": ["moving_averages", "momentum", "volatility", "volume", "trend"],
             "d3": ["news_sentiment", "social_sentiment", "analyst_sentiment"],
@@ -108,6 +108,8 @@ class ScoringService(AnalysisService):
             "d12": ["earnings_quality", "accounting_quality", "governance"],
         }
         
+        # Initialize level2 list
+        level2 = []
         sub_dim_id = 0
         for parent_id, children in sub_dim_map.items():
             for child in children:
@@ -166,7 +168,7 @@ class ScoringService(AnalysisService):
         level4_count = len([v for v in self._hierarchy.values() if v.get("level") == 4])
         
         self.logger.debug(f"Hierarchy built: L1={level1_count}, L2={level2_count}, L3={level3_count}, L4={level4_count}")
-    
+
     def _get_dynamic_weights(self, level: str = "dimensions") -> Dict[str, float]:
         """
         Get weights for a specific hierarchy level, trying ML first then falling back to static.
