@@ -76,55 +76,23 @@ class ScoringService(AnalysisService):
         self.logger.info("ScoringService shutdown")
     
     def _build_hierarchy(self) -> None:
-        """Build 4-level 305-node hierarchy."""
+        """Build 4-level 320-node hierarchy."""
         
-        # Level 1: 6 Dimensions mapped to 6D scoring groups
         level1 = [
-            {"id": "d1", "name": "fundamental", "group": "fundamental", "weight": 0.25},
-            {"id": "d2", "name": "technical", "group": "technical", "weight": 0.20},
-            {"id": "d3", "name": "sentiment", "group": "sentiment", "weight": 0.15},
-            {"id": "d4", "name": "risk", "group": "risk", "weight": 0.20},
-            {"id": "d5", "name": "macro", "group": "macro", "weight": 0.10},
-            {"id": "d6", "name": "ai", "group": "ai", "weight": 0.10},
+            {"id": "d1", "name": "fundamental_price", "group": "fundamental", "weight": 0.15},
+            {"id": "d2", "name": "technical_moving_avg", "group": "technical", "weight": 0.10},
+            {"id": "d3", "name": "sentiment_news", "group": "sentiment", "weight": 0.08},
+            {"id": "d4", "name": "risk_market", "group": "risk", "weight": 0.10},
+            {"id": "d5", "name": "macro_gdp", "group": "macro", "weight": 0.08},
+            {"id": "d6", "name": "ai_prediction", "group": "ai", "weight": 0.08},
+            {"id": "d7", "name": "fundamental_corporate_actions", "group": "fundamental", "weight": 0.07},
+            {"id": "d8", "name": "fundamental_liquidity", "group": "fundamental", "weight": 0.07},
+            {"id": "d9", "name": "fundamental_profitability", "group": "fundamental", "weight": 0.07},
+            {"id": "d10", "name": "fundamental_efficiency", "group": "fundamental", "weight": 0.07},
+            {"id": "d11", "name": "fundamental_valuation", "group": "fundamental", "weight": 0.07},
+            {"id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
         ]
         
-        # Level 2: 40 Sub-Dimensions
-        level2 = []
-        sub_dim_map = {
-            "d1": ["price_history", "ohlcv", "corporate_actions", 
-                   "liquidity", "profitability", "efficiency", 
-                   "valuation", "growth", "quality"],  # 9 items
-            "d2": ["moving_averages", "momentum", "volatility", 
-                   "volume", "trend"],  # 5 items
-            "d3": ["news_sentiment", "social_sentiment", "analyst_sentiment"],  # 3 items
-            "d4": ["market_risk", "credit_risk", "operational_risk", 
-                   "liquidity_risk"],  # 4 items
-            "d5": ["gdp", "inflation", "interest_rates", 
-                   "exchange_rates", "commodity_prices"],  # 5 items
-            "d6": ["ml_prediction", "pattern_recognition", "anomaly_detection"]  # 3 items
-        }
-        
-        # Verify we have the expected counts
-        expected_counts = [9, 5, 3, 4, 5, 3]  # Sum = 29, but we need 40
-        # Let me recount based on the original file to match exactly 40
-        sub_dim_map = {
-            "d1": ["price_history", "ohlcv", "corporate_actions"],  # 3
-            "d2": ["moving_averages", "momentum", "volatility", "volume", "trend"],  # 5
-            "d3": ["news_sentiment", "social_sentiment", "analyst_sentiment"],  # 3
-            "d4": ["market_risk", "credit_risk", "operational_risk", "liquidity_risk"],  # 4
-            "d5": ["gdp", "inflation", "interest_rates", "exchange_rates", "commodity_prices"],  # 5
-            "d6": ["ml_prediction", "pattern_recognition", "anomaly_detection"],  # 3
-            "d7": ["current_ratio", "quick_ratio", "cash_ratio", "working_capital"],  # 4
-            "d8": ["roe", "roa", "roic", "gross_margin", "net_margin"],  # 5
-            "d9": ["asset_turnover", "inventory_turnover", "receivables_turnover"],  # 3
-            "d10": ["pe_ratio", "pb_ratio", "peg_ratio", "ev_ebitda"],  # 4
-            "d11": ["eps_growth", "revenue_growth", "book_value_growth"],  # 3
-            "d12": ["earnings_quality", "accounting_quality", "governance"]  # 3
-        }
-        # 3+5+3+4+5+3+4+5+3+4+3+3 = 45 - still not 40
-        # Let me use the exact mapping from the original file to be sure
-        
-        # Revert to original mapping to maintain 40 sub-dimensions
         sub_dim_map = {
             "d1": ["price_history", "ohlcv", "corporate_actions"],
             "d2": ["moving_averages", "momentum", "volatility", "volume", "trend"],
@@ -162,15 +130,14 @@ class ScoringService(AnalysisService):
                     "name": f"{sub['name']}_aspect_{i+1}",
                 })
         
-        # Level 4: 173 Sub-Aspects (distributed across aspects)
+        # Level 4: 173 Sub-Aspects (distributed across 90 aspects)
         level4 = []
         sub_id = 0
-        for aspect in level3:
-            # Distribute 173 sub-aspects across 80 aspects (~2 per aspect, with remainder)
-            base_count = 173 // 80  # 2
-            remainder = 173 % 80    # 13
-            # First 'remainder' aspects get 3 sub-aspects, rest get 2
-            count_for_this_aspect = base_count + (1 if aspect_id <= remainder else 0)
+        total_aspects = len(level3)
+        for idx, aspect in enumerate(level3):
+            base_count = 173 // total_aspects
+            remainder = 173 % total_aspects
+            count_for_this_aspect = base_count + (1 if idx < remainder else 0)
             
             for i in range(count_for_this_aspect):
                 if sub_id >= 173:
