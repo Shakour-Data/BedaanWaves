@@ -1,12 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 import logging
 from datetime import datetime
 from typing import Optional
 
 from app.api.dependencies import get_current_admin_user
 from app.services.core.dependency_container import get_global_container
-from app.services.health_checker import HealthChecker
-from app.services.health_checker import get_health_checker
+from app.services.core.health_checker import HealthChecker
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ async def health_check():
 @router.get("/services")
 async def list_service_health():
     """Get health status for all services."""
-    health_checker = get_health_checker()
+    health_checker = HealthChecker()
     result = await health_checker.run_all_checks()
     return {
         "status": "success",
@@ -38,7 +37,7 @@ async def list_service_health():
 @router.get("/services/{service}")
 async def get_service_health(service: str):
     """Get health status for specific service."""
-    health_checker = get_health_checker()
+    health_checker = HealthChecker()
     result = await health_checker.run_check(service)
     if not result:
         raise HTTPException(status_code=404, detail=f"Health check not registered for {service}")
