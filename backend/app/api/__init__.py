@@ -1,6 +1,6 @@
 """API Routes Package"""
 
-from . import (
+from .routes import (
     market,
     analysis,
     stocks,
