@@ -23,9 +23,9 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 
 ## Implementation Status
 
-### ✅ COMPLETE (Master Implementation: 100%)
+### � ✅ COMPLETE (Master Implementation: 100%)
 
-**Tier 1: Core Services** (6 services) ✅
+**Tier 1: Core Services** (6 services) � ✅
 - DependencyContainer: IoC/DI management
 - ConfigService: Centralized configuration
 - LoggerService: Structured logging
@@ -33,7 +33,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - DatabaseService: Connection pooling
 - HealthChecker: System monitoring
 
-**Tier 2: Data Services** (13 services) ✅
+**Tier 2: Data Services** (13 services) � ✅
 - BrsApiClient: Tehran Stock Exchange API
 - StockService: Stock data management
 - MarketService: Market data aggregation
@@ -58,7 +58,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - HistoricalDataRetrieval: Historical fundamental data endpoint (TODO-K4)
 - UnifiedFundamentalDataModel: Cross-asset data model (TODO-N1)
 
-**Tier 3: Analysis Services** (7 services) ✅
+**Tier 3: Analysis Services** (7 services) � ✅
 - ScoringService: 6D scoring, 305-node hierarchy
 - TechnicalAnalysisService: 50+ indicators with live dashboard
 - FundamentalAnalysisService: 20+ ratios with global market support (Iran, US, International)
@@ -67,7 +67,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - VolatilityService: Volatility forecasting (production-ready)
 - UserFilteredScoringService: Custom scoring based on user selections (live API)
 
-**Tier 4: ML Services** (9 services) ✅ COMPLETED
+**Tier 4: ML Services** (9 services) � ✅ COMPLETED
 - PredictionService: Price prediction models
 - PatternRecognitionService: Chart pattern detection
 - AnomalyDetectionService: Outlier detection
@@ -78,7 +78,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - CryptoMLService: Crypto-specific ML models
 - UserFilteredRecommendationService: Recommendations filtered by user preferences
 
-**Tier 5: NLP Services** (6 services) ✅ COMPLETED
+**Tier 5: NLP Services** (6 services) � ✅ COMPLETED
 - SentimentAnalysisService: News sentiment analysis
 - NewsSummarizationService: Text summarization
 - DocumentExtractionService: PDF/text extraction
@@ -86,7 +86,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - SearchService: Semantic search
 - MultiLanguageNewsService: Country-specific news with language detection
 
-**Tier 6: User Services** (8 services) ✅ COMPLETED
+**Tier 6: User Services** (8 services) � ✅ COMPLETED
 - AuthService: Authentication with JWT
 - AuthorizationService: RBAC
 - UserProfileService: User profiles and KYC
@@ -96,7 +96,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - UserMarketSettingsService: Country/index/industry selection
 - UserCryptoSettingsService: Cryptocurrency selection preferences
 
-**Tier 7: Specialized Services** (7 services) ✅ COMPLETED
+**Tier 7: Specialized Services** (7 services) � ✅ COMPLETED
 - SectorAnalysisService: Sector performance
 - ScreeningService: Stock screening filters
 - ComparisonService: Peer benchmarking
@@ -105,7 +105,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - InternationalMarketService: Multi-country data integration
 - SectorFilterService: Industry-based filtering
 
-**Tier 8: Crypto Services** (8 services) ✅ COMPLETED
+**Tier 8: Crypto Services** (8 services) � ✅ COMPLETED
 - PriceService: Real-time crypto price feeds
 - PortfolioService: Crypto portfolio management
 - CryptoIngestionService: Exchange data ingestion
@@ -115,7 +115,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - CryptoAnalysisService: On-chain metrics analysis
 - ArbitrageService: Cross-exchange price monitoring
 
-**Tier 9: System Services** (8 services) ✅ COMPLETED
+**Tier 9: System Services** (8 services) � ✅ COMPLETED
 - SchedulerService: Task scheduling pipeline
 - MetricsService: Performance monitoring
 - QueueService: Message queuing system
@@ -180,3 +180,134 @@ DEBUG=false
 DATABASE_POOL_SIZE=20
 CACHE_POOL_SIZE=20
 REDIS_MAX_CONNECTIONS=50
+```
+
+## Deployment Process
+
+The deployment process has been updated to reflect the Docker-free status of the project. All services are now deployed directly on local machines without containerization.
+
+### Updated Architecture Note
+- All services run directly on the host machine
+- No Docker image builds required
+- Manual configuration and startup procedures only
+
+### Backend Deployment
+1. Install Python dependencies: `pip install -r requirements.txt`
+2. Configure environment variables in `.env`
+3. Initialize database: `createdb bedaanwaves`
+4. Apply migrations: `alembic upgrade head`
+5. Start service: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+
+### Frontend Deployment
+1. Install Node.js dependencies: `npm ci`
+2. Build production assets: `npm run build`
+3. Serve built files via web server (NGINX, Apache, or Node.js)
+
+### CI/CD Pipeline
+The CI/CD pipeline has been updated to reflect Docker-free deployment:
+- Build backend artifacts (Python bytecode compilation)
+- Build frontend artifacts (Next.js production build)
+- Deploy directly to target environments
+- No Docker image building or pushing required
+
+## Git Workflow
+
+### Commits
+All work is committed to master branch:
+- Tier implementations are committed separately
+- Each commit includes comprehensive feature description
+- Progress tracked in docs/TODO.md
+
+### Recent Commits
+```
+7a09ed7 - Update crypto_ingestion_service.py
+b66dedf - Update init__.py
+cc0eba2 - Update init__.py
+92bdb4d - Add financial_data_ingest_service.py
+c881e7a - Update TODO.md
+11a8bd0 - Update AGENTS.md
+36d36ea - Update stock_fundamental_ingestion_service.py
+8fac24a - Update init__.py
+7129f9f - Update fundamental_service.py
+8f69185 - Update analysis.py
+```
+
+## Architecture
+
+```
+BedaanWaves/
+├── backend/app/
+│   ├── services/
+│   │   ├── core/          # Tier 1: Foundation
+│   │   ├── data/          # Tier 2: Data access
+│   │   ├── analysis/      # Tier 3: Analysis
+│   │   ├── ml/            # Tier 4: ML (completed)
+│   │   ├── nlp/           # Tier 5: NLP (completed)
+│   │   ├── user/          # Tier 6: User (completed)
+│   │   ├── specialized/   # Tier 7: Specialized (completed)
+│   │   ├── crypto/        # Tier 8: Crypto (completed)
+│   │   └── system/        # Tier 9: System (completed)
+│   ├── api/routes/        # FastAPI routes
+│   ├── models/            # SQLAlchemy models
+│   ├── schemas/           # Pydantic schemas
+│   └── main.py            # Entry point
+├── database/              # Alembic migrations
+├── frontend/              # Next.js 16+
+├── docs/                  # Documentation
+│   ├── AGENTS.md          # This file
+│   └── TODO.md            # Task tracking
+�└── kilo.json              # Kilo config
+```
+
+## Development Guidelines
+
+### Code Style
+- Type hints on all functions
+- Comprehensive docstrings
+- Error handling with proper logging
+- Metrics tracking for monitoring
+
+### Service Development
+1. Extend appropriate base class (BaseService, CachedService, DataService, etc.)
+2. Implement `initialize()` and `shutdown()` lifecycle methods
+3. Use DependencyContainer for service registration
+4. Add comprehensive logging
+5. Include metrics collection
+
+### Testing
+- Unit tests in `backend/tests/`
+- Use pytest with coverage
+- Mock external services
+- Test service initialization/shutdown
+
+## Configuration
+
+All configuration via environment variables or `config.py`:
+- 100+ settings organized by category
+- Centralized ConfigService for access
+- Type conversion helpers (get_int, get_bool, etc.)
+- Validation on startup
+
+## Monitoring & Health
+
+HealthChecker service monitors:
+- Database connectivity
+- Cache functionality
+- System memory/disk
+- Service health status
+
+Access health endpoint for system status.
+
+## No Docker Policy
+
+All services run directly:
+- Backend: FastAPI with Uvicorn
+- Database: PostgreSQL (local install)
+- Cache: Redis (optional, memory fallback)
+- No containerization required
+
+---
+
+**Last Updated**: 2026-08-12  
+**Phase**: Complete (100% Implementation)  
+**Status**: Production Ready
