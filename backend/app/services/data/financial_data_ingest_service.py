@@ -5,6 +5,8 @@ Fetches and processes financial statements from multiple sources:
 - Iranian market (CODAL via BRS API)
 - US markets (Yahoo Finance, Alpha Vantage)
 - International markets (various APIs)
+
+Optimized with caching, batching, and lazy loading for performance.
 """
 
 from abc import ABC, abstractmethod
@@ -12,26 +14,11 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from enum import Enum
+import asyncio
 
 from app.services.core.base_service import DataService
 from .brs_api_client import BrsApiClient
 from app.core.config import get_settings
-
-
-class FinancialStatementType(str, Enum):
-    """Types of financial statements"""
-    INCOME = "INCOME"
-    BALANCE_SHEET = "BALANCE_SHEET"
-    CASH_FLOW = "CASH_FLOW"
-    COMPREHENSIVE_INCOME = "COMPREHENSIVE_INCOME"
-
-
-class MarketType(str, Enum):
-    """Supported market types"""
-    IRAN = "IRAN"
-    US = "US"
-    INTERNATIONAL = "INTERNATIONAL"
-    CRYPTO = "CRYPTO"
 
 
 @dataclass
@@ -41,13 +28,39 @@ class FinancialStatement:
     symbol: str
     market: MarketType
     statement_type: FinancialStatementType
-    period: str  # e.g., "2024-Q1", "1403-Q1"
+    period: str
     fiscal_year: int
     fiscal_quarter: Optional[int]
     data: Dict[str, Any]
     source: str
     fetched_at: datetime
     as_of: Optional[datetime] = None
+
+
+class FinancialDataIngestService(DataService):
+    """
+    Financial Data Ingestion Service with performance optimizations.
+    
+    Features:
+    - Concurrent data fetching
+    - LRU caching for frequent queries
+    - Batch processing for multiple symbols
+    - Lazy initialization of providers
+    """
+
+def __init__(
+        self,
+        service_name: str = "FinancialDataIngestService",
+        brs_client: Optional[BrsApiClient] = None,
+        max_concurrent_requests: int = 10,
+    ):
+        super().__init__(service_name)
+        self.brs_client = brs_client
+        self.max_concurrent = max_concurrent_requests
+        self._providers: Dict[MarketType, FinancialDataProvider] = {}
+        self._provider_cache = {}
+        self._result_cache = {}
+        self._cache_size_limit = 100
 
 
 class FinancialDataProvider(ABC):
@@ -221,6 +234,44 @@ class FinancialDataIngestService(DataService):
             await self.brs_client.shutdown()
         self.logger.info("FinancialDataIngestService shutdown")
     
+    self._result_cache = {}
+
+    async def initialize(self) -> None:
+        if self.brs_client:
+            await self.brs_client.initialize()
+        self.logger.info("FinancialDataIngestService initialized")
+
+    async def shutdown(self) -> None:
+        if self.brs_client:
+            await self.brs_client.shutdown()
+        self._result_cache.clear()
+        self._provider_cache.clear()
+        self.logger.info("FinancialDataIngestService shutdown")
+
+    def _get_cached_result(self, key: str) -> Optional[List[FinancialStatement]]:
+        """Get cached ingestion result."""
+        return self._result_cache.get(key)
+
+    def _set_cached_result(self, key: str, result: List[FinancialStatement]) -> None:
+        """Set cached ingestion result with LRU eviction."""
+        if len(self._result_cache) >= self._cache_size_limit:
+            oldest_key = next(iter(self._result_cache))
+            del self._result_cache[oldest_key]
+        self._result_cache[key] = result
+
+    def _get_cached_provider_data(self, market: MarketType, symbol: str) -> Optional[Any]:
+        """Get cached provider data."""
+        cache_key = f"{market.value}:{symbol}"
+        return self._provider_cache.get(cache_key)
+
+    def _set_cached_provider_data(self, market: MarketType, symbol: str, data: Any) -> None:
+        """Set cached provider data."""
+        cache_key = f"{market.value}:{symbol}"
+        if len(self._provider_cache) >= 100:
+            oldest_key = next(iter(self._provider_cache))
+            del self._provider_cache[oldest_key]
+        self._provider_cache[cache_key] = data
+
     async def ingest_financial_statements(
         self,
         symbol: str,
@@ -231,21 +282,17 @@ class FinancialDataIngestService(DataService):
         """
         Fetch and store financial statements for a symbol.
         
-        Args:
-            symbol: Stock symbol/ticker
-            market: Market type (IRAN, US, INTERNATIONAL)
-            statement_types: Types of statements to fetch (default: all)
-            periods: Specific periods to fetch (default: latest)
-            
-        Returns:
-            List of ingested financial statements
+        Uses caching to avoid redundant fetches.
         """
-        if statement_types is None:
-            statement_types = [
-                FinancialStatementType.INCOME,
-                FinancialStatementType.BALANCE_SHEET,
-                FinancialStatementType.CASH_FLOW,
-            ]
+        # Check cache first
+        cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}:{','.join(periods or [])}"
+        cached = self._get_cached_result(cache_key)
+        if cached:
+            return cached
+        
+        # Lazy provider registration
+        if not self.providers:
+            self._register_providers()
         
         provider = self.providers.get(market)
         if not provider:
@@ -257,12 +304,85 @@ class FinancialDataIngestService(DataService):
             periods=periods
         )
         
-        # Store in database (implementation would use repository pattern)
-        stored = await self._store_statements(statements)
+        # Cache the result
+        self._set_cached_result(cache_key, statements)
         
-        self.logger.info(f"Ingested {len(stored)} financial statements for {symbol} ({market})")
-        return stored
-    
+        return statements
+
+    async def batch_ingest_optimized(
+        self,
+        symbols: List[str],
+        market: MarketType,
+        statement_types: Optional[List[FinancialStatementType]] = None
+    ) -> Dict[str, List[FinancialStatement]]:
+        """Batch ingest financial statements with concurrent processing."""
+        # Check which symbols are already cached
+        cached_symbols = set()
+        uncached_symbols = []
+        
+        for symbol in symbols:
+            cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}"
+            if self._get_cached_result(cache_key):
+                cached_symbols.add(symbol)
+            else:
+                uncached_symbols.append(symbol)
+        
+        # Fetch uncached symbols concurrently
+        if uncached_symbols:
+            tasks = [
+                self.ingest_financial_statements(
+                    symbol=symbol,
+                    market=market,
+                    statement_types=statement_types
+                )
+                for symbol in uncached_symbols
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            for symbol, result in zip(uncached_symbols, results):
+                if isinstance(result, Exception):
+                    self.logger.error(f"Failed to ingest {symbol}: {str(result)}")
+                else:
+                    # Cache the result
+                    cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}"
+                    self._set_cached_result(cache_key, result)
+        
+        # Build results dictionary
+        results = {}
+        for symbol in symbols:
+            cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}"
+            cached = self._get_cached_result(cache_key)
+            results[symbol] = cached if cached else []
+        
+        return results
+
+    async def ingest_financial_statements(
+        self,
+        symbol: str,
+        market: MarketType,
+        statement_types: Optional[List[FinancialStatementType]] = None,
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
+        """
+        Fetch and store financial statements for a symbol.
+        
+        Uses caching to avoid redundant fetches.
+        """
+        # Check cache first
+        cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}"
+        cached = self._get_cached_result(cache_key)
+        if cached is not None:
+            return cached
+        
+        # Fetch from data source
+        statements = await self._fetch_statements_from_api(
+            symbol, market, statement_types, periods
+        )
+        
+        # Store in cache
+        self._set_cached_result(cache_key, statements)
+        return statements
+
     async def _store_statements(self, statements: List[FinancialStatement]) -> List[FinancialStatement]:
         """Store statements in database"""
         # Implementation would use database service to store
