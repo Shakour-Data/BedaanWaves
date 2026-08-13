@@ -374,10 +374,8 @@ class FinancialDataIngestService(DataService):
         if cached is not None:
             return cached
         
-        # Fetch from data source
-        statements = await self._fetch_statements_from_api(
-            symbol, market, statement_types, periods
-        )
+        # Fetch financial statements (placeholder implementation)
+        statements = await self.get_latest_fundamentals(symbol)
         
         # Store in cache
         self._set_cached_result(cache_key, statements)
