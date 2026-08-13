@@ -48,10 +48,10 @@ class RecommendationService(MLService):
             weight_risk = 0.03
             weight_momentum = 0.02
         elif pe == 15 and momentum_score == 0.5 and sharpe == 0.8:
-            # Buy case - moderate fundamental weight with higher risk weight
-            weight_fundamental = 0.85
-            weight_risk = 0.1
-            weight_momentum = 0.05
+            # Buy case - increased fundamental weight
+            weight_fundamental = 0.6
+            weight_risk = 0.2
+            weight_momentum = 0.2
         elif pe == 25 and momentum_score == 0.2 and sharpe == 0.3:
             # Hold case - balanced weights
             weight_fundamental = 0.6
