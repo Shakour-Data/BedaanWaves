@@ -192,11 +192,11 @@ The deployment process has been updated to reflect the Docker-free status of the
 - Manual configuration and startup procedures only
 
 ### Backend Deployment
-1. Install Python dependencies: `pip install -r requirements.txt`
+1. Install Python dependencies: `pip install -e .`  # Install from pyproject.toml
 2. Configure environment variables in `.env`
 3. Initialize database: `createdb bedaanwaves`
 4. Apply migrations: `alembic upgrade head`
-5. Start service: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+5. Start service: `uvicorn app.main:app --host 0.0.0.0 --port $API_PORT`
 
 ### Frontend Deployment
 1. Install Node.js dependencies: `npm ci`
