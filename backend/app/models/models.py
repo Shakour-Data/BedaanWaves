@@ -1598,3 +1598,46 @@ class UserAlert(Base):
         Index('idx_alert_symbol', 'symbol'),
         Index('idx_alert_active', 'is_active'),
     )
+
+
+# ===========================================================================
+# 30. Symbol Master Data
+# ===========================================================================
+class SymbolData(Base):
+    """Master symbol database for multi-market support."""
+    __tablename__ = "symbol_data"
+
+    symbol_id = Column(Integer, primary_key=True, autoincrement=True)
+    symbol = Column(String(10), nullable=False, unique=True, index=True)
+    security_name = Column(Text, nullable=False)
+    exchange = Column(String(50), nullable=False, default="NASDAQ")
+    country_code = Column(String(2), nullable=False, default="US")
+    index_code = Column(String(20))
+    industry_code = Column(String(100))
+    market_type = Column(String(20), nullable=False, default="STOCK")
+    active_status = Column(Boolean, default=True)
+    status_reason = Column(String(200))
+    listing_date = Column(Date)
+    delisting_date = Column(Date)
+    round_lot_size = Column(String(50))
+    market_category = Column(String(1))
+    financial_status = Column(String(50))
+    etf_flag = Column(Boolean, default=False)
+    next_shares = Column(Boolean, default=False)
+    is_test_issue = Column(Boolean, default=False)
+    security_type = Column(String(50), default="COMMON")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_symbol_data_symbol', 'symbol'),
+        Index('idx_symbol_data_exchange', 'exchange'),
+        Index('idx_symbol_data_country', 'country_code'),
+        Index('idx_symbol_data_market_type', 'market_type'),
+        Index('idx_symbol_data_active', 'active_status'),
+    )
+
+
+# ===========================================================================
+# 31. Symbol Market Settings
+# ===========================================================================
