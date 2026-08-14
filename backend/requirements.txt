@@ -71,6 +71,7 @@ requests>=2.31.0
 httpx>=0.25.2
 beautifulsoup4>=4.12.2
 lxml>=4.9.3
+yfinance>=0.2.36
 
 # ============================================================
 # DATA VISUALIZATION & REPORTING
