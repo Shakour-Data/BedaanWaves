@@ -42,6 +42,7 @@ from .data.financial_data_ingest_service import (
     FinancialDataProvider,
 )
 from .data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
+from .data.symbol_service import SymbolService
 
 # Tier 3: Analysis Services
 from .analysis.scoring_service import ScoringService
@@ -96,6 +97,7 @@ __all__ = [
     "DataValidationService",
     "FinancialDataIngestService",
     "StockFundamentalDataIngestionService",
+    "SymbolService",
     "FinancialStatementType",
     "MarketType",
     "FinancialStatement",
