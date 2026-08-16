@@ -41,6 +41,7 @@ from app.api.routes import (
     intl_router,
     live_router,
     health_router,
+    symbols_router,
 )
 
 # Configure logging
