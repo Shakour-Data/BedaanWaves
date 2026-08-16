@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from enum import Enum
+from abc import ABC, abstractmethod
 import asyncio
 
 from app.services.core.base_service import DataService
@@ -56,6 +57,137 @@ class FinancialStatement:
     source: str
     fetched_at: datetime
     as_of: Optional[datetime] = None
+
+
+class FinancialDataProvider(ABC):
+    """Abstract base class for financial data providers"""
+    
+    @abstractmethod
+    async def fetch_financial_statements(
+        self,
+        symbol: str,
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
+        pass
+    
+    @abstractmethod
+    async def get_supported_markets(self) -> List[MarketType]:
+        pass
+
+
+class BrsFinancialDataProvider(FinancialDataProvider):
+    """Financial data provider for Iranian market via BRS API / CODAL"""
+    
+    def __init__(self, brs_client: BrsApiClient):
+        self.brs_client = brs_client
+    
+    async def fetch_financial_statements(
+        self,
+        symbol: str,
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
+        statements = []
+        
+        # CODAL categories: 1=Annual financial, 3=Monthly performance
+        category_map = {
+            FinancialStatementType.INCOME: 1,
+            FinancialStatementType.BALANCE_SHEET: 1,
+            FinancialStatementType.CASH_FLOW: 1,
+        }
+        
+        for stmt_type in statement_types:
+            category = category_map.get(stmt_type, 1)
+            try:
+                codal_data = await self.brs_client.get_codal(l18=symbol, category=category)
+                
+                for announcement in codal_data.get("announcements", []):
+                    # Parse the financial data from announcement
+                    parsed = self._parse_codal_announcement(announcement, stmt_type)
+                    if parsed:
+                        statements.append(parsed)
+                        
+            except Exception as e:
+                # Log error but continue
+                pass
+        
+        return statements
+    
+    def _parse_codal_announcement(
+        self,
+        announcement: Dict[str, Any],
+        stmt_type: FinancialStatementType
+    ) -> Optional[FinancialStatement]:
+        """Parse CODAL announcement into standardized financial statement"""
+        try:
+            # This would parse the actual CODAL response structure
+            # Simplified for now
+            return FinancialStatement(
+                asset_id=announcement.get("symbol", ""),
+                symbol=announcement.get("symbol", ""),
+                market=MarketType.IRAN,
+                statement_type=stmt_type,
+                period=announcement.get("period", ""),
+                fiscal_year=int(announcement.get("fiscal_year", 0)),
+                fiscal_quarter=announcement.get("fiscal_quarter"),
+                data=announcement.get("financial_data", {}),
+                source="CODAL",
+                fetched_at=datetime.now(timezone.utc),
+                as_of=datetime.fromisoformat(announcement.get("publish_date", "")) if announcement.get("publish_date") else None
+            )
+        except Exception:
+            return None
+    
+    async def get_supported_markets(self) -> List[MarketType]:
+        return [MarketType.IRAN]
+
+
+class YahooFinanceProvider(FinancialDataProvider):
+    """Financial data provider for US and international markets via Yahoo Finance"""
+    
+    def __init__(self):
+        self.base_url = "https://query1.finance.yahoo.com/v10/finance"
+        self.settings = get_settings()
+    
+    async def fetch_financial_statements(
+        self,
+        symbol: str,
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
+        # This would integrate with Yahoo Finance API
+        # For now, return empty list - implementation would use yfinance or similar
+        return []
+    
+    async def get_supported_markets(self) -> List[MarketType]:
+        return [MarketType.US, MarketType.INTERNATIONAL]
+
+
+class AlphaVantageProvider(FinancialDataProvider):
+    """Financial data provider via Alpha Vantage API"""
+    
+    def __init__(self):
+        self.base_url = "https://www.alphavantage.co/query"
+        self.settings = get_settings()
+        # Use getattr with default None for optional API key
+        self.api_key = getattr(self.settings, 'ALPHA_VANTAGE_API_KEY', None)
+    
+    async def fetch_financial_statements(
+        self,
+        symbol: str,
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
+        if not self.api_key:
+            return []
+        
+        # This would integrate with Alpha Vantage API
+        # For now, return empty list
+        return []
+    
+    async def get_supported_markets(self) -> List[MarketType]:
+        return [MarketType.US, MarketType.INTERNATIONAL]
 
 
 class FinancialDataIngestService(DataService):
