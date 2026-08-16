@@ -3,6 +3,8 @@ BedaanWaves Main Application Entry Point
 """
 
 import logging
+import signal
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,42 +56,27 @@ logger = logging.getLogger(__name__)
 # Load application settings
 settings = get_settings()
 
+# Global container reference for shutdown
+_container = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
+    global _container
+    
     # Startup
     logger.info("Starting BedaanWaves application...")
-
-    # Initialize dependency container
-    container = DependencyContainer()
-    await container.initialize()
-    app.state.container = container
-
-    logger.info("Registered core services in dependency container")
-
-    # Include API routes
+    
     try:
-        from app.api.routes import (
-            auth_router,
-            stocks_router,
-            market_router,
-            analysis_router,
-            portfolio_router,
-            history_router,
-            news_router,
-            ml_router,
-            users_router,
-            watchlists_router,
-            notifications_router,
-            specialized_router,
-            system_router,
-            crypto_router,
-            intl_router,
-            live_router,
-            health_router,
-        )
-
+        # Initialize dependency container
+        container = DependencyContainer()
+        await container.initialize()
+        app.state.container = container
+        _container = container
+        
+        logger.info("Registered core services in dependency container")
+        
         # Register all routers
         app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
         app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
@@ -108,18 +95,22 @@ async def lifespan(app: FastAPI):
         app.include_router(intl_router, prefix="/api/v1/intl", tags=["intl"])
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
-
+        
         logger.info("Registered all API routes")
     except Exception as e:
-        logger.warning(f"Could not load all API routes: {e}")
-        # Continue anyway for basic functionality
-
+        logger.error(f"Failed to initialize application: {e}", exc_info=True)
+        raise
+    
     yield
-
+    
     # Shutdown
     logger.info("Shutting down BedaanWaves application...")
     if hasattr(app.state, 'container'):
-        await app.state.container.shutdown_all()
+        try:
+            await app.state.container.shutdown_all()
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}", exc_info=True)
+    logger.info("BedaanWaves application shutdown complete")
 
 
 # Create FastAPI application
@@ -153,7 +144,7 @@ async def health_check():
         "status": "healthy",
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "timestamp": "2026-08-04T23:44:00Z"
+        "timestamp": "2026-08-16T19:40:00Z"
     }
 
 # Root endpoint
@@ -165,3 +156,15 @@ async def root():
         "version": settings.APP_VERSION,
         "docs": "/docs"
     }
+
+
+def handle_signal(signum, frame):
+    """Handle shutdown signals gracefully."""
+    logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+    # The lifespan context manager will handle the actual shutdown
+    sys.exit(0)
+
+
+# Register signal handlers
+signal.signal(signal.SIGTERM, handle_signal)
+signal.signal(signal.SIGINT, handle_signal)
