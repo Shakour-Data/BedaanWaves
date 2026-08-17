@@ -1,4 +1,4 @@
-# BedaanWaves Agents Configuration
+# BedaanWaves Agents Configuration & Development Guidelines
 
 ## Project Overview
 
@@ -23,9 +23,9 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 
 ## Implementation Status
 
-### � ✅ COMPLETE (Master Implementation: 100%)
+### ✅ COMPLETE (Master Implementation: 100%)
 
-**Tier 1: Core Services** (6 services) � ✅
+**Tier 1: Core Services** (6 services) ✅
 - DependencyContainer: IoC/DI management
 - ConfigService: Centralized configuration
 - LoggerService: Structured logging
@@ -33,7 +33,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - DatabaseService: Connection pooling
 - HealthChecker: System monitoring
 
-**Tier 2: Data Services** (13 services) � ✅
+**Tier 2: Data Services** (13 services) ✅
 - BrsApiClient: Tehran Stock Exchange API
 - StockService: Stock data management
 - MarketService: Market data aggregation
@@ -58,7 +58,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - HistoricalDataRetrieval: Historical fundamental data endpoint (TODO-K4)
 - UnifiedFundamentalDataModel: Cross-asset data model (TODO-N1)
 
-**Tier 3: Analysis Services** (7 services) � ✅
+**Tier 3: Analysis Services** (7 services) ✅
 - ScoringService: 6D scoring, 305-node hierarchy
 - TechnicalAnalysisService: 50+ indicators with live dashboard
 - FundamentalAnalysisService: 20+ ratios with global market support (Iran, US, International)
@@ -67,7 +67,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - VolatilityService: Volatility forecasting (production-ready)
 - UserFilteredScoringService: Custom scoring based on user selections (live API)
 
-**Tier 4: ML Services** (9 services) � ✅ COMPLETED
+**Tier 4: ML Services** (9 services) ✅ COMPLETED
 - PredictionService: Price prediction models
 - PatternRecognitionService: Chart pattern detection
 - AnomalyDetectionService: Outlier detection
@@ -78,7 +78,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - CryptoMLService: Crypto-specific ML models
 - UserFilteredRecommendationService: Recommendations filtered by user preferences
 
-**Tier 5: NLP Services** (6 services) � ✅ COMPLETED
+**Tier 5: NLP Services** (6 services) ✅ COMPLETED
 - SentimentAnalysisService: News sentiment analysis
 - NewsSummarizationService: Text summarization
 - DocumentExtractionService: PDF/text extraction
@@ -86,7 +86,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - SearchService: Semantic search
 - MultiLanguageNewsService: Country-specific news with language detection
 
-**Tier 6: User Services** (8 services) � ✅ COMPLETED
+**Tier 6: User Services** (8 services) ✅ COMPLETED
 - AuthService: Authentication with JWT
 - AuthorizationService: RBAC
 - UserProfileService: User profiles and KYC
@@ -96,7 +96,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - UserMarketSettingsService: Country/index/industry selection
 - UserCryptoSettingsService: Cryptocurrency selection preferences
 
-**Tier 7: Specialized Services** (7 services) � ✅ COMPLETED
+**Tier 7: Specialized Services** (7 services) ✅ COMPLETED
 - SectorAnalysisService: Sector performance
 - ScreeningService: Stock screening filters
 - ComparisonService: Peer benchmarking
@@ -105,7 +105,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - InternationalMarketService: Multi-country data integration
 - SectorFilterService: Industry-based filtering
 
-**Tier 8: Crypto Services** (8 services) � ✅ COMPLETED
+**Tier 8: Crypto Services** (8 services) ✅ COMPLETED
 - PriceService: Real-time crypto price feeds
 - PortfolioService: Crypto portfolio management
 - CryptoIngestionService: Exchange data ingestion
@@ -115,7 +115,7 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 - CryptoAnalysisService: On-chain metrics analysis
 - ArbitrageService: Cross-exchange price monitoring
 
-**Tier 9: System Services** (8 services) � ✅ COMPLETED
+**Tier 9: System Services** (8 services) ✅ COMPLETED
 - SchedulerService: Task scheduling pipeline
 - MetricsService: Performance monitoring
 - QueueService: Message queuing system
@@ -256,7 +256,7 @@ BedaanWaves/
 ├── docs/                  # Documentation
 │   ├── AGENTS.md          # This file
 │   └── TODO.md            # Task tracking
-�└── kilo.json              # Kilo config
+└── kilo.json              # Kilo config
 ```
 
 ## Development Guidelines
