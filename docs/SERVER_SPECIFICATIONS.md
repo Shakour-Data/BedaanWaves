@@ -65,7 +65,7 @@ This document outlines the recommended server specifications for deploying Bedaa
 | wal_buffers | 16MB | For write-heavy workloads |
 | checkpoint_timeout | 15min | Balance recovery time vs. I/O |
 | max_wal_size | 2GB | Adjust based on write volume |
-| min_wal_size | 800MB |  |
+| min_wal_size | 800MB | |
 
 ### Storage Layout
 - **Data Directory:** Dedicated mount point with noatime,nodiratime options
@@ -206,11 +206,15 @@ This document outlines the recommended server specifications for deploying Bedaa
 ### Validation
 - [ ] Run deployment checklist from docs/deployment_checklist.md
 - [ ] Execute integration test suite
-- [ ] Perform load testing (target: 100 RPM per user)
-- [ ] Verify monitoring and alerting
-- [ ] Conduct security scan
+- [ ] Verify end-to-end workflows:
+  - Data ingestion pipeline
+  - Fundamental analysis calculation
+  - ML prediction endpoint
+  - User authentication flow
+- [ ] Confirm no failed tests or warnings
 
 ## Maintenance Windows
+
 - **Weekly:** Log rotation, temporary file cleanup
 - **Monthly:** Database vacuum analyze, backup verification
 - **Quarterly:** Hardware diagnostics, firmware updates
