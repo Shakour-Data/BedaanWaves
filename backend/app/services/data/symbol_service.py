@@ -9,7 +9,7 @@ from sqlalchemy import select, func, or_
 
 from app.core.config import Settings
 from app.db.base import async_session_maker
-from app.models.symbol import SymbolData
+from app.models.models import SymbolData
 from app.core.services import DataService
 from app.services.core.dependency_container import get_global_container
 
