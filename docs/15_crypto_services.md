@@ -1,96 +1,154 @@
-# BedaanWaves - Crypto Services
+# BedaanWaves - Crypto Services Documentation
 
-## Overview
-Cryptocurrency services provide end-to-end management of cryptocurrency data, trading, and analysis capabilities.
+## Executive Summary
+This document expands on the core crypto services from the initial overview, detailing the full implementation status and technical specifications for cryptocurrency-related functionalities in BedaanWaves.
 
-## Core Crypto Services
+**Status**: 38% Implementation Complete (Phase 2 in progress)
+**Key Dependencies**: BRS API, Binance API, CoinGecko API
+**Critical Path**: CryptoIngestionService -> CryptoPortfolioService -> CryptoAnalysisService
 
-### PriceService
-Real-time cryptocurrency price tracking across multiple exchanges.
+---
 
-**Features:**
-- Multi-exchange support (Binance, Kraken, Coinbase)
-- 5-minute delay-free pricing
-- Historical price data retrieval
-- Order book visualization
-- Market depth analysis
+## Implementation Status
 
-### PortfolioService
-Cryptocurrency portfolio management and analytics.
+### ✅ Completed Services (38%)
 
-**Features:**
-- Portfolio tracking across exchanges
-- Performance metrics (ROI, drawdown)
-- Rebalancing suggestions
-- Tax lot management
-- Profit/loss reporting
+| Service | Class | Files | Tests | Status |
+|---------|-------|-------|-------|--------|
+| PriceService | `PriceService` | `app/services/crypto/price_service.py` | ✅ | ✅ Active |
+| CryptoMLService | `CryptoMLService` | `app/services/crypto/crypto_ml_service.py` | ✅ | ✅ Trained models |
+| CustomCryptoSelectionService | `CustomCryptoSelectionService` | `app/services/crypto/custom_crypto_selection_service.py` | ✅ | ✅ Filter support |
 
-### CryptoIngestionService
-Comprehensive cryptocurrency data ingestion pipeline.
+### ❌ Pending Implementation (62%)
 
-**Capabilities:**
-- Exchange API integration (REST/WebSocket)
-- Data normalization across exchanges
-- Event detection (price pump/dump)
-- Real-time alert generation
-- Data quality monitoring
+| Service | Priority | Blocking Issues |
+|---------|----------|-----------------|
+| CryptoIngestionService | P0 | No exchange connectivity |
+| CryptoPortfolioService | P0 | No portfolio tracking logic |
+| CryptoMarketCapService | P1 | Missing market cap filters |
+| CryptoAnalysisService | P1 | No on-chain metrics |
+| CryptoTransactionService | P2 | No transaction analysis module |
+| ArbitrageService | P2 | No exchange comparison engine |
+| CryptoAlertService | P1 | No market event tracking |
 
-### CryptoMLService
-Specialized machine learning models for cryptocurrency markets.
+---
 
-**Models:**
-- Volatility forecasting (Beta-LMT, LSTM)
-- Market regime detection
-- Transaction clustering
-- Whale movement predictor
-- DeFi risk assessor
+## CryptoIngestionService (P0)
 
-### CryptoAnalysisService
-Blockchain analysis and on-chain metrics evaluation.
+### Purpose
+Real-time and historical cryptocurrency data ingestion from exchanges. Critical path for price tracking and analytics.
 
-**Metrics:**
-- Transaction volume analysis
-- Address clustering
-- Wallet attribution
-- Chain health monitoring
-- Gas fee optimization
+### Functionality
+- REST/WebSocket endpoints for Binance, Kraken, Coinbase
+- Normalizes OHLCV data across exchanges
+- Event detection: Pump/dump patterns, market cap spikes
+- Alert generation via NotificationService
 
-### CustomCryptoSelectionService
-User-defined cryptocurrency selection from top 300 by market cap.
+### Architecture
+```mermaid
+subgraph CryptoIngestion
+    A[BRS API] --> B[Price Feeds] --> C[Normalization Layer] --> D[Validation Module]
+    E[CoinGecko API] --> F[Data Enrichment] --> D
+    G[Binance WebSocket] --> H[Real-time Streaming]
+    I[Coinbase REST] --> J[Batch Processing]
 
-**Features:**
-- Custom screening criteria
-- Correlation analysis
-- Liquidity scoring
-- Market dominance tracking
-- Risk-adjusted performance
+subgraph Events
+    D --> K[Pump Detection] --> L[Alert Channel]
+    F --> M[Market Cap Analysis] --> L
+```
 
-## Architecture
+### Data Flow
+1. Exchange API -> 2. Normalization -> 3. Validation -> 4. Storage/Alerts
+
+---
+
+## CryptoPortfolioService (Upcoming)
+
+### Core Features
+- Multi-exchange portfolio tracking
+- Performance metrics: ROI, drawdown, tax lots
+- Rebalancing suggestions based on market conditions
+
+### Data Sources
+- PriceService for real-time quotes
+- CryptoIngestionService for historical data
+- Wallet APIs (planned integration)
+
+---
+
+## CryptoMLService (Completed)
+
+### Models
+1. **Volatility Forecasting**: Beta-LMT, LSTM models trained on 5-year data
+2. **Market Regime Detection**: Clustering algo for bull/bear phases
+3. **Whale Movement Predictor**: Address clustering analysis
+
+### Training Process
+- Daily retraining with 60-day rolling window
+- Feature selection: Volume, Open Interest, Social signals
+- Model persistence: Pickle + GPU-accelerated inference
+
+---
+
+## CryptoAnalysisService (P1)
+
+### Current Capabilities
+- On-chain transaction analysis (basic volume metrics)
+- Address clustering (PoW/PoS distinction)
+
+### Future Enhancements
+- Gas fee optimization engine
+- Chain health monitoring (block times, difficulty)
+- Smart contract monitoring (ERC-20, BEP-20)
+
+---
+
+## Security Considerations
+
+### Key Measures
+- Private key management recommendations
+- Secure storage guidelines for exchange API keys
+- Audit trails for portfolio changes
+- Integration with wallet services via Web3 SDK (planned)
+
+---
+
+## Integration Map
 
 ```mermaid
 graph TD
-    A[Crypto Data Ingestion] --> B[Normalization & Validation]
-    B --> C[Metrics Calculation]
-    C --> D[Metric Storage]
-    D --> E[Price Service]
-    D --> E[Portfolio Service]
-    D --> F[ML Models]
-    G[User Preferences] --> H[Custom Selection]
-    I[Alerting System] --> J[Event Triggers]
+    A[CryptoIngestion] --> B[PriceService]
+    B --> C[PortfolioAnalysis] --> D[ML Models]
+    A --> E[ScreeningService] --> F[CustomSelections]
+    C --> G[CustomCryptoSelection] --> H[AlertSystem]
+
+Subgraph Security
+    I[API keys] --> J[Encrypted storage]
+    K[Validation rules] --> L[Data integrity checks]
 ```
 
-## Integration Points
-- **Connected Services**: CryptoIngestionService, MarketService, PortfolioService
-- **Data Sources**: Crypto Exchanges, On-chain Analytics, Price Feeds
-- **Outputs**: Price APIs, Portfolio Analytics, Crypto Alerts
+---
 
-## Configuration
-- Supported Cryptocurrencies (Top 300)
-- Refresh Intervals (1m, 5m, 15m, daily)
-- Data Quality Thresholds
-- Alert Sensitivity Levels
+## Implementation Roadmap
 
-## Security Features
-- Private Key Management
-- Secure Storage Recommendations
-- Integration with Wallet Services
+### Phase 1 (2 weeks):
+- Complete CryptoIngestionService
+- Add Exchange API credentials
+- Basic portfolio tracking
+
+### Phase 2 (3 weeks):
+- Develop CryptoPortfolioService with tax lot management
+- Implement crypto analysis module
+- Add crypto alert system
+
+### Phase 3 (1 week):
+- Finalize market cap filtering
+- Complete transaction clustering
+
+---
+
+## Open Issues
+1. Missing wallet integration for portfolio tracking
+2. No real-time transaction processing
+3. Limited alert channels (no mobile webhook support)
+4. Testing gaps in market cap anomaly detection
