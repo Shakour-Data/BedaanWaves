@@ -56,7 +56,6 @@ async def seed_nasdaq_symbols():
 
     batch_size = 500
     total_inserted = 0
-    total_updated = 0
 
     async with async_session_maker() as session:
         for i in range(0, len(symbols), batch_size):
