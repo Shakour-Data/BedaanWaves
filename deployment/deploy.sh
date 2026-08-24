@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # Universal Deployment Script for BedaanWaves
-# Works on both Windows (via Git Bash/WLS) and Linux/macOS
+# Direct server deployment - no Docker
 # =============================================================================
 
 set -e
@@ -33,38 +33,10 @@ check_command() {
     command -v "$1" >/dev/null 2>&1 || { log_error "Command '$1' not found!"; return 1; }
 }
 
-setup_windows() {
-    log_info "Detected Windows environment"
-    
-    # Check for Docker Desktop
-    if check_command "docker" && check_command "docker-compose"; then
-        log_info "Docker found, using Docker Compose deployment"
-        echo "docker-compose up -d --build"
-        return 0
-    fi
-    
-    log_error "Docker Desktop not found. Please install Docker Desktop for Windows"
-    return 1
-}
-
 setup_linux() {
     log_info "Detected Linux environment"
     
-    # Check for Docker
-    if check_command "docker" && check_command "docker-compose"; then
-        log_info "Docker found, using Docker Compose deployment"
-        docker-compose up -d --build
-        return 0
-    fi
-    
-    # Check for docker-compose alternative
-    if check_command "docker" && check_command "podman-compose"; then
-        log_info "Podman found, using podman-compose"
-        podman-compose up -d --build
-        return 0
-    fi
-    
-    log_info "Dockerfile found, installing dependencies locally"
+    log_info "Installing dependencies locally"
     
     # Install Python dependencies
     if check_command "python3"; then
@@ -72,7 +44,7 @@ setup_linux() {
         python3 -m venv venv
         source venv/bin/activate 2>/dev/null || source venv/Scripts/activate 2>/dev/null || true
         pip install --upgrade pip
-        pip install -e .
+        pip install -r backend/requirements.txt
     fi
     
     # Install Node.js dependencies
@@ -90,12 +62,6 @@ setup_linux() {
 setup_macos() {
     log_info "Detected macOS environment"
     
-    if check_command "docker" && check_command "docker-compose"; then
-        log_info "Docker found, using Docker Compose deployment"
-        docker-compose up -d --build
-        return 0
-    fi
-    
     log_info "Installing dependencies locally..."
     
     if check_command "brew"; then
@@ -107,11 +73,37 @@ setup_macos() {
     return 0
 }
 
+setup_windows() {
+    log_info "Detected Windows environment"
+    
+    log_info "Setting up Windows environment..."
+    
+    if check_command "py"; then
+        log_info "Python found, setting up environment..."
+        py -m venv backend/venv
+        cd backend
+        .\venv\Scripts\activate
+        py -m pip install --upgrade pip
+        pip install -r requirements.txt
+        cd ..
+    fi
+    
+    if [[ -d "frontend" ]] && check_command "npm"; then
+        log_info "Setting up Node.js environment..."
+        cd frontend
+        npm install --silent
+        npm run build 2>/dev/null || log_warning "Frontend build skipped (development mode)"
+        cd ..
+    fi
+    
+    return 0
+}
+
 deploy() {
     local os=$(detect_os)
     
     log_info "========================================"
-    log_info "Starting BedaanWaves Universal Deployment"
+    log_info "Starting BedaanWaves Direct Deployment"
     log_info "System detected: $os"
     log_info "========================================"
     
@@ -131,8 +123,8 @@ deploy() {
             ;;
         *)
             log_error "Unknown OS: $os"
-            log_info "Please use Docker deployment instead"
-            docker-compose up -d --build 2>/dev/null || exit 1
+            log_info "Please use Linux, macOS, or Windows for deployment"
+            return 1
             ;;
     esac
     
@@ -147,9 +139,9 @@ deploy() {
 }
 
 main() {
-    if ! check_command "docker" 2>/dev/null && ! check_command "python3" 2>/dev/null && ! check_command "python" 2>/dev/null && ! check_command "npm" 2>/dev/null; then
+    if ! check_command "python3" 2>/dev/null && ! check_command "python" 2>/dev/null && ! check_command "npm" 2>/dev/null; then
         log_error "No deployment tool found!"
-        log_error "Please install Docker, Python3, or Node.js first"
+        log_error "Please install Python3 or Node.js first"
         exit 1
     fi
     
