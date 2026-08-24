@@ -31,6 +31,7 @@ from .shadow_banking_service import ShadowBankingMetricsService
 from .currency_regime_service import CurrencyRegimeClassifier
 from .exchange_rate_volatility_service import ExchangeRateVolatilityService
 from .metric_taxonomy_service import MetricTaxonomyService
+from app.services.system.regime_aware_retention_service import RegimeAwareRetentionService
 
 __all__ = [
     "ScoringService",

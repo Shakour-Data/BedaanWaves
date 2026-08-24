@@ -13,15 +13,16 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import asyncio
-import csv
-import logging
-from datetime import datetime
-from typing import List, Tuple
+import asyncio  # noqa: E402
+import csv  # noqa: E402
+import logging  # noqa: E402
+from datetime import datetime  # noqa: E402
+from typing import List, Tuple  # noqa: E402
 
-from sqlalchemy import select
-from app.db.base import async_session_maker
-from app.models.models import Asset
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: E402
+from app.db.base import async_session_maker  # noqa: E402
+from app.models.models import Asset  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

@@ -1,10 +1,51 @@
 """Tier 6: User Services
 
 Services for user management:
-- UserService: User account management
 - AuthService: Authentication and JWT
-- SubscriptionService: Subscription management
+- AuthorizationService: Permission resolution
+- UserProfileService: User profile management
 - PreferenceService: User preferences
-- AlertService: Alert management
 - NotificationService: Notification delivery
+- WatchlistService: Watchlist management
+- UserMarketSettingsService: User market settings
+- UserCryptoSettingsService: User crypto settings
 """
+
+from .auth_service import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_user_by_username,
+    get_user_by_email,
+    create_user,
+    authenticate_user,
+)
+from .authorization_service import AuthorizationService, authorization_service
+from .user_profile_service import UserProfileService
+from .preference_service import PreferenceService
+from .notification_service import NotificationService
+from .watchlist_service import WatchlistService
+from .user_market_settings_service import UserMarketSettingsService
+from .user_crypto_settings_service import UserCryptoSettingsService
+
+__all__ = [
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "create_refresh_token",
+    "decode_token",
+    "get_user_by_username",
+    "get_user_by_email",
+    "create_user",
+    "authenticate_user",
+    "AuthorizationService",
+    "authorization_service",
+    "UserProfileService",
+    "PreferenceService",
+    "NotificationService",
+    "WatchlistService",
+    "UserMarketSettingsService",
+    "UserCryptoSettingsService",
+]

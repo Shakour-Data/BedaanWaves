@@ -28,6 +28,29 @@ def _add_version_header(response: Response, version: str = "v1"):
     response.headers["X-Rate-Limit-Remaining"] = "60"
 
 
+@router.get("/search", response_model=dict)
+async def search_stocks(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=100),
+    client: BrsApiClient = Depends(get_brs_client),
+    response: Response = None
+) -> dict:
+    """Search stocks by query."""
+    if response:
+        _add_version_header(response, "v1")
+    
+    service = StockService(brs_client=client)
+    await service.initialize()
+    results = await service.search(q)
+    return {
+        "status": "success",
+        "query": q,
+        "count": len(results),
+        "data": results[:limit],
+        "api_version": "v1"
+    }
+
+
 @router.get("/{ticker}", response_model=dict)
 async def get_stock(
     ticker: str,
@@ -56,29 +79,6 @@ async def get_stock(
         result["migrated_to"] = "v2 has same endpoint"
     
     return result
-
-
-@router.get("/search", response_model=dict)
-async def search_stocks(
-    q: str = Query(..., min_length=1),
-    limit: int = Query(20, ge=1, le=100),
-    client: BrsApiClient = Depends(get_brs_client),
-    response: Response = None
-) -> dict:
-    """Search stocks by query."""
-    if response:
-        _add_version_header(response, "v1")
-    
-    service = StockService(brs_client=client)
-    await service.initialize()
-    results = await service.search(q)
-    return {
-        "status": "success",
-        "query": q,
-        "count": len(results),
-        "data": results[:limit],
-        "api_version": "v1"
-    }
 
 
 @router.post("/batch", response_model=dict)

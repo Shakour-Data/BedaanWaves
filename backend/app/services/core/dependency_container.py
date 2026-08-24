@@ -118,6 +118,8 @@ class DependencyContainer:
             **default_kwargs: Default arguments for factory
         """
         self.register(service_name, factory, singleton=singleton, **default_kwargs)
+
+    def register_instance(self, service_name: str, instance: Any) -> None:
         """
         Register a pre-created service instance (useful for testing).
         

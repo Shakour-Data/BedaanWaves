@@ -29,7 +29,6 @@ class DataArchivalService(DataService):
         self.settings = get_settings()
         self.policy = ArchivePolicy.KEEP_RECENT_5_YEARS
         self.archive_path = self.settings.ARCHIVE_PATH or "./data/archive"
-        self.logger = self.get_logger()
         
         # Initialize archive storage
         self._archive_index = self._load_archive_index()

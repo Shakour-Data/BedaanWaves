@@ -78,6 +78,17 @@ class NasdaqIngestionService(DataService):
     @staticmethod
     def _clean_nan(obj):
         """Replace NaN/Inf values with None for JSON serialization."""
+        if isinstance(obj, str):
+            lower = obj.strip().lower()
+            if lower in ("nan", "inf", "-inf", "infinity", "-infinity", "none", "null"):
+                return None
+            try:
+                f = float(obj)
+                if math.isnan(f) or math.isinf(f):
+                    return None
+                return f
+            except (ValueError, TypeError):
+                return obj
         if isinstance(obj, float):
             if math.isnan(obj) or math.isinf(obj):
                 return None
