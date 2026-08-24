@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * صفحه‌ی فهرست سهام: نمادها را از `GET /market/symbols` می‌گیرد و آخرین
- * قیمت/تغییر را از `GET /market/latest-prices`. هر ردیف به صفحه‌ی جزئیاتِ
- * `/stocks/[symbol]` لینک می‌شود.
+ * Stock listing page: Fetches symbols from `GET /market/symbols` and latest
+ * prices from `GET /market/latest-prices`. Each row links to `/stocks/[symbol]`.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,27 +18,24 @@ import {
 } from "@/lib/api/stocks";
 
 const MARKET_LABEL: Record<Market, string> = {
-  TSE: "بورس",
-  OTC: "فرابورس",
-  BINANCE: "کریپتو",
-  KRAKEN: "کریپتو",
-  COINBASE: "کریپتو",
+  TSE: "TSE",
+  OTC: "OTC",
+  BINANCE: "Crypto",
+  KRAKEN: "Crypto",
+  COINBASE: "Crypto",
   NYSE: "NYSE",
   NASDAQ: "NASDAQ",
 };
 
-type MarketFilter = "ALL" | "TSE" | "OTC" | "CRYPTO";
+type MarketFilter = "ALL" | "NASDAQ";
 
 const FILTERS: { key: MarketFilter; label: string }[] = [
-  { key: "ALL", label: "همه" },
-  { key: "TSE", label: "بورس" },
-  { key: "OTC", label: "فرابورس" },
-  { key: "CRYPTO", label: "کریپتو" },
+  { key: "ALL", label: "All" },
+  { key: "NASDAQ", label: "Nasdaq" },
 ];
 
 function matchesFilter(asset: Asset, filter: MarketFilter): boolean {
   if (filter === "ALL") return true;
-  if (filter === "CRYPTO") return asset.asset_class === "CRYPTO";
   return asset.market === filter;
 }
 
@@ -48,7 +44,7 @@ export default function StocksPage() {
   const [prices, setPrices] = useState<Record<string, LatestPrice>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<MarketFilter>("ALL");
+  const [filter, setFilter] = useState<MarketFilter>("NASDAQ");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -57,14 +53,14 @@ export default function StocksPage() {
     async function load() {
       setLoading(true);
       try {
-        const list = await fetchSymbols({ limit: 1000 });
+        const list = await fetchSymbols({ market: "NASDAQ", limit: 1000 });
         if (!active) return;
         setAssets(list);
         setError(null);
         const map = await fetchLatestPrices(list.map((a) => a.symbol)).catch(() => ({}));
         if (active) setPrices(map);
       } catch (e: unknown) {
-        if (active) setError(e instanceof Error ? e.message : "خطا در دریافت نمادها");
+        if (active) setError(e instanceof Error ? e.message : "Error fetching symbols");
       } finally {
         if (active) setLoading(false);
       }
@@ -93,16 +89,16 @@ export default function StocksPage() {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-        در حال بارگذاری نمادها…
+        Loading symbols...
       </div>
     );
   }
 
   if (error || !assets) {
     return (
-      <TarotCard icon="⚠️" title="خطا در ارتباط با بک‌اند">
+      <TarotCard icon="⚠️" title="Backend Connection Error">
         <p className="text-sm text-muted-foreground">
-          دریافت فهرست نمادها ممکن نشد. مطمئن شوید سرویس بک‌اند در حال اجراست.
+          Could not fetch symbol list. Make sure the backend service is running.
         </p>
         {error ? <p className="mt-2 text-xs text-primary">{error}</p> : null}
       </TarotCard>
@@ -111,7 +107,7 @@ export default function StocksPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* فیلترها + جست‌وجو */}
+      {/* Filters + Search */}
       <section className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1">
           {FILTERS.map((f) => (
@@ -136,23 +132,23 @@ export default function StocksPage() {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="جست‌وجوی نماد یا نام…"
+            placeholder="Search symbol or name..."
             className="bg-transparent text-foreground outline-none placeholder:text-muted-foreground/70"
           />
         </label>
       </section>
 
-      <TarotCard icon="🏢" title={`نمادها (${filtered.length.toLocaleString("fa-IR")})`}>
+      <TarotCard icon="🏢" title={`Symbols (${filtered.length.toLocaleString()})`}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="px-2 py-2 text-right font-medium">نماد</th>
-                <th className="px-2 py-2 text-right font-medium">نام</th>
-                <th className="px-2 py-2 text-center font-medium">بازار</th>
-                <th className="px-2 py-2 text-right font-medium">صنعت</th>
-                <th className="px-2 py-2 text-left font-medium">قیمت</th>
-                <th className="px-2 py-2 text-left font-medium">تغییر</th>
+                <th className="px-2 py-2 text-right font-medium">Symbol</th>
+                <th className="px-2 py-2 text-right font-medium">Name</th>
+                <th className="px-2 py-2 text-center font-medium">Market</th>
+                <th className="px-2 py-2 text-right font-medium">Sector</th>
+                <th className="px-2 py-2 text-left font-medium">Price</th>
+                <th className="px-2 py-2 text-left font-medium">Change</th>
               </tr>
             </thead>
             <tbody>
@@ -179,7 +175,7 @@ export default function StocksPage() {
                     </td>
                     <td className="px-2 py-2 text-muted-foreground">{a.sector ?? "—"}</td>
                     <td className="px-2 py-2 text-left">
-                      {p ? p.price.toLocaleString("fa-IR") : "—"}
+                      {p ? p.price.toLocaleString() : "—"}
                     </td>
                     <td className="px-2 py-2 text-left">
                       {p ? <ChangeBadge value={p.change_pct} /> : "—"}
@@ -190,7 +186,7 @@ export default function StocksPage() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-2 py-6 text-center text-muted-foreground">
-                    نمادی یافت نشد.
+                    No symbols found.
                   </td>
                 </tr>
               ) : null}

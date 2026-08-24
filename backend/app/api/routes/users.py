@@ -13,7 +13,7 @@ from app.schemas.schemas import (
 from app.services.user.user_profile_service import user_profile_service
 from app.services.user.preference_service import preference_service
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(tags=["users"])
 
 
 @router.get("/me", response_model=UserResponse)

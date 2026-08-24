@@ -9,25 +9,90 @@ import { useState } from "react";
 const dimensionDetails = [
   {
     id: "fundamental",
-    title: "Fundamental Analysis (25%)",
+    title: "تحلیل بنیادی (25٪)",
     weight: 25,
     color: "bg-blue-500/20 border-blue-400",
     icon: "💎",
     aspects: [
-      { name: "P/E Ratio", desc: "Calculated as market price per share divided by earnings per share" },
-      { name: "ROE", desc: "Return on Equity" },
-      { name: "Book Value", desc: "Shareholder equity divided by outstanding shares" },
-      { name: "Revenue Growth", desc: "Year-over-year increase in revenue" },
-      { name: "Debt-to-Equity", desc: "Total liabilities divided by shareholder equity" }
+      { name: "P/E Ratio", desc: "نسبت قیمت به سود" },
+      { name: "ROE", desc: "بازده حقوق صاحبان سهام" },
+      { name: "Book Value", desc: "ارزش دفتری در هر سهم" },
+      { name: "Revenue Growth", desc: "رشد درآمدی سالانه" },
+      { name: "Debt-to-Equity", desc: "نسبت بدهی به حقوق صاحبان سهام" }
     ],
   },
-  // (Repeat similar structure for other dimensions)
+  {
+    id: "technical",
+    title: "تحلیل تکنیکال (20٪)",
+    weight: 20,
+    color: "bg-green-500/20 border-green-400",
+    icon: "📈",
+    aspects: [
+      { name: "RSI", desc: "شاخص قدرت نسبی" },
+      { name: "MACD", desc: "واگرایی و همگرایی میانگین متحرک" },
+      { name: "Moving Averages", desc: "میانگین‌های متحرک 50 و 200 روزه" },
+      { name: "Bollinger Bands", desc: "باندهای بولینگر" },
+      { name: "Volume Profile", desc: "پروفیل حجم معاملات" }
+    ],
+  },
+  {
+    id: "sentiment",
+    title: "تحلیل احساسات (15٪)",
+    weight: 15,
+    color: "bg-purple-500/20 border-purple-400",
+    icon: "👁️‍🗨️",
+    aspects: [
+      { name: "News Sentiment", desc: "احساسات خبری" },
+      { name: "Social Media", desc: "احساسات شبکه‌های اجتماعی" },
+      { name: "Analyst Ratings", desc: "امتیاز تحلیلگران" }
+    ],
+  },
+  {
+    id: "risk",
+    title: "تحلیل ریسک (20٪)",
+    weight: 20,
+    color: "bg-red-500/20 border-red-400",
+    icon: "⚠️",
+    aspects: [
+      { name: "Volatility", desc: "نوسان قیمت" },
+      { name: "VaR", desc: "ارزش در معرض ریسک" },
+      { name: "Sharpe Ratio", desc: "ضریب شارپ" },
+      { name: "Max Drawdown", desc: "بیشترین افت قیمت" }
+    ],
+  },
+  {
+    id: "macro",
+    title: "تحلیل ماکرو (10٪)",
+    weight: 10,
+    color: "bg-orange-500/20 border-orange-400",
+    icon: "🌍",
+    aspects: [
+      { name: "GDP Growth", desc: "رشد تولید ناخالص داخلی" },
+      { name: "Inflation", desc: "نرخ تورم" },
+      { name: "Interest Rates", desc: "نرخ بهره" },
+      { name: "FX Rates", desc: "نرخ ارز" }
+    ],
+  },
+  {
+    id: "ai",
+    title: "هوش مصنوعی (10٪)",
+    weight: 10,
+    color: "bg-cyan-500/20 border-cyan-400",
+    icon: "🧠",
+    aspects: [
+      { name: "LSTM Forecast", desc: "پیش‌بینی قیمت با LSTM" },
+      { name: "Pattern Detection", desc: "تشکیل الگوهای نموداری" },
+      { name: "Anomaly Detection", desc: "تشخیص ناهنجاری‌ها" }
+    ],
+  },
 ];
 
 const grades = [
-  { label: "A (Strong Buy)", min: 85, color: "text-green-600", bg: "bg-green-500/20" },
-  { label: "B (Buy)", min: 70, color: "text-emerald-600", bg: "bg-emerald-500/20" },
-  // (Continue for other grades)
+  { label: "A (خرید قوی)", min: 85, color: "text-green-600", bg: "bg-green-500/20" },
+  { label: "B (خرید)", min: 70, color: "text-emerald-600", bg: "bg-emerald-500/20" },
+  { label: "C (نگهداری)", min: 55, color: "text-yellow-600", bg: "bg-yellow-500/20" },
+  { label: "D (فروش)", min: 40, color: "text-orange-600", bg: "bg-orange-500/20" },
+  { label: "E (فروش قوی)", min: 0, color: "text-red-600", bg: "bg-red-500/20" },
 ];
 
 const mlCoefficients = [

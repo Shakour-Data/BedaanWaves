@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
-import { semanticColors } from "@/styles/design-tokens";
 
 interface NavItem {
   href: string;
@@ -14,6 +13,7 @@ interface NavItem {
 }
 
 const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", icon: "🔐", ready: true };
+const SECONDARY_COLOR = "#64748B";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -38,6 +38,17 @@ export function Sidebar() {
         AUTH_ITEM,
       ];
 
+  const getNavItemStyle = (active: boolean): Record<string, string> => {
+    if (active) {
+      return {
+        backgroundColor: `${SECONDARY_COLOR}1A`,
+        color: SECONDARY_COLOR,
+        fontWeight: "600",
+      };
+    }
+    return {};
+  };
+
   return (
     <aside
       className={cn(
@@ -60,9 +71,10 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-150",
                 active
-                  ? `bg-[${semanticColors.secondary}]/10 font-semibold text-[${semanticColors.secondary}]`
+                  ? "font-semibold"
                   : "text-muted-foreground hover:bg-black/5 hover:text-foreground",
               )}
+              style={getNavItemStyle(active)}
             >
               <span className="text-xl" aria-hidden="true">
                 {item.icon}

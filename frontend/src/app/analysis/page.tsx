@@ -97,7 +97,7 @@ export default function AnalysisPage() {
           setTopMovers(movers.slice(0, 5));
         }
       } catch (error) {
-        console.error("Error loading analysis data:", error);
+        // Handle error silently
       } finally {
         if (active) setLoading(false);
       }
@@ -159,7 +159,7 @@ export default function AnalysisPage() {
         {/* Active Analysis Tab Content */}
         <TarotCard icon="📊" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمایشگر {analysisTabs.find((t) => t.id === activeTab)?.label} (در حال توسعه)</p>
+            <p>این بخش به‌زودی اضافه می‌شود</p>
           </div>
         </TarotCard>
 

@@ -15,7 +15,7 @@ from app.services.data.brs_api_client import BrsApiClient
 from app.api.routes.live import get_brs_client
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/history", tags=["history"])
+router = APIRouter(tags=["history"])
 
 
 @router.get("/{ticker}", response_model=List[dict])

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
-import { registerApi } from "@/lib/auth";
 import en from "@/i18n/en.json";
 import fa from "@/i18n/fa.json";
 
@@ -19,7 +18,7 @@ const t = (key: string) => {
     if (value && typeof value === "object") {
       value = (value as any)[k];
     } else {
-      return key; // fallback to key if not found
+      return key;
     }
   }
   return typeof value === "string" ? value : key;
@@ -40,7 +39,6 @@ export default function RegisterPage() {
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const lang = e.target.value as "en" | "fa";
     setLanguage(lang);
-    // Also update localStorage for immediate use in t()
     if (typeof window !== "undefined") {
       localStorage.setItem("lang", lang);
     }
@@ -59,10 +57,8 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await registerApi({ name, email, password });
       await registerStore(name, email, password);
     } catch (err: any) {
-      // Try to get error message from response, fallback to generic
       const message = err.response?.data?.detail || t("auth.error_authentication");
       setError(message);
     } finally {

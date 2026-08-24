@@ -30,17 +30,18 @@ export default function ProfilePage() {
     setShowNewPassword(!showNewPassword);
   };
 
-  const validatePasswords = () => {
+  const validatePasswords = (): boolean => {
     if (newPassword && confirmPassword && newPassword !== confirmPassword) {
       setConfirmPasswordError("رمز عبور جدید و تکرار آن باید یکسان باشند");
-    } else {
-      setConfirmPasswordError("");
+      return false;
     }
+    setConfirmPasswordError("");
+    return true;
   };
 
-      const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!validatePasswords()) return;
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validatePasswords()) return;
         
         setLoading(true);
         try {
@@ -55,10 +56,9 @@ export default function ProfilePage() {
           } else {
             throw new Error("بروز خطا در ذخیره اطلاعات");
           }
-        } catch (error) {
-          console.error("Error saving profile:", error);
-          // Handle error (e.g., show toast)
-        } finally {
+          } catch (error) {
+            // Handle error (e.g., show toast)
+          } finally {
           setLoading(false);
         }
       };

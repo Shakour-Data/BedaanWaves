@@ -16,7 +16,7 @@ from app.schemas.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/market", tags=["market"])
+router = APIRouter(tags=["market"])
 
 
 @router.get("/symbols", response_model=List[AssetResponse])
@@ -271,6 +271,8 @@ async def tse_dashboard(
     Returns:
         TSE market overview snapshot
     """
+    Candle = candle_model_for_market("TSE")
+
     # Single query that retrieves assets and their latest candles in one statement
     query = (
         select(
@@ -355,6 +357,8 @@ async def industry_ranking(
     Returns:
         Industries ranked by average change %, each with member count
     """
+    Candle = candle_model_for_market("TSE")
+
     # Single optimized query: join assets with candles, compute latest and previous close
     query = (
         select(

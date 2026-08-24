@@ -50,6 +50,13 @@ Thumbs.db
 *.swp
 *.swo
 
+# Kilo AI internal state
+.kilo/
+
 # PostgreSQL Installer (Windows)
 pginst*.exe
 pginst_extracted/
+
+# Temporary backend test scripts
+backend/check_routes.py
+backend/test_*.py

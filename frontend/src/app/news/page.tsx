@@ -37,7 +37,7 @@ export default function NewsPage() {
           setNewItems(formattedNews);
         }
       } catch (error) {
-        console.error("Failed to load news:", error);
+        // Handle error silently
       } finally {
         if (active) setLoading(false);
       }
@@ -60,7 +60,8 @@ export default function NewsPage() {
 
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
   const filteredNews = selectedSource ? newItems.filter((item) => item.source === selectedSource) : newItems;
-  const trendingTopics = getTrendingTopics();
+  const trendingTopics = getTrendingTopics(newItems);
+  const topTopics = getTopTopics(newItems);
 
   if (loading) {
     return (
@@ -97,15 +98,18 @@ export default function NewsPage() {
             </div>
           </TarotCard>
 
-          {/* Super Topics */}
+          {/* Trending Topics */}
           <TarotCard icon="🔥" title="موضوعات داغ">
             <div className="space-y-2">
-              {getTopTopics().map((topic, i) => (
+              {topTopics.map((topic, i) => (
                 <div key={i} className="flex items-center justify-between font-medium text-sm">
                   <span className="flex-1">{topic.topic}</span>
                   <span className="text-xs text-muted-foreground">{topic.count} خبر</span>
                 </div>
               ))}
+              {topTopics.length === 0 && (
+                <p className="text-sm text-muted-foreground">موضوع داغی یافت نشد</p>
+              )}
             </div>
           </TarotCard>
         </div>
@@ -121,8 +125,23 @@ export default function NewsPage() {
   );
 }
 
-function getTopTopics(): { topic: string; count: number }[] {
-  // This would ideally pull from actual trend data
-  // Fallback implementation
-  return [];
+function getTopTopics(newsItems: NewsItem[]): { topic: string; count: number }[] {
+  const wordCounts: Record<string, number> = {};
+  newsItems.forEach((item) => {
+    const words = item.title.split(/\s+/);
+    words.forEach((word) => {
+      const cleaned = word.replace(/[^\u0600-\u06FFa-zA-Z]/g, "").toLowerCase();
+      if (cleaned.length > 3) {
+        wordCounts[cleaned] = (wordCounts[cleaned] || 0) + 1;
+      }
+    });
+  });
+  return Object.entries(wordCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([topic, count]) => ({ topic, count }));
+}
+
+function getTrendingTopics(newsItems: NewsItem[]): { topic: string; count: number }[] {
+  return getTopTopics(newsItems);
 }

@@ -16,7 +16,7 @@ from app.schemas.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/portfolios", tags=["portfolios"])
+router = APIRouter(tags=["portfolios"])
 
 
 @router.post("/", response_model=PortfolioResponse)

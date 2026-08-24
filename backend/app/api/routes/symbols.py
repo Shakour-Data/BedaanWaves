@@ -12,28 +12,7 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-router = APIRouter(prefix="/symbols", tags=["symbols"])
-
-
-@router.get("/{symbol}", response_model=dict)
-async def get_symbol(
-    symbol: str,
-    service: SymbolService = Depends(SymbolService),
-) -> dict:
-    """Get symbol data by ticker."""
-    data = await service.get_symbol(symbol)
-    if not data:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Symbol '{symbol}' not found"
-        )
-    
-    return {
-        "status": "success",
-        "symbol": symbol,
-        "data": data,
-        "timestamp": datetime.utcnow().isoformat()
-    }
+router = APIRouter(tags=["symbols"])
 
 
 @router.get("/search", response_model=dict)
@@ -108,7 +87,21 @@ async def get_countries(
     }
 
 
-@router.get("/{exchange}/count", response_model=dict)
+@router.get("/stats", response_model=dict)
+async def get_symbol_stats(
+    service: SymbolService = Depends(SymbolService),
+) -> dict:
+    """Get symbol statistics."""
+    stats = await service.get_stats()
+    
+    return {
+        "status": "success",
+        "stats": stats,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+@router.get("/exchanges/{exchange}/count", response_model=dict)
 async def get_symbols_by_exchange(
     exchange: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -135,7 +128,7 @@ async def get_symbols_by_exchange(
     }
 
 
-@router.get("/{market_type}/count", response_model=dict)
+@router.get("/market-types/{market_type}/count", response_model=dict)
 async def get_symbols_by_market_type(
     market_type: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -162,15 +155,22 @@ async def get_symbols_by_market_type(
     }
 
 
-@router.get("/stats", response_model=dict)
-async def get_symbol_stats(
+@router.get("/{symbol}", response_model=dict)
+async def get_symbol(
+    symbol: str,
     service: SymbolService = Depends(SymbolService),
 ) -> dict:
-    """Get symbol statistics."""
-    stats = await service.get_stats()
+    """Get symbol data by ticker."""
+    data = await service.get_symbol(symbol)
+    if not data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Symbol '{symbol}' not found"
+        )
     
     return {
         "status": "success",
-        "stats": stats,
+        "symbol": symbol,
+        "data": data,
         "timestamp": datetime.utcnow().isoformat()
     }

@@ -7,7 +7,7 @@ import logging
 from app.services.data.news_service import NewsService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/news", tags=["news"])
+router = APIRouter(tags=["news"])
 
 
 @router.get("/market", response_model=dict)

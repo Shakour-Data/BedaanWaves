@@ -13,7 +13,6 @@ from app.services.system.queue_service import QueueService, JobStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
-    prefix="/system",
     tags=["system"],
     dependencies=[Depends(get_current_admin_user)],
 )

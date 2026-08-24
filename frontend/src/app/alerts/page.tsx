@@ -97,7 +97,7 @@ export default function AlertsPage() {
         setAlertHistory(history);
 
       } catch (error) {
-        console.error("Failed to load alerts:", error);
+        // Handle error silently
       } finally {
         if (active) setLoading(false);
       }

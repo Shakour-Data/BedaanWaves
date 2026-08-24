@@ -16,7 +16,7 @@ from app.services.specialized.correlation_service import CorrelationService
 from app.services.specialized.calendar_service import CalendarService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/specialized", tags=["specialized"])
+router = APIRouter(tags=["specialized"])
 
 
 def _load(svc_cls):

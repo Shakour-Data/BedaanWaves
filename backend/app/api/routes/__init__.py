@@ -17,6 +17,8 @@ from . import (
     crypto,
     specialized,
     health,
+    symbols,
+    intl,
 )
 
 # Export routers with explicit names for main.py compatibility
@@ -34,21 +36,22 @@ notifications_router = notifications.router
 specialized_router = specialized.router
 system_router = system.router
 crypto_router = crypto.router
-intl_router = market.router
+symbols_router = symbols.router
+intl_router = intl.router
 live_router = live.router
 health_router = health.router
 
 __all__ = [
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "users", "watchlists", "notifications",
-    "system", "crypto", "specialized", "health",
+    "system", "crypto", "specialized", "health", "symbols", "intl",
     "auth_router", "stocks_router", "market_router", "analysis_router",
     "portfolio_router", "history_router", "news_router", "ml_router",
     "users_router", "watchlists_router", "notifications_router",
     "specialized_router", "system_router", "crypto_router",
-    "health_router",
+    "symbols_router", "intl_router", "live_router", "health_router",
     # Module references
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "users", "watchlists", "notifications",
-    "system", "crypto", "specialized", "health",
+    "system", "crypto", "specialized", "health", "symbols", "intl",
 ]

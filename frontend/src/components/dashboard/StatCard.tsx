@@ -1,17 +1,17 @@
 import { cn } from "@/lib/cn";
 import type { MarketStat } from "@/lib/dashboard-data";
-import { semanticColors, fontSizes } from "@/styles/design-tokens";
+import { semanticColors } from "@/styles/design-tokens";
 
 export function ChangeBadge({ value }: { value: number }) {
   const up = value >= 0;
+  const color = up ? semanticColors.success : semanticColors.error;
   return (
     <span
-      className={cn(
-        "rounded-full px-2 py-0.5 text-xs font-semibold",
-        up
-          ? `bg-[${semanticColors.success}]/15 text-[${semanticColors.success}]`
-          : `bg-[${semanticColors.error}]/15 text-[${semanticColors.error}]`,
-      )}
+      className="rounded-full px-2 py-0.5 text-xs font-semibold"
+      style={{
+        backgroundColor: `${color}26`,
+        color,
+      }}
     >
       {up ? "▲" : "▼"} {Math.abs(value).toFixed(2)}٪
     </span>
