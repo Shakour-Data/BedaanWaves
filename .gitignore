@@ -49,3 +49,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# PostgreSQL Installer (Windows)
+pginst*.exe
+pginst_extracted/
