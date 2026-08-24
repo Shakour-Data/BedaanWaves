@@ -81,7 +81,9 @@ class HealthChecker(BaseService):
         
         try:
             check_func = self._checks[name]
-            result = await check_func() if asyncio.iscoroutinefunction(check_func) else check_func()
+            result = check_func()
+            if asyncio.iscoroutine(result):
+                result = await result
             
             result['timestamp'] = datetime.utcnow().isoformat()
             self._last_results[name] = result

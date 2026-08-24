@@ -115,6 +115,21 @@ class SchedulerService(BaseService):
             interval_seconds=1800,
         )
         
+        # Job: Nasdaq daily update (runs every 24 hours)
+        async def nasdaq_daily_update_job():
+            from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
+            service = NasdaqIngestionService()
+            await service.initialize()
+            result = await service.daily_update()
+            await service.shutdown()
+            return result
+        
+        self.register_job(
+            name="NasdaqDailyUpdate",
+            coroutine_func=nasdaq_daily_update_job,
+            interval_seconds=86400,
+        )
+        
         # Job: Data ingestion (runs every 6 hours)
         async def data_ingestion_job():
             from app.services.data.financial_data_ingest_service import FinancialDataIngestService

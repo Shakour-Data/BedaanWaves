@@ -24,7 +24,7 @@ export default function NewsPage() {
       setLoading(true);
       try {
         // Fetch market news
-        const newsRes = await apiClient.get<any>("/news/market?limit=20");
+        const newsRes = await apiClient.get<any>("/news/news/market?limit=20");
         
         if (active) {
           const newsItems: NewsItem[] = (newsRes.data || {}).data || [];

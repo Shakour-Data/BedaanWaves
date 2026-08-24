@@ -32,17 +32,17 @@ export default function AnalysisPage() {
       try {
         // Fetch signal summary
         const summaryRes = await apiClient.get<{ status: string; data: any; summary: Record<string, number> }>(
-          "/analysis/signals-summary?min_confidence=0.6"
+          "/analysis/analysis/signals-summary?min_confidence=0.6"
         );
 
         // Fetch top performers (TSE)
         const performersRes = await apiClient.get<{ status: string; data: any[] }>(
-          "/analysis/top-performers?limit=10&timeframe=1d&market=TSE"
+          "/analysis/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ"
         );
 
         // Fetch symbols to map performer data
         const symbolsRes = await apiClient.get<{ symbol: string; name: string; market: string }[]>(
-          "/market/symbols?market=TSE&limit=50"
+          "/market/market/symbols?market=NASDAQ&limit=50"
         );
 
         if (!active) return;
@@ -64,7 +64,7 @@ export default function AnalysisPage() {
           for (const performer of topPerformerSymbols) {
             try {
               const signalRes = await apiClient.get<{ status: string; data: any }>(
-                `/analysis/signals/${encodeURIComponent(performer.symbol)}`
+                `/analysis/analysis/signals/${encodeURIComponent(performer.symbol)}`
               );
               if (signalRes.status === "success") {
                 signals.push({
@@ -109,16 +109,16 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <DashboardShell title="تحلیل">
+      <DashboardShell title="Analysis">
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          در حال بارگذاری تحلیل...
+          Loading analysis...
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title="تحلیل">
+    <DashboardShell title="Analysis">
       <div className="flex flex-col gap-6">
         {/* Analysis Tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
@@ -139,27 +139,27 @@ export default function AnalysisPage() {
         </div>
 
         {/* Signal Analysis */}
-        <TarotCard icon="🎯" title="سیگنال‌های رتبه‌بندی شده">
+        <TarotCard icon="🎯" title="Ranked Signals">
           {topSignals.length > 0 ? (
             <SignalList signals={topSignals} />
           ) : (
-            <p className="text-muted-foreground py-4">سیگنالی موجود نیست</p>
+            <p className="text-muted-foreground py-4">No signals available</p>
           )}
         </TarotCard>
 
         {/* Top Movers */}
-        <TarotCard icon="🚀" title="پرنوسان‌ترین سهام">
+        <TarotCard icon="🚀" title="Top Movers">
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
-            <p className="text-muted-foreground py-4">داده‌ای موجود نیست</p>
+            <p className="text-muted-foreground py-4">No data available</p>
           )}
         </TarotCard>
 
         {/* Active Analysis Tab Content */}
         <TarotCard icon="📊" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>این بخش به‌زودی اضافه می‌شود</p>
+            <p>Coming soon</p>
           </div>
         </TarotCard>
 

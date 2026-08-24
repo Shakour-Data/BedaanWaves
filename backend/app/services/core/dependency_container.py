@@ -56,8 +56,7 @@ class DependencyContainer:
         self.logger.info(f"Registered service: {service_name} (singleton={singleton})")
     
     def get(self, service_name: str, **kwargs) -> Any:
-        """
-        Get service instance.
+        """Get service instance.
         
         Args:
             service_name: Service identifier
@@ -69,6 +68,9 @@ class DependencyContainer:
         Raises:
             KeyError: If service not registered
         """
+        if service_name in self._singletons:
+            return self._singletons[service_name]
+        
         if service_name not in self._factories:
             raise KeyError(f"Service not registered: {service_name}")
         
@@ -99,7 +101,23 @@ class DependencyContainer:
             self.logger.error(f"Failed to create service {service_name}: {e}")
             raise
     
-    def register_instance(self, service_name: str, instance: Any) -> None:
+    def register_factory(
+        self,
+        service_name: str,
+        factory: Callable,
+        singleton: bool = True,
+        **default_kwargs
+    ) -> None:
+        """
+        Register a service factory (alias for register).
+        
+        Args:
+            service_name: Unique service identifier
+            factory: Callable that creates service instance
+            singleton: Whether to cache single instance
+            **default_kwargs: Default arguments for factory
+        """
+        self.register(service_name, factory, singleton=singleton, **default_kwargs)
         """
         Register a pre-created service instance (useful for testing).
         
@@ -172,6 +190,12 @@ class DependencyContainer:
 
 # Global container instance (lazy-loaded)
 _global_container: Optional[DependencyContainer] = None
+
+
+def set_global_container(container: DependencyContainer) -> None:
+    """Set the global dependency container instance."""
+    global _global_container
+    _global_container = container
 
 
 def get_global_container() -> DependencyContainer:

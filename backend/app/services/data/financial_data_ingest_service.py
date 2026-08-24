@@ -18,6 +18,7 @@ import asyncio
 
 from app.services.core.base_service import DataService
 from .brs_api_client import BrsApiClient
+from .nasdaq_ingestion_service import NasdaqIngestionService
 from app.core.config import get_settings
 
 
@@ -367,16 +368,30 @@ class FinancialDataIngestService(DataService):
     async def batch_ingest(
         self,
         symbols: List[str],
-        market: MarketType,
+        market: MarketType = None,
         statement_types: Optional[List[FinancialStatementType]] = None
     ) -> Dict[str, List[FinancialStatement]]:
         """Ingest financial statements for multiple symbols"""
+        if market in (MarketType.US, MarketType.NASDAQ) or (market is None and symbols):
+            nasdaq = NasdaqIngestionService()
+            await nasdaq.initialize()
+            results = {}
+            for symbol in symbols:
+                try:
+                    count = await nasdaq.ingest_price_history(symbol, period="5d")
+                    results[symbol] = {"prices": count, "fundamentals": False}
+                except Exception as e:
+                    self.logger.error(f"Failed to ingest {symbol}: {e}")
+                    results[symbol] = {"prices": 0, "fundamentals": False, "error": str(e)}
+            await nasdaq.shutdown()
+            return results
+
         results = {}
         for symbol in symbols:
             try:
                 results[symbol] = await self.ingest_financial_statements(
                     symbol=symbol,
-                    market=market,
+                    market=market or MarketType.US,
                     statement_types=statement_types
                 )
             except Exception as e:

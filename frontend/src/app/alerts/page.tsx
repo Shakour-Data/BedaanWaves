@@ -31,10 +31,10 @@ export default function AlertsPage() {
           data: any;
           summary: Record<string, number>;
           average_confidence: Record<string, number>;
-        }>("/analysis/signals-summary?min_confidence=0.7");
+        }>("/analysis/analysis/signals-summary?min_confidence=0.7");
 
-        const watchlistsRes = await apiClient.get<any[]>("/watchlists");
-        const notificationsRes = await apiClient.get<any[]>("/notifications?limit=20");
+        const watchlistsRes = await apiClient.get<any[]>("/watchlists/watchlists");
+        const notificationsRes = await apiClient.get<any[]>("/notifications/notifications?limit=20");
 
         if (!active) return;
 
@@ -66,7 +66,7 @@ export default function AlertsPage() {
           const symbols = defaultWatchlist.items.map((item: any) => item.asset?.symbol).filter(Boolean);
           if (symbols.length) {
             const pricesRes = await apiClient.get<any>(
-              `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+              `/market/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
             );
             const prices = pricesRes.data?.data || pricesRes.data || {};
 

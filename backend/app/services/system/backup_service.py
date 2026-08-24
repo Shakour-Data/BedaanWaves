@@ -80,7 +80,7 @@ class BackupService(BaseService):
         backup_name = name or f"db_backup_{int(datetime.now(timezone.utc).timestamp())}"
         
         # Get database connection details
-        from ...config import ConfigService
+        from app.services.core.config_service import ConfigService
         config_service = ConfigService()
         db_config = {
             "host": config_service.get("DB_HOST"),
@@ -351,8 +351,8 @@ class BackupService(BaseService):
         
         try:
             # Collect platform state information
-            from ...config import ConfigService
-            from ...services import MetricsService
+            from app.services.core.config_service import ConfigService
+            from app.services.system.metrics_service import MetricsService
             
             config_service = ConfigService()
             metrics_service = MetricsService()
@@ -444,7 +444,7 @@ class BackupService(BaseService):
             from psycopg2.extras import DictCursor
             
             # Get database connection details
-            from ...config import ConfigService
+            from app.services.core.config_service import ConfigService
             config_service = ConfigService()
             
             conn = psycopg2.connect(
