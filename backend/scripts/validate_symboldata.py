@@ -1,4 +1,4 @@
-import psycopg2
+﻿import psycopg2
 
 conn = psycopg2.connect(
     dbname='bedaanwaves_db',
@@ -82,7 +82,7 @@ if bad_symbols:
     for row in bad_symbols[:5]:
         print(f"  {row[0]}")
 else:
-    print("\n��✓ All symbols are valid")
+    print("\n�� All symbols are valid")
 
 cur.execute("""
 SELECT symbol 
@@ -93,7 +93,7 @@ bad_names = cur.fetchall()
 if bad_names:
     print(f"WARNING: Found {len(bad_names)} symbols with missing names")
 else:
-    print("��✓ All symbols have valid security names")
+    print("�� All symbols have valid security names")
 
 cur.close()
 conn.close()

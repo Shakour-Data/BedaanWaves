@@ -45,7 +45,6 @@ from .data_archival import DataArchivalService
 from .incremental_ingest import IncrementalFinancialDataIngestService
 from .market_data_processing import MarketDataProcessingService
 from .sec_edgar_client import SECRestAPIClient
-from .fetch_real_nasdaq_data import FetchRealNasdaqData
 
 __all__ = [
     "BrsApiClient",
@@ -67,7 +66,6 @@ __all__ = [
     "IncrementalFinancialDataIngestService",
     "MarketDataProcessingService",
     "SECRestAPIClient",
-    "FetchRealNasdaqData",
     "FinancialStatementType",
     "MarketType",
     "FinancialStatement",

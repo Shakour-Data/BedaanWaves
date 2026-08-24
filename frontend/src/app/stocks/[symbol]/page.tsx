@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * صفحه‌ی جزئیات سهم: `/stocks/[symbol]`
@@ -141,7 +141,7 @@ export default function StockDetailPage() {
 
   if (error) {
     return (
-      <TarotCard icon="⚠️" title="خطا در دریافت داده">
+      <TarotCard icon="️" title="خطا در دریافت داده">
         <p className="text-sm text-muted-foreground">
           دریافت داده‌ی نماد «{symbol}» ممکن نشد. مطمئن شوید سرویس بک‌اند در حال اجراست و نماد وجود
           دارد.
@@ -248,3 +248,4 @@ export default function StockDetailPage() {
     </div>
   );
 }
+

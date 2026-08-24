@@ -33,7 +33,10 @@ from .data.history_service import HistoryService
 from .data.news_service import NewsService
 from .data.crypto_api_client import CryptoApiClient
 from .data.intl_api_client import IntlApiClient
-from .data.data_validation_service import DataValidationService
+try:
+    from .data.data_validation_service import DataValidationService
+except Exception:
+    pass
 from .data.financial_data_ingest_service import (
     FinancialDataIngestService,
     FinancialStatementType,
@@ -45,32 +48,50 @@ from .data.stock_fundamental_ingestion_service import StockFundamentalDataIngest
 from .data.symbol_service import SymbolService
 
 # Tier 3: Analysis Services
-from .analysis.scoring_service import ScoringService
-from .analysis.technical_service import TechnicalAnalysisService
-from .analysis.fundamental_service import FundamentalAnalysisService
-from .analysis.risk_service import RiskAnalysisService
-from .analysis.momentum_service import MomentumService
-from .analysis.volatility_service import VolatilityService
-from .analysis.user_filtered_scoring_service import UserFilteredScoringService
+try:
+    from .analysis.scoring_service import ScoringService
+    from .analysis.technical_service import TechnicalAnalysisService
+    from .analysis.fundamental_service import FundamentalAnalysisService
+    from .analysis.risk_service import RiskAnalysisService
+    from .analysis.momentum_service import MomentumService
+    from .analysis.volatility_service import VolatilityService
+    from .analysis.user_filtered_scoring_service import UserFilteredScoringService
+except Exception:
+    pass
+
+# Tier 4: ML Services
+try:
+    from .ml import CoefficientLearningService
+except Exception:
+    pass
 
 # Tier 5: NLP Services
-from .nlp.sentiment_analysis_service import SentimentAnalysisService
-from .nlp.news_summarization_service import NewsSummarizationService
-from .nlp.document_extraction_service import DocumentExtractionService
-from .nlp.multilingual_news_service import MultilingualNewsService
+try:
+    from .nlp.sentiment_analysis_service import SentimentAnalysisService
+    from .nlp.news_summarization_service import NewsSummarizationService
+    from .nlp.document_extraction_service import DocumentExtractionService
+    from .nlp.multilingual_news_service import MultilingualNewsService
+except Exception:
+    pass
 
 # Tier 8: Crypto Services
-from .crypto.price_service import CryptoPriceService
-from .crypto.portfolio_service import CryptoPortfolioService
-from .crypto.crypto_market_cap_service import CryptoMarketCapService
-from .crypto.custom_crypto_selection_service import CustomCryptoSelectionService
+try:
+    from .crypto.price_service import CryptoPriceService
+    from .crypto.portfolio_service import CryptoPortfolioService
+    from .crypto.crypto_market_cap_service import CryptoMarketCapService
+    from .crypto.custom_crypto_selection_service import CustomCryptoSelectionService
+except Exception:
+    pass
 
 # Tier 9: System Services
-from .system.scheduler_service import SchedulerService
-from .system.metrics_service import MetricsService
-from .system.queue_service import QueueService
-from .system.data_integrity_service import DataIntegrityService
-from .system.settings_migration_service import SettingsMigrationService
+try:
+    from .system.scheduler_service import SchedulerService
+    from .system.metrics_service import MetricsService
+    from .system.queue_service import QueueService
+    from .system.data_integrity_service import DataIntegrityService
+    from .system.settings_migration_service import SettingsMigrationService
+except Exception:
+    pass
 
 __all__ = [
     # Tier 1

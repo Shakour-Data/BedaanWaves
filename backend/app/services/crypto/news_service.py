@@ -10,10 +10,11 @@ from ..data.crypto_api_client import CryptoApiClient
 from ..nlp.sentiment_analysis_service import SentimentAnalysisService
 
 class CryptoNewsService(CachedService):
-    def __init__(self, service_name: str = "CryptoNewsService", cache_ttl_seconds: int = 300):
+    def __init__(self, service_name: str = "CryptoNewsService", cache_ttl_seconds: int = 300,
+                 crypto_client=None, sentiment_analyzer=None):
         super().__init__(service_name, cache_ttl_seconds=cache_ttl_seconds)
-        self.crypto_client = CryptoApiClient()
-        self.sentiment_analyzer = SentimentAnalysisService()
+        self.crypto_client = crypto_client
+        self.sentiment_analyzer = sentiment_analyzer
         # Define categories and keywords
         self.category_keywords = {
             "DeFi": ["defi", "decentralized finance", "lending", "staking", "yields", "liquidity"],

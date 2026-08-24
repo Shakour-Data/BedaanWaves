@@ -1,4 +1,4 @@
-"""Database setup script - creates database and runs migrations."""
+﻿"""Database setup script - creates database and runs migrations."""
 
 import os
 import sys
@@ -28,9 +28,9 @@ def create_database():
     
     if not exists:
         cursor.execute("CREATE DATABASE bedaanwaves_db")
-        print("✅ Database bedaanwaves_db created")
+        print(" Database bedaanwaves_db created")
     else:
-        print("✅ Database bedaanwaves_db already exists")
+        print(" Database bedaanwaves_db already exists")
     
     cursor.close()
     conn.close()
@@ -61,10 +61,10 @@ def run_migrations():
     )
     
     if result.returncode == 0:
-        print("✅ Migrations applied successfully")
+        print(" Migrations applied successfully")
     else:
-        print(f"⚠️ Migration output: {result.stdout}")
-        print(f"⚠️ Migration errors: {result.stderr}")
+        print(f"️ Migration output: {result.stdout}")
+        print(f"️ Migration errors: {result.stderr}")
 
 def main():
     """Main setup routine."""

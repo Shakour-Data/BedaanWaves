@@ -9,10 +9,10 @@ import logging
 from ..data.crypto_api_client import CryptoApiClient
 
 class CryptoArbitrageService:
-    def __init__(self, service_name: str = "CryptoArbitrageService"):
+    def __init__(self, service_name: str = "CryptoArbitrageService", crypto_client=None):
         self.service_name = service_name
         self.logger = logging.getLogger(service_name)
-        self.price_client = CryptoApiClient()
+        self.price_client = crypto_client
         getcontext().prec = 12  # High precision for financial calculations
 
         # Exchanges to monitor

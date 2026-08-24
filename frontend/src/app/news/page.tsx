@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -79,7 +79,7 @@ export default function NewsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="🔍" title="فیلترها">
+          <TarotCard icon="" title="فیلترها">
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedSource(null)}
@@ -100,7 +100,7 @@ export default function NewsPage() {
           </TarotCard>
 
           {/* Trending Topics */}
-          <TarotCard icon="🔥" title="موضوعات داغ">
+          <TarotCard icon="" title="موضوعات داغ">
             <div className="space-y-2">
               {topTopics.map((topic, i) => (
                 <div key={i} className="flex items-center justify-between font-medium text-sm">
@@ -117,7 +117,7 @@ export default function NewsPage() {
 
         {/* News List */}
         <div className="lg:col-span-3">
-          <TarotCard icon="📰" title={selectedSource ? `اخبار از ${selectedSource}` : "همه اخبار"}>
+          <TarotCard icon="" title={selectedSource ? `اخبار از ${selectedSource}` : "همه اخبار"}>
             <NewsList items={filteredNews} />
           </TarotCard>
         </div>

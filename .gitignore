@@ -64,6 +64,13 @@ backend/test_*.py
 
 # Temporary utility scripts
 remove_emojis.py
+backend/scripts/seed_real_data.py
+backend/scripts/seed.py
+backend/scripts/seed_data.py
+backend/scripts/seed_local.py
+
+# Root-level utility scripts
+scripts/
 
 # Machine learning artifacts
 *.joblib

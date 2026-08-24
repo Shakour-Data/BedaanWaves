@@ -17,6 +17,11 @@ from abc import ABC, abstractmethod
 import asyncio
 
 from app.services.core.base_service import DataService
+from app.core.exceptions import (
+    DataProviderException,
+    DataParsingException,
+    FinancialDataException,
+)
 from .brs_api_client import BrsApiClient
 from .nasdaq_ingestion_service import NasdaqIngestionService
 from app.core.config import get_settings
@@ -104,14 +109,16 @@ class BrsFinancialDataProvider(FinancialDataProvider):
                 codal_data = await self.brs_client.get_codal(l18=symbol, category=category)
                 
                 for announcement in codal_data.get("announcements", []):
-                    # Parse the financial data from announcement
                     parsed = self._parse_codal_announcement(announcement, stmt_type)
                     if parsed:
                         statements.append(parsed)
                         
-            except Exception as e:
-                # Log error but continue
-                pass
+            except DataProviderException:
+                raise
+            except Exception as exc:
+                raise DataProviderException(
+                    f"Failed to fetch financial statements for {symbol}: {exc}"
+                ) from exc
         
         return statements
     
@@ -120,25 +127,34 @@ class BrsFinancialDataProvider(FinancialDataProvider):
         announcement: Dict[str, Any],
         stmt_type: FinancialStatementType
     ) -> Optional[FinancialStatement]:
-        """Parse CODAL announcement into standardized financial statement"""
+        """Parse CODAL announcement into standardized financial statement."""
         try:
-            # This would parse the actual CODAL response structure
-            # Simplified for now
+            fiscal_year = announcement.get("fiscal_year")
+            if fiscal_year is not None:
+                fiscal_year = int(fiscal_year)
+            
+            publish_date = announcement.get("publish_date")
+            as_of_date = None
+            if publish_date:
+                as_of_date = datetime.fromisoformat(publish_date)
+            
             return FinancialStatement(
                 asset_id=announcement.get("symbol", ""),
                 symbol=announcement.get("symbol", ""),
                 market=MarketType.IRAN,
                 statement_type=stmt_type,
                 period=announcement.get("period", ""),
-                fiscal_year=int(announcement.get("fiscal_year", 0)),
+                fiscal_year=fiscal_year or 0,
                 fiscal_quarter=announcement.get("fiscal_quarter"),
                 data=announcement.get("financial_data", {}),
                 source="CODAL",
                 fetched_at=datetime.now(timezone.utc),
-                as_of=datetime.fromisoformat(announcement.get("publish_date", "")) if announcement.get("publish_date") else None
+                as_of=as_of_date,
             )
-        except Exception:
-            return None
+        except (ValueError, TypeError) as exc:
+            raise DataParsingException(
+                f"Failed to parse CODAL announcement: {exc}"
+            ) from exc
     
     async def get_supported_markets(self) -> List[MarketType]:
         return [MarketType.IRAN]

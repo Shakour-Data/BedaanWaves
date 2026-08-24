@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -10,7 +10,7 @@ const analysisMethods = [
   {
     id: "scoring",
     title: "6D Scoring System",
-    icon: "🧮",
+    icon: "",
     description: "Comprehensive multi-dimensional stock evaluation",
     steps: [
       "Collect data across six dimensions (fundamental, technical, sentiment, risk, macro, AI)",
@@ -27,7 +27,7 @@ const analysisMethods = [
   {
     id: "ranking",
     title: "Ranking System",
-    icon: "📊",
+    icon: "",
     description: "Stock ranking by performance metrics",
     steps: [
       "Calculate 6D scores for all eligible securities",
@@ -42,7 +42,7 @@ const analysisMethods = [
   {
     id: "technical",
     title: "Technical Analysis",
-    icon: "📈",
+    icon: "",
     description: "Price and volume-based indicators",
     steps: [
       "Fetch historical price/volume data (minimum 20 periods)",
@@ -57,7 +57,7 @@ const analysisMethods = [
   {
     id: "fundamental",
     title: "Fundamental Analysis",
-    icon: "💰",
+    icon: "",
     description: "Financial statement analysis",
     steps: [
       "Retrieve latest financial statements from CODAL, Yahoo Finance, or Alpha Vantage",
@@ -72,7 +72,7 @@ const analysisMethods = [
   {
     id: "momentum",
     title: "Momentum Analysis",
-    icon: "🚀",
+    icon: "",
     description: "Short-term price trend identification",
     steps: [
       "Calculate price changes over multiple timeframes (1D, 1W, 1M, 3M)",
@@ -87,7 +87,7 @@ const analysisMethods = [
   {
     id: "risk",
     title: "Risk Analysis",
-    icon: "⚠️",
+    icon: "️",
     description: "Volatility and downside risk assessment",
     steps: [
       "Calculate daily returns from historical price data",
@@ -104,7 +104,7 @@ const analysisMethods = [
   {
     id: "sentiment",
     title: "Sentiment Analysis",
-    icon: "🗣️",
+    icon: "️",
     description: "Market sentiment from news and social media",
     steps: [
       "Collect financial news and social media mentions",
@@ -119,7 +119,7 @@ const analysisMethods = [
   {
     id: "ai",
     title: "AI/ML Analysis",
-    icon: "🧠",
+    icon: "",
     description: "Machine learning-based predictions",
     steps: [
       "Train LSTM/Prophet models on historical price data",
@@ -140,7 +140,7 @@ export default function MethodologyPage() {
     <DashboardShell title="Analysis Methodology">
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard icon="🔬" title="Methodology Overview">
+        <TarotCard icon="" title="Methodology Overview">
           <p className="text-muted-foreground text-justify">
             BedaanWaves employs a multi-faceted approach to financial analysis, combining traditional fundamental/technical analysis with cutting-edge machine learning techniques. Each analysis type serves a specific purpose in the investment decision-making process.
           </p>
@@ -206,29 +206,29 @@ export default function MethodologyPage() {
         {/* Secondary Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Capabilities */}
-          <TarotCard icon="📚" title="Key Capabilities">
+          <TarotCard icon="" title="Key Capabilities">
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500"></span>
                 <span>Coverage: Iran, Global, and Crypto Markets</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500"></span>
                 <span>Real-time data updates (24/7)</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500"></span>
                 <span>ML-optimized weighting system</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500"></span>
                 <span>Customizable user preferences</span>
               </li>
             </ul>
           </TarotCard>
 
           {/* Disclaimers */}
-          <TarotCard icon="⚡" title="Important Notes">
+          <TarotCard icon="" title="Important Notes">
             <div className="space-y-3 text-sm">
               <div>
                 <h5 className="font-medium mb-1">Disclaimer:</h5>

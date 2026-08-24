@@ -145,4 +145,4 @@ class WatchlistService:
                 await session.close()
 
 
-watchlist_service = WatchlistService()
+

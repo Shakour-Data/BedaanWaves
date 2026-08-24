@@ -18,6 +18,8 @@ export interface AssetRow {
   market: "TSE" | "OTC" | "BINANCE" | "CRYPTO";
   price: number;
   changePct: number;
+  quantity?: number;
+  avg_price?: number;
 }
 
 export interface SignalRow {

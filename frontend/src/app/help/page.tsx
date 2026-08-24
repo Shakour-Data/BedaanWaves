@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -19,7 +19,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "frontend-pages",
     title: "Frontend Pages",
-    icon: "📄",
+    icon: "",
     description: "Complete list of all frontend pages with paths, features, and API integration status",
     contentType: "table",
     category: "frontend"
@@ -27,7 +27,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "component-guide",
     title: "Component Reference",
-    icon: "🧩",
+    icon: "",
     description: "All UI components with usage examples and properties",
     contentType: "list",
     category: "frontend"
@@ -35,7 +35,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "data-flow",
     title: "Data Flow Architecture",
-    icon: "🌊",
+    icon: "",
     description: "End-to-end data flow from backend to frontend display",
     contentType: "text",
     category: "frontend"
@@ -43,7 +43,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "schema-overview",
     title: "Database Schema",
-    icon: "🗄️",
+    icon: "️",
     description: "Complete database table definitions and relationships",
     contentType: "text",
     category: "database"
@@ -51,7 +51,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "api-endpoints",
     title: "API Endpoints",
-    icon: "🔌",
+    icon: "",
     description: "Complete list of API endpoints with parameters and responses",
     contentType: "table",
     category: "api"
@@ -59,21 +59,21 @@ const documentationSections: DocumentationSection[] = [
 ];
 
 const frontendPages = [
-  { name: "Home Page", path: "/", description: "Landing page overview", status: "✅ Working" },
-  { name: "Login Page", path: "/login", description: "Authentication interface", status: "✅ Working" },
-  { name: "Register Page", path: "/register", description: "User registration", status: "✅ Working" },
-  { name: "Dashboard", path: "/dashboard", description: "Market overview with statistics", status: "✅ Live API" },
-  { name: "Stocks List", path: "/stocks", description: "Symbol list with prices", status: "✅ Live API" },
-  { name: "Stock Detail", path: "/stocks/[symbol]", description: "Single asset analysis", status: "✅ Live API" },
-  { name: "Analysis", path: "/analysis", description: "Multi-tab analysis interface", status: "✅ Live API" },
-  { name: "Portfolio", path: "/portfolio", description: "Personal portfolio management", status: "✅ Live API" },
-  { name: "Settings", path: "/settings", description: "Configuration and preferences", status: "✅ Working" },
-  { name: "Settings Profile", path: "/settings/profile", description: "User profile management", status: "⚠️ Needs sync" },
-  { name: "News", path: "/news", description: "Market news aggregation", status: "✅ Fixed" },
-  { name: "Alerts", path: "/alerts", description: "System notifications", status: "✅ Live API" },
-  { name: "Scoring", path: "/scoring", description: "6D scoring methodology", status: "✅ Working" },
-  { name: "Methodology", path: "/methodology", description: "Analysis explanation guide", status: "✅ Working" },
-  { name: "Help", path: "/help", description: "Platform documentation", status: "✅ Working" }
+  { name: "Home Page", path: "/", description: "Landing page overview", status: " Working" },
+  { name: "Login Page", path: "/login", description: "Authentication interface", status: " Working" },
+  { name: "Register Page", path: "/register", description: "User registration", status: " Working" },
+  { name: "Dashboard", path: "/dashboard", description: "Market overview with statistics", status: " Live API" },
+  { name: "Stocks List", path: "/stocks", description: "Symbol list with prices", status: " Live API" },
+  { name: "Stock Detail", path: "/stocks/[symbol]", description: "Single asset analysis", status: " Live API" },
+  { name: "Analysis", path: "/analysis", description: "Multi-tab analysis interface", status: " Live API" },
+  { name: "Portfolio", path: "/portfolio", description: "Personal portfolio management", status: " Live API" },
+  { name: "Settings", path: "/settings", description: "Configuration and preferences", status: " Working" },
+  { name: "Settings Profile", path: "/settings/profile", description: "User profile management", status: "️ Needs sync" },
+  { name: "News", path: "/news", description: "Market news aggregation", status: " Fixed" },
+  { name: "Alerts", path: "/alerts", description: "System notifications", status: " Live API" },
+  { name: "Scoring", path: "/scoring", description: "6D scoring methodology", status: " Working" },
+  { name: "Methodology", path: "/methodology", description: "Analysis explanation guide", status: " Working" },
+  { name: "Help", path: "/help", description: "Platform documentation", status: " Working" }
 ];
 
 const uiComponents = [
@@ -112,13 +112,13 @@ export default function HelpPage() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "frontend":
-        return "📱";
+        return "";
       case "database":
-        return "🗄️";
+        return "️";
       case "api":
-        return "🔌";
+        return "";
       default:
-        return "📚";
+        return "";
     }
   };
 
@@ -126,7 +126,7 @@ export default function HelpPage() {
     <DashboardShell title="Help & Documentation">
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard icon="📚" title="Interactive Documentation System">
+        <TarotCard icon="" title="Interactive Documentation System">
           <p className="text-muted-foreground text-justify">
             Welcome to the BedaanWaves comprehensive documentation system. This
             integrated help center provides detailed information about all
@@ -138,9 +138,9 @@ export default function HelpPage() {
         {/* Category Tabs */}
         <div className="flex flex-wrap gap-3">
           {[
-            { id: "frontend", label: "Frontend Docs", icon: "📱" },
-            { id: "database", label: "Database Docs", icon: "🗄️" },
-            { id: "api", label: "API Docs", icon: "🔌" }
+            { id: "frontend", label: "Frontend Docs", icon: "" },
+            { id: "database", label: "Database Docs", icon: "️" },
+            { id: "api", label: "API Docs", icon: "" }
           ].map((cat) => (
             <button
               key={cat.id}
@@ -167,7 +167,7 @@ export default function HelpPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Navigation */}
           <div className="lg:col-span-1">
-            <TarotCard icon="📋" title="Documentation Index">
+            <TarotCard icon="" title="Documentation Index">
               <div className="space-y-2">
                 {filteredSections.map((section) => (
                   <button
@@ -194,7 +194,7 @@ export default function HelpPage() {
             </TarotCard>
 
             {/* Quick Access */}
-            <TarotCard icon="⚡" title="Quick Access">
+            <TarotCard icon="" title="Quick Access">
               <div className="space-y-3">
                 <Link href="/dashboard" passHref>
                   <PrimaryButton className="w-full cursor-pointer">
@@ -214,7 +214,7 @@ export default function HelpPage() {
           <div className="lg:col-span-3">
             {/* Frontend Pages Table */}
             {activeSection === "frontend-pages" && (
-              <TarotCard icon="📄" title="Frontend Pages Documentation">
+              <TarotCard icon="" title="Frontend Pages Documentation">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
                     <thead>
@@ -241,9 +241,9 @@ export default function HelpPage() {
                           <td className="p-3">
                             <span
                               className={`px-2 py-1 rounded text-xs font-medium ${
-                                page.status.includes("✅")
+                                page.status.includes("")
                                   ? "bg-green-500/20 text-green-700"
-                                  : page.status.includes("⚠️")
+                                  : page.status.includes("️")
                                   ? "bg-yellow-500/20 text-yellow-700"
                                   : "bg-red-500/20 text-red-700"
                               }`}
@@ -269,7 +269,7 @@ export default function HelpPage() {
 
             {/* Component Reference */}
             {activeSection === "component-guide" && (
-              <TarotCard icon="🧩" title="UI Component Reference">
+              <TarotCard icon="" title="UI Component Reference">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {uiComponents.map((comp, i) => (
                     <div
@@ -296,7 +296,7 @@ export default function HelpPage() {
 
             {/* Database Schema */}
             {activeSection === "schema-overview" && (
-              <TarotCard icon="🗄️" title="Database Schema Overview">
+              <TarotCard icon="️" title="Database Schema Overview">
                 <div className="space-y-4">
                   {coreTables.map((table, i) => (
                     <div key={i} className="border rounded-lg p-3">
@@ -328,7 +328,7 @@ export default function HelpPage() {
 
             {/* Data Flow */}
             {activeSection === "data-flow" && (
-              <TarotCard icon="🌊" title="Data Flow Architecture">
+              <TarotCard icon="" title="Data Flow Architecture">
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Complete end-to-end data pipeline from backend services to
@@ -379,7 +379,7 @@ export default function HelpPage() {
 
             {/* Fallback */}
             {activeSection === "api-endpoints" && (
-              <TarotCard icon="🔌" title="API Endpoints">
+              <TarotCard icon="" title="API Endpoints">
                 <div className="space-y-3">
                   <div className="border rounded p-3">
                     <div className="font-medium text-sm mb-2">
@@ -414,7 +414,7 @@ export default function HelpPage() {
             )}
 
             {!activeSection && (
-              <TarotCard icon="❓" title="Select a Section">
+              <TarotCard icon="" title="Select a Section">
                 <p className="text-muted-foreground text-center py-8">
                   Select a documentation section from the left panel to
                   view detailed information.

@@ -1,4 +1,4 @@
-# BedaanWaves - Crypto Services Documentation
+﻿# BedaanWaves - Crypto Services Documentation
 
 ## Executive Summary
 This document expands on the core crypto services from the initial overview, detailing the full implementation status and technical specifications for cryptocurrency-related functionalities in BedaanWaves.
@@ -11,15 +11,15 @@ This document expands on the core crypto services from the initial overview, det
 
 ## Implementation Status
 
-### ✅ Completed Services (38%)
+###  Completed Services (38%)
 
 | Service | Class | Files | Tests | Status |
 |---------|-------|-------|-------|--------|
-| PriceService | `PriceService` | `app/services/crypto/price_service.py` | ✅ | ✅ Active |
-| CryptoMLService | `CryptoMLService` | `app/services/crypto/crypto_ml_service.py` | ✅ | ✅ Trained models |
-| CustomCryptoSelectionService | `CustomCryptoSelectionService` | `app/services/crypto/custom_crypto_selection_service.py` | ✅ | ✅ Filter support |
+| PriceService | `PriceService` | `app/services/crypto/price_service.py` |  |  Active |
+| CryptoMLService | `CryptoMLService` | `app/services/crypto/crypto_ml_service.py` |  |  Trained models |
+| CustomCryptoSelectionService | `CustomCryptoSelectionService` | `app/services/crypto/custom_crypto_selection_service.py` |  |  Filter support |
 
-### ❌ Pending Implementation (62%)
+###  Pending Implementation (62%)
 
 | Service | Priority | Blocking Issues |
 |---------|----------|-----------------|

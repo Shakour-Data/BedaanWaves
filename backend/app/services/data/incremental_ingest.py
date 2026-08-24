@@ -19,10 +19,11 @@ class IncrementalFinancialDataIngestService(DataService):
     
     def __init__(self, 
                  service_name: str = "IncrementalFinancialDataIngestService",
-                 brs_client=None):
+                 brs_client=None,
+                 sec_client=None):
         super().__init__(service_name)
         self.financial_ingest_service = FinancialDataIngestService(brs_client=brs_client)
-        self.sec_client = SECRestAPIClient()
+        self.sec_client = sec_client
         self.settings = get_settings()
         
         # Create or load change tracking database
@@ -30,12 +31,14 @@ class IncrementalFinancialDataIngestService(DataService):
         
     async def initialize(self) -> None:
         """Initialize incremental ingestion service"""
-        await self.sec_client.initialize()
+        if self.sec_client is not None:
+            await self.sec_client.initialize()
         self.logger.info("Incremental ingestion service initialized")
         
     async def shutdown(self) -> None:
         """Shutdown service"""
-        await self.sec_client.shutdown()
+        if self.sec_client is not None:
+            await self.sec_client.shutdown()
         self.logger.info("Incremental ingestion service shutdown")
         
     async def find_updated_symbols(self, 

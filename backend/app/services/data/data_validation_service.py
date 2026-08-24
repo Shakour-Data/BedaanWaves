@@ -131,17 +131,6 @@ class DataValidationService(CachedService):
             self.logger.debug(f"Cache hit for {ticker}")
             return cached
         
-        # Lazy load dependent services
-        if self.stock_service is None:
-            from app.services.data.stock_service import StockService
-            self.stock_service = StockService(brs_client=self.brs_client)
-        if self.crypto_client is None:
-            from app.services.data.crypto_api_client import CryptoApiClient
-            self.crypto_client = CryptoApiClient()
-        if self.market_service is None:
-            from app.services.data.market_service import MarketService
-            self.market_service = MarketService()
-        
         # Perform validation
         try:
             # Validate stock data

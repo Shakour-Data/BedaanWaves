@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-3">
-      <TarotCard icon="🔐" title={t("login.title")} className="w-full max-w-md">
+      <TarotCard icon="" title={t("login.title")} className="w-full max-w-md">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {error ? (
             <p className="rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary">{error}</p>
@@ -68,7 +68,7 @@ export default function LoginPage() {
             <span className="text-sm text-muted-foreground">{t("login.email")}</span>
             <span className="relative">
               <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                💧
+                
               </span>
               <input
                 type="email"
@@ -86,7 +86,7 @@ export default function LoginPage() {
             <span className="text-sm text-muted-foreground">{t("login.password")}</span>
             <span className="relative">
               <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                👁️
+                ️
               </span>
               <input
                 type={showPassword ? "text" : "password"}
@@ -103,7 +103,7 @@ export default function LoginPage() {
                 aria-label={showPassword ? t("auth.hide_password") : t("auth.show_password")}
                 className="absolute inset-y-0 left-3 flex items-center text-muted-foreground transition hover:text-foreground"
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "" : "️"}
               </button>
             </span>
           </label>

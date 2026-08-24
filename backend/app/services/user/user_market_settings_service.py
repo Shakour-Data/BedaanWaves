@@ -37,7 +37,7 @@ class UserMarketSettingsService(BaseService):
             logger: Optional logger instance
         """
         super().__init__(service_name, logger=logger)
-        self.preference_service = preference_service or PreferenceService()
+        self.preference_service = preference_service
         
         # Default market settings
         self.default_settings = {

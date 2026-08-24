@@ -165,4 +165,4 @@ class NotificationService:
                 await session.close()
 
 
-notification_service = NotificationService()
+

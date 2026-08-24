@@ -3,6 +3,7 @@ export interface ExportOptions {
   format?: 'csv' | 'xlsx' | 'json';
   includeHeaders?: boolean;
   customFilename?: string;
+  className?: string;
 }
 
 export interface ExportableRow {
@@ -99,7 +100,7 @@ export function createExportButton(
   const exportButton = document.createElement('button');
   exportButton.id = buttonId;
   exportButton.type = 'button';
-  exportButton.addEventListener('click', handler);
+  exportButton.addEventListener('click', () => handler({} as React.MouseEvent));
   exportButton.textContent = 'Export';
   exportButton.setAttribute('aria-label', 'Export data');
   

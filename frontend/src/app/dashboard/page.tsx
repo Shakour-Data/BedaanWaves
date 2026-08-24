@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -55,7 +55,7 @@ export default function DashboardPage() {
 
       {/* Top Movers + Watchlist */}
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <TarotCard icon="📈" title="Top Movers" className="lg:col-span-2">
+        <TarotCard icon="" title="Top Movers" className="lg:col-span-2">
           <AssetTable rows={data.topMovers} />
         </TarotCard>
         <TarotCard icon="⭐" title="Watchlist">
@@ -65,13 +65,14 @@ export default function DashboardPage() {
 
       {/* ML Signals + News */}
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <TarotCard icon="🔮" title="AI Signals" className="lg:col-span-2">
+        <TarotCard icon="" title="AI Signals" className="lg:col-span-2">
           <SignalList signals={data.signals} />
         </TarotCard>
-        <TarotCard icon="📰" title="Latest News">
+        <TarotCard icon="" title="Latest News">
           <NewsList items={data.news} />
         </TarotCard>
       </section>
     </div>
   );
 }
+

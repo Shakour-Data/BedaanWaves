@@ -24,10 +24,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-import yfinance as yf
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
+from app.core.exceptions import DataParsingException, IngestionException
 
 from app.services.core.base_service import DataService
 from app.core.config import get_settings
@@ -105,13 +105,14 @@ class NasdaqIngestionService(DataService):
         try:
             with open(NASDAQ_CSV_PATH, newline="", encoding="utf-8") as f:
                 reader = csv.reader(f)
-                next(reader, None)  # skip header
+                next(reader, None)
                 for row in reader:
                     if row and len(row) >= 1 and row[0] and not row[0].startswith("File Creation"):
                         symbols.append(row[0].strip())
             logger.info(f"Loaded {len(symbols)} symbols from {NASDAQ_CSV_PATH}")
-        except Exception as e:
-            logger.error(f"Failed to load Nasdaq symbols from CSV: {e}")
+        except (FileNotFoundError, PermissionError, csv.Error) as exc:
+            logger.error(f"Failed to load Nasdaq symbols from CSV: {exc}")
+            raise IngestionException(f"Nasdaq symbol CSV load failed: {exc}") from exc
         return symbols
 
     @property

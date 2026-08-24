@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Auto-check script for BedaanWaves TODO.md
 Runs periodically to scan codebase and mark completed tasks.
@@ -173,7 +173,7 @@ def main():
 
     print(f"\nFindings:")
     for key, value in findings.items():
-        status = "✓" if value else "✗"
+        status = "" if value else ""
         print(f"  {status} {key}")
 
     updated = update_todo_markers(findings)
@@ -187,3 +187,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

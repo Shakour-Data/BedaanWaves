@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -101,7 +101,7 @@ export default function PortfolioPage() {
   if (error) {
     return (
       <DashboardShell title="پورتفولیو">
-        <TarotCard icon="⚠️" title="خطا" className="max-w-md mx-auto">
+        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
           <p className="text-sm text-muted-foreground">{error}</p>
         </TarotCard>
       </DashboardShell>
@@ -127,7 +127,7 @@ export default function PortfolioPage() {
         </section>
 
         {/* Holdings */}
-        <TarotCard icon="💼" title="دارایی‌های فعلی">
+        <TarotCard icon="" title="دارایی‌های فعلی">
           {holdings.length > 0 ? (
             <AssetTable rows={holdings} />
           ) : (
@@ -141,14 +141,14 @@ export default function PortfolioPage() {
         </TarotCard>
 
         {/* Performance Chart Placeholder */}
-        <TarotCard icon="📈" title="عملکرد پورتفولیو">
+        <TarotCard icon="" title="عملکرد پورتفولیو">
           <div className="h-64 flex items-center justify-center text-muted-foreground">
             <p>نمودار عملکرد پورتفولیو به‌زودی اضافه می‌شود</p>
           </div>
         </TarotCard>
 
         {/* Asset Allocation */}
-        <TarotCard icon="🥧" title="توزیع دارایی‌ها">
+        <TarotCard icon="" title="توزیع دارایی‌ها">
           <div className="h-64 flex items-center justify-center text-muted-foreground">
             <p>نمودار توزیع دارایی‌ها به‌زودی اضافه می‌شود</p>
           </div>
