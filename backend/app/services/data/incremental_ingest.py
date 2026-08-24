@@ -27,7 +27,6 @@ class IncrementalFinancialDataIngestService(DataService):
         
         # Create or load change tracking database
         self.change_tracker = self._load_change_tracker()
-        self.logger = self.get_logger()
         
     async def initialize(self) -> None:
         """Initialize incremental ingestion service"""

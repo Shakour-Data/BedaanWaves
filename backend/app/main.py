@@ -32,6 +32,7 @@ from app.services.core.logger_service import LoggerService
 from app.services.core.cache_service import CacheService
 from app.services.core.database_service import DatabaseService
 from app.services.core.health_checker import HealthChecker
+from app.services.system.scheduler_service import SchedulerService
 
 # Import API routes
 from app.api.routes import (
@@ -93,6 +94,7 @@ async def lifespan(app: FastAPI):
         container.register_instance("database_service", DatabaseService())
         container.register_instance("cache_service", CacheService())
         container.register_instance("health_checker", HealthChecker())
+        container.register_instance("scheduler_service", SchedulerService())
         
         await container.initialize()
         app.state.container = container

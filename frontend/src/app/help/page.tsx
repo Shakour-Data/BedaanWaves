@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useState } from "react";
+import Link from "next/link";
 
 type DocumentationSection = {
   id: string;

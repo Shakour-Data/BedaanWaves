@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { cn } from "@/lib/cn";
 
 export function LanguageSwitcher() {
   const currentLang = useAuthStore((s) => s.currentLang);

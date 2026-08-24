@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from ..core.base_service import DataService
 from ..core.config import get_settings
 import logging
-from ..db.base import async_session_maker
+from app.db.base import async_session_maker
 from ..models.models import RawMarketData, MarketDataSnapshot, Asset
 
 logger = logging.getLogger(__name__)

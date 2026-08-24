@@ -3,7 +3,8 @@
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiClient } from "@/lib/api";
 
 const countries = [
   { id: "ir", name: "Iran", flag: "🇮🇷", region: "Middle East" },

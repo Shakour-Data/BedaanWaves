@@ -125,7 +125,7 @@ async def schema_registry_factory(
     return registry
 
 
-get_global_container().register_factory(
+get_global_container().register(
     "SchemaRegistry",
     schema_registry_factory,
     singleton=True,

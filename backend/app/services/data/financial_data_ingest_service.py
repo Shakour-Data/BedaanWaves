@@ -219,14 +219,14 @@ class FinancialDataIngestService(DataService):
     def _register_providers(self) -> None:
         """Register default data providers"""
         if self.brs_client:
-            self.providers[MarketType.IRAN] = BrsFinancialDataProvider(self.brs_client)
+            self._providers[MarketType.IRAN] = BrsFinancialDataProvider(self.brs_client)
 
-        self.providers[MarketType.US] = YahooFinanceProvider()
-        self.providers[MarketType.INTERNATIONAL] = AlphaVantageProvider()
+        self._providers[MarketType.US] = YahooFinanceProvider()
+        self._providers[MarketType.INTERNATIONAL] = AlphaVantageProvider()
 
     def register_provider(self, market: MarketType, provider: FinancialDataProvider) -> None:
         """Register a custom data provider"""
-        self.providers[market] = provider
+        self._providers[market] = provider
 
     async def initialize(self) -> None:
         if self.brs_client:
@@ -259,10 +259,10 @@ class FinancialDataIngestService(DataService):
             return cached if cached else []
 
         # Lazy provider registration
-        if not self.providers:
+        if not self._providers:
             self._register_providers()
 
-        provider = self.providers.get(market)
+        provider = self._providers.get(market)
         if not provider:
             raise ValueError(f"No provider registered for market: {market}")
 

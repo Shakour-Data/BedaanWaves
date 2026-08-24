@@ -3,6 +3,8 @@ Crypto Ingestion Service - tier 2 data ingestion for cryptocurrency markets.
 """
 
 import asyncio
+import functools
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +12,7 @@ import aiohttp
 from pytz import utc
 
 import logging
+from sqlalchemy import select
 from ..core.base_service import DataService
 from ..core.config import get_settings
 from ...db.base import async_session_maker
@@ -124,6 +127,28 @@ async def _fetch_binance_depth(symbol: str) -> Dict[str, Any]:
                 text = await response.text()
                 raise RuntimeError(
                     f"Binance depth request failed ({response.status}): {text}"
+                )
+
+
+async def _fetch_coingecko_market_data(crypto_id: str) -> Dict[str, Any]:
+    """Fetch full market data from CoinGecko API."""
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+        url = f"https://api.coingecko.com/api/v3/coins/{crypto_id}"
+        params = {
+            "localization": False,
+            "tickers": False,
+            "market_data": True,
+            "community_data": False,
+            "developer_data": False,
+            "sparkline": False,
+        }
+        async with session.get(url, params=params) as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                text = await response.text()
+                raise RuntimeError(
+                    f"CoinGecko market data request failed ({response.status}): {text}"
                 )
 
 
@@ -443,7 +468,7 @@ class CryptoIngestionService(DataService):
             price_info = raw.get(crypto_id.lower(), {})
             usd_price = price_info.get("usd")
 
-            if usd_price is _fetch_coingecko_market_data(crypto_id):
+            if usd_price is None:
                 raise ValueError("Price not found in CoinGecko response")
 
             return {
