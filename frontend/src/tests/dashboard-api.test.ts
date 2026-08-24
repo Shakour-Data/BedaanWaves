@@ -15,16 +15,16 @@ describe('Dashboard API Service', () => {
 
   it('should fetch dashboard data when all APIs succeed', async () => {
     ;(apiClient.get as any).mockImplementation((url: string) => {
-      if (url.includes('/market/market-overview')) {
+      if (url.includes('/market/market/market-overview')) {
         return { data: {
           status: 'success',
-          market: 'TSE',
+          market: 'NASDAQ',
           total_assets: 500,
           sectors: { 'Technology': 100, 'Finance': 80 },
           timestamp: '2023-01-01'
         }}
       }
-      if (url.includes('/market/tse-dashboard')) {
+      if (url.includes('/market/market/tse-dashboard')) {
         return { data: {
           status: 'success',
           market: 'TSE',
@@ -35,7 +35,7 @@ describe('Dashboard API Service', () => {
           timestamp: '2023-01-01'
         }}
       }
-      if (url.includes('/watchlists')) {
+      if (url.includes('/watchlists/watchlists')) {
         return { data: [
           {
             id: '1',
@@ -46,7 +46,7 @@ describe('Dashboard API Service', () => {
           }
         ]}
       }
-      if (url.includes('/market/latest-prices')) {
+      if (url.includes('/market/market/latest-prices')) {
         return { data: {
           status: 'success',
           timestamp: '2023-01-01',
@@ -55,7 +55,7 @@ describe('Dashboard API Service', () => {
           }
         }}
       }
-      if (url.includes('/analysis/signals-summary')) {
+      if (url.includes('/analysis/analysis/signals-summary')) {
         if (!url.includes('signal_type')) {
           return { data: {
             status: 'success',
@@ -93,7 +93,7 @@ describe('Dashboard API Service', () => {
           }}
         }
       }
-      if (url.includes('/news/market')) {
+      if (url.includes('/news/news/market')) {
         return { data: {
           status: 'success',
           count: 1,

@@ -36,6 +36,7 @@ dist/
 out/
 .nuxt/
 .vercel/
+tsconfig.tsbuildinfo
 
 # OS
 .DS_Store

@@ -6,6 +6,7 @@ import logging
 import signal
 import sys
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -22,7 +23,10 @@ from app.api.middleware import (
 )
 
 # Import core services
-from app.services.core.dependency_container import DependencyContainer
+from app.services.core.dependency_container import (
+    DependencyContainer,
+    set_global_container,
+)
 from app.services.core.config_service import ConfigService
 from app.services.core.logger_service import LoggerService
 from app.services.core.cache_service import CacheService
@@ -65,6 +69,12 @@ settings = get_settings()
 _container = None
 
 
+# Global exception handlers for graceful degradation
+from sqlalchemy.exc import SQLAlchemyError
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
@@ -76,9 +86,18 @@ async def lifespan(app: FastAPI):
     try:
         # Initialize dependency container
         container = DependencyContainer()
+        
+        # Register core services
+        container.register_instance("config_service", ConfigService())
+        container.register_instance("logger_service", LoggerService())
+        container.register_instance("database_service", DatabaseService())
+        container.register_instance("cache_service", CacheService())
+        container.register_instance("health_checker", HealthChecker())
+        
         await container.initialize()
         app.state.container = container
         _container = container
+        set_global_container(container)
         
         logger.info("Registered core services in dependency container")
         
@@ -151,6 +170,40 @@ app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
 # Add request logging middleware (last, so it can log all requests)
 app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
 
+
+# Global exception handlers for graceful degradation
+from sqlalchemy.exc import SQLAlchemyError
+from fastapi import Request
+
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+    """Handle database errors with 503 Service Unavailable."""
+    logger.error(f"Database error on {request.method} {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "error",
+            "error_code": "SERVICE_UNAVAILABLE",
+            "message": "Service temporarily unavailable - database connection failed",
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Handle unhandled exceptions with 500 Internal Server Error."""
+    logger.error(f"Unhandled error on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "error_code": "INTERNAL_ERROR",
+            "message": "Internal server error",
+        },
+    )
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
@@ -159,7 +212,7 @@ async def health_check():
         "status": "healthy",
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 # Root endpoint

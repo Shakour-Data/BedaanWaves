@@ -64,34 +64,7 @@ VALUES (
 ON CONFLICT (symbol) DO NOTHING;
 
 -- ===============================================
--- 4. Insert top 100 Nasdaq constituents by market cap
--- ===============================================
-INSERT INTO assets (symbol, name, asset_class, market, sector, industry, country_code, currency, active, metadata)
-VALUES
-    ('AAPL', 'Apple Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Consumer Electronics', 'US', 'USD', TRUE, '{"market_cap_rank": 1}'::jsonb),
-    ('MSFT', 'Microsoft Corporation', 'EQUITY', 'NASDAQ', 'Technology', 'Software - Infrastructure', 'US', 'USD', TRUE, '{"market_cap_rank": 2}'::jsonb),
-    ('GOOGL', 'Alphabet Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Internet Content & Information', 'US', 'USD', TRUE, '{"market_cap_rank": 3}'::jsonb),
-    ('AMZN', 'Amazon.com Inc.', 'EQUITY', 'NASDAQ', 'Consumer Cyclical', 'Internet Retail', 'US', 'USD', TRUE, '{"market_cap_rank": 4}'::jsonb),
-    ('NVDA', 'NVIDIA Corporation', 'EQUITY', 'NASDAQ', 'Technology', 'Semiconductors', 'US', 'USD', TRUE, '{"market_cap_rank": 5}'::jsonb),
-    ('META', 'Meta Platforms Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Internet Content & Information', 'US', 'USD', TRUE, '{"market_cap_rank": 6}'::jsonb),
-    ('TSLA', 'Tesla Inc.', 'EQUITY', 'NASDAQ', 'Consumer Cyclical', 'Auto Manufacturers', 'US', 'USD', TRUE, '{"market_cap_rank": 7}'::jsonb),
-    ('AVGO', 'Broadcom Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Semiconductors', 'US', 'USD', TRUE, '{"market_cap_rank": 8}'::jsonb),
-    ('COST', 'Costco Wholesale Corporation', 'EQUITY', 'NASDAQ', 'Consumer Defensive', 'Discount Stores', 'US', 'USD', TRUE, '{"market_cap_rank": 9}'::jsonb),
-    ('NFLX', 'Netflix Inc.', 'EQUITY', 'NASDAQ', 'Communication Services', 'Entertainment', 'US', 'USD', TRUE, '{"market_cap_rank": 10}'::jsonb),
-    ('PLTR', 'Palantir Technologies Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Software - Application', 'US', 'USD', TRUE, '{"market_cap_rank": 11}'::jsonb),
-    ('ASML', 'ASML Holding N.V.', 'EQUITY', 'NASDAQ', 'Technology', 'Semiconductor Equipment & Materials', 'US', 'USD', TRUE, '{"market_cap_rank": 12}'::jsonb),
-    ('TMUS', 'T-Mobile US Inc.', 'EQUITY', 'NASDAQ', 'Communication Services', 'Telecom Services', 'US', 'USD', TRUE, '{"market_cap_rank": 13}'::jsonb),
-    ('CSCO', 'Cisco Systems Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Communication Equipment', 'US', 'USD', TRUE, '{"market_cap_rank": 14}'::jsonb),
-    ('ADBE', 'Adobe Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Software - Application', 'US', 'USD', TRUE, '{"market_cap_rank": 15}'::jsonb),
-    ('CMCSA', 'Comcast Corporation', 'EQUITY', 'NASDAQ', 'Communication Services', 'Telecom Services', 'US', 'USD', TRUE, '{"market_cap_rank": 16}'::jsonb),
-    ('PEP', 'PepsiCo Inc.', 'EQUITY', 'NASDAQ', 'Consumer Defensive', 'Beverages - Non-Alcoholic', 'US', 'USD', TRUE, '{"market_cap_rank": 17}'::jsonb),
-    ('INTC', 'Intel Corporation', 'EQUITY', 'NASDAQ', 'Technology', 'Semiconductors', 'US', 'USD', TRUE, '{"market_cap_rank": 18}'::jsonb),
-    ('INTU', 'Intuit Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'Software - Application', 'US', 'USD', TRUE, '{"market_cap_rank": 19}'::jsonb),
-    ('TXN', 'Texas Instruments Incorporated', 'EQUITY', 'NASDAQ', 'Technology', 'Semiconductors', 'US', 'USD', TRUE, '{"market_cap_rank": 20}'::jsonb)
-ON CONFLICT (symbol) DO NOTHING;
-
--- ===============================================
--- 5. Sample board members for Apple (example)
+-- 4. Sample board members for Apple (example)
 -- ===============================================
 INSERT INTO company_leadership (asset_id, name, title, leadership_type, start_date, source)
 SELECT id, 'Timothy D. Cook', 'Chief Executive Officer', 'officer', DATE '2011-08-24', 'SEC'
@@ -105,7 +78,7 @@ FROM assets WHERE symbol = 'AAPL'
 ON CONFLICT DO NOTHING;
 
 -- ===============================================
--- 6. Sample macro indicators
+-- 5. Sample macro indicators (updated by ingestion service)
 -- ===============================================
 INSERT INTO macro_indicators (indicator_code, name, value, period, unit, source, as_of)
 VALUES
@@ -117,7 +90,7 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- ===============================================
--- 7. Sample English news
+-- 6. Sample English news
 -- ===============================================
 INSERT INTO news (source, title, body, url, published_at, asset_id, language)
 SELECT 'Reuters', 'Fed signals potential rate cut in September', 'Federal Reserve officials indicated they are ready to begin easing monetary policy...', 'https://reuters.com/fed-sept-rate-cut', TIMESTAMP '2026-08-24 09:00:00', id, 'en'
@@ -130,4 +103,4 @@ ON CONFLICT DO NOTHING;
 -- ===============================================
 -- Done
 -- ===============================================
-SELECT 'Nasdaq tables and sample data created' AS status;
+SELECT 'Nasdaq tables and sample data created. Run python scripts/seed_nasdaq.py to load all constituents.' AS status;

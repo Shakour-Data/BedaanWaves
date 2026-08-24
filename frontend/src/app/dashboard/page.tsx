@@ -29,7 +29,7 @@ export default function DashboardPage() {
   if (loading || !data) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-        در حال بارگذاری داشبورد…
+        Loading dashboard...
       </div>
     );
   }
@@ -38,37 +38,37 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-3">
       {data.live ? (
         <p className="rounded-xl bg-success/10 px-3 py-2 text-sm text-success">
-          ● داده‌های زنده از بک‌اند دریافت شد
+          ● Live data received from backend
         </p>
       ) : (
         <p className="rounded-xl bg-accent/30 px-3 py-2 text-sm text-accent-foreground">
-          ● نمایش داده‌های نمایشی (بک‌اند در دسترس نیست)
+          ● Showing sample data (backend unavailable)
         </p>
       )}
 
-      {/* آمار بازار */}
+      {/* Market Stats */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {data.marketStats.map((s) => (
           <StatCard key={s.label} stat={s} />
         ))}
       </section>
 
-      {/* برترین حرکات + واچ‌لیست */}
+      {/* Top Movers + Watchlist */}
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <TarotCard icon="📈" title="برترین حرکات بازار" className="lg:col-span-2">
+        <TarotCard icon="📈" title="Top Movers" className="lg:col-span-2">
           <AssetTable rows={data.topMovers} />
         </TarotCard>
-        <TarotCard icon="⭐" title="واچ‌لیست">
+        <TarotCard icon="⭐" title="Watchlist">
           <AssetTable rows={data.watchlist} />
         </TarotCard>
       </section>
 
-      {/* سیگنال‌های ML + اخبار */}
+      {/* ML Signals + News */}
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <TarotCard icon="🔮" title="سیگنال‌های هوشمند" className="lg:col-span-2">
+        <TarotCard icon="🔮" title="AI Signals" className="lg:col-span-2">
           <SignalList signals={data.signals} />
         </TarotCard>
-        <TarotCard icon="📰" title="آخرین اخبار">
+        <TarotCard icon="📰" title="Latest News">
           <NewsList items={data.news} />
         </TarotCard>
       </section>

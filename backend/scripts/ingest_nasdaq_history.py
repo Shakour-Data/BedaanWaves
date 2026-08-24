@@ -1,15 +1,15 @@
 """
 Nasdaq Historical Data Backfill Script
 
-Fetches 5 years of historical data for Nasdaq Composite index and top constituents:
+Fetches historical data for Nasdaq Composite index and ALL constituents:
 - Price candles (daily OHLCV)
 - Fundamentals (quarterly income statements + ratios)
 - Board members / officers
 - Macro indicators
-- News (placeholder)
+- News (yfinance)
 
 Usage:
-    python scripts/ingest_nasdaq_history.py [--symbols AAPL,MSFT,GOOGL] [--years 5]
+    python scripts/ingest_nasdaq_history.py [--symbols AAPL,MSFT,GOOGL] [--years 5] [--daily]
 """
 
 import argparse
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 async def main():
     parser = argparse.ArgumentParser(description="Nasdaq historical data backfill")
     parser.add_argument("--symbols", type=str, default=None,
-                        help="Comma-separated list of symbols (default: top 100 Nasdaq)")
+                        help="Comma-separated list of symbols (default: all Nasdaq constituents from CSV)")
     parser.add_argument("--years", type=int, default=5,
                         help="Number of years of history to fetch (default: 5)")
     parser.add_argument("--daily", action="store_true",

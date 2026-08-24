@@ -98,6 +98,7 @@ class NotificationDispatcher(BaseService):
         self.max_queue_size = max_queue_size
         self.max_retries = max_retries
         self.default_priority = default_priority
+        self._lock = asyncio.Lock()
         
         # Internal state
         self._event_log: deque = deque()

@@ -24,7 +24,7 @@ export default function PortfolioPage() {
       setError(null);
       try {
         // Fetch user's portfolio holdings
-        const holdingsRes = await apiClient.get<any>("/portfolios/holdings");
+        const holdingsRes = await apiClient.get<any>("/portfolio/portfolios/");
         
         if (holdingsRes.status === "success" && holdingsRes.data) {
           const holdingsData = holdingsRes.data;
@@ -33,7 +33,7 @@ export default function PortfolioPage() {
           if (holdingsData.length > 0) {
             const symbols = holdingsData.map((h: any) => h.symbol);
             const pricesRes = await apiClient.get<any>(
-              `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+              `/market/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
             );
             
             const prices = pricesRes.data?.data || pricesRes.data || {};

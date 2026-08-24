@@ -109,7 +109,7 @@ export async function fetchSymbols(params: FetchSymbolsParams = {}): Promise<Ass
   if (params.sector) qs.set("sector", params.sector);
   if (params.industry) qs.set("industry", params.industry);
   qs.set("limit", String(params.limit ?? 500));
-  const res = await apiClient.get<Asset[]>(`/market/symbols?${qs.toString()}`);
+  const res = await apiClient.get<Asset[]>(`/market/market/symbols?${qs.toString()}`);
   return res.data;
 }
 
@@ -141,7 +141,7 @@ export async function fetchPriceHistory({
     timeframe,
     limit: String(limit),
   });
-  const res = await apiClient.get<RawCandle[]>(`/market/price-history?${qs.toString()}`);
+  const res = await apiClient.get<RawCandle[]>(`/market/market/price-history?${qs.toString()}`);
   return res.data.map((c) => ({
     timestamp: c.timestamp,
     timeframe: c.timeframe,
@@ -159,7 +159,7 @@ export async function fetchPriceHistory({
 export async function fetchLatestPrices(symbols: string[]): Promise<Record<string, LatestPrice>> {
   if (symbols.length === 0) return {};
   const qs = symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&");
-  const res = await apiClient.get<RawLatestPricesResponse>(`/market/latest-prices?${qs}`);
+  const res = await apiClient.get<RawLatestPricesResponse>(`/market/market/latest-prices?${qs}`);
 
   const out: Record<string, LatestPrice> = {};
   for (const [symbol, v] of Object.entries(res.data.data ?? {})) {
