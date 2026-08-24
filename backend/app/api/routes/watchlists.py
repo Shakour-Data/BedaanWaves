@@ -12,7 +12,7 @@ from app.schemas.schemas import (
 )
 from app.services.user.watchlist_service import watchlist_service
 
-router = APIRouter(prefix="/watchlists", tags=["watchlists"])
+router = APIRouter(tags=["watchlists"])
 
 
 @router.post("", response_model=WatchlistResponse, status_code=status.HTTP_201_CREATED)

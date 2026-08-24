@@ -5,7 +5,6 @@ import Link from "next/link";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
-import { loginApi } from "@/lib/auth";
 import en from "@/i18n/en.json";
 import fa from "@/i18n/fa.json";
 
@@ -19,7 +18,7 @@ const t = (key: string) => {
     if (value && typeof value === "object") {
       value = (value as any)[k];
     } else {
-      return key; // fallback to key if not found
+      return key;
     }
   }
   return typeof value === "string" ? value : key;
@@ -48,7 +47,6 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await loginApi({ email, password });
       await loginStore(email, password);
     } catch (err: any) {
       const message = err.response?.data?.detail || t("auth.error_authentication");

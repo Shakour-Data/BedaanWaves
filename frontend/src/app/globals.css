@@ -141,13 +141,13 @@
    }
 
    /* Ensure proper flex direction for RTL */
-   [dir="rtl"] .flex-row {
-     flex-direction: row-reverse;
-   }
+    [dir="rtl"] .flex-row {
+      flex-direction: row;
+    }
 
-   [dir="rtl"] .flex-row-reverse {
-     flex-direction: row;
-   }
+    [dir="rtl"] .flex-row-reverse {
+      flex-direction: row-reverse;
+    }
 }
 @layer components {
    /* Clean primary button: Financial red with subtle hover */

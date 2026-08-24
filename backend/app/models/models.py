@@ -652,30 +652,32 @@ class MacroIndicator(Base):
 # 10. داده‌های بنیادی بازار ایران
 # ===========================================================================
 class IRFinancialStatement(Base):
-    """صورت‌های مالی بازار ایران (ترازنامه/سودزیان/جریان وجوه نقد)"""
+    """صورت‌های مالی (ترازنامه/سودزیان/جریان وجوه نقد) — قابل استفاده برای همه بازارها"""
     __tablename__ = "ir_financial_statements"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
-    period = Column(String(20), nullable=False)  # 1402Q1
+    market = Column(String(20), nullable=False, default="TSE", index=True)
+    period = Column(String(20), nullable=False)  # 1402Q1 / 2024Q1
     statement_type = Column(String(20), nullable=False)  # BALANCE / INCOME / CASHFLOW
     fiscal_year = Column(Integer)
     data = Column(JSONB, default={})  # سرفصل‌ها و مقادیر
     as_of = Column(Date)
 
     __table_args__ = (
-        UniqueConstraint('asset_id', 'period', 'statement_type', name='uix_ir_fin_stmt'),
+        UniqueConstraint('asset_id', 'period', 'statement_type', 'market', name='uix_fin_stmt'),
     )
 
 
 class IRFundamentalRatio(Base):
-    """نسبت‌های بنیادی بازار ایران (EPS, P/E, P/B, DPS, ROE و ...)"""
+    """نسبت‌های بنیادی (EPS, P/E, P/B, DPS, ROE و ...) — قابل استفاده برای همه بازارها"""
     __tablename__ = "ir_fundamental_ratios"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
+    market = Column(String(20), nullable=False, default="TSE", index=True)
     period = Column(String(20), nullable=False)
     eps = Column(Numeric(20, 4))
     pe = Column(Numeric(12, 2))
@@ -688,7 +690,30 @@ class IRFundamentalRatio(Base):
     as_of = Column(Date)
 
     __table_args__ = (
-        UniqueConstraint('asset_id', 'period', name='uix_ir_fund_ratio'),
+        UniqueConstraint('asset_id', 'period', 'market', name='uix_fund_ratio'),
+    )
+
+
+# ===========================================================================
+# 10.5. رهبری و هیئت مدیره شرکت‌ها (Board / Leadership)
+# ===========================================================================
+class CompanyLeadership(Base):
+    """اعضای هیئت مدیره و مدیران شرکت‌ها"""
+    __tablename__ = "company_leadership"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+
+    name = Column(String(255), nullable=False)
+    title = Column(String(255), nullable=False)
+    leadership_type = Column(String(50), nullable=False, index=True)  # board / officer
+    start_date = Column(Date)
+    end_date = Column(Date)
+    source = Column(String(50), default="SEC")
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_company_leadership_asset', 'asset_id'),
     )
 
 

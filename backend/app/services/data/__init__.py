@@ -12,6 +12,7 @@ Services for data management and external API integration:
 - IntlApiClient: International stock exchange data
 - FinancialDataIngestService: Financial statements from multiple sources
 - StockFundamentalDataIngestionService: Stock fundamental data ingestion
+- NasdaqIngestionService: Nasdaq Composite index and constituent data
 """
 
 from .brs_api_client import BrsApiClient
@@ -30,6 +31,7 @@ from .financial_data_ingest_service import (
     FinancialDataProvider,
 )
 from .stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
+from .nasdaq_ingestion_service import NasdaqIngestionService
 
 __all__ = [
     "BrsApiClient",
@@ -42,6 +44,7 @@ __all__ = [
     "IntlApiClient",
     "FinancialDataIngestService",
     "StockFundamentalDataIngestionService",
+    "NasdaqIngestionService",
     "FinancialStatementType",
     "MarketType",
     "FinancialStatement",

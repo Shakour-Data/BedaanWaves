@@ -9,9 +9,6 @@ export interface ExportableRow {
   [key: string]: any;
 }
 
-/**
- * Export data to various formats
- */
 export function exportData(
   data: ExportableRow[],
   options: ExportOptions = {}
@@ -41,9 +38,6 @@ export function exportData(
   }
 }
 
-/**
- * Export to CSV format
- */
 function exportToCSV(rows: ExportableRow[], filename: string): void {
   const headers = Object.keys(rows[0] || {});
   const csvContent = [
@@ -53,32 +47,22 @@ function exportToCSV(rows: ExportableRow[], filename: string): void {
         `"${(row[header] ?? '').toString().replace(/"/g, '""')}"`
       ).join(',')
     )
-  ].join('\\n');
+  ].join('\n');
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   downloadFile(blob, filename);
 }
 
-/**
- * Export to Excel format (using existing JSON structure)
- */
 function exportToExcel(rows: ExportableRow[], filename: string): void {
-  // Using browser's native CSV download as fallback for Excel-compatible format
   exportToCSV(rows, filename);
 }
 
-/**
- * Export to JSON format
- */
 function exportToJSON(rows: ExportableRow[], filename: string): void {
   const jsonContent = JSON.stringify(rows, null, 2);
   const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
   downloadFile(blob, filename);
 }
 
-/**
- * Trigger file download
- */
 function downloadFile(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -92,9 +76,6 @@ function downloadFile(blob: Blob, filename: string): void {
   window.URL.revokeObjectURL(url);
 }
 
-/**
- * Create download button element
- */
 export function createExportButton(
   data: ExportableRow[],
   options: ExportOptions = {}, 

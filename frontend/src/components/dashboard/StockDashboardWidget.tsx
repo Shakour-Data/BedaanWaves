@@ -82,7 +82,7 @@ export function StockDashboardWidget() {
         includeHeaders: true,
       });
     } catch (err) {
-      console.error('Export failed:', err);
+      // Handle error silently
     }
   };
 

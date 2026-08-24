@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from app.services.data.intl_api_client import IntlApiClient
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/market/intl", tags=["intl"])
+router = APIRouter(tags=["intl"])
 
 
 @router.get("/quote/{symbol}", response_model=dict)

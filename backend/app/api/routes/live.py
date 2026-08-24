@@ -15,7 +15,7 @@ from app.services.data.brs_api_client import BrsApiClient
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/market/live", tags=["market-live"])
+router = APIRouter(tags=["market-live"])
 
 _settings = get_settings()
 _client = BrsApiClient(

@@ -1,18 +1,18 @@
 """Symbol Service - Tier 2 Data Service
 Manages symbol data and operations with multi-market support and cache integration."""
 
-import shelve
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from sqlalchemy import select, func, or_
 
-from app.core.config import Settings
+from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import SymbolData
 from app.core.services import DataService
 from app.services.core.dependency_container import get_global_container
 
+settings = get_settings()
 container = get_global_container()
 
 
@@ -20,23 +20,13 @@ class SymbolService(DataService):
     """Comprehensive symbol data management with multi-market support and cache integration."""
 
     def __init__(self):
-        super().__init__(
-            service_name="SymbolService",
-            cache_backend=settings.CACHE_BACKEND,
-            cache_timeout=settings.SYMBOL_CACHE_TTL
-        )
+        super().__init__(service_name="SymbolService")
+        self._symbol_cache: Dict[str, Any] = {}
 
     async def initialize(self) -> None:
         """Initialize service with database and cache connections."""
         await super().initialize()
-        self._initialize_cache()
         await self._load_initial_symbols()
-
-    async def _initialize_cache(self) -> None:
-        """Set up cache configuration."""
-        self._symbol_cache = shelve.open(f"symbol_cache_{settings.ENVIRONMENT}")
-        if not self._symbol_cache.awake():
-            self._symbol_cache.sync()
 
     async def _load_initial_symbols(self) -> int:
         """Load initial symbols from database."""
@@ -44,7 +34,7 @@ class SymbolService(DataService):
             stmt = select(SymbolData).order_by(SymbolData.symbol)
             result = await session.execute(stmt)
             symbols = result.scalars().all()
-            
+
         for symbol in symbols:
             cache_key = f"symbol:{symbol.symbol}"
             self._symbol_cache[cache_key] = {
@@ -55,7 +45,7 @@ class SymbolService(DataService):
                 "active": symbol.active_status,
                 "last_updated": symbol.updated_at
             }
-            
+
         return len(symbols)
 
     async def get_symbol(self, symbol: str) -> Dict[str, Any]:
@@ -140,11 +130,10 @@ class SymbolService(DataService):
     async def clear_cache(self) -> None:
         """Clear symbol cache."""
         self._symbol_cache.clear()
-        self._symbol_cache.sync()
 
     async def shutdown(self) -> None:
         """Clean up resources."""
-        self._symbol_cache.close()
+        self._symbol_cache.clear()
         await super().shutdown()
 
 

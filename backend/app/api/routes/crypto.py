@@ -10,7 +10,7 @@ from app.services.crypto import CryptoPriceService
 from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/market/crypto", tags=["crypto"])
+router = APIRouter(tags=["crypto"])
 
 
 async def _get_crypto_service() -> CryptoPriceService:

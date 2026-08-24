@@ -14,7 +14,12 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 
 # Import middleware
-from app.api.middleware import RateLimitMiddleware
+from app.api.middleware import (
+    RateLimitMiddleware,
+    CorrelationIdMiddleware,
+    AuthGuardMiddleware,
+    RequestLoggingMiddleware,
+)
 
 # Import core services
 from app.services.core.dependency_container import DependencyContainer
@@ -95,6 +100,7 @@ async def lifespan(app: FastAPI):
         app.include_router(intl_router, prefix="/api/v1/intl", tags=["intl"])
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
+        app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
         
         logger.info("Registered all API routes")
     except Exception as e:
@@ -118,9 +124,9 @@ app = FastAPI(
     title=settings.API_TITLE,
     description=settings.APP_DESCRIPTION,
     version=settings.APP_VERSION,
-    openapi_url="/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    openapi_url=settings.OPENAPI_URL,
+    docs_url=settings.DOCS_URL,
+    redoc_url=settings.REDOC_URL,
     lifespan=lifespan,
 )
 
@@ -133,8 +139,17 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
+# Add correlation ID middleware (first, so it wraps all other middleware)
+app.add_middleware(CorrelationIdMiddleware)
+
+# Add auth guard middleware
+app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
+
 # Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
+
+# Add request logging middleware (last, so it can log all requests)
+app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
 
 # Health check endpoint
 @app.get("/health")
@@ -144,7 +159,7 @@ async def health_check():
         "status": "healthy",
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "timestamp": "2026-08-16T19:40:00Z"
+        "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
 # Root endpoint
@@ -154,7 +169,7 @@ async def root():
     return {
         "message": f"Welcome to {settings.APP_NAME}",
         "version": settings.APP_VERSION,
-        "docs": "/docs"
+        "docs": settings.DOCS_URL
     }
 
 

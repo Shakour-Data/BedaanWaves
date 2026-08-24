@@ -105,8 +105,29 @@ export default function SettingsPage() {
     sms: false,
     telegram: true
   });
+  const [marketData, setMarketData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const data = marketData[selectedCountry as keyof typeof marketData] || marketData.ir;
+  useEffect(() => {
+    let active = true;
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const res = await apiClient.get("/settings/market-preferences");
+        if (active && res.data) {
+          setMarketData(res.data);
+        }
+      } catch {
+        // Settings will use local defaults if API is unavailable
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadSettings();
+    return () => { active = false; };
+  }, []);
+
+  const data = marketData ? marketData[selectedCountry as keyof typeof marketData] : null;
   const countryInfo = countries.find(c => c.id === selectedCountry);
 
   const toggleCurrency = (currency: string) => {
@@ -124,25 +145,31 @@ export default function SettingsPage() {
     }));
   };
 
-  const handleSave = () => {
-    // Save settings logic
-    console.log("Settings saved:", {
-      country: selectedCountry,
-      index: selectedIndex,
-      stock: selectedStock,
-      industry: selectedIndustry,
-      crypto: selectedCrypto,
-      currencies: selectedCurrencies,
-      notifications
-    });
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await apiClient.post("/settings/market-preferences", {
+        country: selectedCountry,
+        index: selectedIndex,
+        stock: selectedStock,
+        industry: selectedIndustry,
+        crypto: selectedCrypto,
+        currencies: selectedCurrencies,
+        notifications
+      });
+    } catch (error) {
+      // Handle error (e.g., show toast)
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <DashboardShell title="Professional Market Settings">
+    <DashboardShell title="تنظیمات بازار">
       <div className="flex flex-col gap-6">
-        <TarotCard icon="⚙️" title="Market Preferences Configuration">
+        <TarotCard icon="⚙️" title="پیکربندی تنظیمات بازار">
           <p className="text-muted-foreground text-justify">
-            Configure your personalized market analysis settings. Select countries, indices, stocks, industries, and cryptocurrency preferences. Multiple market selections are supported with dynamic tab organization.
+            تنظیمات تحلیل بازار شخصی‌سازی شده خود را پیکربندی کنید. کشورها، شاخص‌ها، سهام، صنایع و ارزهای دیجیتال را انتخاب کنید.
           </p>
         </TarotCard>
 

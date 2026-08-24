@@ -16,7 +16,7 @@ from app.services.ml.portfolio_optimization_service import PortfolioOptimization
 from app.services.ml.time_series_forecasting_service import TimeSeriesForecastingService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/ml", tags=["ml"])
+router = APIRouter(tags=["ml"])
 
 
 def _load_service(svc_cls):

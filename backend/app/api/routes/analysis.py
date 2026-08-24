@@ -26,7 +26,7 @@ from app.services.data.stock_fundamental_ingestion_service import StockFundament
 from app.core.rate_limiting import RateLimiter, rate_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/analysis", tags=["analysis"])
+router = APIRouter(tags=["analysis"])
 
 
 @router.get("/signals/{symbol}", response_model=MLSignalResponse)

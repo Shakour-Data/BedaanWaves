@@ -72,7 +72,6 @@ export default function PortfolioPage() {
           if (active) setError("پاسخ سرور نامعتبر است");
         }
       } catch (err) {
-        console.error("Failed to load portfolio:", err);
         if (active) setError("خطا در بارگذاری پورتفولیو. مطمئن شوید بک‌اند در دسترس است و لاگین کرده‌ید.");
       } finally {
         if (active) setLoading(false);
@@ -144,14 +143,14 @@ export default function PortfolioPage() {
         {/* Performance Chart Placeholder */}
         <TarotCard icon="📈" title="عملکرد پورتفولیو">
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمودار عملکرد پورتفولیو (به‌زودی)</p>
+            <p>نمودار عملکرد پورتفولیو به‌زودی اضافه می‌شود</p>
           </div>
         </TarotCard>
 
         {/* Asset Allocation */}
         <TarotCard icon="🥧" title="توزیع دارایی‌ها">
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمودار پن‌دول توزیع دارایی‌ها (به‌زودی)</p>
+            <p>نمودار توزیع دارایی‌ها به‌زودی اضافه می‌شود</p>
           </div>
         </TarotCard>
       </div>

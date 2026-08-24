@@ -18,7 +18,7 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-router = APIRouter(prefix="/stocks", tags=["stocks"])
+router = APIRouter(tags=["stocks"])
 
 
 def _add_version_header(response: Response, version: str = "v1"):
@@ -153,7 +153,7 @@ async def get_multiple_stocks_v2(
 @router.post("/export", response_model=dict)
 async def export_portfolio_data(
     tickers: Optional[List[str]] = None,
-    format: str = Query("json", regex="^(json|csv)$"),
+    format: str = Query("json", pattern="^(json|csv)$"),
     client: BrsApiClient = Depends(get_brs_client),
     response: Response = None
 ) -> dict:

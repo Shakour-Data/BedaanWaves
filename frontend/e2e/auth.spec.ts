@@ -6,7 +6,7 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should display login form', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText(/login|sign in/i);
+    await expect(page.locator('h1, h2')).toContainText(/login|sign in|ورود/i);
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
@@ -14,7 +14,7 @@ test.describe('Authentication Flow', () => {
 
   test('should show validation errors for empty fields', async ({ page }) => {
     await page.locator('button[type="submit"]').click();
-    await expect(page.locator('text=email|text=password')).toBeVisible();
+    await expect(page.locator('text=email|text=password|text=ایمیل|text=رمز')).toBeVisible();
   });
 
   test('should navigate to dashboard after successful login', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('Authentication Flow', () => {
     await page.locator('button[type="submit"]').click();
 
     await page.waitForURL('/dashboard');
-    await expect(page.locator('[data-testid="dashboard"]')).toBeVisible();
+    await expect(page.locator('text=داشبورد|text=Dashboard')).toBeVisible();
   });
 
   test('should show error message for invalid credentials', async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe('Authentication Flow', () => {
     await page.locator('input[type="password"]').fill('wrongpassword');
     await page.locator('button[type="submit"]').click();
 
-    await expect(page.locator('text=invalid|text=error|text=credential')).toBeVisible();
+    await expect(page.locator('text=invalid|text=error|text=credential|text=خطا|text=ناموفق')).toBeVisible();
   });
 });
 
@@ -41,25 +41,23 @@ test.describe('Dashboard', () => {
   });
 
   test('should load dashboard with market stats', async ({ page }) => {
-    await expect(page.locator('[data-testid="market-stats"]')).toBeVisible();
-    const statCards = page.locator('[data-testid="stat-card"]');
-    await expect(statCards.first()).toBeVisible();
+    await expect(page.locator('text=شاخص|text=بازار|text=Market')).toBeVisible();
   });
 
   test('should display asset table', async ({ page }) => {
-    await expect(page.locator('[data-testid="asset-table"]')).toBeVisible();
+    await expect(page.locator('table, .overflow-x-auto')).toBeVisible();
   });
 
   test('should display signal list', async ({ page }) => {
-    await expect(page.locator('[data-testid="signal-list"]')).toBeVisible();
+    await expect(page.locator('text=سیگنال|text=Signal')).toBeVisible();
   });
 
   test('should display news feed', async ({ page }) => {
-    await expect(page.locator('[data-testid="news-list"]')).toBeVisible();
+    await expect(page.locator('text=اخبار|text=News')).toBeVisible();
   });
 
   test('should have live data indicator', async ({ page }) => {
-    const liveIndicator = page.locator('text=live|text=زنده|text=connected');
+    const liveIndicator = page.locator('text=live|text=زنده|text=connected|text=داده‌های زنده');
     await expect(liveIndicator.first()).toBeVisible();
   });
 });

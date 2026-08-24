@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # DATABASE CONFIGURATION
     # ============================================================
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/bedaanwaves_db"
+    DB_DRIVER: str = "postgresql"
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_NAME: str = "bedaanwaves_db"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "postgres"
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
@@ -40,18 +46,27 @@ class Settings(BaseSettings):
     # ============================================================
     REDIS_URL: str = "redis://localhost:6379/0"
     CACHE_ENABLED: bool = True
+    CACHE_BACKEND: str = "memory"
+    CACHE_TTL: int = 3600
+    CACHE_MAX_SIZE: int = 1000
     CACHE_TTL_MINUTES: int = 60
     CACHE_SCORE_TTL_HOURS: int = 24
     CACHE_API_RESPONSE_TTL_MINUTES: int = 5
+    SYMBOL_CACHE_TTL: int = 3600
     
     # ============================================================
     # API CONFIGURATION
     # ============================================================
     API_V1_STR: str = "/api/v1"
+    API_BASE_PATH: str = "/api/v1"
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 3000
+    API_VERSION: str = "1.0.0"
     API_TITLE: str = "BedaanWaves API"
+    API_TIMEOUT: int = 30
+    API_MAX_CONNECTIONS: int = 100
     DOCS_URL: str = "/api/v1/docs"
+    REDOC_URL: str = "/api/v1/redoc"
     OPENAPI_URL: str = "/api/v1/openapi.json"
     
     # ============================================================
@@ -76,8 +91,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     JWT_SECRET: str = "your-jwt-secret"
     JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_HOURS: int = 24
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    PASSWORD_MIN_LENGTH: int = 8
+    ENABLE_HTTPS: bool = False
     
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
@@ -95,9 +113,6 @@ class Settings(BaseSettings):
     AUTH_PUBLIC_PATHS: List[str] = [
         "/",
         "/health",
-        "/docs",
-        "/redoc",
-        "/openapi.json",
     ]
     # Path prefixes that never require authentication (e.g. the auth router itself).
     AUTH_PUBLIC_PREFIXES: List[str] = [
@@ -159,7 +174,10 @@ class Settings(BaseSettings):
     
     # News APIs
     NEWS_SOURCES: List[str] = ["tehran-news", "financial-news", "market-news"]
+    NEWS_API_URL: str = "https://newsapi.org"
+    NEWS_API_KEY: Optional[str] = None
     NEWS_REFRESH_INTERVAL_MINUTES: int = 30
+    NLP_MODEL: str = "persian-bert"
     
     # Cryptocurrency APIs
     CRYPTO_ENABLED: bool = True
@@ -167,23 +185,23 @@ class Settings(BaseSettings):
     BINANCE_API_BASE_URL: str = "https://api.binance.com/api/v3"
     CRYPTO_REFRESH_INTERVAL_MINUTES: int = 5
     
-    # Machine Learning
-    ML_MODEL_PATH: str = "./models"
-    ML_MODELS_DIR: str = "./models"
-    ML_MODELS_VERSION: str = "1.0.0"
-    
     # ============================================================
     # MACHINE LEARNING CONFIGURATION (Bedaan4D-ML)
     # ============================================================
     ML_ENABLED: bool = True
     ML_MODEL_PATH: str = "./models"
+    ML_MODELS_DIR: str = "./models"
     ML_MODELS_VERSION: str = "1.0.0"
-    
+    ML_BATCH_SIZE: int = 32
+    ML_LEARNING_RATE: float = 0.001
+    ML_EPOCHS: int = 100
+    ML_ENSEMBLE_ENABLED: bool = True
+
     # Model Training
     ML_TRAINING_ENABLED: bool = True
     ML_UPDATE_INTERVAL_HOURS: int = 1
     ML_RETRAINING_INTERVAL_DAYS: int = 7
-    
+
     # Model Performance
     ML_SIGNAL_THRESHOLD: float = 0.65
     ML_CONFIDENCE_THRESHOLD: float = 0.60
@@ -194,10 +212,17 @@ class Settings(BaseSettings):
         "neural_network": 0.20,
         "svm": 0.10,
     }
-    
+
     # Feature Engineering
     ML_LOOKBACK_DAYS: int = 252  # One trading year
     ML_FEATURES_NORMALIZATION: str = "zscore"  # zscore or minmax
+
+    # ML Coefficient Learning
+    ML_COEFFICIENTS_ENABLED: bool = True
+    ML_COEFFICIENTS_RETRAIN_INTERVAL_HOURS: int = 24
+    ML_COEFFICIENTS_MIN_SAMPLES: int = 50
+    ML_COEFFICIENTS_VALIDATION_SPLIT: float = 0.2
+    ML_COEFFICIENTS_ALERT_THRESHOLD: float = 0.1
     
     # ============================================================
     # 6D SCORING SYSTEM CONFIGURATION (Bedaan6D-project)
