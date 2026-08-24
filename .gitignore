@@ -62,6 +62,10 @@ pginst_extracted/
 backend/check_routes.py
 backend/test_*.py
 
+# Temporary backend output files
+backend/ls_out.txt
+backend/test_out.txt
+
 # Temporary utility scripts
 remove_emojis.py
 backend/scripts/seed_real_data.py
