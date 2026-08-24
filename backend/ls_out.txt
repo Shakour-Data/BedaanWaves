@@ -1,0 +1,46 @@
+
+    Directory: E:\BedaanWaves\backend
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----           8/25/2026  3:02 AM                .pytest_cache
+d----           8/25/2026  3:01 AM                app
+d----           8/25/2026  2:48 AM                database
+d----           8/25/2026  2:48 AM                logs
+d----           8/25/2026  2:48 AM                models
+d----           8/25/2026  2:48 AM                scripts
+d----           8/25/2026  2:48 AM                static
+d----           8/25/2026  2:48 AM                test_results
+d----           8/25/2026  3:01 AM                tests
+-a---           8/25/2026  2:48 AM           4792 .env.example
+-a---           8/25/2026  2:48 AM           4474 alembic.ini
+-a---           8/25/2026  2:48 AM            205 assets.txt
+-a---           8/25/2026  2:48 AM            734 check_all_services.py
+-a---           8/25/2026  2:48 AM            398 check_classes.py
+-a---           8/25/2026  2:48 AM           1263 check_column_types.py
+-a---           8/25/2026  2:48 AM            527 check_db.py
+-a---           8/25/2026  2:48 AM            625 check_tables.py
+-a---           8/25/2026  2:48 AM           8143 database_schema.sql
+-a---           8/25/2026  2:48 AM           3231 db_check_results.txt
+-a---           8/25/2026  2:48 AM            331 debug_output.txt
+-a---           8/25/2026  2:48 AM           1893 final_db_check.py
+-a---           8/25/2026  2:48 AM           1651 final_validation.py
+-a---           8/25/2026  2:48 AM           3819 fix_all_imports.py
+-a---           8/25/2026  2:48 AM          43663 install_log.txt
+-a---           8/25/2026  3:04 AM              0 ls_out.txt
+-a---           8/25/2026  2:48 AM         265523 nasdaq_symbols.csv
+-a---           8/25/2026  2:48 AM          23223 populate_database.py
+-a---           8/25/2026  2:48 AM          25401 populate_database.py.backup
+-a---           8/25/2026  2:48 AM            216 project_status.json
+-a---           8/25/2026  2:48 AM           2145 pyproject.toml
+-a---           8/25/2026  2:48 AM            593 pytest.ini
+-a---           8/25/2026  2:48 AM          22850 README.md
+-a---           8/25/2026  2:48 AM            763 requirements.lock
+-a---           8/25/2026  2:48 AM           3934 requirements.txt
+-a---           8/25/2026  2:48 AM           2097 run_tests.ps1
+-a---           8/25/2026  2:48 AM            316 run.py
+-a---           8/25/2026  2:48 AM           1029 temp_check_db.py
+-a---           8/25/2026  3:04 AM              0 test_out.txt
+-a---           8/25/2026  2:48 AM          55502 test_output.txt
+-a---           8/25/2026  2:48 AM         118516 test_results.txt
+
