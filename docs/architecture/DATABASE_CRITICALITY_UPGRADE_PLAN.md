@@ -1,4 +1,4 @@
-# طرح جامع ارتقای سطح اهمیت (Criticality) وظایف مربوط به پایگاه داده
+﻿# طرح جامع ارتقای سطح اهمیت (Criticality) وظایف مربوط به پایگاه داده
 
 **پروژه:** BedaanWaves  
 **تاریخ:** 2026-07-27  
@@ -94,12 +94,12 @@
 
 | استاندارد | اعمال شده؟ | اقدام لازم |
 |-----------|------------|------------|
-| نام‌گذاری جداول/ستونها | ✅ بیشتر | بررسی کامل در Migration بعدی |
-| نوع داده مالی (NUMERIC) | ✅ | - |
-| TIMESTAMPTZ به جای TIMESTAMP | ❌ برخی TIMESTAMP | Migration تبدیل به TIMESTAMPTZ |
-| UUID PK همه جا | ✅ | - |
-| Soft Delete Pattern (`deleted_at`) | ❌ بیشتر جداول | افزودن به جداول حساس |
-| Audit Columns (`created_by`, `updated_by`) | ❌ | افزودن به مدل پایه (Base Mixin) |
+| نام‌گذاری جداول/ستونها |  بیشتر | بررسی کامل در Migration بعدی |
+| نوع داده مالی (NUMERIC) |  | - |
+| TIMESTAMPTZ به جای TIMESTAMP |  برخی TIMESTAMP | Migration تبدیل به TIMESTAMPTZ |
+| UUID PK همه جا |  | - |
+| Soft Delete Pattern (`deleted_at`) |  بیشتر جداول | افزودن به جداول حساس |
+| Audit Columns (`created_by`, `updated_by`) |  | افزودن به مدل پایه (Base Mixin) |
 
 ### ۳.۲ مدل پایه و Mixinها (Base Model & Mixins)
 
@@ -169,12 +169,12 @@ class AuditMixin:
 
 | اصل | اجرا شده؟ | اقدام |
 |------|-----------|-------|
-| همه تغییرات از طریق Alembic | ✅ | - |
-| `alembic revision --autogenerate` برای مدل‌های جدید | ✅ | - |
-| **بدون `create_all` در استارتاپ** | ⚠️ در `base.py:65` هست | حذف کامل، فقط `alembic upgrade head` |
+| همه تغییرات از طریق Alembic |  | - |
+| `alembic revision --autogenerate` برای مدل‌های جدید |  | - |
+| **بدون `create_all` در استارتاپ** | ️ در `base.py:65` هست | حذف کامل، فقط `alembic upgrade head` |
 | Migrationها **Non-destructive** (بدون DROP COLUMN در P0) | ⬜ | یادداشت در PR Template |
 | Migrationهای **Backward Compatible** (Add column nullable، بعد NOT NULL) | ⬜ | استانداردسازی در CONTRIBUTING |
-| هر Migration با **Transaction** (Prevent Partial) | ✅ پیش‌فرض Alembic | - |
+| هر Migration با **Transaction** (Prevent Partial) |  پیش‌فرض Alembic | - |
 | **Rollback Plan** در هر PR توصیف شود | ⬜ | قالب PR اضافه شود |
 
 ### ۴.۲ خط لوله CI/CD برای دیتابیس (Database CI/CD Pipeline)
@@ -232,11 +232,11 @@ jobs:
 
 | ناحیه | وضعیت کنونی | هدف | ابزار / اقدام |
 |--------|-------------|-----|--------------|
-| **N+1 Queries** | ❌ در `market.py:139-174` | ۰ N+1 | `selectinload` / `joinedload` / LATERAL JOIN |
+| **N+1 Queries** |  در `market.py:139-174` | ۰ N+1 | `selectinload` / `joinedload` / LATERAL JOIN |
 | **Connection Pool** | `pool_size=10, max_overflow=20` | تنظیم بر اساس Load Test | `pgbouncer` (Transaction mode) برای Production |
-| **Prepared Statements** | ❌ غیرفعال | فعال برای کوئری‌های تکراری | `statement_cache_size` در asyncpg |
-| **Read Replicas** | ❌ | Master/Replica برای خواندن | `async_session_maker` جدا برای Read |
-| **Query Timeout** | ❌ | `statement_timeout = '30s'` | در `postgresql.conf` و Session-level |
+| **Prepared Statements** |  غیرفعال | فعال برای کوئری‌های تکراری | `statement_cache_size` در asyncpg |
+| **Read Replicas** |  | Master/Replica برای خواندن | `async_session_maker` جدا برای Read |
+| **Query Timeout** |  | `statement_timeout = '30s'` | در `postgresql.conf` و Session-level |
 
 ### ۵.۲ کش‌سازی استراتژیک (Caching Strategy)
 
@@ -267,10 +267,10 @@ jobs:
 
 | سطح | مثال‌ها | رمزنگاری در حالت استراحت | رمزنگاری در ترانزیت | دسترسی |
 |------|---------|------------------------|-------------------|--------|
-| **Public** | Asset metadata, Market data | ❌ | TLS | همه |
-| **Internal** | ML signals, Screening results | ❌ | TLS | App services |
-| **Confidential** | User PII (email, name), Portfolio holdings | ✅ (Column-level) | TLS + mTLS | Need-to-know |
-| **Restricted** | Password hashes, Refresh tokens, API keys | ✅ (App-level) | TLS + mTLS | فقط Auth Service |
+| **Public** | Asset metadata, Market data |  | TLS | همه |
+| **Internal** | ML signals, Screening results |  | TLS | App services |
+| **Confidential** | User PII (email, name), Portfolio holdings |  (Column-level) | TLS + mTLS | Need-to-know |
+| **Restricted** | Password hashes, Refresh tokens, API keys |  (App-level) | TLS + mTLS | فقط Auth Service |
 
 ### ۶.۲ نگهداری و حذف داده‌ها (Retention & Purging)
 
@@ -289,7 +289,7 @@ jobs:
 |--------|-------------|-------|
 | حق حذف (Right to Erasure) | Soft Delete + Anonymization Job | ⬜ |
 | حق دسترسی (Data Portability) | Export API (JSON/CSV) | ⬜ |
-| Minimization | فقط داده‌های لازم جمع‌آوری شود | ✅ بیشتر |
+| Minimization | فقط داده‌های لازم جمع‌آوری شود |  بیشتر |
 | DPIA (Data Protection Impact Assessment) | مستندسازی برای پردازش‌های پرریسک | ⬜ |
 
 ---
@@ -567,12 +567,12 @@ def check_schema_sync():
     head_rev = script.get_current_head()
     
     if current_rev != head_rev:
-        print(f"❌ SCHEMA DRIFT: DB at {current_rev}, migrations at {head_rev}")
+        print(f" SCHEMA DRIFT: DB at {current_rev}, migrations at {head_rev}")
         return 1
     
     # 3. Compare metadata (optional deep check)
     # ...
-    print("✅ Schema in sync")
+    print(" Schema in sync")
     return 0
 
 if __name__ == "__main__":

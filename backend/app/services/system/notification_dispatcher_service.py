@@ -61,13 +61,13 @@ class NotificationStatus(str, Enum):
 @dataclass
 class NotificationMessage:
     """Represents a notification to be dispatched."""
-    notification_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: NotificationType
     channel: NotificationChannel
     priority: NotificationPriority
+    notification_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     payload: Dict[str, Any] = field(default_factory=dict)
-    recipients: List[str] = field(default_factory=list)  # User or channel IDs
-    sender: str = "core"  # Originating service
+    recipients: List[str] = field(default_factory=list)
+    sender: str = "core"
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     status: NotificationStatus = NotificationStatus.PENDING
     retry_count: int = 0

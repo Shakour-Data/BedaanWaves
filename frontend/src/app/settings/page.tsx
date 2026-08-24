@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -10,7 +10,7 @@ const countries = [
   { id: "ir", name: "Iran", flag: "🇮🇷", region: "Middle East" },
   { id: "us", name: "USA", flag: "🇺🇸", region: "North America" },
   { id: "eu", name: "Europe", flag: "🇪🇺", region: "Europe" },
-  { id: "as", name: "Asia", flag: "🌏", region: "Asia Pacific" },
+  { id: "as", name: "Asia", flag: "", region: "Asia Pacific" },
   { id: "crypto", name: "Cryptocurrency", flag: "₿", region: "Digital" }
 ];
 
@@ -87,10 +87,10 @@ const marketData = {
 };
 
 const notificationTypes = [
-  { id: "email", label: "Email Notifications", icon: "📧" },
-  { id: "push", label: "Push Notifications", icon: "🔔" },
-  { id: "sms", label: "SMS Alerts", icon: "📱" },
-  { id: "telegram", label: "Telegram Bot", icon: "📨" }
+  { id: "email", label: "Email Notifications", icon: "" },
+  { id: "push", label: "Push Notifications", icon: "" },
+  { id: "sms", label: "SMS Alerts", icon: "" },
+  { id: "telegram", label: "Telegram Bot", icon: "" }
 ];
 
 export default function SettingsPage() {
@@ -168,7 +168,7 @@ export default function SettingsPage() {
   return (
     <DashboardShell title="تنظیمات بازار">
       <div className="flex flex-col gap-6">
-        <TarotCard icon="⚙️" title="پیکربندی تنظیمات بازار">
+        <TarotCard icon="️" title="پیکربندی تنظیمات بازار">
           <p className="text-muted-foreground text-justify">
             تنظیمات تحلیل بازار شخصی‌سازی شده خود را پیکربندی کنید. کشورها، شاخص‌ها، سهام، صنایع و ارزهای دیجیتال را انتخاب کنید.
           </p>
@@ -177,7 +177,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Country Selection - Left Sidebar */}
           <div className="lg:col-span-3">
-            <TarotCard icon="🌍" title="Country Selection">
+            <TarotCard icon="" title="Country Selection">
               <div className="space-y-2">
                 {countries.map((country) => {
                   const isSelected = selectedCountry === country.id;
@@ -353,7 +353,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Notification Settings */}
-                <TarotCard icon="🔔" title="Notification Preferences">
+                <TarotCard icon="" title="Notification Preferences">
                   <div className="space-y-2">
                     {notificationTypes.map((type) => (
                       <label

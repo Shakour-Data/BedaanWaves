@@ -1,4 +1,4 @@
-# BedaanWaves Service Catalog & Inventory
+﻿# BedaanWaves Service Catalog & Inventory
 
 ## Overview
 
@@ -40,12 +40,12 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **DependencyContainer** | `app.services.core.dependency_container` | ✅ Yes | None | IoC/DI container managing all services |
-| **ConfigService** | `app.services.core.config_service` | ✅ Yes | None | Centralized configuration (100+ settings) |
-| **LoggerService** | `app.services.core.logger_service` | ✅ Yes | None | Structured logging system |
-| **CacheService** | `app.services.core.cache_service` | ✅ Yes | None | Multi-backend caching layer |
-| **DatabaseService** | `app.services.core.database_service` | ✅ Yes | None | Database connection management |
-| **HealthChecker** | `app.services.core.health_checker` | ✅ Yes | DatabaseService, CacheService | System health monitoring |
+| **DependencyContainer** | `app.services.core.dependency_container` |  Yes | None | IoC/DI container managing all services |
+| **ConfigService** | `app.services.core.config_service` |  Yes | None | Centralized configuration (100+ settings) |
+| **LoggerService** | `app.services.core.logger_service` |  Yes | None | Structured logging system |
+| **CacheService** | `app.services.core.cache_service` |  Yes | None | Multi-backend caching layer |
+| **DatabaseService** | `app.services.core.database_service` |  Yes | None | Database connection management |
+| **HealthChecker** | `app.services.core.health_checker` |  Yes | DatabaseService, CacheService | System health monitoring |
 
 **Implementation Status**: 100% Complete
 **Characteristics**: All singleton services, singleton registration, immediate initialization
@@ -54,19 +54,19 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **BrsApiClient** | `app.services.data.brs_api_client` | ✅ Yes | LoggerService | Tehran Stock Exchange API integration |
-| **StockService** | `app.services.data.stock_service` | ✅ Yes | DatabaseService, LoggerService | Stock data management and operations |
-| **MarketService** | `app.services.data.market_service` | ✅ Yes | DatabaseService, LoggerService | Market data aggregation and analysis |
-| **PortfolioService** | `app.services.data.portfolio_service` | ✅ Yes | DatabaseService, LoggerService | Portfolio operations and management |
-| **HistoryService** | `app.services.data.history_service` | ✅ Yes | DatabaseService, LoggerService | Historical data retrieval and storage |
-| **NewsService** | `app.services.data.news_service` | ✅ Yes | DatabaseService, LoggerService | News aggregation and processing |
-| **IngestionService** | `app.services.data.ingestion_service` | ❌ No | LoggerService | Data ingestion pipeline orchestration |
-| **MarketDataProcessing** | `app.services.data.market_data_processing` | ❌ No | LoggerService | Market data cleaning and validation |
-| **IntlApiClient** | `app.services.data.intl_api_client` | ✅ Yes | LoggerService | International market APIs integration |
-| **CryptoApiClient** | `app.services.data.crypto_api_client` | ✅ Yes | LoggerService | Cryptocurrency exchange APIs integration |
-| **DataValidationService** | `app.services.data.data_validation_service` | ❌ No | LoggerService | Data integrity validation |
-| **FinancialDataIngestService** | `app.services.data.financial_data_ingest_service` | ❌ No | LoggerService | Financial statements ingestion (CODAL, Yahoo, AlphaVantage) |
-| **StockFundamentalDataIngestionService** | `app.services.data.stock_fundamental_ingestion_service` | ❌ No | LoggerService | Fundamental data pipeline (Iran/US/International) |
+| **BrsApiClient** | `app.services.data.brs_api_client` |  Yes | LoggerService | Tehran Stock Exchange API integration |
+| **StockService** | `app.services.data.stock_service` |  Yes | DatabaseService, LoggerService | Stock data management and operations |
+| **MarketService** | `app.services.data.market_service` |  Yes | DatabaseService, LoggerService | Market data aggregation and analysis |
+| **PortfolioService** | `app.services.data.portfolio_service` |  Yes | DatabaseService, LoggerService | Portfolio operations and management |
+| **HistoryService** | `app.services.data.history_service` |  Yes | DatabaseService, LoggerService | Historical data retrieval and storage |
+| **NewsService** | `app.services.data.news_service` |  Yes | DatabaseService, LoggerService | News aggregation and processing |
+| **IngestionService** | `app.services.data.ingestion_service` |  No | LoggerService | Data ingestion pipeline orchestration |
+| **MarketDataProcessing** | `app.services.data.market_data_processing` |  No | LoggerService | Market data cleaning and validation |
+| **IntlApiClient** | `app.services.data.intl_api_client` |  Yes | LoggerService | International market APIs integration |
+| **CryptoApiClient** | `app.services.data.crypto_api_client` |  Yes | LoggerService | Cryptocurrency exchange APIs integration |
+| **DataValidationService** | `app.services.data.data_validation_service` |  No | LoggerService | Data integrity validation |
+| **FinancialDataIngestService** | `app.services.data.financial_data_ingest_service` |  No | LoggerService | Financial statements ingestion (CODAL, Yahoo, AlphaVantage) |
+| **StockFundamentalDataIngestionService** | `app.services.data.stock_fundamental_ingestion_service` |  No | LoggerService | Fundamental data pipeline (Iran/US/International) |
 
 **Implementation Status**: 6/13 (46%) Complete
 **Characteristics**: Mixed singleton/lifecycle services, some services in development
@@ -75,13 +75,13 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **ScoringService** | `app.services.analysis.scoring_service` | ✅ Yes | LoggerService | 6D scoring system (305-node hierarchy) |
-| **TechnicalAnalysisService** | `app.services.analysis.technical_service` | ✅ Yes | LoggerService | 50+ technical indicators |
-| **FundamentalAnalysisService** | `app.services.analysis.fundamental_service` | ✅ Yes | LoggerService | Fundamental metrics analysis |
-| **RiskAnalysisService** | `app.services.analysis.risk_service` | ✅ Yes | LoggerService | Risk assessment (VaR, Sharpe, stress testing) |
-| **MomentumService** | `app.services.analysis.momentum_service` | ✅ Yes | LoggerService | Momentum analysis with live signals |
-| **VolatilityService** | `app.services.analysis.volatility_service` | ✅ Yes | LoggerService | Volatility forecasting and analysis |
-| **UserFilteredScoringService** | `app.services.analysis.user_filtered_scoring_service` | ❌ No | LoggerService | Custom scoring based on user selections |
+| **ScoringService** | `app.services.analysis.scoring_service` |  Yes | LoggerService | 6D scoring system (305-node hierarchy) |
+| **TechnicalAnalysisService** | `app.services.analysis.technical_service` |  Yes | LoggerService | 50+ technical indicators |
+| **FundamentalAnalysisService** | `app.services.analysis.fundamental_service` |  Yes | LoggerService | Fundamental metrics analysis |
+| **RiskAnalysisService** | `app.services.analysis.risk_service` |  Yes | LoggerService | Risk assessment (VaR, Sharpe, stress testing) |
+| **MomentumService** | `app.services.analysis.momentum_service` |  Yes | LoggerService | Momentum analysis with live signals |
+| **VolatilityService** | `app.services.analysis.volatility_service` |  Yes | LoggerService | Volatility forecasting and analysis |
+| **UserFilteredScoringService** | `app.services.analysis.user_filtered_scoring_service` |  No | LoggerService | Custom scoring based on user selections |
 
 **Implementation Status**: 7/7 (100%) Complete
 **Characteristics**: All singleton services, production-ready
@@ -90,15 +90,15 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **PredictionService** | `app.services.ml.prediction_service` | ✅ Yes | LoggerService | Ensemble price prediction models |
-| **PatternRecognitionService** | `app.services.ml.pattern_recognition_service` | ❌ No | LoggerService | Chart pattern detection |
-| **AnomalyDetectionService** | `app.services.ml.anomaly_detection_service` | ✅ Yes | LoggerService | Statistical and ML outlier detection |
-| **RecommendationService** | `app.services.ml.recommendation_service` | ❌ No | LoggerService | Stock and portfolio recommendations |
-| **PortfolioOptimizationService** | `app.services.ml.portfolio_optimization_service` | ✅ Yes | LoggerService | Efficient frontier and risk-parity optimization |
-| **TimeSeriesForecastingService** | `app.services.ml.time_series_forecasting_service` | ❌ No | LoggerService | ARIMA, LSTM, Prophet forecasting |
-| **CoefficientLearningService** | `app.services.ml.coefficient_learning_service` | ✅ Yes | LoggerService | Dynamic coefficient adjustment |
-| **CryptoMLService** | `app.services.ml.crypto_ml_service` | ❌ No | LoggerService | Cryptocurrency-specific ML models |
-| **UserFilteredRecommendationService** | `app.services.ml.user_filtered_recommendation_service` | ❌ No | LoggerService | Personalized recommendations |
+| **PredictionService** | `app.services.ml.prediction_service` |  Yes | LoggerService | Ensemble price prediction models |
+| **PatternRecognitionService** | `app.services.ml.pattern_recognition_service` |  No | LoggerService | Chart pattern detection |
+| **AnomalyDetectionService** | `app.services.ml.anomaly_detection_service` |  Yes | LoggerService | Statistical and ML outlier detection |
+| **RecommendationService** | `app.services.ml.recommendation_service` |  No | LoggerService | Stock and portfolio recommendations |
+| **PortfolioOptimizationService** | `app.services.ml.portfolio_optimization_service` |  Yes | LoggerService | Efficient frontier and risk-parity optimization |
+| **TimeSeriesForecastingService** | `app.services.ml.time_series_forecasting_service` |  No | LoggerService | ARIMA, LSTM, Prophet forecasting |
+| **CoefficientLearningService** | `app.services.ml.coefficient_learning_service` |  Yes | LoggerService | Dynamic coefficient adjustment |
+| **CryptoMLService** | `app.services.ml.crypto_ml_service` |  No | LoggerService | Cryptocurrency-specific ML models |
+| **UserFilteredRecommendationService** | `app.services.ml.user_filtered_recommendation_service` |  No | LoggerService | Personalized recommendations |
 
 **Implementation Status**: 9/9 (100%) Complete
 **Characteristics**: Mixed singleton/lifecycle, production-ready
@@ -107,12 +107,12 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **SentimentAnalysisService** | `app.services.nlp.sentiment_analysis_service` | ✅ Yes | LoggerService | Persian and multi-language sentiment analysis |
-| **NewsSummarizationService** | `app.services.nlp.news_summarization_service` | ❌ No | LoggerService | Automatic text summarization |
-| **DocumentExtractionService** | `app.services.nlp.document_extraction_service` | ❌ No | LoggerService | PDF and document text extraction |
-| **ChatbotService** | `app.services.nlp.chatbot_service` | ❌ No | LoggerService | Conversational AI for user assistance |
-| **SearchService** | `app.services.nlp.search_service` | ✅ Yes | LoggerService | Semantic search across content |
-| **MultiLanguageNewsService** | `app.services.nlp.multilingual_news_service` | ❌ No | LoggerService | Country-specific news with language detection |
+| **SentimentAnalysisService** | `app.services.nlp.sentiment_analysis_service` |  Yes | LoggerService | Persian and multi-language sentiment analysis |
+| **NewsSummarizationService** | `app.services.nlp.news_summarization_service` |  No | LoggerService | Automatic text summarization |
+| **DocumentExtractionService** | `app.services.nlp.document_extraction_service` |  No | LoggerService | PDF and document text extraction |
+| **ChatbotService** | `app.services.nlp.chatbot_service` |  No | LoggerService | Conversational AI for user assistance |
+| **SearchService** | `app.services.nlp.search_service` |  Yes | LoggerService | Semantic search across content |
+| **MultiLanguageNewsService** | `app.services.nlp.multilingual_news_service` |  No | LoggerService | Country-specific news with language detection |
 
 **Implementation Status**: 6/6 (100%) Complete
 **Characteristics**: Mixed lifecycle, production-ready
@@ -121,14 +121,14 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **AuthService** | `app.services.user.auth_service` | ✅ Yes | LoggerService | JWT authentication and session management |
-| **AuthorizationService** | `app.services.user.authorization_service` | ✅ Yes | LoggerService | Role-based access control system |
-| **UserProfileService** | `app.services.user.user_profile_service` | ❌ No | LoggerService | User profile management and KYC |
-| **WatchlistService** | `app.services.user.watchlist_service` | ✅ Yes | LoggerService | User-defined watchlists management |
-| **PreferenceService** | `app.services.user.preference_service` | ✅ Yes | LoggerService | User customization and settings |
-| **NotificationService** | `app.services.user.notification_service` | ❌ No | LoggerService | Multi-channel notifications |
-| **UserMarketSettingsService** | `app.services.user.user_market_settings_service` | ✅ Yes | LoggerService | Market/index/industry selection preferences |
-| **UserCryptoSettingsService** | `app.services.user.user_crypto_settings_service` | ✅ Yes | LoggerService | Cryptocurrency selection preferences |
+| **AuthService** | `app.services.user.auth_service` |  Yes | LoggerService | JWT authentication and session management |
+| **AuthorizationService** | `app.services.user.authorization_service` |  Yes | LoggerService | Role-based access control system |
+| **UserProfileService** | `app.services.user.user_profile_service` |  No | LoggerService | User profile management and KYC |
+| **WatchlistService** | `app.services.user.watchlist_service` |  Yes | LoggerService | User-defined watchlists management |
+| **PreferenceService** | `app.services.user.preference_service` |  Yes | LoggerService | User customization and settings |
+| **NotificationService** | `app.services.user.notification_service` |  No | LoggerService | Multi-channel notifications |
+| **UserMarketSettingsService** | `app.services.user.user_market_settings_service` |  Yes | LoggerService | Market/index/industry selection preferences |
+| **UserCryptoSettingsService** | `app.services.user.user_crypto_settings_service` |  Yes | LoggerService | Cryptocurrency selection preferences |
 
 **Implementation Status**: 8/8 (100%) Complete
 **Characteristics**: Mixed lifecycle, production-ready
@@ -137,12 +137,12 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **SectorAnalysisService** | `app.services.specialized.sector_analysis_service` | ✅ Yes | LoggerService | Sector performance analysis and ranking |
-| **ScreeningService** | `app.services.specialized.screening_service` | ✅ Yes | LoggerService | Flexible stock screening with custom filters |
-| **ComparisonService** | `app.services.specialized.comparison_service` | ✅ Yes | LoggerService | Peer benchmarking and cross-asset comparison |
-| **CorrelationService** | `app.services.specialized.correlation_service` | ✅ Yes | LoggerService | Cross-asset correlation analysis |
-| **CalendarService** | `app.services.specialized.calendar_service` | ✅ Yes | LoggerService | Market calendar integration (trading days, events) |
-| **SectorFilterService** | `app.services.specialized.sector_filter_service` | ❌ No | LoggerService | Industry-based filtering and classification |
+| **SectorAnalysisService** | `app.services.specialized.sector_analysis_service` |  Yes | LoggerService | Sector performance analysis and ranking |
+| **ScreeningService** | `app.services.specialized.screening_service` |  Yes | LoggerService | Flexible stock screening with custom filters |
+| **ComparisonService** | `app.services.specialized.comparison_service` |  Yes | LoggerService | Peer benchmarking and cross-asset comparison |
+| **CorrelationService** | `app.services.specialized.correlation_service` |  Yes | LoggerService | Cross-asset correlation analysis |
+| **CalendarService** | `app.services.specialized.calendar_service` |  Yes | LoggerService | Market calendar integration (trading days, events) |
+| **SectorFilterService** | `app.services.specialized.sector_filter_service` |  No | LoggerService | Industry-based filtering and classification |
 
 **Implementation Status**: 5/7 (71%) Complete
 **Characteristics**: Mixed singleton/lifecycle, production-ready
@@ -151,14 +151,14 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **PriceService** | `app.services.crypto.price_service` | ✅ Yes | LoggerService | Real-time crypto price feeds from exchanges |
-| **PortfolioService** | `app.services.crypto.portfolio_service` | ❌ No | LoggerService | Cryptocurrency portfolio management |
-| **CryptoIngestionService** | `app.services.crypto.crypto_ingestion_service` | ❌ No | LoggerService | Exchange data ingestion and normalization |
-| **CryptoMLService** | `app.services.crypto.crypto_ml_service` | ✅ Yes | LoggerService | Cryptocurrency-specific ML analysis |
-| **CustomCryptoSelectionService** | `app.services.crypto.custom_crypto_selection_service` | ❌ No | LoggerService | User-defined selection from top 300 crypto |
-| **CryptoMarketCapService** | `app.services.crypto.crypto_market_cap_service` | ❌ No | LoggerService | Market cap-based filtering and categorization |
-| **CryptoAnalysisService** | `app.services.crypto.crypto_analysis_service` | ❌ No | LoggerService | On-chain metrics analysis |
-| **ArbitrageService** | `app.services.crypto.arbitrage_service` | ❌ No | LoggerService | Cross-exchange price monitoring |
+| **PriceService** | `app.services.crypto.price_service` |  Yes | LoggerService | Real-time crypto price feeds from exchanges |
+| **PortfolioService** | `app.services.crypto.portfolio_service` |  No | LoggerService | Cryptocurrency portfolio management |
+| **CryptoIngestionService** | `app.services.crypto.crypto_ingestion_service` |  No | LoggerService | Exchange data ingestion and normalization |
+| **CryptoMLService** | `app.services.crypto.crypto_ml_service` |  Yes | LoggerService | Cryptocurrency-specific ML analysis |
+| **CustomCryptoSelectionService** | `app.services.crypto.custom_crypto_selection_service` |  No | LoggerService | User-defined selection from top 300 crypto |
+| **CryptoMarketCapService** | `app.services.crypto.crypto_market_cap_service` |  No | LoggerService | Market cap-based filtering and categorization |
+| **CryptoAnalysisService** | `app.services.crypto.crypto_analysis_service` |  No | LoggerService | On-chain metrics analysis |
+| **ArbitrageService** | `app.services.crypto.arbitrage_service` |  No | LoggerService | Cross-exchange price monitoring |
 
 **Implementation Status**: 3/5 (60%) Complete
 **Characteristics**: All services in progress, some completed
@@ -167,14 +167,14 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **SchedulerService** | `app.services.system.scheduler_service` | ✅ Yes | LoggerService | Task scheduling and cron-like job management |
-| **MetricsService** | `app.services.system.metrics_service` | ✅ Yes | LoggerService | Performance monitoring and metrics collection |
-| **QueueService** | `app.services.system.queue_service` | ❌ No | LoggerService | Message queuing for asynchronous processing |
-| **BackupService** | `app.services.system.backup_service` | ❌ No | LoggerService | Automated database and file backup strategies |
-| **LoggingService** | `app.services.system.logging_service` | ❌ No | LoggerService | Centralized logging aggregation |
-| **NotificationDispatcher** | `app.services.system.notification_dispatcher_service` | ❌ No | LoggerService | Multi-channel notification distribution |
-| **DataIntegrityService** | `app.services.system.data_integrity_service` | ❌ No | LoggerService | Historical data validation and consistency checks |
-| **SettingsMigrationService** | `app.services.system.settings_migration_service` | ❌ No | LoggerService | User preference migration across versions |
+| **SchedulerService** | `app.services.system.scheduler_service` |  Yes | LoggerService | Task scheduling and cron-like job management |
+| **MetricsService** | `app.services.system.metrics_service` |  Yes | LoggerService | Performance monitoring and metrics collection |
+| **QueueService** | `app.services.system.queue_service` |  No | LoggerService | Message queuing for asynchronous processing |
+| **BackupService** | `app.services.system.backup_service` |  No | LoggerService | Automated database and file backup strategies |
+| **LoggingService** | `app.services.system.logging_service` |  No | LoggerService | Centralized logging aggregation |
+| **NotificationDispatcher** | `app.services.system.notification_dispatcher_service` |  No | LoggerService | Multi-channel notification distribution |
+| **DataIntegrityService** | `app.services.system.data_integrity_service` |  No | LoggerService | Historical data validation and consistency checks |
+| **SettingsMigrationService** | `app.services.system.settings_migration_service` |  No | LoggerService | User preference migration across versions |
 
 **Implementation Status**: 3/6 (50%) Complete
 **Characteristics**: Mixed singleton/lifecycle, some services in development

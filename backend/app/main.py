@@ -1,20 +1,26 @@
 """
 BedaanWaves Main Application Entry Point
+Enhanced with full automation:
+- Auto database migration on startup
+- Auto database creation if missing
+- Auto seed data on fresh database
+- Pre-flight health checks
+- Directory creation
 """
 
 import logging
 import signal
 import sys
+import os
+import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Import configuration
 from app.core.config import get_settings
 
-# Import middleware
 from app.api.middleware import (
     RateLimitMiddleware,
     CorrelationIdMiddleware,
@@ -22,7 +28,6 @@ from app.api.middleware import (
     RequestLoggingMiddleware,
 )
 
-# Import core services
 from app.services.core.dependency_container import (
     DependencyContainer,
     set_global_container,
@@ -34,7 +39,6 @@ from app.services.core.database_service import DatabaseService
 from app.services.core.health_checker import HealthChecker
 from app.services.system.scheduler_service import SchedulerService
 
-# Import API routes
 from app.api.routes import (
     auth_router,
     stocks_router,
@@ -56,53 +60,202 @@ from app.api.routes import (
     symbols_router,
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Load application settings
 settings = get_settings()
-
-# Global container reference for shutdown
 _container = None
 
 
-# Global exception handlers for graceful degradation
-from sqlalchemy.exc import SQLAlchemyError
-from fastapi import Request
-from fastapi.responses import JSONResponse
+def _ensure_directories():
+    """Create required directories if they don't exist."""
+    dirs = [
+        "logs",
+        "data",
+        "data/archive",
+        "models",
+        "temp",
+        "backups",
+    ]
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for d in dirs:
+        path = os.path.join(base, d)
+        os.makedirs(path, exist_ok=True)
+
+
+def _ensure_database():
+    """Create database if it doesn't exist."""
+    try:
+        from sqlalchemy import create_engine, text
+        db_url = settings.DATABASE_URL
+        parts = db_url.split("/")
+        db_name = parts[-1].split("?")[0]
+        base_url = "/".join(parts[:-1])
+
+        if db_url.startswith("postgresql+psycopg://"):
+            base_url = base_url.replace("postgresql+psycopg://", "postgresql://", 1)
+        elif db_url.startswith("postgresql+psycopg2://"):
+            base_url = base_url.replace("postgresql+psycopg2://", "postgresql://", 1)
+
+        engine = create_engine(f"{base_url}/postgres", future=True)
+        with engine.connect() as conn:
+            conn.execute(text("COMMIT"))
+            result = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :name"),
+                {"name": db_name}
+            )
+            if not result.fetchone():
+                conn.execute(text("COMMIT"))
+                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                logger.info(f"Database '{db_name}' created automatically")
+        engine.dispose()
+    except Exception as e:
+        logger.warning(f"Could not auto-create database: {e}")
+
+
+def _run_migrations():
+    """Run Alembic migrations automatically."""
+    try:
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        result = subprocess.run(
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            logger.info("Database migrations applied successfully")
+        else:
+            logger.warning(f"Migration output: {result.stderr}")
+    except Exception as e:
+        logger.warning(f"Could not run migrations automatically: {e}")
+
+
+def _check_tables_exist() -> bool:
+    """Check if core tables exist in the database."""
+    try:
+        from sqlalchemy import create_engine, inspect, text
+        engine = create_engine(settings.DATABASE_URL, future=True)
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        engine.dispose()
+        return "assets" in tables
+    except Exception:
+        return False
+
+
+def _needs_seeding() -> bool:
+    """Check if database needs initial data seeding."""
+    try:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(settings.DATABASE_URL, future=True)
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT COUNT(*) FROM assets"))
+            count = result.scalar()
+            engine.dispose()
+            return count == 0
+    except Exception:
+        return True
+
+
+def _run_seed():
+    """Run the real data seed script."""
+    try:
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        seed_script = os.path.join(backend_dir, "scripts", "seed_real_data.py")
+        if os.path.exists(seed_script):
+            logger.info("Starting automated data seeding (5 years of real market data)...")
+            result = subprocess.run(
+                [sys.executable, seed_script],
+                cwd=backend_dir,
+                capture_output=False,
+                text=True,
+                timeout=3600,
+            )
+            if result.returncode == 0:
+                logger.info("Data seeding completed successfully")
+            else:
+                logger.warning("Data seeding encountered issues")
+    except subprocess.TimeoutExpired:
+        logger.warning("Data seeding timed out (may still be running)")
+    except Exception as e:
+        logger.warning(f"Could not run seed automatically: {e}")
+
+
+def _preflight_checks() -> dict:
+    """Run pre-flight health checks before accepting traffic."""
+    checks = {}
+    try:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(settings.DATABASE_URL, future=True)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        engine.dispose()
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+
+    try:
+        import redis
+        r = redis.from_url(settings.REDIS_URL, socket_connect_timeout=5)
+        r.ping()
+        r.close()
+        checks["redis"] = "ok"
+    except Exception:
+        checks["redis"] = "unavailable (cache disabled)"
+
+    return checks
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan events."""
+    """Application lifespan events with full automation."""
     global _container
-    
-    # Startup
+
     logger.info("Starting BedaanWaves application...")
-    
+
+    # Step 1: Ensure directories exist
+    _ensure_directories()
+
+    # Step 2: Auto-create database if missing
+    _ensure_database()
+
+    # Step 3: Auto-run migrations
+    if not _check_tables_exist():
+        logger.info("Tables not found, running migrations...")
+        _run_migrations()
+
+    # Step 4: Auto-seed if database is empty
+    if _needs_seeding():
+        logger.info("Database empty, seeding real market data...")
+        _run_seed()
+
     try:
-        # Initialize dependency container
+        # Step 5: Initialize dependency container
         container = DependencyContainer()
-        
-        # Register core services
+
         container.register_instance("config_service", ConfigService())
         container.register_instance("logger_service", LoggerService())
         container.register_instance("database_service", DatabaseService())
         container.register_instance("cache_service", CacheService())
         container.register_instance("health_checker", HealthChecker())
         container.register_instance("scheduler_service", SchedulerService())
-        
+
         await container.initialize()
         app.state.container = container
         _container = container
         set_global_container(container)
-        
+
         logger.info("Registered core services in dependency container")
-        
+
+        # Step 6: Pre-flight health checks
+        checks = _preflight_checks()
+        logger.info(f"Pre-flight checks: {checks}")
+
         # Register all routers
         app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
         app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
@@ -122,15 +275,16 @@ async def lifespan(app: FastAPI):
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
         app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
-        
+
         logger.info("Registered all API routes")
+        logger.info("BedaanWaves application ready")
+
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}", exc_info=True)
         raise
-    
+
     yield
-    
-    # Shutdown
+
     logger.info("Shutting down BedaanWaves application...")
     if hasattr(app.state, 'container'):
         try:
@@ -140,7 +294,6 @@ async def lifespan(app: FastAPI):
     logger.info("BedaanWaves application shutdown complete")
 
 
-# Create FastAPI application
 app = FastAPI(
     title=settings.API_TITLE,
     description=settings.APP_DESCRIPTION,
@@ -151,7 +304,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -160,27 +312,17 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
-# Add correlation ID middleware (first, so it wraps all other middleware)
 app.add_middleware(CorrelationIdMiddleware)
-
-# Add auth guard middleware
 app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
-
-# Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
-
-# Add request logging middleware (last, so it can log all requests)
 app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
 
-
-# Global exception handlers for graceful degradation
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import Request
 
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    """Handle database errors with 503 Service Unavailable."""
     logger.error(f"Database error on {request.method} {request.url.path}: {exc}")
     return JSONResponse(
         status_code=503,
@@ -194,7 +336,6 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    """Handle unhandled exceptions with 500 Internal Server Error."""
     logger.error(f"Unhandled error on {request.method} {request.url.path}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
@@ -206,21 +347,21 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    checks = _preflight_checks()
+    status = "healthy" if all(v == "ok" for v in checks.values() if "database" in str(checks.values())) else "degraded"
     return {
-        "status": "healthy",
+        "status": status,
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": checks,
     }
 
-# Root endpoint
+
 @app.get("/")
 async def root():
-    """Root endpoint."""
     return {
         "message": f"Welcome to {settings.APP_NAME}",
         "version": settings.APP_VERSION,
@@ -229,12 +370,9 @@ async def root():
 
 
 def handle_signal(signum, frame):
-    """Handle shutdown signals gracefully."""
     logger.info(f"Received signal {signum}, initiating graceful shutdown...")
-    # The lifespan context manager will handle the actual shutdown
     sys.exit(0)
 
 
-# Register signal handlers
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal)

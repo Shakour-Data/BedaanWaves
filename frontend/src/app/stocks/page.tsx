@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * Stock listing page: Fetches symbols from `GET /market/symbols` and latest
@@ -96,7 +96,7 @@ export default function StocksPage() {
 
   if (error || !assets) {
     return (
-      <TarotCard icon="⚠️" title="Backend Connection Error">
+      <TarotCard icon="️" title="Backend Connection Error">
         <p className="text-sm text-muted-foreground">
           Could not fetch symbol list. Make sure the backend service is running.
         </p>
@@ -127,7 +127,7 @@ export default function StocksPage() {
           ))}
         </div>
         <label className="ms-auto flex items-center gap-2 rounded-xl bg-neutral/60 px-3 py-2 text-sm text-muted-foreground">
-          <span aria-hidden="true">🔍</span>
+          <span aria-hidden="true"></span>
           <input
             type="search"
             value={search}
@@ -138,7 +138,7 @@ export default function StocksPage() {
         </label>
       </section>
 
-      <TarotCard icon="🏢" title={`Symbols (${filtered.length.toLocaleString()})`}>
+      <TarotCard icon="" title={`Symbols (${filtered.length.toLocaleString()})`}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -197,3 +197,4 @@ export default function StocksPage() {
     </div>
   );
 }
+

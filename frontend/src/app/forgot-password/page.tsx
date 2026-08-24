@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-3">
-      <TarotCard icon="🔑" title={t("login.forgot_password")} className="w-full max-w-md">
+      <TarotCard icon="" title={t("login.forgot_password")} className="w-full max-w-md">
         {sent ? (
           <p className="text-sm text-muted-foreground">
             {t("forgot_password.sent_message") || "اگر ایمیل معتبر باشد، لینک بازیابی ارسال شد."}
@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
               <span className="text-sm text-muted-foreground">{t("auth.email")}</span>
               <span className="relative">
                 <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                  💧
+                  
                 </span>
                 <input
                   type="email"
@@ -80,3 +80,4 @@ export default function ForgotPasswordPage() {
     </main>
   );
 }
+

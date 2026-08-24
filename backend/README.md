@@ -1,4 +1,4 @@
-# BedaanWaves Backend - Unified Python/FastAPI Platform
+﻿# BedaanWaves Backend - Unified Python/FastAPI Platform
 
 **Version**: 1.0.0  
 **Status**: Development  
@@ -6,7 +6,7 @@
 
 ---
 
-## 🎯 Overview
+##  Overview
 
 BedaanWaves Backend is a comprehensive financial analysis platform consolidating functionality from:
 - **Bedaan4D-ML** - Backend APIs and ML services
@@ -17,31 +17,31 @@ BedaanWaves Backend is a comprehensive financial analysis platform consolidating
 
 ### Core Capabilities
 
-✅ **Data Integration**
+ **Data Integration**
 - Tehran Stock Exchange (BrsApi.ir)
 - Financial Disclosures (Codal API)
 - News Aggregation
 - Cryptocurrency Support (Binance, CoinGecko)
 
-✅ **Analysis Engine**
+ **Analysis Engine**
 - 6D Scoring System (305-node hierarchy)
 - 50+ Technical Indicators
 - Fundamental Analysis
 - Risk Assessment
 
-✅ **Machine Learning**
+ **Machine Learning**
 - Ensemble Models (RF, XGBoost, LightGBM, NN, SVM)
 - Time-Series Forecasting
 - Anomaly Detection
 - Coefficient Learning
 
-✅ **NLP & Sentiment**
+ **NLP & Sentiment**
 - Persian Sentiment Analysis
 - Named Entity Extraction
 - Text Summarization
 - Impact Scoring
 
-✅ **User Features**
+ **User Features**
 - Portfolio Management
 - Real-time Alerts
 - Performance Tracking
@@ -49,7 +49,7 @@ BedaanWaves Backend is a comprehensive financial analysis platform consolidating
 
 ---
 
-## 📦 Architecture
+##  Architecture
 
 ### Technology Stack
 
@@ -249,7 +249,7 @@ backend/
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -318,7 +318,7 @@ API Docs: **http://localhost:3000/api/v1/docs**
 
 ---
 
-## 📊 Core Features
+##  Core Features
 
 ### 1. 6D Scoring System
 
@@ -395,7 +395,7 @@ Forex:            Available via partner APIs
 
 ---
 
-## 🔌 API Routes (16 Routers)
+##  API Routes (16 Routers)
 
 ### Authentication
 ```
@@ -544,7 +544,7 @@ WS     /ws/market/stream                      # Market data WebSocket
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 ### Run Tests
 
@@ -582,24 +582,24 @@ tests/
 
 ---
 
-## 🔐 Security
+##  Security
 
 ### Implemented
 
-✅ JWT Authentication & Authorization  
-✅ Password Hashing (bcrypt)  
-✅ CORS Protection  
-✅ Rate Limiting (100 req/min default)  
-✅ Input Validation & Sanitization  
-✅ SQL Injection Prevention (SQLAlchemy ORM)  
-✅ XSS Prevention (Pydantic validation)  
-✅ HTTPS Ready  
-✅ Audit Logging  
-✅ Error Handling (no sensitive info exposed)
+ JWT Authentication & Authorization  
+ Password Hashing (bcrypt)  
+ CORS Protection  
+ Rate Limiting (100 req/min default)  
+ Input Validation & Sanitization  
+ SQL Injection Prevention (SQLAlchemy ORM)  
+ XSS Prevention (Pydantic validation)  
+ HTTPS Ready  
+ Audit Logging  
+ Error Handling (no sensitive info exposed)
 
 ---
 
-## 📈 Performance
+##  Performance
 
 ### Benchmarks
 
@@ -630,7 +630,7 @@ Throughput:       1000+ requests/second (on 4-core server)
 
 ---
 
-## 🚀 Deployment
+##  Deployment
 
  Production Checklist
 
@@ -647,7 +647,7 @@ Throughput:       1000+ requests/second (on 4-core server)
 
 ---
 
-## 📚 Documentation
+##  Documentation
 
 ### API Documentation
 
@@ -667,7 +667,7 @@ See: `app/core/config.py` (100+ settings)
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 ### Development Workflow
 
@@ -687,13 +687,13 @@ See: `app/core/config.py` (100+ settings)
 
 ---
 
-## 📝 License
+##  License
 
 MIT License - See LICENSE file
 
 ---
 
-## 🔗 References
+##  References
 
 ### OldFils Projects (Consolidated)
 - **Bedaan4D-ML**: Backend APIs, 50 services
@@ -719,3 +719,4 @@ MIT License - See LICENSE file
 **Last Updated**: July 29, 2026  
 **Version**: 1.0.0  
 **Status**: Phase 3 (~85% Complete) - Tiers 1-7 implemented, Tiers 8-9 in progress
+

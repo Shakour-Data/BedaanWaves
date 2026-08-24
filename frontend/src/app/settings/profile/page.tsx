@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -50,7 +50,7 @@ export default function ProfilePage() {
             new_password: newPassword,
           });
           
-          if (response.ok) {
+          if (response.status === 200) {
             // Success: refresh user data if needed
             window.location.reload();
           } else {
@@ -67,10 +67,10 @@ export default function ProfilePage() {
     <DashboardShell title="پروفایل کاربری">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* User Profile */}
-        <TarotCard icon="👤" title="پروفایل کاربر" className="lg:col-span-3">
+        <TarotCard icon="" title="پروفایل کاربر" className="lg:col-span-3">
           <div className="flex items-start gap-4">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-2xl">
-              👤
+              
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold">{fullName || user?.name || "کاربر نمایشی"}</h3>
@@ -85,7 +85,7 @@ export default function ProfilePage() {
         </TarotCard>
 
         {/* Account Info */}
-        <TarotCard icon="🌐" title="اطلاعات حساب" className="lg:col-span-2">
+        <TarotCard icon="" title="اطلاعات حساب" className="lg:col-span-2">
           <div className="space-y-4">
             <div>
               <div className="text-sm font-medium mb-2">ایمیل</div>
@@ -110,13 +110,13 @@ export default function ProfilePage() {
         </TarotCard>
 
         {/* Security Settings */}
-        <TarotCard icon="🔒" title="تنظیمات امنیتی" className="lg:col-span-2">
+        <TarotCard icon="" title="تنظیمات امنیتی" className="lg:col-span-2">
           <div className="space-y-4">
             <div className="border-b border-border pb-2 mb-4">
               <div className="font-medium mb-2">تغییر رمز عبور</div>
               <div className="flex items-center gap-2">
                 <span className="cursor-pointer mr-3">
-                  <span className="text-xl">{showPassword ? "🙈" : "👁️"}</span>
+                  <span className="text-xl">{showPassword ? "" : "️"}</span>
                 </span>
                 <input
                   type="password"
@@ -133,7 +133,7 @@ export default function ProfilePage() {
                 className="ml-2 px-3 py-2 rounded-xl bg-secondary text-sm text-secondary hover:bg-primary/10 transition duration-fast ease-flow"
                 aria-label={showPassword ? "مخفی کردن رمز" : "نمایش رمز"}
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "" : "️"}
               </button>
             </div>
 
@@ -157,7 +157,7 @@ export default function ProfilePage() {
               />
               {confirmPasswordError && (
                 <p className="text-sm mt-1 text-primary flex items-center">
-                  <span className="text-xl">⚠️</span>
+                  <span className="text-xl">️</span>
                   {confirmPasswordError}
                 </p>
               )}

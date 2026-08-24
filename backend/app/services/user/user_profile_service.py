@@ -83,4 +83,4 @@ class UserProfileService:
                 await session.close()
 
 
-user_profile_service = UserProfileService()
+

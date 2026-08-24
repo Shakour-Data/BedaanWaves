@@ -97,4 +97,4 @@ class PreferenceService:
                 await session.close()
 
 
-preference_service = PreferenceService()
+

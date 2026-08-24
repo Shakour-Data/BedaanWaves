@@ -1666,3 +1666,36 @@ class SymbolData(Base):
 # ===========================================================================
 # 31. Symbol Market Settings
 # ===========================================================================
+class SymbolMarketSettings(Base):
+    """Market-specific settings for symbols (indices, industries, etc.)."""
+    __tablename__ = "symbol_market_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4())
+    symbol_id = Column(Integer, ForeignKey("symbol_data.symbol_id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    # Market classification
+    country = Column(String(50))
+    index_code = Column(String(50))
+    industry_code = Column(String(50))
+    region = Column(String(50))
+
+    # Display settings
+    is_visible = Column(Boolean, default=True)
+    display_order = Column(Integer, default=0)
+    custom_label = Column(String(255))
+
+    # Filter settings
+    price_min = Column(Numeric(20, 8))
+    price_max = Column(Numeric(20, 8))
+    volume_min = Column(Numeric(25, 2))
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('symbol_id', 'user_id', name='uix_symbol_market_settings'),
+        Index('idx_symbol_market_settings_user', 'user_id'),
+        Index('idx_symbol_market_settings_symbol', 'symbol_id'),
+    )

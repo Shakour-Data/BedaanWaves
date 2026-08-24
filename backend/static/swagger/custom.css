@@ -1,4 +1,4 @@
-/* BedaanWaves Custom Swagger UI Theme */
+﻿/* BedaanWaves Custom Swagger UI Theme */
 :root {
     --bg-color: #0d1117;
     --text-color: #c9d1d9;
@@ -361,7 +361,7 @@ body {
 
 /* Custom BedaanWaves branding */
 .swagger-ui .info .title::before {
-    content: "🌊 ";
+    content: " ";
     font-size: 2rem;
     margin-right: 8px;
 }

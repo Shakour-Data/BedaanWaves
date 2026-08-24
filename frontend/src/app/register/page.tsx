@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -68,7 +68,7 @@ export default function RegisterPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-3">
-      <TarotCard icon="🌱" title={t("signup.title")} className="w-full max-w-md">
+      <TarotCard icon="" title={t("signup.title")} className="w-full max-w-md">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {error ? (
             <p className="rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary">{error}</p>
@@ -78,7 +78,7 @@ export default function RegisterPage() {
             <span className="text-sm text-muted-foreground">{t("signup.name")}</span>
             <span className="relative">
               <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                🌿
+                
               </span>
               <input
                 type="text"
@@ -96,7 +96,7 @@ export default function RegisterPage() {
             <span className="text-sm text-muted-foreground">{t("signup.email")}</span>
             <span className="relative">
               <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                💧
+                
               </span>
               <input
                 type="email"
@@ -114,7 +114,7 @@ export default function RegisterPage() {
             <span className="text-sm text-muted-foreground">{t("signup.password")}</span>
             <span className="relative">
               <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                🔒
+                
               </span>
               <input
                 type={showPassword ? "text" : "password"}
@@ -131,7 +131,7 @@ export default function RegisterPage() {
                 aria-label={showPassword ? t("auth.hide_password") : t("auth.show_password")}
                 className="absolute inset-y-0 left-3 flex items-center text-muted-foreground transition hover:text-foreground"
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "" : "️"}
               </button>
             </span>
           </label>
@@ -140,7 +140,7 @@ export default function RegisterPage() {
             <span className="text-sm text-muted-foreground">{t("signup.confirm_password")}</span>
             <span className="relative">
               <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                🔒
+                
               </span>
               <input
                 type={showPassword ? "text" : "password"}

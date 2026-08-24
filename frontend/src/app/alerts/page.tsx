@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -137,7 +137,7 @@ export default function AlertsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="🎯" title="فیلتر هشدارها">
+          <TarotCard icon="" title="فیلتر هشدارها">
             <div className="space-y-2">
               {[
                 { id: "all", label: "همه" },
@@ -156,7 +156,7 @@ export default function AlertsPage() {
             </div>
           </TarotCard>
 
-          <TarotCard icon="📊" title="آمار هشدارها">
+          <TarotCard icon="" title="آمار هشدارها">
             <div className="space-y-3">
               {[
                 { label: "هشدارهای فعال", value: filteredAlerts.length },
@@ -175,7 +175,7 @@ export default function AlertsPage() {
 
         {/* Active Alerts */}
         <div className="lg:col-span-3 space-y-4">
-          <TarotCard icon="🔔" title={`هشدارهای فعال (${filteredAlerts.length})`}>
+          <TarotCard icon="" title={`هشدارهای فعال (${filteredAlerts.length})`}>
             {filteredAlerts.length > 0 ? (
               <SignalList signals={filteredAlerts} />
             ) : (
@@ -183,7 +183,7 @@ export default function AlertsPage() {
             )}
           </TarotCard>
 
-          <TarotCard icon="👁️" title="نمادهای واچ‌لیست">
+          <TarotCard icon="️" title="نمادهای واچ‌لیست">
             {watchlistAlerts.length > 0 ? (
               <AssetTable rows={watchlistAlerts} />
             ) : (
@@ -191,7 +191,7 @@ export default function AlertsPage() {
             )}
           </TarotCard>
 
-          <TarotCard icon="📜" title="تاریخچه هشدارها">
+          <TarotCard icon="" title="تاریخچه هشدارها">
             {alertHistory.length > 0 ? (
               <div className="space-y-3">
                 {alertHistory.map((alert, i) => (

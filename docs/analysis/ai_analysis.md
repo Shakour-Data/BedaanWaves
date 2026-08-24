@@ -1,4 +1,4 @@
-# AI Analysis in BedaanWaves Scoring System
+﻿# AI Analysis in BedaanWaves Scoring System
 
 ## Overview
 AI analysis leverages machine learning models and artificial intelligence to generate predictive insights, detect patterns, and identify anomalies in market data. This dimension contributes 10% to the overall 6D score, providing forward-looking signals that complement fundamental, technical, and other analytical approaches.
@@ -140,7 +140,7 @@ AI analysis enhances other dimensions by:
 
 ```mermaid
 flowchart TD
-    subgraph Data_Ingestion["📥 Data Ingestion"]
+    subgraph Data_Ingestion[" Data Ingestion"]
         A1[Historical Price Data] --> A2[Feature Store Ingestion]
         A2 --> A3[Fundamental Data Feed]
         A3 --> A4[Sentiment API Integration]
@@ -148,7 +148,7 @@ flowchart TD
         A5 --> A6[Test Dataset Allocation]
     end
 
-    subgraph Feature_Engineering["⚙️ Feature Engineering"]
+    subgraph Feature_Engineering["️ Feature Engineering"]
         A6 --> B1[Price-Derived Features]
         B1 --> B1a[OHLCV Technical Indicators]
         B1 --> B1b[Lagged Returns, Rolling Statistics]
@@ -164,7 +164,7 @@ flowchart TD
         B1 & B2 & B3 --> B4[Feature Selection via SHAP Importance]
     end
 
-    subgraph Model_Training["🧠 Model Training & Validation"]
+    subgraph Model_Training[" Model Training & Validation"]
         B4 --> C1[Model Training (XGBoost, LightGBM)]
         C1 --> C1a[Hyperparameter Optimization (GridSearch/Bayesian)]
         C1a --> C2[Model Validation (Walk-forward CV)]
@@ -178,7 +178,7 @@ flowchart TD
         C6 --> C7[Model Interpretability (SHAP/LIME)]
     end
 
-    subgraph Pattern_Recognition["🔍 Pattern Recognition"]
+    subgraph Pattern_Recognition[" Pattern Recognition"]
         C7 --> D1[CNN-Based Pattern Detector]
         D1 --> D1a[Candlestick Pattern Classifier]
         D1 --> D1b[Head & Shoulders, Double Top/Bottom, Triangles]
@@ -194,7 +194,7 @@ flowchart TD
         D2 --> D2e[Anomaly Confidence Level]
     end
 
-    subgraph Ensemble_Deployment["⚡ Ensemble & Deployment"]
+    subgraph Ensemble_Deployment[" Ensemble & Deployment"]
         D1 --> E1[Ensemble Voting Layer]
         D1 --> E1a[Stacking Meta-Learner]
         D1 --> E1b[Blending Weighted Model]
@@ -210,7 +210,7 @@ flowchart TD
         E3 --> E3c[Real-time Prediction API]
     end
 
-    subgraph Coefficient_Integration["⚖️ Coefficient Integration"]
+    subgraph Coefficient_Integration["️ Coefficient Integration"]
         E3 --> F1[CoefficientLearningService (Dynamic Weights)]
         F1 --> F1a[AutoML Hyperparameter Tuning]
         F1 --> F1b[A/B Testing Framework]
@@ -219,7 +219,7 @@ flowchart TD
         F1 --> F1e[Feature Importance Refresh]
     end
 
-    subgraph Signal_Generation["🎯 Signal Generation"]
+    subgraph Signal_Generation[" Signal Generation"]
         F1 --> G1[Prediction Confidence Scoring]
         G1 --> G1a[Short-term Horizon (1-day)]
         G1 --> G1b[Medium-term Horizon (5-day)]
@@ -236,7 +236,7 @@ flowchart TD
         G2 --> G2d[Cross-Asset Signal Validation]
     end
 
-    subgraph Output_Pipeline["📊 Output Pipeline"]
+    subgraph Output_Pipeline[" Output Pipeline"]
         G2 --> H1[Score Normalization (0-100)]
         H1 --> H1a[AI Score (10% weight)]
         H1 --> H1b[Sub-Dimension Scores]
@@ -257,7 +257,7 @@ flowchart TD
         H3 --> H3d[Portfolio Integration Engine]
     end
 
-    subgraph Monitoring["📈 Monitoring & Feedback Loop"]
+    subgraph Monitoring[" Monitoring & Feedback Loop"]
         H3 --> I1[Continuous Performance Tracker]
         I1 --> I1a[Prediction Accuracy Decay]
         I1 --> I1b[Data Drift Detection]

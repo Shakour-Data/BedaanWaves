@@ -48,7 +48,9 @@ describe('NewsList', () => {
 
     // First item should have border
     expect(firstItem).not.toBeNull()
-    expect(firstItem.className).toContain('border-b')
+    if (firstItem) {
+      expect(firstItem.className).toContain('border-b')
+    }
 
     // Check that the source and time are in the same item
     const sourceElement = screen.getByText(/Financial Times/).closest('li')

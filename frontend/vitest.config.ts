@@ -12,6 +12,5 @@ export default defineConfig({
     },
     clearMocks: true,
     setupFiles: ['./src/tests/setup.ts'],
-    setupFilesAfterEnv: ['./src/tests/setup.tsx'],
   },
 })

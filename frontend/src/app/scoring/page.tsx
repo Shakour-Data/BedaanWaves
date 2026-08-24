@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -12,7 +12,7 @@ const dimensionDetails = [
     title: "تحلیل بنیادی (25٪)",
     weight: 25,
     color: "bg-blue-500/20 border-blue-400",
-    icon: "💎",
+    icon: "",
     aspects: [
       { name: "P/E Ratio", desc: "نسبت قیمت به سود" },
       { name: "ROE", desc: "بازده حقوق صاحبان سهام" },
@@ -26,7 +26,7 @@ const dimensionDetails = [
     title: "تحلیل تکنیکال (20٪)",
     weight: 20,
     color: "bg-green-500/20 border-green-400",
-    icon: "📈",
+    icon: "",
     aspects: [
       { name: "RSI", desc: "شاخص قدرت نسبی" },
       { name: "MACD", desc: "واگرایی و همگرایی میانگین متحرک" },
@@ -40,7 +40,7 @@ const dimensionDetails = [
     title: "تحلیل احساسات (15٪)",
     weight: 15,
     color: "bg-purple-500/20 border-purple-400",
-    icon: "👁️‍🗨️",
+    icon: "️‍️",
     aspects: [
       { name: "News Sentiment", desc: "احساسات خبری" },
       { name: "Social Media", desc: "احساسات شبکه‌های اجتماعی" },
@@ -52,7 +52,7 @@ const dimensionDetails = [
     title: "تحلیل ریسک (20٪)",
     weight: 20,
     color: "bg-red-500/20 border-red-400",
-    icon: "⚠️",
+    icon: "️",
     aspects: [
       { name: "Volatility", desc: "نوسان قیمت" },
       { name: "VaR", desc: "ارزش در معرض ریسک" },
@@ -65,7 +65,7 @@ const dimensionDetails = [
     title: "تحلیل ماکرو (10٪)",
     weight: 10,
     color: "bg-orange-500/20 border-orange-400",
-    icon: "🌍",
+    icon: "",
     aspects: [
       { name: "GDP Growth", desc: "رشد تولید ناخالص داخلی" },
       { name: "Inflation", desc: "نرخ تورم" },
@@ -78,7 +78,7 @@ const dimensionDetails = [
     title: "هوش مصنوعی (10٪)",
     weight: 10,
     color: "bg-cyan-500/20 border-cyan-400",
-    icon: "🧠",
+    icon: "",
     aspects: [
       { name: "LSTM Forecast", desc: "پیش‌بینی قیمت با LSTM" },
       { name: "Pattern Detection", desc: "تشکیل الگوهای نموداری" },
@@ -110,7 +110,7 @@ export default function ScoringPage() {
 return (
     <DashboardShell title="6D Scoring Methodology">
       <div className="flex flex-col gap-6">
-        <TarotCard icon="🧮" title="6D Scoring System">
+        <TarotCard icon="" title="6D Scoring System">
           <div className="space-y-6 padding">
             <p className="text-justify text-muted-foreground">
               The 6D scoring system evaluates stocks across six dimensions: Fundamental, Technical, Sentiment, Risk, Macro, and AI factors. Each dimension is weighted 25%, 20%, 15%, 20%, 10%, and 10% respectively. The scoring algorithm uses 305 hierarchical nodes across four levels to calculate a final score between 0-100.
@@ -123,7 +123,7 @@ return (
                     <span className="text-sm">{w.label}</span>
                     <div className="flex items-center">
                       <span className="font-bold text-secondary">{w.defaultWeight}%</span>
-                      {w.mlOptimized && <span className="text-xs text-muted-foreground" title="Optimized by ML">🤖</span>}
+                      {w.mlOptimized && <span className="text-xs text-muted-foreground" title="Optimized by ML"></span>}
                     </div>
                   </div>
                 </div>
@@ -132,7 +132,7 @@ return (
           </div>
         </TarotCard>
 
-        <TarotCard icon="🧩" title="6 Dimensions">
+        <TarotCard icon="" title="6 Dimensions">
           {dimensionDetails.map((dim, i) => (
             <div key={dim.id} className="cursor-pointer transition hover:shadow-md">
               <div className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer">
@@ -160,7 +160,7 @@ return (
           ))}
         </TarotCard>
 
-        <TarotCard icon="🏆" title="Grading Scale">
+        <TarotCard icon="" title="Grading Scale">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {grades.map((g, i) => (
               <div key={i} className={`text-center p-3 rounded ${g.bg} border ${g.color}`}>
@@ -173,7 +173,7 @@ return (
           </div>
         </TarotCard>
 
-        <TarotCard icon="🤖" title="Machine Learning Optimization">
+        <TarotCard icon="" title="Machine Learning Optimization">
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Static weights serve as fallback values. The ML service dynamically optimizes these weights by:
@@ -193,7 +193,7 @@ return (
           </div>
         </TarotCard>
 
-        <TarotCard icon="🔗" title="305-Node Hierarchy">
+        <TarotCard icon="" title="305-Node Hierarchy">
           <div className="grid grid-cols-4 gap-4">
             <div className="p-3 bg-secondary/10 rounded">
               <div className="text-2xl font-bold">6</div>

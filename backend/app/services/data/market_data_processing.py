@@ -17,7 +17,7 @@ from ..core.base_service import DataService
 from ..core.config import get_settings
 import logging
 from app.db.base import async_session_maker
-from ..models.models import RawMarketData, MarketDataSnapshot, Asset
+from app.models.models import RawMarketData, MarketDataSnapshot, Asset
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

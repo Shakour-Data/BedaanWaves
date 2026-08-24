@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,7 +12,7 @@ interface NavItem {
   ready: boolean;
 }
 
-const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", icon: "🔐", ready: true };
+const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", icon: "", ready: true };
 const SECONDARY_COLOR = "#64748B";
 
 export function Sidebar() {
@@ -21,20 +21,20 @@ export function Sidebar() {
 
   const navItems: NavItem[] = isAuthenticated
     ? [
-        { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },
-        { href: "/stocks", label: "سهام", icon: "🏢", ready: true },
-        { href: "/portfolio", label: "پورتفولیو", icon: "💼", ready: true },
-        { href: "/analysis", label: "تحلیل", icon: "🔮", ready: true },
-        { href: "/news", label: "اخبار", icon: "📰", ready: true },
-        { href: "/alerts", label: "هشدارها", icon: "🔔", ready: true },
-        { href: "/scoring", label: "امتیازدهی", icon: "🧮", ready: true },
-        { href: "/methodology", label: "روش‌شناسی", icon: "📚", ready: true },
-        { href: "/help", label: "راهنما", icon: "📖", ready: true },
-        { href: "/settings", label: "تنظیمات", icon: "⚙️", ready: true },
+        { href: "/dashboard", label: "داشبورد", icon: "", ready: true },
+        { href: "/stocks", label: "سهام", icon: "", ready: true },
+        { href: "/portfolio", label: "پورتفولیو", icon: "", ready: true },
+        { href: "/analysis", label: "تحلیل", icon: "", ready: true },
+        { href: "/news", label: "اخبار", icon: "", ready: true },
+        { href: "/alerts", label: "هشدارها", icon: "", ready: true },
+        { href: "/scoring", label: "امتیازدهی", icon: "", ready: true },
+        { href: "/methodology", label: "روش‌شناسی", icon: "", ready: true },
+        { href: "/help", label: "راهنما", icon: "", ready: true },
+        { href: "/settings", label: "تنظیمات", icon: "️", ready: true },
       ]
     : [
-        { href: "/dashboard", label: "داشبورد", icon: "🏠", ready: true },
-        { href: "/stocks", label: "سهام", icon: "🏢", ready: true },
+        { href: "/dashboard", label: "داشبورد", icon: "", ready: true },
+        { href: "/stocks", label: "سهام", icon: "", ready: true },
         AUTH_ITEM,
       ];
 
@@ -58,7 +58,7 @@ export function Sidebar() {
     >
       <div className="mb-3 flex items-center gap-2 px-1">
         <span className="text-2xl" aria-hidden="true">
-          🌊
+          
         </span>
         <span className="text-lg font-bold text-foreground">BedaanWaves</span>
       </div>
@@ -107,7 +107,7 @@ export function Sidebar() {
         {isAuthenticated && user ? (
           <div className="rounded-xl bg-[var(--color-neutral)]/60 p-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span aria-hidden="true">👤</span>
+              <span aria-hidden="true"></span>
               <span className="flex-1 truncate">{user.name}</span>
             </div>
             <button
@@ -126,3 +126,4 @@ export function Sidebar() {
     </aside>
   );
 }
+

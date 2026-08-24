@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """
 Real Nasdaq data integration test.
 Fetches actual market data from Yahoo Finance API.
@@ -54,5 +54,5 @@ def fetch_price_history():
 if __name__ == "__main__":
     data = fetch_nasdaq_data()
     fetch_price_history()
-    print(f"\n✅ Successfully fetched data for {len(data)} NASDAQ stocks")
-    print("✅ Data is fresh and real, ready for database ingestion")
+    print(f"\n Successfully fetched data for {len(data)} NASDAQ stocks")
+    print(" Data is fresh and real, ready for database ingestion")

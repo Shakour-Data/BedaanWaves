@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -9,10 +9,10 @@ import { apiClient } from "@/lib/api";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
 
 const analysisTabs = [
-  { id: "technical", label: "تحلیل تکنیکال", icon: "📊" },
-  { id: "fundamental", label: "تحلیل بنیادی", icon: "💰" },
-  { id: "scoring", label: "بررسی ۶ بعدی", icon: "🧮" },
-  { id: "sentiment", label: "احساسات بازار", icon: "👁️‍🗨️" },
+  { id: "technical", label: "تحلیل تکنیکال", icon: "" },
+  { id: "fundamental", label: "تحلیل بنیادی", icon: "" },
+  { id: "scoring", label: "بررسی ۶ بعدی", icon: "" },
+  { id: "sentiment", label: "احساسات بازار", icon: "️‍️" },
 ];
 
 export default function AnalysisPage() {
@@ -48,8 +48,8 @@ export default function AnalysisPage() {
         if (!active) return;
 
         // Build signal list from summary
-        if (summaryRes.status === "success") {
-          const signalTypes = Object.entries(summaryRes.data?.summary ?? {})
+        if (summaryRes.data.status === "success") {
+          const signalTypes = Object.entries(summaryRes.data.data?.summary ?? {})
             .filter(([, count]) => Number(count) > 0)
             .sort(([, a], [, b]) => Number(b) - Number(a))
             .slice(0, 5);
@@ -57,7 +57,7 @@ export default function AnalysisPage() {
           const signals: SignalRow[] = [];
 
           // Get signals for top performers instead of per-type
-          const topPerformerSymbols = (performersRes.data ?? [])
+          const topPerformerSymbols = (performersRes.data.data ?? [])
             .sort((a: any, b: any) => Math.abs(b.change_percent) - Math.abs(a.change_percent))
             .slice(0, 5);
 
@@ -66,12 +66,12 @@ export default function AnalysisPage() {
               const signalRes = await apiClient.get<{ status: string; data: any }>(
                 `/analysis/analysis/signals/${encodeURIComponent(performer.symbol)}`
               );
-              if (signalRes.status === "success") {
+              if (signalRes.data.status === "success") {
                 signals.push({
                   symbol: performer.symbol,
-                  type: signalRes.data.signal_type || "HOLD",
-                  confidence: signalRes.data.confidence ?? 50,
-                  model: signalRes.data.model_name || "ML",
+                  type: signalRes.data.data.signal_type || "HOLD",
+                  confidence: signalRes.data.data.confidence ?? 50,
+                  model: signalRes.data.data.model_name || "ML",
                 });
               }
             } catch {}
@@ -81,9 +81,9 @@ export default function AnalysisPage() {
         }
 
         // Build top movers from performers data and symbols
-        if (performersRes.status === "success" && symbolsRes.length > 0) {
-          const symbolMap = new Map(symbolsRes.map((s) => [s.symbol, s.name]));
-          const movers: AssetRow[] = (performersRes.data ?? [])
+        if (performersRes.data.status === "success" && symbolsRes.data.length > 0) {
+          const symbolMap = new Map(symbolsRes.data.map((s) => [s.symbol, s.name]));
+          const movers: AssetRow[] = (performersRes.data.data ?? [])
             .map((p: any) => ({
               symbol: p.symbol,
               name: symbolMap.get(p.symbol) || p.name || "",
@@ -139,7 +139,7 @@ export default function AnalysisPage() {
         </div>
 
         {/* Signal Analysis */}
-        <TarotCard icon="🎯" title="Ranked Signals">
+        <TarotCard icon="" title="Ranked Signals">
           {topSignals.length > 0 ? (
             <SignalList signals={topSignals} />
           ) : (
@@ -148,7 +148,7 @@ export default function AnalysisPage() {
         </TarotCard>
 
         {/* Top Movers */}
-        <TarotCard icon="🚀" title="Top Movers">
+        <TarotCard icon="" title="Top Movers">
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
@@ -157,7 +157,7 @@ export default function AnalysisPage() {
         </TarotCard>
 
         {/* Active Analysis Tab Content */}
-        <TarotCard icon="📊" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
+        <TarotCard icon="" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
             <p>Coming soon</p>
           </div>
@@ -165,7 +165,7 @@ export default function AnalysisPage() {
 
         {/* Technical Analysis Panel */}
         {activeTab === "technical" && (
-          <TarotCard icon="📈" title="نمودارهای تکنیکال">
+          <TarotCard icon="" title="نمودارهای تکنیکال">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {topMovers.slice(0, 3).map((mover, i) => (
                 <div key={i} className="p-4 rounded-lg bg-muted/50">
@@ -185,7 +185,7 @@ export default function AnalysisPage() {
 
         {/* Fundamental Analysis Panel */}
         {activeTab === "fundamental" && (
-          <TarotCard icon="💎" title="شاخص‌های بنیادی کلیدی">
+          <TarotCard icon="" title="شاخص‌های بنیادی کلیدی">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {["P/E", "P/B", "ROE", "Debt/Eq", "EPS", "Dividend Yield", "Market Cap", "Revenue Growth"].map((metric, i) => (
                 <div key={i} className="text-center p-3 rounded-lg bg-muted/50">
@@ -199,7 +199,7 @@ export default function AnalysisPage() {
 
         {/* 6D Scoring Panel */}
         {activeTab === "scoring" && (
-          <TarotCard icon="🧮" title="بررسی ۶ بعدی">
+          <TarotCard icon="" title="بررسی ۶ بعدی">
             <div className="p-4 text-muted-foreground">
               سامانه ۶ بعدی تحلیل سرمایه‌گذاری در حال بارگذاری است...
             </div>
@@ -208,7 +208,7 @@ export default function AnalysisPage() {
 
         {/* Sentiment Panel */}
         {activeTab === "sentiment" && (
-          <TarotCard icon="🗣️" title="احساس و ذهنیت بازار">
+          <TarotCard icon="️" title="احساس و ذهنیت بازار">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { label: "احساسات خبری", value: "محاسبه در حال اجراست", trend: "stable", color: "text-muted-foreground" },

@@ -1,4 +1,4 @@
-# Sentiment Analysis in BedaanWaves Scoring System
+﻿# Sentiment Analysis in BedaanWaves Scoring System
 
 ## Overview
 Sentiment analysis evaluates market sentiment through analysis of news, social media, and analyst opinions. This dimension contributes 15% to the overall 6D score and focuses on understanding market psychology and sentiment-driven price movements.
@@ -114,13 +114,13 @@ Sentiment acts as a leading indicator that can:
 
 ```mermaid
 flowchart TD
-    subgraph Data_Collection["📥 Data Collection"]
+    subgraph Data_Collection[" Data Collection"]
         A1[News API Scraping] --> A2[Social Media Harvesting]
         A2 --> A3[Analyst Report Ingestion]
         A3 --> A4[Raw Text Corpus]
     end
 
-    subgraph Preprocessing["🔧 Preprocessing"]
+    subgraph Preprocessing[" Preprocessing"]
         A4 --> B1[Language Detection]
         B1 --> B2[Tokenization & Normalization]
         B2 --> B3[Persian Morphology Processing]
@@ -129,7 +129,7 @@ flowchart TD
         B5 --> B6[Cleaned Corpus]
     end
 
-    subgraph ML_Processing["🧠 ML Processing"]
+    subgraph ML_Processing[" ML Processing"]
         B6 --> C1[BERT-based Persian Sentiment Model]
         C1 --> C2[Ensemble Classifier]
         C2 --> C3[Temporal Convolutional Network]
@@ -137,18 +137,18 @@ flowchart TD
         C4 --> C5[Raw Sentiment Scores]
     end
 
-    subgraph Aggregation["📊 Aggregation"]
+    subgraph Aggregation[" Aggregation"]
         C5 --> D1[Score Normalization]
         D1 --> D2[Source Credibility Weighting]
         D2 --> D3[Final Sentiment Signal]
     end
 
-    subgraph Output["🔢 Output"]
+    subgraph Output[" Output"]
         D3 --> E1[Sentiment Score 0-100]
         E1 --> E2[6D Composite Integration]
     end
 
-    subgraph Monitoring["📈 Monitoring"]
+    subgraph Monitoring[" Monitoring"]
         E2 --> F1[Sentiment Drift Detector]
         F1 --> C1
         F1 --> C4

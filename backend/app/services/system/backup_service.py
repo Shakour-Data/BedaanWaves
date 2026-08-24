@@ -32,6 +32,8 @@ class BackupService(BaseService):
         backup_dir: Optional[str] = None,
         retention_days: int = 7,
         compression: bool = True,
+        config_service=None,
+        metrics_service=None,
     ):
         super().__init__(service_name)
         self.backup_dir = Path(backup_dir) if backup_dir else Path("backups")
@@ -39,6 +41,8 @@ class BackupService(BaseService):
         self.compression = compression
         self._ongoing_backups: Dict[str, asyncio.Task] = {}
         self._backup_history: List[Dict[str, Any]] = []
+        self.config_service = config_service
+        self.metrics_service = metrics_service
         
     async def initialize(self) -> None:
         """Initialize backup service."""
@@ -79,14 +83,11 @@ class BackupService(BaseService):
         """
         backup_name = name or f"db_backup_{int(datetime.now(timezone.utc).timestamp())}"
         
-        # Get database connection details
-        from app.services.core.config_service import ConfigService
-        config_service = ConfigService()
         db_config = {
-            "host": config_service.get("DB_HOST"),
-            "port": config_service.get("DB_PORT"),
-            "database": config_service.get("DB_NAME"),
-            "user": config_service.get("DB_USER"),
+            "host": self.config_service.get("DB_HOST"),
+            "port": self.config_service.get("DB_PORT"),
+            "database": self.config_service.get("DB_NAME"),
+            "user": self.config_service.get("DB_USER"),
         }
         
         # Start backup task
@@ -351,12 +352,6 @@ class BackupService(BaseService):
         
         try:
             # Collect platform state information
-            from app.services.core.config_service import ConfigService
-            from app.services.system.metrics_service import MetricsService
-            
-            config_service = ConfigService()
-            metrics_service = MetricsService()
-            
             snapshot_data = {
                 "metadata": {
                     "type": "platform_snapshot",
@@ -365,8 +360,8 @@ class BackupService(BaseService):
                     "version": "1.0",
                 },
                 "platform_state": {
-                    "config": config_service.get_all(),
-                    "metrics": metrics_service.get_all_metrics(),
+                    "config": self.config_service.get_all(),
+                    "metrics": self.metrics_service.get_all_metrics(),
                     "filesystem_snapshot": {},
                 },
             }
@@ -443,15 +438,11 @@ class BackupService(BaseService):
             import psycopg2
             from psycopg2.extras import DictCursor
             
-            # Get database connection details
-            from app.services.core.config_service import ConfigService
-            config_service = ConfigService()
-            
             conn = psycopg2.connect(
-                host=config_service.get("DB_HOST"),
-                port=config_service.get("DB_PORT"),
-                database=config_service.get("DB_NAME"),
-                user=config_service.get("DB_USER"),
+                host=self.config_service.get("DB_HOST"),
+                port=self.config_service.get("DB_PORT"),
+                database=self.config_service.get("DB_NAME"),
+                user=self.config_service.get("DB_USER"),
             )
             
             # Restore schema

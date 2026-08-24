@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
@@ -26,11 +26,11 @@ export function Topbar({ title }: TopbarProps) {
             theme === "dark" ? "text-accent" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {theme === "dark" ? "🌙" : "☀️"}
+          {theme === "dark" ? "" : "️"}
         </button>
 
         <div className="flex items-center gap-2 rounded-xl bg-[var(--color-secondary)]/10 px-3 py-2 text-sm text-[var(--color-secondary)]">
-          <span aria-hidden="true">👤</span>
+          <span aria-hidden="true"></span>
           <span className="hidden sm:inline">{user?.name || "کاربر نمایشی"}</span>
         </div>
 
@@ -46,3 +46,4 @@ export function Topbar({ title }: TopbarProps) {
     </header>
   );
 }
+
