@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -14,7 +14,7 @@ const countries = [
   { id: "crypto", name: "Cryptocurrency", flag: "₿", region: "Digital" }
 ];
 
-const marketData = {
+const DEFAULT_MARKET_DATA = {
   ir: {
     indices: [
       { id: "tepix", name: "TEPIX", desc: "Tehran Stock Exchange Index" },
@@ -128,7 +128,7 @@ export default function SettingsPage() {
     return () => { active = false; };
   }, []);
 
-  const data = marketData ? marketData[selectedCountry as keyof typeof marketData] : null;
+  const data = (marketData || DEFAULT_MARKET_DATA)[selectedCountry as keyof typeof DEFAULT_MARKET_DATA];
   const countryInfo = countries.find(c => c.id === selectedCountry);
 
   const toggleCurrency = (currency: string) => {

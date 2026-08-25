@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -45,9 +45,10 @@ export default function ProfilePage() {
         
         setLoading(true);
         try {
-          const response = await apiClient.post("/user/profile/update", {
+          // Note: Backend currently supports full_name update via PATCH /users/me
+          // Password update is not yet implemented in the backend services.
+          const response = await apiClient.patch("/users/me", {
             full_name: fullName,
-            new_password: newPassword,
           });
           
           if (response.status === 200) {
