@@ -77,8 +77,22 @@ class ScoringService(AnalysisService):
     
     def _build_hierarchy(self) -> None:
         """Build 4-level 320-node hierarchy."""
+        level1 = self._build_level1_dimensions()
+        sub_dim_map = self._build_sub_dimension_map()
+        level2 = self._build_level2_sub_dimensions(sub_dim_map)
+        level3 = self._build_level3_aspects(level2)
+        level4 = self._build_level4_sub_aspects(level3)
         
-        level1 = [
+        self._hierarchy.update({d["id"]: {"level": 1, **d} for d in level1})
+        self._hierarchy.update({sd["id"]: {"level": 2, **sd} for sd in level2})
+        self._hierarchy.update({a["id"]: {"level": 3, **a} for a in level3})
+        self._hierarchy.update({sa["id"]: {"level": 4, **sa} for sa in level4})
+        
+        self._verify_hierarchy_counts()
+    
+    def _build_level1_dimensions(self) -> List[Dict[str, Any]]:
+        """Build level 1 dimension definitions."""
+        return [
             {"id": "d1", "name": "fundamental_price", "group": "fundamental", "weight": 0.15},
             {"id": "d2", "name": "technical_moving_avg", "group": "technical", "weight": 0.10},
             {"id": "d3", "name": "sentiment_news", "group": "sentiment", "weight": 0.08},
@@ -90,11 +104,12 @@ class ScoringService(AnalysisService):
             {"id": "d9", "name": "fundamental_profitability", "group": "fundamental", "weight": 0.07},
             {"id": "d10", "name": "fundamental_efficiency", "group": "fundamental", "weight": 0.07},
             {"id": "d11", "name": "fundamental_valuation", "group": "fundamental", "weight": 0.07},
-            {
-            "id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
+            {"id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
         ]
-        
-        sub_dim_map = {
+    
+    def _build_sub_dimension_map(self) -> Dict[str, List[str]]:
+        """Build sub-dimension mapping for level 2."""
+        return {
             "d1": ["price_history", "ohlcv", "corporate_actions"],
             "d2": ["moving_averages", "momentum", "volatility", "volume", "trend"],
             "d3": ["news_sentiment", "social_sentiment", "analyst_sentiment"],
@@ -108,8 +123,9 @@ class ScoringService(AnalysisService):
             "d11": ["eps_growth", "revenue_growth", "book_value_growth"],
             "d12": ["earnings_quality", "accounting_quality", "governance"],
         }
-        
-        # Initialize level2 list
+    
+    def _build_level2_sub_dimensions(self, sub_dim_map: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+        """Build level 2 sub-dimensions from parent mapping."""
         level2 = []
         sub_dim_id = 0
         for parent_id, children in sub_dim_map.items():
@@ -120,8 +136,10 @@ class ScoringService(AnalysisService):
                     "parent_id": parent_id,
                     "name": child,
                 })
-        
-        # Level 3: 80 Aspects (2 per sub-dimension)
+        return level2
+    
+    def _build_level3_aspects(self, level2: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Build level 3 aspects (2 per sub-dimension)."""
         level3 = []
         aspect_id = 0
         for sub in level2:
@@ -132,16 +150,18 @@ class ScoringService(AnalysisService):
                     "parent_id": sub["id"],
                     "name": f"{sub['name']}_aspect_{i+1}",
                 })
-        
-        # Level 4: 173 Sub-Aspects (distributed across 90 aspects)
+        return level3
+    
+    def _build_level4_sub_aspects(self, level3: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Build level 4 sub-aspects distributed across aspects."""
         level4 = []
         sub_id = 0
         total_aspects = len(level3)
+        base_count = 173 // total_aspects
+        remainder = 173 % total_aspects
+        
         for idx, aspect in enumerate(level3):
-            base_count = 173 // total_aspects
-            remainder = 173 % total_aspects
             count_for_this_aspect = base_count + (1 if idx < remainder else 0)
-            
             for i in range(count_for_this_aspect):
                 if sub_id >= 173:
                     break
@@ -151,24 +171,19 @@ class ScoringService(AnalysisService):
                     "parent_id": aspect["id"],
                     "name": f"{aspect['name']}_detail_{i+1}",
                 })
+        return level4
+    
+    def _verify_hierarchy_counts(self) -> None:
+        """Verify hierarchy node counts at each level."""
+        level1_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 1)
+        level2_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 2)
+        level3_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 3)
+        level4_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 4)
         
-        # Build lookup dictionary
-        for d in level1:
-            self._hierarchy[d["id"]] = {"level": 1, **d}
-        for sd in level2:
-            self._hierarchy[sd["id"]] = {"level": 2, **sd}
-        for a in level3:
-            self._hierarchy[a["id"]] = {"level": 3, **a}
-        for sa in level4:
-            self._hierarchy[sa["id"]] = {"level": 4, **sa}
-        
-        # Verify counts
-        level1_count = len([v for v in self._hierarchy.values() if v.get("level") == 1])
-        level2_count = len([v for v in self._hierarchy.values() if v.get("level") == 2])
-        level3_count = len([v for v in self._hierarchy.values() if v.get("level") == 3])
-        level4_count = len([v for v in self._hierarchy.values() if v.get("level") == 4])
-        
-        self.logger.debug(f"Hierarchy built: L1={level1_count}, L2={level2_count}, L3={level3_count}, L4={level4_count}")
+        self.logger.debug(
+            f"Hierarchy built: L1={level1_count}, L2={level2_count}, "
+            f"L3={level3_count}, L4={level4_count}"
+        )
 
     def _get_dynamic_weights(self, level: str = "dimensions") -> Dict[str, float]:
         """

@@ -205,7 +205,6 @@
 - [ ] Load testing
 
 ### Phase 8: Deployment (PENDING)  (0%)
-- [ ] Docker setup
 - [ ] Environment configuration
 - [ ] CI/CD pipeline
 - [ ] Monitoring setup
@@ -336,7 +335,7 @@
 
 ### Long-term (Week 5+)
 11. Performance optimization
-12. Deployment setup (despite no-Docker policy, prepare for production)
+12. Deployment setup for direct server execution
 13. Production hardening
 
 ---

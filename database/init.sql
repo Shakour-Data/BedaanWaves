@@ -413,18 +413,21 @@ CREATE INDEX IF NOT EXISTS idx_macro_as_of ON macro_indicators(as_of);
 CREATE TABLE IF NOT EXISTS ir_financial_statements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL REFERENCES assets(id),
+    market VARCHAR(20) NOT NULL DEFAULT 'TSE',
     period VARCHAR(20) NOT NULL,
     statement_type VARCHAR(20) NOT NULL,
     fiscal_year INTEGER,
     data JSONB DEFAULT '{}',
     as_of DATE,
-    UNIQUE(asset_id, period, statement_type)
+    UNIQUE(asset_id, period, statement_type, market)
 );
 CREATE INDEX IF NOT EXISTS idx_ir_fin_stmt_asset ON ir_financial_statements(asset_id);
+CREATE INDEX IF NOT EXISTS idx_ir_fin_stmt_market ON ir_financial_statements(market);
 
 CREATE TABLE IF NOT EXISTS ir_fundamental_ratios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL REFERENCES assets(id),
+    market VARCHAR(20) NOT NULL DEFAULT 'TSE',
     period VARCHAR(20) NOT NULL,
     eps NUMERIC(20, 4),
     pe NUMERIC(12, 2),
@@ -435,7 +438,7 @@ CREATE TABLE IF NOT EXISTS ir_fundamental_ratios (
     market_cap NUMERIC(25, 2),
     book_value NUMERIC(20, 4),
     as_of DATE,
-    UNIQUE(asset_id, period)
+    UNIQUE(asset_id, period, market)
 );
 CREATE INDEX IF NOT EXISTS idx_ir_fund_ratio_asset ON ir_fundamental_ratios(asset_id);
 
@@ -605,7 +608,504 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO bedaan_ap
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO bedaan_api;
 
 -- ===============================================
--- 18. اطلاعات اولیه (Sample Data)
+-- 18. Additional Tables (ML, Crypto, User Settings, etc.)
+-- ===============================================
+
+-- Company Leadership
+CREATE TABLE IF NOT EXISTS company_leadership (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    asset_id UUID NOT NULL REFERENCES assets(id),
+    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    leadership_type VARCHAR(50) NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    source VARCHAR(50) DEFAULT 'SEC',
+    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_company_leadership_asset ON company_leadership(asset_id);
+
+-- Raw Market Data (Crypto & International)
+CREATE TABLE IF NOT EXISTS raw_market_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    asset_id UUID REFERENCES assets(id),
+    raw_symbol VARCHAR(50) NOT NULL,
+    market VARCHAR(20) NOT NULL,
+    exchange VARCHAR(50),
+    data_type VARCHAR(30) NOT NULL,
+    raw_payload JSONB NOT NULL,
+    price NUMERIC(20, 8),
+    volume NUMERIC(25, 2),
+    quote_volume NUMERIC(25, 2),
+    source_timestamp TIMESTAMPTZ NOT NULL,
+    ingested_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    ingestion_id VARCHAR(100),
+    data_quality VARCHAR(10) DEFAULT 'RAW',
+    UNIQUE(raw_symbol, market, exchange, data_type, source_timestamp),
+    CONSTRAINT chk_raw_data_quality CHECK (data_quality IN ('RAW', 'VALIDATED')),
+    CONSTRAINT chk_raw_market_type CHECK (market IN ('CRYPTO', 'INTL', 'TSE')),
+    CONSTRAINT chk_raw_volume_non_negative CHECK (volume >= 0)
+);
+CREATE INDEX IF NOT EXISTS idx_raw_asset ON raw_market_data(asset_id);
+CREATE INDEX IF NOT EXISTS idx_raw_market_type ON raw_market_data(market, data_type);
+CREATE INDEX IF NOT EXISTS idx_raw_ingested ON raw_market_data(ingested_at);
+CREATE INDEX IF NOT EXISTS idx_raw_symbol ON raw_market_data(raw_symbol);
+
+-- Market Data Snapshots
+CREATE TABLE IF NOT EXISTS market_data_snapshots (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    asset_id UUID NOT NULL REFERENCES assets(id),
+    snapshot_time TIMESTAMPTZ NOT NULL,
+    interval VARCHAR(10) NOT NULL,
+    open NUMERIC(20, 8),
+    high NUMERIC(20, 8),
+    low NUMERIC(20, 8),
+    close NUMERIC(20, 8),
+    volume NUMERIC(25, 2),
+    turnover NUMERIC(25, 2),
+    rsi NUMERIC(8, 4),
+    macd NUMERIC(20, 8),
+    macd_signal NUMERIC(20, 8),
+    macd_histogram NUMERIC(20, 8),
+    bb_upper NUMERIC(20, 8),
+    bb_middle NUMERIC(20, 8),
+    bb_lower NUMERIC(20, 8),
+    atr NUMERIC(20, 8),
+    ma_7 NUMERIC(20, 8),
+    ma_14 NUMERIC(20, 8),
+    ma_30 NUMERIC(20, 8),
+    volatility NUMERIC(20, 8),
+    volume_ma_7 NUMERIC(25, 2),
+    volume_ratio NUMERIC(8, 4),
+    features JSONB DEFAULT '{}',
+    source VARCHAR(20) DEFAULT 'BRS',
+    is_fresh BOOLEAN DEFAULT TRUE,
+    freshness_score NUMERIC(5, 2),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(asset_id, snapshot_time, interval),
+    CONSTRAINT chk_freshness_score_range CHECK (freshness_score >= 0 AND freshness_score <= 100),
+    CONSTRAINT chk_snapshot_high_low CHECK (high >= low),
+    CONSTRAINT chk_snapshot_volume_non_negative CHECK (volume >= 0)
+);
+CREATE INDEX IF NOT EXISTS idx_snapshot_fresh ON market_data_snapshots(asset_id, is_fresh, snapshot_time);
+CREATE INDEX IF NOT EXISTS idx_snapshot_interval ON market_data_snapshots(asset_id, interval, snapshot_time);
+
+-- Crypto ML Signals
+CREATE TABLE IF NOT EXISTS crypto_ml_signals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    asset_id UUID NOT NULL REFERENCES assets(id),
+    snapshot_id UUID REFERENCES market_data_snapshots(id),
+    signal_type VARCHAR(20) NOT NULL,
+    confidence NUMERIC(5, 2) NOT NULL,
+    expected_return NUMERIC(8, 2),
+    expected_volatility NUMERIC(8, 2),
+    risk_score NUMERIC(5, 2),
+    model_name VARCHAR(100),
+    model_version VARCHAR(50),
+    features_used JSONB DEFAULT '{}',
+    technical_indicators JSONB DEFAULT '{}',
+    generated_at TIMESTAMPTZ DEFAULT NOW(),
+    valid_from TIMESTAMPTZ DEFAULT NOW(),
+    valid_until TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS idx_crypto_signal_active ON crypto_ml_signals(asset_id, is_active, valid_until);
+CREATE INDEX IF NOT EXISTS idx_crypto_signal_model ON crypto_ml_signals(model_version);
+
+-- Raw Performance Scores (Coefficient Learning)
+CREATE TABLE IF NOT EXISTS raw_performance_scores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    captured_at TIMESTAMPTZ DEFAULT NOW(),
+    asset_id UUID REFERENCES assets(id),
+    market VARCHAR(20) NOT NULL,
+    exchange VARCHAR(50) NOT NULL,
+    context JSONB DEFAULT '{}',
+    dimension_scores JSONB NOT NULL,
+    sub_dimension_scores JSONB NOT NULL,
+    aspect_scores JSONB NOT NULL,
+    sub_aspect_scores JSONB NOT NULL,
+    target_return NUMERIC(20, 8),
+    target_volatility NUMERIC(10, 6),
+    target_sharpe NUMERIC(8, 4),
+    target_price_change NUMERIC(10, 6),
+    target_volume_change NUMERIC(10, 4),
+    target_bitcoin_correlation NUMERIC(8, 6),
+    target_market_sentiment NUMERIC(5, 2),
+    data_quality VARCHAR(20) DEFAULT 'VALIDATED',
+    validation_status VARCHAR(20) DEFAULT 'PENDING',
+    validation_notes TEXT,
+    is_processed BOOLEAN DEFAULT FALSE,
+    processing_errors JSONB DEFAULT '{}',
+    ingestion_id VARCHAR(100),
+    source_system VARCHAR(50) DEFAULT 'SCORING_SERVICE',
+    UNIQUE(asset_id, captured_at, market)
+);
+CREATE INDEX IF NOT EXISTS idx_raw_perf_asset_time ON raw_performance_scores(asset_id, captured_at);
+CREATE INDEX IF NOT EXISTS idx_raw_perf_market ON raw_performance_scores(market, exchange);
+CREATE INDEX IF NOT EXISTS idx_raw_perf_processed ON raw_performance_scores(is_processed);
+
+-- Processed Feature Data
+CREATE TABLE IF NOT EXISTS processed_feature_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    raw_data_id UUID NOT NULL REFERENCES raw_performance_scores(id),
+    asset_id UUID REFERENCES assets(id),
+    processed_at TIMESTAMPTZ DEFAULT NOW(),
+    market VARCHAR(20) NOT NULL,
+    exchange VARCHAR(50) NOT NULL,
+    feature_vector NUMERIC(20, 8)[] NOT NULL,
+    dimension_features JSONB NOT NULL,
+    sub_dimension_features JSONB NOT NULL,
+    aspect_features JSONB NOT NULL,
+    sub_aspect_features JSONB NOT NULL,
+    target_values JSONB NOT NULL,
+    features_used JSONB DEFAULT '{}',
+    preprocessing_steps JSONB DEFAULT '{}',
+    normalization_params JSONB DEFAULT '{}',
+    is_valid BOOLEAN DEFAULT TRUE,
+    quality_score NUMERIC(5, 2) DEFAULT 100.0,
+    validation_errors JSONB DEFAULT '{}',
+    model_version VARCHAR(50) DEFAULT 'v1.0.0',
+    feature_schema_version VARCHAR(20) DEFAULT '1.0',
+    UNIQUE(raw_data_id, processed_at)
+);
+CREATE INDEX IF NOT EXISTS idx_proc_asset_market ON processed_feature_data(asset_id, market);
+CREATE INDEX IF NOT EXISTS idx_proc_valid ON processed_feature_data(is_valid);
+CREATE INDEX IF NOT EXISTS idx_proc_processed_at ON processed_feature_data(processed_at);
+
+-- Coefficient Adjustments
+CREATE TABLE IF NOT EXISTS coefficient_adjustments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    adjustment_cycle TIMESTAMPTZ DEFAULT NOW(),
+    asset_id UUID REFERENCES assets(id),
+    level VARCHAR(20) NOT NULL,
+    feature_key VARCHAR(100) NOT NULL,
+    old_weight NUMERIC(8, 6) NOT NULL,
+    new_weight NUMERIC(8, 6) NOT NULL,
+    weight_change NUMERIC(8, 6),
+    adjustment_code VARCHAR(50) NOT NULL,
+    adjustment_reason TEXT,
+    confidence_score NUMERIC(5, 2) DEFAULT 100.0,
+    model_version VARCHAR(50),
+    training_samples INTEGER,
+    performance_improvement NUMERIC(8, 6),
+    created_by VARCHAR(50) DEFAULT 'system',
+    implementation_version VARCHAR(20) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_adj_cycle_level ON coefficient_adjustments(adjustment_cycle, level);
+CREATE INDEX IF NOT EXISTS idx_adj_feature_key ON coefficient_adjustments(feature_key);
+
+-- Coefficient History
+CREATE TABLE IF NOT EXISTS coefficient_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    effective_at TIMESTAMPTZ DEFAULT NOW(),
+    asset_id UUID REFERENCES assets(id),
+    market VARCHAR(20) NOT NULL,
+    exchange VARCHAR(50) NOT NULL,
+    coefficients JSONB NOT NULL,
+    source VARCHAR(50) DEFAULT 'ML_TRAINING',
+    model_version VARCHAR(50),
+    is_valid BOOLEAN DEFAULT TRUE,
+    validation_notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_hist_asset_time ON coefficient_history(asset_id, effective_at);
+CREATE INDEX IF NOT EXISTS idx_hist_effective ON coefficient_history(effective_at);
+
+-- User Market Settings
+CREATE TABLE IF NOT EXISTS user_market_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    countries JSONB DEFAULT '[]',
+    indices JSONB DEFAULT '[]',
+    industries JSONB DEFAULT '[]',
+    regions JSONB DEFAULT '[]',
+    exchanges JSONB DEFAULT '[]',
+    currencies JSONB DEFAULT '[]',
+    last_validated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    validation_hash VARCHAR(64),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_market_settings_user ON user_market_settings(user_id);
+
+-- User Market Configs
+CREATE TABLE IF NOT EXISTS user_market_configs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    config_name VARCHAR(100) NOT NULL,
+    country VARCHAR(50),
+    country_indices JSONB DEFAULT '[]',
+    selected_industries JSONB DEFAULT '[]',
+    included_symbols JSONB DEFAULT '[]',
+    price_range JSONB,
+    volume_range JSONB,
+    change_filter JSONB,
+    market_cap_filter JSONB,
+    last_calc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, config_name)
+);
+CREATE INDEX IF NOT EXISTS idx_market_config_user ON user_market_configs(user_id);
+
+-- User Crypto Settings
+CREATE TABLE IF NOT EXISTS user_crypto_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    selected_cryptos JSONB DEFAULT '[]',
+    excluded_cryptos JSONB DEFAULT '[]',
+    custom_watchlist JSONB DEFAULT '[]',
+    exchange_source VARCHAR(50) DEFAULT 'binance',
+    min_volume_24h NUMERIC(20, 8) DEFAULT 1000000,
+    min_market_cap NUMERIC(20, 8) DEFAULT 50000000,
+    price_change_filter VARCHAR(20) DEFAULT 'all',
+    last_validated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    validation_hash VARCHAR(64),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_crypto_settings_user ON user_crypto_settings(user_id);
+
+-- User Crypto Configs
+CREATE TABLE IF NOT EXISTS user_crypto_configs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    config_name VARCHAR(100) NOT NULL,
+    included_symbols JSONB DEFAULT '[]',
+    excluded_symbols JSONB DEFAULT '[]',
+    exchange_source VARCHAR(50) DEFAULT 'binance',
+    min_volume_24h NUMERIC(20, 8),
+    min_market_cap NUMERIC(20, 8),
+    price_range JSONB,
+    change_filter JSONB,
+    last_calc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, config_name)
+);
+CREATE INDEX IF NOT EXISTS idx_crypto_config_user ON user_crypto_configs(user_id);
+
+-- User Scoring Results
+CREATE TABLE IF NOT EXISTS user_scoring_results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    source VARCHAR(100) NOT NULL,
+    symbol VARCHAR(50) NOT NULL,
+    country VARCHAR(50),
+    industry VARCHAR(50),
+    exchange VARCHAR(50),
+    score NUMERIC(10, 6),
+    rank INTEGER,
+    data_date DATE NOT NULL,
+    criteria_scores JSONB,
+    user_preferences JSONB,
+    recommendations JSONB,
+    description JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, symbol, data_date)
+);
+CREATE INDEX IF NOT EXISTS idx_scoring_user ON user_scoring_results(user_id);
+CREATE INDEX IF NOT EXISTS idx_scoring_user_date ON user_scoring_results(user_id, data_date);
+
+-- Validation Records
+CREATE TABLE IF NOT EXISTS validation_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_id VARCHAR(100) NOT NULL,
+    validation_date TIMESTAMP NOT NULL,
+    validation_type VARCHAR(50) NOT NULL,
+    is_valid BOOLEAN NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_validation_source ON validation_records(source_id);
+CREATE INDEX IF NOT EXISTS idx_validation_type ON validation_records(validation_type);
+
+-- Source Authenticity
+CREATE TABLE IF NOT EXISTS source_authenticity (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_name VARCHAR(100) NOT NULL,
+    authenticity_score NUMERIC(5, 2) NOT NULL,
+    verification_status VARCHAR(50) NOT NULL,
+    verification_timestamp TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_authenticity_source ON source_authenticity(source_name);
+
+-- Cross Source Consistency
+CREATE TABLE IF NOT EXISTS cross_source_consistency (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_a_id VARCHAR(100) NOT NULL,
+    source_b_id VARCHAR(100) NOT NULL,
+    data_type VARCHAR(50) NOT NULL,
+    consistency_metric NUMERIC(5, 2) NOT NULL,
+    validation_timestamp TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_consistency_sources ON cross_source_consistency(source_a_id, source_b_id);
+
+-- Data Sources Registry
+CREATE TABLE IF NOT EXISTS data_sources (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_name VARCHAR(100) NOT NULL UNIQUE,
+    source_type VARCHAR(50) NOT NULL,
+    base_url VARCHAR(500),
+    api_key_required BOOLEAN DEFAULT FALSE,
+    auth_token VARCHAR(500),
+    data_format VARCHAR(50),
+    last_verification TIMESTAMP,
+    verification_count INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    info JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_datasource_type ON data_sources(source_type);
+CREATE INDEX IF NOT EXISTS idx_datasource_active ON data_sources(is_active);
+
+-- Historical Data Import Log
+CREATE TABLE IF NOT EXISTS historical_data_import_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    import_batch_id VARCHAR(100) NOT NULL,
+    source_id UUID REFERENCES data_sources(id),
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    records_imported INTEGER DEFAULT 0,
+    records_updated INTEGER DEFAULT 0,
+    validation_results JSONB,
+    import_status VARCHAR(50) DEFAULT 'pending',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_import_batch ON historical_data_import_log(import_batch_id);
+CREATE INDEX IF NOT EXISTS idx_import_status ON historical_data_import_log(import_status);
+
+-- Cryptocurrencies Master List
+CREATE TABLE IF NOT EXISTS cryptocurrencies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    symbol VARCHAR(20) NOT NULL UNIQUE,
+    name VARCHAR(200) NOT NULL,
+    exchange VARCHAR(50),
+    market_cap NUMERIC(20, 8),
+    volume_24h NUMERIC(20, 8),
+    price_usd NUMERIC(20, 8),
+    price_change_24h NUMERIC(10, 6),
+    price_change_7d NUMERIC(10, 6),
+    market_cap_rank INTEGER,
+    circulating_supply NUMERIC(20, 8),
+    max_supply NUMERIC(20, 8),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    extra_data JSONB
+);
+CREATE INDEX IF NOT EXISTS idx_crypto_symbol ON cryptocurrencies(symbol);
+CREATE INDEX IF NOT EXISTS idx_crypto_market_cap_rank ON cryptocurrencies(market_cap_rank);
+
+-- Countries List
+CREATE TABLE IF NOT EXISTS countries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    iso_code VARCHAR(10) NOT NULL UNIQUE,
+    stock_exchange VARCHAR(100),
+    currency_code VARCHAR(10),
+    timezone VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    extra_data JSONB,
+    last_verified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_country_code ON countries(iso_code);
+CREATE INDEX IF NOT EXISTS idx_country_active ON countries(is_active);
+
+-- Industries List
+CREATE TABLE IF NOT EXISTS industries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    sector VARCHAR(100),
+    etf_ticker VARCHAR(20),
+    is_active BOOLEAN DEFAULT TRUE,
+    extra_data JSONB,
+    last_verified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_industry_sector ON industries(sector);
+CREATE INDEX IF NOT EXISTS idx_industry_active ON industries(is_active);
+
+-- Market Indices
+CREATE TABLE IF NOT EXISTS market_indices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    symbol VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(200) NOT NULL,
+    exchange VARCHAR(100),
+    country VARCHAR(50),
+    base_value NUMERIC(20, 8),
+    current_value NUMERIC(20, 8),
+    change_percent NUMERIC(10, 6),
+    volume NUMERIC(18, 8),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    extra_data JSONB,
+    is_active BOOLEAN DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS idx_index_country ON market_indices(country);
+CREATE INDEX IF NOT EXISTS idx_index_active ON market_indices(is_active);
+
+-- User Favorites
+CREATE TABLE IF NOT EXISTS user_favorites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    source VARCHAR(100) NOT NULL,
+    symbol VARCHAR(50) NOT NULL,
+    category VARCHAR(50),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, source, symbol)
+);
+CREATE INDEX IF NOT EXISTS idx_favorite_user ON user_favorites(user_id);
+
+-- User Alerts
+CREATE TABLE IF NOT EXISTS user_alerts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    symbol VARCHAR(50) NOT NULL,
+    alert_type VARCHAR(50) NOT NULL,
+    alert_condition JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    notify_method JSONB DEFAULT '{"email": true, "push": true, "sms": false}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_triggered TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_alert_user ON user_alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_alert_symbol ON user_alerts(symbol);
+CREATE INDEX IF NOT EXISTS idx_alert_active ON user_alerts(is_active);
+
+-- Symbol Market Settings
+CREATE TABLE IF NOT EXISTS symbol_market_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    symbol_id INTEGER NOT NULL REFERENCES symbol_data(symbol_id),
+    user_id UUID NOT NULL,
+    country VARCHAR(50),
+    index_code VARCHAR(50),
+    industry_code VARCHAR(50),
+    region VARCHAR(50),
+    is_visible BOOLEAN DEFAULT TRUE,
+    display_order INTEGER DEFAULT 0,
+    custom_label VARCHAR(255),
+    price_min NUMERIC(20, 8),
+    price_max NUMERIC(20, 8),
+    volume_min NUMERIC(25, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(symbol_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_symbol_market_settings_user ON symbol_market_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_symbol_market_settings_symbol ON symbol_market_settings(symbol_id);
+
+-- ===============================================
+-- 19. اطلاعات اولیه (Sample Data)
 -- ===============================================
 INSERT INTO assets (symbol, name, asset_class, market, sector) VALUES
 ('FSPD', 'فولاد', 'EQUITY', 'TSE', 'معادن'),
@@ -614,6 +1114,40 @@ INSERT INTO assets (symbol, name, asset_class, market, sector) VALUES
 ('SAIPA', 'سایپا', 'EQUITY', 'TSE', 'خودروساز'),
 ('PETR', 'نفت', 'EQUITY', 'TSE', 'انرژی')
 ON CONFLICT (symbol) DO NOTHING;
+
+-- ===============================================
+-- 19. Key Nasdaq Symbols (Full list in insert_nasdaq_symbols.sql)
+-- ===============================================
+INSERT INTO assets (symbol, name, asset_class, market, sector, country_code, currency, active) VALUES
+('^IXIC', 'Nasdaq Composite', 'INDEX', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('AAPL', 'Apple Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('MSFT', 'Microsoft Corporation', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('AMZN', 'Amazon.com Inc.', 'EQUITY', 'NASDAQ', 'Consumer Discretionary', 'US', 'USD', TRUE),
+('GOOGL', 'Alphabet Inc. Class A', 'EQUITY', 'NASDAQ', 'Communication Services', 'US', 'USD', TRUE),
+('GOOG', 'Alphabet Inc. Class C', 'EQUITY', 'NASDAQ', 'Communication Services', 'US', 'USD', TRUE),
+('META', 'Meta Platforms Inc.', 'EQUITY', 'NASDAQ', 'Communication Services', 'US', 'USD', TRUE),
+('NVDA', 'NVIDIA Corporation', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('TSLA', 'Tesla Inc.', 'EQUITY', 'NASDAQ', 'Consumer Discretionary', 'US', 'USD', TRUE),
+('PEP', 'PepsiCo Inc.', 'EQUITY', 'NASDAQ', 'Consumer Staples', 'US', 'USD', TRUE),
+('AVGO', 'Broadcom Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('COST', 'Costco Wholesale Corporation', 'EQUITY', 'NASDAQ', 'Consumer Staples', 'US', 'USD', TRUE),
+('CSCO', 'Cisco Systems Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('TMUS', 'T-Mobile US Inc.', 'EQUITY', 'NASDAQ', 'Communication Services', 'US', 'USD', TRUE),
+('ADBE', 'Adobe Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('NFLX', 'Netflix Inc.', 'EQUITY', 'NASDAQ', 'Communication Services', 'US', 'USD', TRUE),
+('AMD', 'Advanced Micro Devices Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('INTC', 'Intel Corporation', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('QCOM', 'Qualcomm Incorporated', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('TXN', 'Texas Instruments Incorporated', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('AMGN', 'Amgen Inc.', 'EQUITY', 'NASDAQ', 'Healthcare', 'US', 'USD', TRUE),
+('HON', 'Honeywell International Inc.', 'EQUITY', 'NASDAQ', 'Industrials', 'US', 'USD', TRUE),
+('INTU', 'Intuit Inc.', 'EQUITY', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
+('BKNG', 'Booking Holdings Inc.', 'EQUITY', 'NASDAQ', 'Consumer Discretionary', 'US', 'USD', TRUE),
+('SBUX', 'Starbucks Corporation', 'EQUITY', 'NASDAQ', 'Consumer Discretionary', 'US', 'USD', TRUE)
+ON CONFLICT (symbol) DO NOTHING;
+
+-- Load all 5569 Nasdaq symbols from database/insert_nasdaq_symbols.sql
+-- Run: psql -U postgres -d bedaanwaves_db -f database/insert_nasdaq_symbols.sql
 
 -- ===============================================
 -- پایان

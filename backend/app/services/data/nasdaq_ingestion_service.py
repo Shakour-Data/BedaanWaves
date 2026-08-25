@@ -201,13 +201,18 @@ class NasdaqIngestionService(DataService):
                 await session.execute(stmt)
                 await session.commit()
                 inserted = len(rows)
-            except Exception as e:
+            except IntegrityError:
                 await session.rollback()
-                self.logger.error(f"Bulk candle upsert failed: {e}")
+                raise
+            except Exception as exc:
+                await session.rollback()
+                self.logger.error(f"Bulk candle upsert failed: {exc}")
+                raise IngestionException(f"Nasdaq candle upsert failed: {exc}") from exc
         return inserted
 
     async def ingest_price_history(self, symbol: str, period: str = "5y") -> int:
         """Fetch and store price history for a symbol."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -244,12 +249,15 @@ class NasdaqIngestionService(DataService):
                 # Batch insert
                 count = await self._bulk_upsert_candles(candles)
                 return count
-        except Exception as e:
-            self.logger.error(f"Failed to ingest prices for {symbol}: {e}")
-            return 0
+        except IngestionException:
+            raise
+        except Exception as exc:
+            self.logger.error(f"Failed to ingest prices for {symbol}: {exc}")
+            raise IngestionException(f"Nasdaq price ingestion failed for {symbol}: {exc}") from exc
 
     async def ingest_fundamentals(self, symbol: str) -> bool:
         """Fetch and store fundamental data for a symbol."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -384,6 +392,7 @@ class NasdaqIngestionService(DataService):
 
     async def ingest_board_members(self, symbol: str) -> int:
         """Fetch board members and officers from yfinance."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -426,6 +435,7 @@ class NasdaqIngestionService(DataService):
 
     async def ingest_news_for_symbol(self, symbol: str, days: int = 7) -> int:
         """Fetch recent news for a symbol from yfinance."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -480,6 +490,7 @@ class NasdaqIngestionService(DataService):
 
     async def ingest_macro_indicators(self) -> bool:
         """Fetch macro indicators from yfinance macro tickers."""
+        import yfinance as yf
         try:
             macro_data = []
             for ticker_sym, (name, unit) in MACRO_TICKERS.items():

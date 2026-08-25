@@ -92,7 +92,6 @@ BedaanWaves/
 │
 ├── config/                     # Configuration
 │   ├── .kilo/                 # Kilo agent configuration
-│   ├── docker-compose.yml     # Local development
 │   └── .env.example           # Environment template
 │
 ├── docs/                       # Documentation
@@ -259,8 +258,8 @@ BedaanWaves/
 - **Load**: Locust, K6
 
 ### DevOps
-- **Containerization**: Docker
-- **Orchestration**: Docker Compose
+- **Containerization**: Direct execution (No Docker policy)
+- **Orchestration**: Direct process execution (No Docker policy)
 - **CI/CD**: GitHub Actions
 - **Monitoring**: Prometheus, ELK
 - **Logging**: Structured logging
@@ -482,7 +481,7 @@ performance = correlation(predictions, actual_returns)
 - **Business Logic**: Consolidated from 5 OldFils projects
 - **Testing**: Comprehensive test coverage (unit, integration, e2e)
 - **Documentation**: Complete API and architecture docs
-- **Deployment**: Containerized with Docker
+- **Deployment**: Direct execution on server
 - **Monitoring**: Full observability stack
 
 

@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import User
 from app.schemas.schemas import TokenData
-from app.services.user.authorization_service import authorization_service
+from app.services.user.authorization_service import AuthorizationService
 from app.services.core.health_checker import HealthChecker
 from app.services.core.dependency_container import get_global_container
 
@@ -66,9 +66,10 @@ async def get_current_user_id(current_user: User = Depends(get_current_active_us
 
 def require_permissions(required: List[str]):
     """Dependency factory enforcing that the user holds ALL ``required`` permissions."""
+    _auth_service = AuthorizationService()
 
     async def _checker(current_user: User = Depends(get_current_active_user)) -> User:
-        missing = [p for p in required if not authorization_service.has_permission(current_user, p)]
+        missing = [p for p in required if not _auth_service.has_permission(current_user, p)]
         if missing:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -84,10 +85,11 @@ def require_roles(roles: List[str]):
 
     Supported roles: ``admin`` (``User.is_admin``) and ``user`` (any active user).
     """
+    _auth_service = AuthorizationService()
 
     async def _checker(current_user: User = Depends(get_current_active_user)) -> User:
         normalized = {r.lower() for r in roles}
-        if "admin" in normalized and authorization_service.is_admin(current_user):
+        if "admin" in normalized and _auth_service.is_admin(current_user):
             return current_user
         if "user" in normalized:
             return current_user

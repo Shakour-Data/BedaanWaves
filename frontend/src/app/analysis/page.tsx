@@ -87,8 +87,8 @@ export default function AnalysisPage() {
             .map((p: any) => ({
               symbol: p.symbol,
               name: symbolMap.get(p.symbol) || p.name || "",
-              market: p.market === "NASDAQ" || p.market === "NYSE" ? "NASDAQ" :
-                      p.market === "BINANCE" || p.market === "KRAKEN" ? "BINANCE" : "TSE",
+              market: (p.market === "NASDAQ" || p.market === "NYSE" ? "NASDAQ" :
+                      p.market === "BINANCE" || p.market === "KRAKEN" ? "BINANCE" : "TSE") as AssetRow["market"],
               price: p.current_price ?? p.price ?? 0,
               changePct: p.change_percent ?? p.change_pct ?? 0,
             }))

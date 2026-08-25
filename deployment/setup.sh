@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # deployment/setup.sh - Comprehensive deployment script for BedaanWaves
+# Direct server deployment - no Docker, no Kubernetes
 
 # Colors for output
 RED='\033[0;31m'
@@ -145,312 +146,6 @@ WantedBy=multi-user.target
 EOF
     log "Systemd service files created in /tmp/"
     log "To install services: sudo cp *.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now backend.service frontend.service"
-}
-
-# Setup Docker (for any server deployment)
-setup_docker() {
-    log "Setting up Docker configuration"
-    
-    # Create Dockerfile
-    cat > Dockerfile.backend << 'EOF'
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# Copy application code
-COPY . .
-
-# Expose port
-EXPOSE 8000
-
-# Run migrations and start app
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --workers 4 --host 0.0.0.0 --port 8000"]
-EOF
-
-    # Create Dockerfile for frontend
-    cat > Dockerfile.frontend << 'EOF'
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-
-# Install dependencies
-COPY package*.json ./
-RUN npm ci
-
-# Copy and build application
-COPY . .
-RUN npm run build
-
-# Production image
-FROM nginx:alpine
-COPY --from=builder /app/.next/standalone /usr/share/nginx/html
-COPY --from=builder /app/.next/static /usr/share/nginx/html/static
-
-# Expose port
-EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
-EOF
-
-    # Create docker-compose.yml
-    cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
-services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    ports:
-      - "8000:8000"
-    environment:
-      - ENVIRONMENT=production
-      - DATABASE_URL=postgresql://postgres:password@db:5432/bedaanwaves
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-    depends_on:
-      - db
-      - redis
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
-  db:
-    image: postgres:13
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=bedaanwaves
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-
-  pgadmin:
-    image: dpage/pgadmin4
-    ports:
-      - "5050:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@bedaanwaves.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    volumes:
-      - pgadmin:/var/lib/pgadmin
-
-volumes:
-  pgdata:
-  pgadmin:
-EOF
-
-    log "Docker configuration files created"
-    log "To use Docker: docker-compose up --build -d"
-}
-
-# Setup Kubernetes (for deployment on any server)
-setup_kubernetes() {
-    log "Setting up Kubernetes deployment configuration"
-    
-    cat > bedaanwaves-deployment.yaml << 'EOF'
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: bedaanwaves-backend
-  labels:
-    app: bedaanwaves
-    tier: backend
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: bedaanwaves
-      tier: backend
-  template:
-    metadata:
-      labels:
-        app: bedaanwaves
-        tier: backend
-    spec:
-      containers:
-      - name: backend
-        image: bedaanwaves/backend:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: ENVIRONMENT
-          value: "production"
-        - name: DATABASE_URL
-          value: "postgresql://postgres:password@postgres/bedaanwaves"
-        - name: REDIS_URL
-          value: "redis://redis:6379/0"
-        resources:
-          limits:
-            memory: "{{ .Values.resources.limits.memory }}"
-            cpu: "{{ .Values.resources.limits.cpu }}"
-          requests:
-            memory: "{{ .Values.resources.requests.memory }}"
-            cpu: "{{ .Values.resources.requests.cpu }}"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: bedaanwaves-frontend
-  labels:
-    app: bedaanwaves
-    tier: frontend
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: bedaanwaves
-      tier: frontend
-  template:
-    metadata:
-      labels:
-        app: bedaanwaves
-        tier: frontend
-    spec:
-      containers:
-      - name: frontend
-        image: bedaanwaves/frontend:latest
-        ports:
-        - containerPort: 80
-        env:
-        - name: NEXT_PUBLIC_API_URL
-          value: "http://backend:8000"
-        env:
-        - name: NEXT_PUBLIC_GRAPHQL_ENDPOINT
-          value: "https://api.example.com/graphql"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: api
-spec:
-  type: ClusterIP
-  ports:
-    - port: 8000
-      targetPort: 8000
-  selector:
-    app: bedaanwaves
-    tier: backend
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
-  ports:
-    - port: 80
-      targetPort: 80
-  selector:
-    app: bedaanwaves
-    tier: frontend
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  ports:
-    - port: 8000
-      targetPort: 8000
-      protocol: TCP
-  selector:
-    app: bedaanwaves
-    tier: backend
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-  spec:
-    containers:
-    - name: postgres
-      image: postgres:13
-      ports:
-      - containerPort: 5432
-      env:
-      - name: POSTGRES_DB
-        value: bedaanwaves
-      - name: POSTGRES_USER
-        value: postgres
-      - name: POSTGRES_PASSWORD
-        value: password
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-spec:
-  ports:
-    - port: 5432
-      targetPort: 5432
-  selector:
-    app: postgres
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redis
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redis
-  template:
-    metadata:
-      labels:
-        app: redis
-  spec:
-    containers:
-    - name: redis
-      image: redis:7
-      ports:
-      - containerPort: 6379
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-spec:
-  ports:
-    - port: 6379
-      targetPort: 6379
-  selector:
-    app: redis
-EOF
-    log "Kubernetes deployment files created"
-    log "To deploy: kubectl apply -f bedaanwaves-deployment.yaml"
 }
 
 # Setup monitoring and logging
@@ -679,12 +374,10 @@ EOF
 # Checks for required tools
 check_prerequisites() {
     log "Checking prerequisites"
-    check_command docker
-    check_command docker-compose
-    check_command kubectl
-    check_command helm
-    check_command prometheus
-    check_command grafana
+    check_command python3
+    check_command pip
+    check_command node
+    check_command npm
     log "All prerequisites checked"
 }
 
@@ -697,8 +390,6 @@ main_setup() {
     setup_database
     run_migrations
     # setup_production_services
-    setup_docker
-    setup_kubernetes
     setup_monitoring
     log "All setup steps completed successfully"
     log "Check the README for deployment instructions"
@@ -706,8 +397,7 @@ main_setup() {
     echo "==========================================="
     echo "DEPLOYMENT INSTRUCTIONS:"
     echo "1. For local development: ./venv/bin/uvicorn app.main:app --reload"
-    echo "2. For production with Docker: docker-compose up --build -d"
-    echo "3. For server deployment: Use the generated systemd services or Kubernetes manifests"
+    echo "2. For production: Use systemd services or process manager"
     echo "==========================================="
 }
 
@@ -716,17 +406,11 @@ case "$1" in
     setup)
         main_setup
         ;;
-    docker)
-        setup_docker
-        ;;
-    kubernetes)
-        setup_kubernetes
-        ;;
     monitoring)
         setup_monitoring
         ;;
     *)
-        warn "Usage: $0 {setup|docker|kubernetes|monitoring}"
+        warn "Usage: $0 {setup|monitoring}"
         warn "For detailed setup guide, check README.md"
         ;;
 esac

@@ -26,8 +26,8 @@ export default function PortfolioPage() {
         // Fetch user's portfolio holdings
         const holdingsRes = await apiClient.get<any>("/portfolio/portfolios/");
         
-        if (holdingsRes.status === "success" && holdingsRes.data) {
-          const holdingsData = holdingsRes.data;
+        if (holdingsRes.data.status === "success" && holdingsRes.data.data) {
+          const holdingsData = holdingsRes.data.data;
           
           // Fetch latest prices for holdings
           if (holdingsData.length > 0) {

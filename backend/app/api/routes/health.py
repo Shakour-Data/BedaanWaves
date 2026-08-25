@@ -87,7 +87,7 @@ async def get_service_health(service: str):
 
 @router.get("/ready")
 async def readiness_check():
-    """Readiness probe for Kubernetes/Orchestration systems."""
+    """Readiness probe for load balancers and monitoring systems."""
     health_checker = HealthChecker()
     
     # Check critical services only for readiness

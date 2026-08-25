@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 
 from ..core import BaseService
 from app.core.config import get_settings
+from sqlalchemy import select
+from app.models.models import Asset, IntlPriceCandle
 
 
 @dataclass
@@ -291,7 +293,8 @@ print(result)
                         .where(IntlPriceCandle.asset_id == asset_id)
                         .where(IntlPriceCandle.timeframe == "1d")
                         .order_by(IntlPriceCandle.timestamp.desc())
-                        .limit=50)
+                        .limit(50)
+                    )
                     candles = candle_result.all()
 
                     if len(candles) >= 20:

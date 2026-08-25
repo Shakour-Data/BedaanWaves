@@ -22,7 +22,7 @@ from .auth_service import (
     create_user,
     authenticate_user,
 )
-from .authorization_service import AuthorizationService, authorization_service
+from .authorization_service import AuthorizationService
 from .user_profile_service import UserProfileService
 from .preference_service import PreferenceService
 from .notification_service import NotificationService
@@ -41,7 +41,6 @@ __all__ = [
     "create_user",
     "authenticate_user",
     "AuthorizationService",
-    "authorization_service",
     "UserProfileService",
     "PreferenceService",
     "NotificationService",
