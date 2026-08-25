@@ -156,7 +156,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await apiClient.post("/settings/market-preferences", {
+      await apiClient.post("/users/preferences", {
         country: selectedCountry,
         index: selectedIndex,
         stock: selectedStock,
@@ -219,7 +219,7 @@ export default function SettingsPage() {
                 <div>
                   <h4 className="font-medium mb-3 text-sm">Indices</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {data.indices.map((index: any) => (
+                    {data?.indices?.map((index: any) => (
                       <label
                         key={index.id}
                         className={`flex items-center gap-2 p-3 rounded border cursor-pointer transition-all
