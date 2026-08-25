@@ -180,6 +180,32 @@ class SchedulerService(BaseService):
             interval_seconds=300,
         )
 
+        async def db_watchdog_job():
+            from app.services.core.database_service import DatabaseService
+            from app.services.core.dependency_container import get_global_container
+            
+            container = get_global_container()
+            if not container:
+                return {"status": "skipped", "reason": "no global container"}
+                
+            db_service = container.get("database_service")
+            if not isinstance(db_service, DatabaseService):
+                return {"status": "skipped", "reason": "database service not found"}
+                
+            health = await db_service.health_check()
+            if health["status"] != "healthy":
+                self.logger.warning("Database connection lost! Attempting recovery...")
+                success = await db_service.reconnect()
+                return {"status": "recovered" if success else "failed", "health": health}
+            
+            return {"status": "healthy", "health": health}
+
+        self.register_job(
+            name="DatabaseWatchdog",
+            coroutine_func=db_watchdog_job,
+            interval_seconds=60,  # Check every minute
+        )
+
         async def cache_warming_job():
             if self.cache_service:
                 await self.cache_service.initialize()

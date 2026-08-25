@@ -28,13 +28,13 @@ class Settings(BaseSettings):
     # ============================================================
     # DATABASE CONFIGURATION
     # ============================================================
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/bedaanwaves_db"
+    DATABASE_URL: str = "postgresql://administrator:Sedghi%404343@85.198.10.73:5432/bedaanwaves_db"
     DB_DRIVER: str = "postgresql"
-    DB_HOST: str = "localhost"
+    DB_HOST: str = "85.198.10.73"
     DB_PORT: int = 5432
     DB_NAME: str = "bedaanwaves_db"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
+    DB_USER: str = "administrator"
+    DB_PASSWORD: str = "Sedghi@4343"
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10

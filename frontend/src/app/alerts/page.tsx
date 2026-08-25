@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -31,7 +31,7 @@ export default function AlertsPage() {
           data: any;
           summary: Record<string, number>;
           average_confidence: Record<string, number>;
-        }>("/analysis/analysis/signals-summary?min_confidence=0.7");
+        }>("/analysis/signals-summary?min_confidence=0.7");
 
         const watchlistsRes = await apiClient.get<any[]>("/watchlists/watchlists");
         const notificationsRes = await apiClient.get<any[]>("/notifications/notifications?limit=20");
@@ -66,7 +66,7 @@ export default function AlertsPage() {
           const symbols = defaultWatchlist.items.map((item: any) => item.asset?.symbol).filter(Boolean);
           if (symbols.length) {
             const pricesRes = await apiClient.get<any>(
-              `/market/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+              `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
             );
             const prices = pricesRes.data?.data || pricesRes.data || {};
 
