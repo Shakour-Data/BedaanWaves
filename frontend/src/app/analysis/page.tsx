@@ -32,17 +32,17 @@ export default function AnalysisPage() {
       try {
         // Fetch signal summary
         const summaryRes = await apiClient.get<{ status: string; data: any; summary: Record<string, number> }>(
-          "/analysis/analysis/signals-summary?min_confidence=0.6"
+          "/analysis/signals-summary?min_confidence=0.6"
         );
 
-        // Fetch top performers (TSE)
+        // Fetch top performers
         const performersRes = await apiClient.get<{ status: string; data: any[] }>(
-          "/analysis/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ"
+          "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ"
         );
 
         // Fetch symbols to map performer data
         const symbolsRes = await apiClient.get<{ symbol: string; name: string; market: string }[]>(
-          "/market/market/symbols?market=NASDAQ&limit=50"
+          "/market/symbols?market=NASDAQ&limit=50"
         );
 
         if (!active) return;
@@ -64,7 +64,7 @@ export default function AnalysisPage() {
           for (const performer of topPerformerSymbols) {
             try {
               const signalRes = await apiClient.get<{ status: string; data: any }>(
-                `/analysis/analysis/signals/${encodeURIComponent(performer.symbol)}`
+                `/analysis/signals/${encodeURIComponent(performer.symbol)}`
               );
               if (signalRes.data.status === "success") {
                 signals.push({

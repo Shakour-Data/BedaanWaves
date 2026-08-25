@@ -81,13 +81,13 @@ function formatTimeAgo(dateStr: string): string {
 
 async function fetchMarketStats(): Promise<MarketStat[]> {
   try {
-    const [tseOverviewRes, tseDashboardRes] = await Promise.all([
-      apiClient.get<MarketOverviewResponse>("/market/market/market-overview?market=NASDAQ").catch(() => null),
-      apiClient.get<TseDashboardResponse>("/market/market/tse-dashboard").catch(() => null),
+    const [marketOverviewRes, tseDashboardRes] = await Promise.all([
+      apiClient.get<MarketOverviewResponse>("/market/market-overview?market=NASDAQ").catch(() => null),
+      apiClient.get<TseDashboardResponse>("/market/tse-dashboard").catch(() => null),
     ]);
 
-    const tseOverview = tseOverviewRes?.data
-    const tseDashboard = tseDashboardRes?.data
+    const marketOverview = marketOverviewRes?.data;
+    const tseDashboard = tseDashboardRes?.data;
 
     const stats: MarketStat[] = [];
 
@@ -98,9 +98,9 @@ async function fetchMarketStats(): Promise<MarketStat[]> {
       );
     }
 
-    if (tseOverview?.status === "success") {
+    if (marketOverview?.status === "success") {
       stats.push(
-        { label: "نمادهای فعال بورس", value: tseOverview.total_assets.toLocaleString("fa-IR"), changePct: 0 },
+        { label: "نمادهای فعال بورس", value: marketOverview.total_assets.toLocaleString("fa-IR"), changePct: 0 },
       );
     }
 
@@ -118,7 +118,7 @@ async function fetchMarketStats(): Promise<MarketStat[]> {
 
 async function fetchTopMovers(): Promise<AssetRow[]> {
   try {
-    const res = await apiClient.get<TseDashboardResponse>("/market/market/tse-dashboard");
+    const res = await apiClient.get<TseDashboardResponse>("/market/tse-dashboard");
     const data = res.data;
     if (data.status !== "success") return [];
 
@@ -137,14 +137,14 @@ async function fetchTopMovers(): Promise<AssetRow[]> {
 
 async function fetchWatchlist(): Promise<AssetRow[]> {
   try {
-    const watchlistsRes = await apiClient.get<WatchlistResponse[]>("/watchlists/watchlists");
+    const watchlistsRes = await apiClient.get<WatchlistResponse[]>("/watchlists");
     const watchlists = watchlistsRes.data;
     const defaultWatchlist = watchlists.find((w) => w.is_default);
     if (!defaultWatchlist?.items?.length) return [];
 
     const symbols = defaultWatchlist.items.map((item) => item.asset.symbol);
     const pricesRes = await apiClient.get<LatestPricesResponse>(
-      `/market/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+      `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
     );
     const pricesData = pricesRes.data?.data ?? {};
 
@@ -164,33 +164,29 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
 
 async function fetchSignals(): Promise<SignalRow[]> {
   try {
-        const res = await apiClient.get<SignalsSummaryResponse>("/analysis/analysis/signals-summary?min_confidence=0.6");
+    const res = await apiClient.get<SignalsSummaryResponse>("/analysis/signals-summary?min_confidence=0.6");
     const data = res.data;
     if (data.status !== "success") return [];
 
-    const symbols = Object.entries(data.summary ?? {})
+    const signalTypes = Object.entries(data.summary ?? {})
       .filter(([, count]) => Number(count) > 0)
       .sort(([, a], [, b]) => Number(b) - Number(a))
       .slice(0, 5)
       .map(([type]) => type);
 
     const allSignals: SignalRow[] = [];
-    for (const type of symbols) {
+    for (const type of signalTypes) {
       try {
-          const typeRes = await apiClient.get<any>(`/analysis/analysis/signals-summary?min_confidence=0.6&signal_type=${type}`);
+        const typeRes = await apiClient.get<SignalsSummaryResponse>(`/analysis/signals-summary?min_confidence=0.6`);
         const typeData = typeRes.data;
         if (typeData?.status === "success") {
-          const signals = (typeData.data?.summary || [])
-            .filter((s: any) => s.signal_type === type)
-            .slice(0, 2);
-          for (const s of signals) {
-            allSignals.push({
-              symbol: s.asset?.symbol || s.symbol,
-              type: s.signal_type,
-              confidence: s.confidence,
-              model: s.model_name || "ML",
-            });
-          }
+          const summary = typeData.summary;
+          allSignals.push({
+            symbol: `${type}`,
+            type: type as SignalRow["type"],
+            confidence: typeData.average_confidence?.[type] ?? 50,
+            model: "ML",
+          });
         }
       } catch {}
     }
@@ -203,7 +199,7 @@ async function fetchSignals(): Promise<SignalRow[]> {
 
 async function fetchNews(): Promise<NewsItem[]> {
   try {
-      const res = await apiClient.get<NewsResponse>("/news/news/market?limit=10");
+    const res = await apiClient.get<NewsResponse>("/news/market?limit=10");
     const data = res.data;
     if (data.status !== "success") return [];
 

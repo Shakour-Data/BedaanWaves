@@ -254,7 +254,7 @@ class NasdaqIngestionService(DataService):
             # Insert remaining candles
             if candles:
                 count = await self._bulk_upsert_candles(candles)
-            return count if 'count' in dir() else 0
+            return count
         except IngestionException:
             raise
         except Exception as exc:

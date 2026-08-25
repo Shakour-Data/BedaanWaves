@@ -350,7 +350,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health_check():
     checks = _preflight_checks()
-    status = "healthy" if all(v == "ok" for v in checks.values() if "database" in str(checks.values())) else "degraded"
+    status = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
     return {
         "status": status,
         "service": settings.APP_NAME,

@@ -23,53 +23,69 @@ export default function PortfolioPage() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch user's portfolio holdings
-        const holdingsRes = await apiClient.get<any>("/portfolio/portfolios/");
+        // Fetch user's portfolios
+        const portfoliosRes = await apiClient.get<any>("/portfolio/");
         
-        if (holdingsRes.data.status === "success" && holdingsRes.data.data) {
-          const holdingsData = holdingsRes.data.data;
+        if (!active) return;
+        
+        const portfolios = Array.isArray(portfoliosRes.data) ? portfoliosRes.data : [];
+        
+        if (portfolios.length === 0) {
+          setHoldings([]);
+          setStats([
+            { label: "مجموع ارزش پورتفولیو", value: "۰ رال", changePct: 0 },
+            { label: "سود/زیان کلی", value: "۰ رال", changePct: 0 },
+            { label: "تعداد نمادها", value: "۰", changePct: 0 },
+            { label: "بازگشت روزانه", value: "۰٪", changePct: 0 },
+          ]);
+          return;
+        }
+        
+        // Get holdings from first portfolio
+        const firstPortfolio = portfolios[0];
+        const holdingsRes = await apiClient.get<any>(`/portfolio/${firstPortfolio.id}/holdings`);
+        const holdingsData = Array.isArray(holdingsRes.data) ? holdingsRes.data : [];
+        
+        if (holdingsData.length > 0) {
+          const symbols = holdingsData.map((h: any) => h.asset?.symbol || h.symbol).filter(Boolean);
+          const pricesRes = await apiClient.get<any>(
+            `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+          );
           
-          // Fetch latest prices for holdings
-          if (holdingsData.length > 0) {
-            const symbols = holdingsData.map((h: any) => h.symbol);
-            const pricesRes = await apiClient.get<any>(
-              `/market/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
-            );
-            
-            const prices = pricesRes.data?.data || pricesRes.data || {};
-            
-            const enrichedHoldings: AssetRow[] = holdingsData.map((h: any) => ({
-              symbol: h.symbol,
-              name: h.name,
-              market: h.market,
-              price: prices[h.symbol]?.price ?? h.avg_price ?? 0,
-              changePct: prices[h.symbol]?.change_pct ?? 0,
-            }));
-            
-            if (active) setHoldings(enrichedHoldings);
-            
-            // Calculate portfolio stats
-            const totalValue = enrichedHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
-            const totalPnL = enrichedHoldings.reduce((sum, h) => sum + ((h.price - (h.avg_price ?? 0)) * (h.quantity ?? 0)), 0);
-            const totalReturnPct = totalValue > 0 ? (totalPnL / (totalValue - totalPnL)) * 100 : 0;
-            
-            if (active) setStats([
-              { label: "مجموع ارزش پورتفولیو", value: `${totalValue.toLocaleString("fa-IR")} رال`, changePct: totalReturnPct },
-              { label: "سود/زیان کلی", value: `${totalPnL.toLocaleString("fa-IR")} رال`, changePct: totalReturnPct },
-              { label: "تعداد نمادها", value: String(enrichedHoldings.length), changePct: 0 },
-              { label: "بازگشت روزانه", value: `${(totalReturnPct / 30).toFixed(2)}٪`, changePct: totalReturnPct / 30 },
-            ]);
-          } else {
-            if (active) setHoldings([]);
-            if (active) setStats([
-              { label: "مجموع ارزش پورتفولیو", value: "۰ رال", changePct: 0 },
-              { label: "سود/زیان کلی", value: "۰ رال", changePct: 0 },
-              { label: "تعداد نمادها", value: "۰", changePct: 0 },
-              { label: "بازگشت روزانه", value: "۰٪", changePct: 0 },
-            ]);
-          }
+          const prices = pricesRes.data?.data || {};
+          
+          const enrichedHoldings: AssetRow[] = holdingsData.map((h: any) => ({
+            symbol: h.asset?.symbol || h.symbol,
+            name: h.asset?.name || h.name || "",
+            market: (h.asset?.market || h.market || "NASDAQ") as AssetRow["market"],
+            price: prices[h.asset?.symbol || h.symbol]?.price ?? h.entry_price ?? 0,
+            changePct: prices[h.asset?.symbol || h.symbol]?.change_pct ?? 0,
+          }));
+          
+          setHoldings(enrichedHoldings);
+          
+          const totalValue = enrichedHoldings.reduce((sum: number, h: AssetRow) => sum + (h.price * ((h as any).quantity ?? 1)), 0);
+          const totalPnL = enrichedHoldings.reduce((sum: number, h: AssetRow) => {
+            const quantity = ((h as any).quantity ?? 1);
+            const entryPrice = ((h as any).entry_price ?? h.price);
+            return sum + ((h.price - entryPrice) * quantity);
+          }, 0);
+          const totalReturnPct = totalValue > 0 ? (totalPnL / (totalValue - totalPnL || 1)) * 100 : 0;
+          
+          setStats([
+            { label: "مجموع ارزش پورتفولیو", value: `${totalValue.toLocaleString("fa-IR")} $`, changePct: totalReturnPct },
+            { label: "سود/زیان کلی", value: `${totalPnL.toLocaleString("fa-IR")} $`, changePct: totalReturnPct },
+            { label: "تعداد نمادها", value: String(enrichedHoldings.length), changePct: 0 },
+            { label: "بازگشت روزانه", value: `${(totalReturnPct / 30).toFixed(2)}٪`, changePct: totalReturnPct / 30 },
+          ]);
         } else {
-          if (active) setError("پاسخ سرور نامعتبر است");
+          setHoldings([]);
+          setStats([
+            { label: "مجموع ارزش پورتفولیو", value: "۰ $", changePct: 0 },
+            { label: "سود/زیان کلی", value: "۰ $", changePct: 0 },
+            { label: "تعداد نمادها", value: "۰", changePct: 0 },
+            { label: "بازگشت روزانه", value: "۰٪", changePct: 0 },
+          ]);
         }
       } catch (err) {
         if (active) setError("خطا در بارگذاری پورتفولیو. مطمئن شوید بک‌اند در دسترس است و لاگین کرده‌ید.");

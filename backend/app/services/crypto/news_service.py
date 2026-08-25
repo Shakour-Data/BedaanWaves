@@ -2,6 +2,7 @@
 Crypto News Service - Tier 8 Complete Implementation
 """
 import aiohttp
+import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 

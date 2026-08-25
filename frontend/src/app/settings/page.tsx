@@ -94,19 +94,19 @@ const notificationTypes = [
 ];
 
 export default function SettingsPage() {
-  const [selectedCountry, setSelectedCountry] = useState("ir");
-  const [selectedIndex, setSelectedIndex] = useState("tepix");
+  const [selectedCountry, setSelectedCountry] = useState("us");
+  const [selectedIndex, setSelectedIndex] = useState("spx");
   const [selectedStock, setSelectedStock] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("");
   const [selectedCrypto, setSelectedCrypto] = useState("");
-  const [selectedCurrencies, setSelectedCurrencies] = useState(["IRR", "USD"]);
+  const [selectedCurrencies, setSelectedCurrencies] = useState(["USD", "EUR"]);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
     sms: false,
-    telegram: true
+    telegram: false
   });
-  const [marketData, setMarketData] = useState<any>(null);
+  const [apiSettingsData, setApiSettingsData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -114,9 +114,16 @@ export default function SettingsPage() {
     async function loadSettings() {
       setLoading(true);
       try {
-        const res = await apiClient.get("/settings/market-preferences");
+        const res = await apiClient.get("/users/preferences");
         if (active && res.data) {
-          setMarketData(res.data);
+          setApiSettingsData(res.data);
+          if (res.data.country) setSelectedCountry(res.data.country);
+          if (res.data.index) setSelectedIndex(res.data.index);
+          if (res.data.stock) setSelectedStock(res.data.stock);
+          if (res.data.industry) setSelectedIndustry(res.data.industry);
+          if (res.data.crypto) setSelectedCrypto(res.data.crypto);
+          if (res.data.currencies) setSelectedCurrencies(res.data.currencies);
+          if (res.data.notifications) setNotifications(res.data.notifications);
         }
       } catch {
         // Settings will use local defaults if API is unavailable
@@ -128,7 +135,7 @@ export default function SettingsPage() {
     return () => { active = false; };
   }, []);
 
-  const data = marketData ? marketData[selectedCountry as keyof typeof marketData] : null;
+  const data = apiSettingsData?.[selectedCountry as keyof typeof apiSettingsData] || marketData[selectedCountry as keyof typeof marketData];
   const countryInfo = countries.find(c => c.id === selectedCountry);
 
   const toggleCurrency = (currency: string) => {
