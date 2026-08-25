@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
 
 export default function ProfilePage() {
@@ -28,6 +26,9 @@ export default function ProfilePage() {
 
   const handleToggleShowPassword = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleToggleShowNewPassword = () => {
     setShowNewPassword(!showNewPassword);
   };
 
@@ -40,29 +41,31 @@ export default function ProfilePage() {
     return true;
   };
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
     if (!validatePasswords()) return;
-        
-        setLoading(true);
-        try {
-          const response = await apiClient.post("/user/profile/update", {
-            full_name: fullName,
-            new_password: newPassword,
-          });
-          
-          if (response.status === 200) {
-            // Success: refresh user data if needed
-            window.location.reload();
-          } else {
-            throw new Error("بروز خطا در ذخیره اطلاعات");
-          }
-          } catch (error) {
-            // Handle error (e.g., show toast)
-          } finally {
-          setLoading(false);
-        }
-      };
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post("/users/profile/update", {
+        full_name: fullName,
+        new_password: newPassword,
+      });
+
+      if (response.status === 200) {
+        window.location.reload();
+      } else {
+        throw new Error("بروز خطا در ذخیره اطلاعات");
+      }
+    } catch (error) {
+      setSaveError("خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <DashboardShell title="پروفایل کاربری">
@@ -78,7 +81,7 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground">{user?.email || "user@example.com"}</p>
               <div className="mt-2 flex gap-2">
                 <span className="px-2 py-1 rounded text-xs bg-secondary text-secondary-foreground">
-                  عضو از: ۱۴۰۲/۰۱/۰۱
+                  عضو از: {user?.created_at ? new Date(user.created_at).toLocaleDateString("fa-IR") : "—"}
                 </span>
               </div>
             </div>
@@ -105,7 +108,9 @@ export default function ProfilePage() {
 
             <div>
               <div className="text-sm font-medium mb-2">تاریخ ثبت‌نام</div>
-              <span className="text-sm text-muted-foreground">۱۴۰۲/۰۱/۰۱</span>
+              <span className="text-sm text-muted-foreground">
+                {user?.created_at ? new Date(user.created_at).toLocaleDateString("fa-IR") : "—"}
+              </span>
             </div>
           </div>
         </TarotCard>
@@ -140,14 +145,25 @@ export default function ProfilePage() {
 
             <div>
               <div className="font-medium mb-2">رمز عبور جدید</div>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                disabled={loading}
-                className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
-                placeholder="حداقل ۸ کاراکتر"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={loading}
+                  className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
+                  placeholder="حداقل ۸ کاراکتر"
+                />
+                <button
+                  type="button"
+                  onClick={handleToggleShowNewPassword}
+                  disabled={loading}
+                  className="px-3 py-2 rounded-xl bg-secondary text-sm text-secondary hover:bg-primary/10 transition duration-fast ease-flow"
+                  aria-label={showNewPassword ? "مخفی کردن رمز" : "نمایش رمز"}
+                >
+                  {showNewPassword ? "" : "️"}
+                </button>
+              </div>
               <input
                 type="password"
                 value={confirmPassword}
@@ -161,6 +177,9 @@ export default function ProfilePage() {
                   <span className="text-xl">️</span>
                   {confirmPasswordError}
                 </p>
+              )}
+              {saveError && (
+                <p className="text-sm mt-1 text-primary">{saveError}</p>
               )}
             </div>
 

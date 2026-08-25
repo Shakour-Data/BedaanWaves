@@ -8,11 +8,27 @@ import logging
 from app.services.data.symbol_service import SymbolService
 from app.services.data.stock_service import StockService
 from app.core.config import get_settings
+from app.services.core.dependency_container import get_global_container
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
 router = APIRouter(tags=["symbols"])
+
+
+def get_symbol_service() -> SymbolService:
+    """Get SymbolService from the dependency container."""
+    container = get_global_container()
+    if container.has("symbol_service"):
+        return container.get("symbol_service")
+    return SymbolService()
+
+
+def get_stock_service() -> StockService:
+    """Get StockService from the dependency container."""
+    container = get_global_container()
+    if container.has("stock_service"):
+        return container.get("stock_service")
+    return StockService()
 
 
 @router.get("/search", response_model=dict)
@@ -22,7 +38,7 @@ async def search_symbols(
     exchange: Optional[str] = Query(None, description="Filter by exchange"),
     market_type: Optional[str] = Query(None, description="Filter by market type"),
     active_only: bool = Query(True, description="Only active symbols"),
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Search symbols by query string."""
     results = await service.search(
@@ -44,7 +60,7 @@ async def search_symbols(
 
 @router.get("/exchanges", response_model=dict)
 async def get_exchanges(
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get list of all available exchanges."""
     exchanges = await service.get_exchanges()
@@ -59,7 +75,7 @@ async def get_exchanges(
 
 @router.get("/market-types", response_model=dict)
 async def get_market_types(
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get list of all available market types."""
     market_types = await service.get_market_types()
@@ -74,7 +90,7 @@ async def get_market_types(
 
 @router.get("/countries", response_model=dict)
 async def get_countries(
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get list of all available country codes."""
     countries = await service.get_countries()
@@ -89,7 +105,7 @@ async def get_countries(
 
 @router.get("/stats", response_model=dict)
 async def get_symbol_stats(
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get symbol statistics."""
     stats = await service.get_stats()
@@ -107,7 +123,7 @@ async def get_symbols_by_exchange(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     active_only: bool = Query(True),
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get symbols by exchange with pagination."""
     symbols = await service.get_by_exchange(
@@ -134,7 +150,7 @@ async def get_symbols_by_market_type(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     active_only: bool = Query(True),
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get symbols by market type with pagination."""
     symbols = await service.get_by_market_type(
@@ -158,7 +174,7 @@ async def get_symbols_by_market_type(
 @router.get("/{symbol}", response_model=dict)
 async def get_symbol(
     symbol: str,
-    service: SymbolService = Depends(SymbolService),
+    service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get symbol data by ticker."""
     data = await service.get_symbol(symbol)

@@ -6,10 +6,10 @@ modified data rather than re-ingesting everything.
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from app.services.core.base_service import DataService
-from ...core.config import get_settings
-from ..data.financial_data_ingest_service import FinancialDataIngestService, FinancialStatement
-from ..data.sec_edgar_client import SECRestAPIClient
-from ..data.financial_data_ingest_service import MarketType
+from app.core.config import get_settings
+from .financial_data_ingest_service import FinancialDataIngestService, FinancialStatement
+from .sec_edgar_client import SECRestAPIClient
+from .financial_data_ingest_service import MarketType
 
 class IncrementalFinancialDataIngestService(DataService):
     """

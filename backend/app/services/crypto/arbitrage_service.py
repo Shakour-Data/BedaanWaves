@@ -5,6 +5,7 @@ from decimal import Decimal, getcontext
 from typing import Any, Dict, List, Optional
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from ..data.crypto_api_client import CryptoApiClient
 

@@ -269,7 +269,3 @@ class SymbolService(DataService):
         """Clean up resources."""
         self._symbol_cache.clear()
         await super().shutdown()
-
-
-# Register SymbolService in dependency container
-container.register(DataService, SymbolService)
