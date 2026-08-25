@@ -140,7 +140,6 @@
 ## DevOps & Deployment
 - [ ] Production environment setup
 - [ ] Environment variable management
-- [ ] Docker compose for development (optional)
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] Monitoring & logging setup
 - [ ] Security audit

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 """
 Real Nasdaq data integration test.
 Fetches actual market data from Yahoo Finance API.
