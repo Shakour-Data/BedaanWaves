@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
 import en from "@/i18n/en.json";
 import fa from "@/i18n/fa.json";
@@ -67,112 +68,108 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-3">
-      <TarotCard icon="" title={t("signup.title")} className="w-full max-w-md">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <main className="flex min-h-screen items-center justify-center p-3 bg-neutral/30">
+      <TarotCard icon="" title={t("signup.title")} className="w-full max-w-md shadow-lg border-border/40">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error ? (
-            <p className="rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary">{error}</p>
+            <div className="rounded-xl bg-error/10 px-4 py-3 text-sm text-error border border-error/20 animate-in fade-in slide-in-from-top-2">
+              {error}
+            </div>
           ) : null}
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-muted-foreground">{t("signup.name")}</span>
-            <span className="relative">
-              <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                
-              </span>
-              <input
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("signup.name")}</span>
+              <Input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("signup.name_placeholder") || t("signup.name")}
                 disabled={loading}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 ps-10 text-sm outline-none transition duration-fast ease-focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
+                className="ps-10"
               />
-            </span>
-          </label>
+            </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-muted-foreground">{t("signup.email")}</span>
-            <span className="relative">
-              <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                
-              </span>
-              <input
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("signup.email")}</span>
+              <Input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t("signup.email_placeholder") || t("signup.email")}
                 disabled={loading}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 ps-10 text-sm outline-none transition duration-fast ease-focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
+                className="ps-10"
               />
-            </span>
-          </label>
+            </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-muted-foreground">{t("signup.password")}</span>
-            <span className="relative">
-              <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                
-              </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("signup.password_placeholder") || t("signup.password")}
-                disabled={loading}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 ps-10 text-sm outline-none transition duration-fast ease-focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? t("auth.hide_password") : t("auth.show_password")}
-                className="absolute inset-y-0 left-3 flex items-center text-muted-foreground transition hover:text-foreground"
-              >
-                {showPassword ? "" : "️"}
-              </button>
-            </span>
-          </label>
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("signup.password")}</span>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t("signup.password_placeholder") || t("signup.password")}
+                  disabled={loading}
+                  className="ps-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? t("auth.hide_password") : t("auth.show_password")}
+                  className="absolute inset-y-0 left-3 flex items-center text-muted-foreground transition hover:text-foreground focus:outline-none"
+                >
+                  {showPassword ? "" : "️"}
+                </button>
+              </div>
+            </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-muted-foreground">{t("signup.confirm_password")}</span>
-            <span className="relative">
-              <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                
-              </span>
-              <input
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("signup.confirm_password")}</span>
+              <Input
                 type={showPassword ? "text" : "password"}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder={t("signup.confirm_password_placeholder") || t("signup.confirm_password")}
                 disabled={loading}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 ps-10 text-sm outline-none transition duration-fast ease-focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
+                className="ps-10"
               />
-            </span>
-          </label>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{t("auth.language")}:</span>
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xs text-muted-foreground">{t("auth.language")}:</span>
             <select
               value={currentLang}
               onChange={handleLanguageChange}
-              className="border border-border rounded px-2 py-1 text-sm bg-surface"
+              className="border border-border rounded-lg px-2 py-1 text-xs bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               <option value="en">English</option>
               <option value="fa">فارسی</option>
             </select>
           </div>
 
-          <PrimaryButton type="submit" disabled={loading} className="mt-1 w-full justify-center">
-            {loading ? t("auth.loading") : t("signup.submit_button")}
+          <PrimaryButton 
+            type="submit" 
+            disabled={loading} 
+            className="mt-2 w-full justify-center h-11"
+            size="lg"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                {t("auth.loading")}
+              </span>
+            ) : t("signup.submit_button")}
           </PrimaryButton>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground mt-2">
             {t("signup.already_have_account")}{" "}
-            <Link href="/login" className="text-secondary hover:underline">
+            <Link href="/login" className="text-primary hover:underline font-bold">
               {t("signup.login_link")}
             </Link>
           </p>

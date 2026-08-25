@@ -5,6 +5,8 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { PageLoading } from "@/components/ui/PageLoading";
+import { StatCard } from "@/components/dashboard/StatCard";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
@@ -107,9 +109,7 @@ export default function PortfolioPage() {
   if (loading) {
     return (
       <DashboardShell title="پورتفولیو">
-        <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          در حال بارگذاری پورتفولیو...
-        </div>
+        <PageLoading />
       </DashboardShell>
     );
   }
@@ -117,8 +117,13 @@ export default function PortfolioPage() {
   if (error) {
     return (
       <DashboardShell title="پورتفولیو">
-        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
-          <p className="text-sm text-muted-foreground">{error}</p>
+        <TarotCard icon="️" title="خطا در دریافت اطلاعات" className="max-w-md mx-auto border-error/20 bg-error/5">
+          <div className="py-4 text-center">
+            <p className="text-sm text-error font-medium mb-4">{error}</p>
+            <PrimaryButton onClick={() => window.location.reload()} variant="outline" size="sm">
+              تلاش مجدد
+            </PrimaryButton>
+          </div>
         </TarotCard>
       </DashboardShell>
     );
@@ -126,19 +131,11 @@ export default function PortfolioPage() {
 
   return (
     <DashboardShell title="پورتفولیو">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Portfolio Summary */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {stats.map((stat, i) => (
-            <TarotCard key={i} className="text-center">
-              <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
-              <span className="text-lg font-bold mt-1 block">{stat.value}</span>
-              {stat.changePct !== undefined && (
-                <span className={`text-xs mt-1 block ${stat.changePct >= 0 ? "text-success" : "text-primary"}`}>
-                  {stat.changePct >= 0 ? "▲" : "▼"} {Math.abs(stat.changePct).toFixed(2)}%
-                </span>
-              )}
-            </TarotCard>
+            <StatCard key={i} stat={{ label: stat.label, value: stat.value, changePct: stat.changePct }} />
           ))}
         </section>
 
@@ -147,28 +144,33 @@ export default function PortfolioPage() {
           {holdings.length > 0 ? (
             <AssetTable rows={holdings} />
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <p className="text-lg mb-2">پورتفولیو شما خالی است</p>
-              <PrimaryButton onClick={() => window.location.href = "/stocks"}>
-                افزودن نماد به پورتفولیو
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border-2 border-dashed border-border rounded-xl">
+              <div className="text-4xl mb-4"></div>
+              <p className="text-lg font-bold text-foreground mb-2">پورتفولیو شما خالی است</p>
+              <p className="text-sm mb-6 max-w-xs text-center">هنوز هیچ دارایی در سبد خود ثبت نکرده‌اید. برای شروع، نمادهای مورد نظر خود را اضافه کنید.</p>
+              <PrimaryButton onClick={() => window.location.href = "/stocks"} size="lg">
+                مشاهده لیست سهام
               </PrimaryButton>
             </div>
           )}
         </TarotCard>
 
         {/* Performance Chart Placeholder */}
-        <TarotCard icon="" title="عملکرد پورتفولیو">
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمودار عملکرد پورتفولیو به‌زودی اضافه می‌شود</p>
-          </div>
-        </TarotCard>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TarotCard icon="" title="عملکرد پورتفولیو">
+            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40">
+              <div className="text-2xl mb-2"></div>
+              <p className="text-sm">نمودار عملکرد به‌زودی...</p>
+            </div>
+          </TarotCard>
 
-        {/* Asset Allocation */}
-        <TarotCard icon="" title="توزیع دارایی‌ها">
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمودار توزیع دارایی‌ها به‌زودی اضافه می‌شود</p>
-          </div>
-        </TarotCard>
+          <TarotCard icon="" title="توزیع دارایی‌ها">
+            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40">
+              <div className="text-2xl mb-2"></div>
+              <p className="text-sm">توزیع دارایی‌ها به‌زودی...</p>
+            </div>
+          </TarotCard>
+        </div>
       </div>
     </DashboardShell>
   );

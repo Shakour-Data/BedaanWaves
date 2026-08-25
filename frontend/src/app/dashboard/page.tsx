@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -6,7 +6,10 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { SignalList } from "@/components/dashboard/SignalList";
 import { NewsList } from "@/components/dashboard/NewsList";
+import { DashboardShell } from "@/components/layout/DashboardShell";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { fetchDashboardData, type DashboardData } from "@/lib/api/dashboard";
+import { cn } from "@/lib/cn";
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -28,51 +31,53 @@ export default function DashboardPage() {
 
   if (loading || !data) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-        Loading dashboard...
-      </div>
+      <DashboardShell title="داشبورد">
+        <PageLoading />
+      </DashboardShell>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {data.live ? (
-        <p className="rounded-xl bg-success/10 px-3 py-2 text-sm text-success">
-          ● Live data received from backend
-        </p>
-      ) : (
-        <p className="rounded-xl bg-accent/30 px-3 py-2 text-sm text-accent-foreground">
-          ● Showing sample data (backend unavailable)
-        </p>
-      )}
+    <DashboardShell title="داشبورد">
+      <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+        <div className={cn(
+          "rounded-xl px-4 py-3 text-sm flex items-center gap-2 border",
+          data.live 
+            ? "bg-success/10 text-success border-success/20" 
+            : "bg-accent/10 text-accent-foreground border-accent/20"
+        )}>
+          <span className={cn("h-2 w-2 rounded-full", data.live ? "bg-success" : "bg-accent")} />
+          {data.live ? "اتصال زنده به بازار برقرار است" : "در حال نمایش داده‌های نمونه (عدم اتصال به سرور)"}
+        </div>
 
-      {/* Market Stats */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {data.marketStats.map((s) => (
-          <StatCard key={s.label} stat={s} />
-        ))}
-      </section>
+        {/* Market Stats */}
+        <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {data.marketStats.map((s) => (
+            <StatCard key={s.label} stat={s} />
+          ))}
+        </section>
 
-      {/* Top Movers + Watchlist */}
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <TarotCard icon="" title="Top Movers" className="lg:col-span-2">
-          <AssetTable rows={data.topMovers} />
-        </TarotCard>
-        <TarotCard icon="⭐" title="Watchlist">
-          <AssetTable rows={data.watchlist} />
-        </TarotCard>
-      </section>
+        {/* Top Movers + Watchlist */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <TarotCard icon="" title="بیشترین تغییرات" className="lg:col-span-2">
+            <AssetTable rows={data.topMovers} />
+          </TarotCard>
+          <TarotCard icon="⭐" title="دیده‌بان">
+            <AssetTable rows={data.watchlist} />
+          </TarotCard>
+        </section>
 
-      {/* ML Signals + News */}
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <TarotCard icon="" title="AI Signals" className="lg:col-span-2">
-          <SignalList signals={data.signals} />
-        </TarotCard>
-        <TarotCard icon="" title="Latest News">
-          <NewsList items={data.news} />
-        </TarotCard>
-      </section>
-    </div>
+        {/* ML Signals + News */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <TarotCard icon="" title="سیگنال‌های هوش مصنوعی" className="lg:col-span-2">
+            <SignalList signals={data.signals} />
+          </TarotCard>
+          <TarotCard icon="" title="آخرین اخبار">
+            <NewsList items={data.news} />
+          </TarotCard>
+        </section>
+      </div>
+    </DashboardShell>
   );
 }
 
