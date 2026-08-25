@@ -109,28 +109,29 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <DashboardShell title="Analysis">
+      <DashboardShell title="تحلیل‌ها">
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          Loading analysis...
+          در حال بارگذاری تحلیل‌ها...
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title="Analysis">
+    <DashboardShell title="تحلیل‌ها">
       <div className="flex flex-col gap-6">
         {/* Analysis Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
           {analysisTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-semibold transition duration-fast ease-flow whitespace-nowrap",
                 activeTab === tab.id
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+                  ? "bg-secondary text-white shadow-sm"
+                  : "bg-neutral text-muted-foreground hover:bg-neutral/80"
+              )}
             >
               <span className="mr-2">{tab.icon}</span>
               {tab.label}
@@ -139,42 +140,35 @@ export default function AnalysisPage() {
         </div>
 
         {/* Signal Analysis */}
-        <TarotCard icon="" title="Ranked Signals">
+        <TarotCard icon="" title="سیگنال‌های برتر">
           {topSignals.length > 0 ? (
             <SignalList signals={topSignals} />
           ) : (
-            <p className="text-muted-foreground py-4">No signals available</p>
+            <p className="text-muted-foreground py-4 text-center">سیگنالی یافت نشد</p>
           )}
         </TarotCard>
 
         {/* Top Movers */}
-        <TarotCard icon="" title="Top Movers">
+        <TarotCard icon="" title="بیشترین تغییرات">
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
-            <p className="text-muted-foreground py-4">No data available</p>
+            <p className="text-muted-foreground py-4 text-center">داده‌ای یافت نشد</p>
           )}
-        </TarotCard>
-
-        {/* Active Analysis Tab Content */}
-        <TarotCard icon="" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>Coming soon</p>
-          </div>
         </TarotCard>
 
         {/* Technical Analysis Panel */}
         {activeTab === "technical" && (
           <TarotCard icon="" title="نمودارهای تکنیکال">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {topMovers.slice(0, 3).map((mover, i) => (
-                <div key={i} className="p-4 rounded-lg bg-muted/50">
-                  <div className="font-bold text-lg">{mover.symbol}</div>
-                  <div className="text-sm text-muted-foreground mt-1">{mover.name}</div>
-                  <div className="text-xl font-bold mt-2">
+                <div key={i} className="p-4 rounded-xl bg-neutral/50 border border-border/40 transition duration-fast ease-flow hover:bg-neutral">
+                  <div className="font-bold text-lg text-foreground">{mover.symbol}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{mover.name}</div>
+                  <div className="text-xl font-bold mt-2 text-foreground">
                     {mover.price.toLocaleString("fa-IR")}
                   </div>
-                  <div className={`text-sm mt-1 ${mover.changePct >= 0 ? "text-success" : "text-primary"}`}>
+                  <div className={`text-sm mt-1 font-semibold ${mover.changePct >= 0 ? "text-success" : "text-primary"}`}>
                     {mover.changePct >= 0 ? "▲" : "▼"} {Math.abs(mover.changePct).toFixed(2)}%
                   </div>
                 </div>
@@ -188,9 +182,9 @@ export default function AnalysisPage() {
           <TarotCard icon="" title="شاخص‌های بنیادی کلیدی">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {["P/E", "P/B", "ROE", "Debt/Eq", "EPS", "Dividend Yield", "Market Cap", "Revenue Growth"].map((metric, i) => (
-                <div key={i} className="text-center p-3 rounded-lg bg-muted/50">
+                <div key={i} className="text-center p-3 rounded-xl bg-neutral/50 border border-border/40">
                   <div className="text-xs text-muted-foreground">{metric}</div>
-                  <div className="text-sm font-bold mt-1">—</div>
+                  <div className="text-sm font-bold mt-1 text-foreground">—</div>
                 </div>
               ))}
             </div>
@@ -200,8 +194,10 @@ export default function AnalysisPage() {
         {/* 6D Scoring Panel */}
         {activeTab === "scoring" && (
           <TarotCard icon="" title="بررسی ۶ بعدی">
-            <div className="p-4 text-muted-foreground">
-              سامانه ۶ بعدی تحلیل سرمایه‌گذاری در حال بارگذاری است...
+            <div className="p-8 text-center text-muted-foreground">
+              <div className="text-4xl mb-4"></div>
+              <p>سامانه ۶ بعدی تحلیل سرمایه‌گذاری در حال بارگذاری است...</p>
+              <p className="text-xs mt-2">این بخش به زودی فعال خواهد شد.</p>
             </div>
           </TarotCard>
         )}
@@ -215,7 +211,7 @@ export default function AnalysisPage() {
                 { label: "احساسات اجتماعی", value: "محاسبه در حال اجراست", trend: "stable", color: "text-muted-foreground" },
                 { label: "احساسات کریپتو", value: "محاسبه در حال اجراست", trend: "stable", color: "text-muted-foreground" },
               ].map((sentiment, i) => (
-                <div key={i} className="text-center p-4 rounded-lg bg-muted/50">
+                <div key={i} className="text-center p-6 rounded-xl bg-neutral/50 border border-border/40">
                   <div className="text-xs text-muted-foreground">{sentiment.label}</div>
                   <div className={`text-lg font-bold mt-2 ${sentiment.color}`}>{sentiment.value}</div>
                 </div>

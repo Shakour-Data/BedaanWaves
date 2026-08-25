@@ -25,6 +25,17 @@ export function DashboardShell({ title, children }: DashboardShellProps) {
   }, [theme]);
 
   useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [sidebarOpen]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       router.replace('/login');
     }
@@ -47,14 +58,14 @@ export function DashboardShell({ title, children }: DashboardShellProps) {
 
       {/* سایدبار موبایل (overlay) */}
       {sidebarOpen ? (
-        <div className="fixed inset-0 z-30 md:hidden">
+        <div className="fixed inset-0 z-30 md:hidden animate-in fade-in duration-300">
           <button
             type="button"
             aria-label="بستن منو"
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="absolute inset-y-0 right-0 animate-[fadeIn_300ms]">
+          <div className="absolute inset-y-0 right-0 w-64 animate-in slide-in-from-right duration-300 ease-flow">
             <Sidebar />
           </div>
         </div>
