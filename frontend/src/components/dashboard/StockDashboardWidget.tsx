@@ -57,9 +57,8 @@ export function StockDashboardWidget() {
 
   const handleExport = (format: 'csv' | 'xlsx' | 'json') => {
     try {
-      const timestamp = new Date().toISOString().toLocaleString('fa-IR', {
+      const timestamp = new Date().toLocaleString('fa-IR', {
         timeZone: 'Asia/Tehran',
-        formatStyle: 'date',
       });
       
       const filename = `stock-data-${timestamp.replace(/:/g, '-')}.${format}`;

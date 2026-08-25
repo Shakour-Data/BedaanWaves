@@ -7,9 +7,10 @@ from uuid import UUID
 
 from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import NotificationResponse
-from app.services.user.notification_service import notification_service
+from app.services.user.notification_service import NotificationService
 
 router = APIRouter(tags=["notifications"])
+_notification_service = NotificationService()
 
 
 @router.get("", response_model=list[NotificationResponse])
@@ -19,7 +20,7 @@ async def list_notifications(
     offset: int = Query(0, ge=0),
     user_id: UUID = Depends(get_route_user_id),
 ):
-    notifications, _ = await notification_service.list_notifications(
+    notifications, _ = await _notification_service.list_notifications(
         user_id=user_id,
         unread_only=unread_only,
         limit=limit,
@@ -33,16 +34,16 @@ async def mark_read(
     notification_id: UUID,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    marked = await notification_service.mark_read(notification_id, user_id)
+    marked = await _notification_service.mark_read(notification_id, user_id)
     if not marked:
         raise HTTPException(status_code=404, detail="Notification not found")
-    notification = await notification_service.get_notification(notification_id, user_id)
+    notification = await _notification_service.get_notification(notification_id, user_id)
     return notification
 
 
 @router.post("/read-all", status_code=status.HTTP_200_OK)
 async def mark_all_read(user_id: UUID = Depends(get_route_user_id)):
-    count = await notification_service.mark_all_read(user_id)
+    count = await _notification_service.mark_all_read(user_id)
     return {"status": "success", "marked": count}
 
 
@@ -51,7 +52,7 @@ async def delete_notification(
     notification_id: UUID,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    deleted = await notification_service.delete_notification(notification_id, user_id)
+    deleted = await _notification_service.delete_notification(notification_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Notification not found")
     return {"status": "success", "id": str(notification_id)}

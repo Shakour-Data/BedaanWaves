@@ -246,9 +246,15 @@ class NasdaqIngestionService(DataService):
                 )
                 candles.append(candle)
 
-                # Batch insert
+                # Batch insert every CANDLE_BATCH_SIZE candles
+                if len(candles) >= CANDLE_BATCH_SIZE:
+                    count = await self._bulk_upsert_candles(candles)
+                    candles = []
+
+            # Insert remaining candles
+            if candles:
                 count = await self._bulk_upsert_candles(candles)
-                return count
+            return count if 'count' in dir() else 0
         except IngestionException:
             raise
         except Exception as exc:

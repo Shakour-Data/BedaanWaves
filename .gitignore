@@ -62,6 +62,9 @@ pginst_extracted/
 # Temporary backend test scripts
 backend/check_routes.py
 backend/test_*.py
+backend/check_*.py
+backend/run_*.py
+backend/verify_*.py
 
 # Temporary backend output files
 backend/ls_out.txt
@@ -73,6 +76,7 @@ backend/scripts/seed_real_data.py
 backend/scripts/seed.py
 backend/scripts/seed_data.py
 backend/scripts/seed_local.py
+backend/generate_processed_data.py
 
 # Root-level utility scripts
 scripts/

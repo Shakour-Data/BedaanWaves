@@ -10,9 +10,10 @@ from app.schemas.schemas import (
     WatchlistItemResponse,
     WatchlistItemCreate,
 )
-from app.services.user.watchlist_service import watchlist_service
+from app.services.user.watchlist_service import WatchlistService
 
 router = APIRouter(tags=["watchlists"])
+_watchlist_service = WatchlistService()
 
 
 @router.post("", response_model=WatchlistResponse, status_code=status.HTTP_201_CREATED)
@@ -20,7 +21,7 @@ async def create_watchlist(
     data: WatchlistCreate,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    return await watchlist_service.create_watchlist(
+    return await _watchlist_service.create_watchlist(
         user_id=user_id,
         name=data.name,
         description=data.description,
@@ -30,7 +31,7 @@ async def create_watchlist(
 
 @router.get("", response_model=list[WatchlistResponse])
 async def list_watchlists(user_id: UUID = Depends(get_route_user_id)):
-    return await watchlist_service.list_watchlists(user_id)
+    return await _watchlist_service.list_watchlists(user_id)
 
 
 @router.get("/{watchlist_id}", response_model=WatchlistResponse)
@@ -38,7 +39,7 @@ async def get_watchlist(
     watchlist_id: UUID,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    watchlist = await watchlist_service.get_watchlist(watchlist_id, user_id)
+    watchlist = await _watchlist_service.get_watchlist(watchlist_id, user_id)
     if watchlist is None:
         raise HTTPException(status_code=404, detail="Watchlist not found")
     return watchlist
@@ -49,7 +50,7 @@ async def delete_watchlist(
     watchlist_id: UUID,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    deleted = await watchlist_service.delete_watchlist(watchlist_id, user_id)
+    deleted = await _watchlist_service.delete_watchlist(watchlist_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"status": "success", "id": str(watchlist_id)}
@@ -65,7 +66,7 @@ async def add_item(
     data: WatchlistItemCreate,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    item = await watchlist_service.add_item(
+    item = await _watchlist_service.add_item(
         watchlist_id=watchlist_id,
         user_id=user_id,
         asset_id=data.asset_id,
@@ -86,7 +87,7 @@ async def remove_item(
     item_id: UUID,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    deleted = await watchlist_service.remove_item(watchlist_id, item_id, user_id)
+    deleted = await _watchlist_service.remove_item(watchlist_id, item_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Watchlist item not found")
     return {"status": "success", "id": str(item_id)}

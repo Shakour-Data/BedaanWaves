@@ -10,6 +10,7 @@ import { apiClient } from "@/lib/api";
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const [fullName, setFullName] = useState(user?.name || "");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -99,7 +100,7 @@ export default function ProfilePage() {
 
             <div>
               <div className="text-sm font-medium mb-2">وضعیت ورود</div>
-              <span className="text-sm text-muted-foreground">{user?.isActive ? "فعال" : "غیرفعال"}</span>
+              <span className="text-sm text-muted-foreground">{isAuthenticated ? "فعال" : "غیرفعال"}</span>
             </div>
 
             <div>

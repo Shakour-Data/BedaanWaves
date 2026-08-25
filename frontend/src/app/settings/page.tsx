@@ -268,7 +268,7 @@ export default function SettingsPage() {
                 <div>
                   <h4 className="font-medium mb-3 text-sm">Industries</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {data.industries.map((industry) => (
+                    {data.industries.map((industry: any) => (
                       <label
                         key={industry.id}
                         className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
@@ -299,7 +299,7 @@ export default function SettingsPage() {
                 <div>
                   <h4 className="font-medium mb-3 text-sm">Cryptocurrencies</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {data.crypto.map((coin) => (
+                    {data.crypto.map((coin: any) => (
                       <label
                         key={coin.id}
                         className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
