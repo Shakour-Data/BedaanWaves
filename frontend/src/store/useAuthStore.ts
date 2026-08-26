@@ -5,7 +5,7 @@ import { apiClient } from '../lib/api';
 type Role = "user" | "admin";
 
 interface AuthState {
-  user: { name: string; email: string; role: Role } | null;
+  user: { name: string; email: string; role: Role; created_at?: string } | null;
   isAuthenticated: boolean;
   token: string | null;
   refreshToken: string | null;
@@ -85,7 +85,10 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        ...state,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        token: state.token,
+        refreshToken: state.refreshToken,
         currentLang: state.currentLang,
       }),
     }

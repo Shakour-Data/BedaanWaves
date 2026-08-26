@@ -19,6 +19,7 @@ from . import (
     health,
     symbols,
     intl,
+    password_reset,
 )
 
 # Export routers with explicit names for main.py compatibility
@@ -40,6 +41,7 @@ symbols_router = symbols.router
 intl_router = intl.router
 live_router = live.router
 health_router = health.router
+password_reset_router = password_reset.router
 
 __all__ = [
     "market", "analysis", "stocks", "portfolios", "history", "news",
@@ -50,8 +52,10 @@ __all__ = [
     "users_router", "watchlists_router", "notifications_router",
     "specialized_router", "system_router", "crypto_router",
     "symbols_router", "intl_router", "live_router", "health_router",
+    "password_reset_router",
     # Module references
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "users", "watchlists", "notifications",
     "system", "crypto", "specialized", "health", "symbols", "intl",
+    "password_reset",
 ]

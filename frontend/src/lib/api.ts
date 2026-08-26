@@ -26,6 +26,7 @@ apiClient.interceptors.request.use(
 
 // Add response interceptor to handle token refresh
 let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
 let failedQueue: Array<{
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
@@ -48,16 +49,16 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // If already refreshing, queue this request
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          if (originalRequest.headers && token) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return apiClient(originalRequest);
-        });
+      if (isRefreshing && refreshPromise) {
+        return refreshPromise.then(
+          (token) => {
+            if (originalRequest.headers && token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return apiClient(originalRequest);
+          },
+          (refreshError) => Promise.reject(refreshError)
+        );
       }
 
       originalRequest._retry = true;
@@ -66,41 +67,40 @@ apiClient.interceptors.response.use(
       const refreshToken = useAuthStore.getState().refreshToken;
 
       if (!refreshToken) {
-        // No refresh token, logout user
         useAuthStore.getState().logout();
         return Promise.reject(error);
       }
 
+      refreshPromise = Promise.race([
+        axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken }).then(
+          (response) => response.data.token
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Refresh token timeout')), 10000)
+        ),
+      ]).catch((refreshError) => {
+        useAuthStore.getState().logout();
+        throw refreshError;
+      });
+
       try {
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
+        const token = await refreshPromise;
 
-        const { token, refreshToken: newRefreshToken } = response.data;
-
-        // Update store with new tokens
         useAuthStore.setState({
           token,
-          refreshToken: newRefreshToken,
+          refreshToken: useAuthStore.getState().refreshToken,
         });
 
-        // Update default header
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        // Process queued requests
         processQueue(null, token);
 
-        // Retry original request
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${token}`;
         }
         return apiClient(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        useAuthStore.getState().logout();
-        return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
+        refreshPromise = null;
       }
     }
 

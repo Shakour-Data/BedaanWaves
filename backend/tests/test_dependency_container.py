@@ -57,13 +57,10 @@ class TestDependencyContainer:
         assert container._singletons["pre"] is instance
 
     def test_register_instance_requires_factory_for_get(self, container):
-        # Documents current behaviour: register_instance stores only in
-        # _singletons, but get() looks in _factories first and raises.
         instance = _Dummy()
         container.register_instance("only_instance", instance)
         assert container.has("only_instance")
-        with pytest.raises(KeyError):
-            container.get("only_instance")
+        assert container.get("only_instance") is instance
 
     def test_has(self, container):
         assert not container.has("x")

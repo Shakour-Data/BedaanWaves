@@ -1,15 +1,11 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { NewsList } from "@/components/dashboard/NewsList";
-import { AssetTable } from "@/components/dashboard/AssetTable";
-import { useAppStore } from "@/store/useAppStore";
-import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
-import type { NewsItem, AssetRow } from "@/lib/dashboard-data";
+import type { NewsItem } from "@/lib/dashboard-data";
 
 export default function NewsPage() {
   const [newItems, setNewItems] = useState<NewsItem[]>([]);

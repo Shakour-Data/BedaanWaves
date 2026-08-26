@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
@@ -10,6 +11,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
 
 export default function PortfolioPage() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const [holdings, setHoldings] = useState<AssetRow[]>([]);
   const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
@@ -149,7 +151,7 @@ export default function PortfolioPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <p className="text-lg mb-2">پورتفولیو شما خالی است</p>
-              <PrimaryButton onClick={() => window.location.href = "/stocks"}>
+              <PrimaryButton onClick={() => router.push("/stocks")}>
                 افزودن نماد به پورتفولیو
               </PrimaryButton>
             </div>
