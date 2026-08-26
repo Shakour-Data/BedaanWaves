@@ -243,7 +243,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Stocks Section */}
-                {data.stocks.length > 0 && (
+                {data?.stocks?.length > 0 && (
                   <div>
                     <h4 className="font-medium mb-3 text-sm">Stocks</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
@@ -275,7 +275,7 @@ export default function SettingsPage() {
                 <div>
                   <h4 className="font-medium mb-3 text-sm">Industries</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {data.industries.map((industry: any) => (
+                    {data?.industries?.map((industry: any) => (
                       <label
                         key={industry.id}
                         className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
@@ -306,7 +306,7 @@ export default function SettingsPage() {
                 <div>
                   <h4 className="font-medium mb-3 text-sm">Cryptocurrencies</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {data.crypto.map((coin: any) => (
+                    {data?.crypto?.map((coin: any) => (
                       <label
                         key={coin.id}
                         className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
@@ -340,7 +340,7 @@ export default function SettingsPage() {
                 <div>
                   <h4 className="font-medium mb-3 text-sm">Trading Currencies</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {["IRR", "USD", "EUR", "GBP", "JPY", "CNY", "BTC", "ETH"].map((currency) => (
+                    {["USD", "EUR", "GBP", "JPY", "CNY", "CHF", "CAD", "AUD"].map((currency) => (
                       <label
                         key={currency}
                         className="flex items-center justify-center gap-2 p-2 rounded border cursor-pointer transition-all

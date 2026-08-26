@@ -14,12 +14,14 @@ export default function AlertsPage() {
   const [watchlistAlerts, setWatchlistAlerts] = useState<AssetRow[]>([]);
   const [alertHistory, setAlertHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function loadAlerts() {
       setLoading(true);
+      setError(null);
       setActiveAlerts([]);
       setWatchlistAlerts([]);
       setAlertHistory([]);
@@ -97,7 +99,7 @@ export default function AlertsPage() {
         setAlertHistory(history);
 
       } catch (error) {
-        // Handle error silently
+        if (active) setError("خطا در بارگذاری هشدارها. لطفاً دوباره تلاش کنید.");
       } finally {
         if (active) setLoading(false);
       }

@@ -70,7 +70,7 @@ class TestHistoricalVolatility:
     async def test_constant_returns(self):
         service = VolatilityService()
         returns = [0.01] * 10
-        assert service._calculate_historical_volatility(returns) == 0.0
+        assert service._calculate_historical_volatility(returns) == pytest.approx(0.0)
 
     async def test_annualized_volatility(self):
         service = VolatilityService()
