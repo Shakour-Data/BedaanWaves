@@ -40,6 +40,7 @@ from app.models.models import (
     News,
     MacroIndicator,
 )
+from app.services.data.multi_source_news_fetcher import MultiSourceNewsFetcher
 from app.db.base import async_session_maker
 
 logger = logging.getLogger(__name__)
