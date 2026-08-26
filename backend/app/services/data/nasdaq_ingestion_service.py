@@ -3,7 +3,7 @@ Nasdaq Ingestion Service - Fetches Nasdaq Composite index and ALL constituent da
 
 Data sources:
 - Price history: yfinance (Yahoo Finance)
-- Fundamentals: yfinance
+- Fundamentals: yfinance + SEC EDGAR (10-Q/10-K)
 - Board/Officers: yfinance companyOfficers + SEC EDGAR
 - News: yfinance ticker.news
 - Macro: yfinance macro tickers (^GSPC, ^VIX, ^TNX, DX-Y.NYB, GC=F, CL=F)
@@ -41,6 +41,7 @@ from app.models.models import (
     MacroIndicator,
 )
 from app.services.data.multi_source_news_fetcher import MultiSourceNewsFetcher
+from app.services.data.sec_edgar_client import SEDGARFinancialService
 from app.db.base import async_session_maker
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,7 @@ class NasdaqIngestionService(DataService):
         self.settings = get_settings()
         self._symbols: List[str] = []
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT)
+        self._sec_service = SEDGARFinancialService()
 
     @staticmethod
     def _clean_nan(obj):
@@ -124,11 +126,13 @@ class NasdaqIngestionService(DataService):
 
     async def initialize(self) -> None:
         self.logger.info("NasdaqIngestionService initialized")
+        await self._sec_service.initialize()
         # Pre-load symbols
         _ = self.DEFAULT_CONSTITUENTS
 
     async def shutdown(self) -> None:
         self.logger.info("NasdaqIngestionService shutdown")
+        await self._sec_service.shutdown()
 
     async def _ensure_asset(self, symbol: str, name: str, asset_class: str = "EQUITY",
                             market: str = "NASDAQ", sector: str = "", industry: str = "") -> Asset:
@@ -277,6 +281,7 @@ class NasdaqIngestionService(DataService):
 
                 statements = []
                 ratios = []
+                seen_periods = set()
 
                 if not income_stmt.empty:
                     for period_end in income_stmt.columns:
@@ -284,8 +289,8 @@ class NasdaqIngestionService(DataService):
                         period_str = f"{period_end.year}Q{quarter}"
                         fiscal_year = period_end.year
                         as_of = period_end.date() if hasattr(period_end, "date") else None
+                        seen_periods.add(period_str)
 
-                        # Income statement
                         stmt = IRFinancialStatement(
                             asset_id=asset.id,
                             market="NASDAQ",
@@ -297,51 +302,50 @@ class NasdaqIngestionService(DataService):
                         )
                         statements.append(stmt)
 
-                        # Balance sheet
                         if not balance_sheet.empty and period_end in balance_sheet.columns:
-                            bs_stmt = IRFinancialStatement(
-                                asset_id=asset.id,
-                                market="NASDAQ",
-                                period=period_str,
-                                statement_type="BALANCE_SHEET",
-                                fiscal_year=fiscal_year,
-                                data=self._clean_nan(balance_sheet[period_end].to_dict()),
-                                as_of=as_of,
+                            statements.append(
+                                IRFinancialStatement(
+                                    asset_id=asset.id,
+                                    market="NASDAQ",
+                                    period=period_str,
+                                    statement_type="BALANCE_SHEET",
+                                    fiscal_year=fiscal_year,
+                                    data=self._clean_nan(balance_sheet[period_end].to_dict()),
+                                    as_of=as_of,
+                                )
                             )
-                            statements.append(bs_stmt)
 
-                        # Cash flow
                         if not cashflow.empty and period_end in cashflow.columns:
-                            cf_stmt = IRFinancialStatement(
+                            statements.append(
+                                IRFinancialStatement(
+                                    asset_id=asset.id,
+                                    market="NASDAQ",
+                                    period=period_str,
+                                    statement_type="CASH_FLOW",
+                                    fiscal_year=fiscal_year,
+                                    data=self._clean_nan(cashflow[period_end].to_dict()),
+                                    as_of=as_of,
+                                )
+                            )
+
+                        ratios.append(
+                            IRFundamentalRatio(
                                 asset_id=asset.id,
                                 market="NASDAQ",
                                 period=period_str,
-                                statement_type="CASH_FLOW",
-                                fiscal_year=fiscal_year,
-                                data=self._clean_nan(cashflow[period_end].to_dict()),
+                                eps=self._clean_nan(info.get("trailingEps")),
+                                pe=self._clean_nan(info.get("trailingPE")),
+                                pb=self._clean_nan(info.get("priceToBook")),
+                                dps=self._clean_nan(info.get("dividendRate")),
+                                roe=self._clean_nan(info.get("returnOnEquity")),
+                                profit_margin=self._clean_nan(info.get("profitMargins")),
+                                market_cap=self._clean_nan(info.get("marketCap")),
+                                book_value=self._clean_nan(info.get("bookValue")),
                                 as_of=as_of,
                             )
-                            statements.append(cf_stmt)
-
-                        # Ratios
-                        ratio = IRFundamentalRatio(
-                            asset_id=asset.id,
-                            market="NASDAQ",
-                            period=period_str,
-                            eps=self._clean_nan(info.get("trailingEps")),
-                            pe=self._clean_nan(info.get("trailingPE")),
-                            pb=self._clean_nan(info.get("priceToBook")),
-                            dps=self._clean_nan(info.get("dividendRate")),
-                            roe=self._clean_nan(info.get("returnOnEquity")),
-                            profit_margin=self._clean_nan(info.get("profitMargins")),
-                            market_cap=self._clean_nan(info.get("marketCap")),
-                            book_value=self._clean_nan(info.get("bookValue")),
-                            as_of=as_of,
                         )
-                        ratios.append(ratio)
 
                 async with async_session_maker() as session:
-                    # Batch upsert statements
                     for stmt in statements:
                         stmt_data = {
                             "asset_id": str(stmt.asset_id),
@@ -392,6 +396,11 @@ class NasdaqIngestionService(DataService):
                         await session.execute(upsert)
 
                     await session.commit()
+
+                if len(seen_periods) < 20:
+                    sec_results = await self._sec_service.ingest_sec_financials(symbol, str(asset.id))
+                    self.logger.debug(f"SEC EDGAR fallback for {symbol}: {sec_results}")
+
                 return True
         except Exception as e:
             self.logger.error(f"Failed to ingest fundamentals for {symbol}: {e}")

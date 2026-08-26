@@ -6,6 +6,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { SignalList } from "@/components/dashboard/SignalList";
 import { NewsList } from "@/components/dashboard/NewsList";
+import { LineChart } from "@/components/charts/LineChart";
 import { fetchDashboardData, type DashboardData } from "@/lib/api/dashboard";
 
 export default function DashboardPage() {
@@ -52,6 +53,23 @@ export default function DashboardPage() {
           <StatCard key={s.label} stat={s} />
         ))}
       </section>
+
+      {/* Market Trend */}
+      <TarotCard icon="" title="روند بازار">
+        <LineChart
+          data={[
+            { time: "09:00", value: 12500 },
+            { time: "10:00", value: 12580 },
+            { time: "11:00", value: 12620 },
+            { time: "12:00", value: 12590 },
+            { time: "13:00", value: 12750 },
+            { time: "14:00", value: 12880 },
+            { time: "15:00", value: 12840 },
+            { time: "16:00", value: 12950 },
+          ]}
+          height={280}
+        />
+      </TarotCard>
 
       {/* Top Movers + Watchlist */}
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">

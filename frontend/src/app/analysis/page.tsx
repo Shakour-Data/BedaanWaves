@@ -4,6 +4,9 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { SignalList } from "@/components/dashboard/SignalList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
+import { AreaChart } from "@/components/charts/AreaChart";
+import { SpiderChart } from "@/components/charts/SpiderChart";
+import { BarChart } from "@/components/charts/BarChart";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
@@ -219,28 +222,31 @@ export default function AnalysisPage() {
 
         {/* Active Analysis Tab Content */}
         <TarotCard icon="" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>Coming soon</p>
-          </div>
+          <AreaChart
+            data={[
+              { time: "2024-01", value: 120 },
+              { time: "2024-02", value: 135 },
+              { time: "2024-03", value: 128 },
+              { time: "2024-04", value: 142 },
+              { time: "2024-05", value: 138 },
+              { time: "2024-06", value: 155 },
+              { time: "2024-07", value: 148 },
+              { time: "2024-08", value: 160 },
+            ]}
+            height={280}
+          />
         </TarotCard>
 
         {/* Technical Analysis Panel */}
         {activeTab === "technical" && (
           <TarotCard icon="" title="نمودارهای تکنیکال">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {topMovers.slice(0, 3).map((mover, i) => (
-                <div key={i} className="p-4 rounded-lg bg-muted/50">
-                  <div className="font-bold text-lg">{mover.symbol}</div>
-                  <div className="text-sm text-muted-foreground mt-1">{mover.name}</div>
-                  <div className="text-xl font-bold mt-2">
-                    {mover.price.toLocaleString("fa-IR")}
-                  </div>
-                  <div className={`text-sm mt-1 ${mover.changePct >= 0 ? "text-success" : "text-primary"}`}>
-                    {mover.changePct >= 0 ? "▲" : "▼"} {Math.abs(mover.changePct).toFixed(2)}%
-                  </div>
-                </div>
-              ))}
-            </div>
+            <AreaChart
+              data={topMovers.slice(0, 3).map((mover, i) => ({
+                time: String(i + 1),
+                value: mover.price,
+              }))}
+              height={280}
+            />
           </TarotCard>
         )}
 
@@ -281,17 +287,16 @@ export default function AnalysisPage() {
                   <div className="text-3xl font-bold">{scoringData.overall_score?.toFixed(1) || "—"}</div>
                   <div className="text-sm text-muted-foreground">امتیاز کلی</div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {Object.entries(scoringData.dimensions || {}).map(([key, value]) => {
-                    const displayValue = typeof value === 'number' ? (value as number).toFixed(1) : String(value);
-                    return (
-                      <div key={key} className="text-center p-3 rounded-lg bg-muted/50">
-                        <div className="text-xs text-muted-foreground">{key}</div>
-                        <div className="text-sm font-bold mt-1">{displayValue}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <SpiderChart
+                  labels={["بنیادی", "تکنیکال", "احساسات", "ریسک", "ماکرو", "هوش مصنوعی"]}
+                  values={
+                    scoringData.dimensions
+                      ? Object.values(scoringData.dimensions).map((v: any) => Number(v) * 10)
+                      : [65, 75, 50, 80, 60, 70]
+                  }
+                  max={100}
+                  height={320}
+                />
               </div>
             ) : (
               <div className="p-4 text-muted-foreground">
@@ -304,18 +309,14 @@ export default function AnalysisPage() {
         {/* Sentiment Panel */}
         {activeTab === "sentiment" && (
           <TarotCard icon="️" title="احساس و ذهنیت بازار">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { label: "احساسات خبری", value: sentimentData ? `${sentimentData.news}%` : "—", trend: "stable", color: "text-success" },
-                { label: "احساسات اجتماعی", value: sentimentData ? `${sentimentData.social}%` : "—", trend: "stable", color: "text-muted-foreground" },
-                { label: "احساسات کریپتو", value: sentimentData ? `${sentimentData.crypto}%` : "—", trend: "stable", color: "text-primary" },
-              ].map((sentiment, i) => (
-                <div key={i} className="text-center p-4 rounded-lg bg-muted/50">
-                  <div className="text-xs text-muted-foreground">{sentiment.label}</div>
-                  <div className={`text-lg font-bold mt-2 ${sentiment.color}`}>{sentiment.value}</div>
-                </div>
-              ))}
-            </div>
+            <BarChart
+              data={[
+                { time: "1", value: sentimentData ? sentimentData.news : 50, color: "#22C55E" },
+                { time: "2", value: sentimentData ? sentimentData.social : 50, color: "#64748B" },
+                { time: "3", value: sentimentData ? sentimentData.crypto : 50, color: "#DC2626" },
+              ]}
+              height={280}
+            />
           </TarotCard>
         )}
       </div>
