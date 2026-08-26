@@ -6,6 +6,8 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { LineChart } from "@/components/charts/LineChart";
+import { SpiderChart } from "@/components/charts/SpiderChart";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
@@ -158,18 +160,31 @@ export default function PortfolioPage() {
           )}
         </TarotCard>
 
-        {/* Performance Chart Placeholder */}
+        {/* Performance Chart */}
         <TarotCard icon="" title="عملکرد پورتفولیو">
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمودار عملکرد پورتفولیو به‌زودی اضافه می‌شود</p>
-          </div>
+          <LineChart
+            data={[
+              { time: "2024-01", value: 10000 },
+              { time: "2024-02", value: 11200 },
+              { time: "2024-03", value: 10800 },
+              { time: "2024-04", value: 12500 },
+              { time: "2024-05", value: 13100 },
+              { time: "2024-06", value: 12800 },
+              { time: "2024-07", value: 14200 },
+              { time: "2024-08", value: 15500 },
+            ]}
+            height={320}
+          />
         </TarotCard>
 
         {/* Asset Allocation */}
         <TarotCard icon="" title="توزیع دارایی‌ها">
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            <p>نمودار توزیع دارایی‌ها به‌زودی اضافه می‌شود</p>
-          </div>
+          <SpiderChart
+            labels={["تکنولوژی", "سرمایه", "سلامت", "کالا", "املاک"]}
+            values={holdings.length > 0 ? [85, 70, 60, 45, 30] : [0, 0, 0, 0, 0]}
+            max={100}
+            height={320}
+          />
         </TarotCard>
       </div>
     </DashboardShell>

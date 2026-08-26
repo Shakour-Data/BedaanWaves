@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from app.services.core.base_service import DataService
 from app.core.config import get_settings
 from .financial_data_ingest_service import FinancialDataIngestService, FinancialStatement
-from .sec_edgar_client import SECRestAPIClient
+from .sec_edgar_client import SEDGARFinancialService
 from .financial_data_ingest_service import MarketType
 
 class IncrementalFinancialDataIngestService(DataService):

@@ -44,7 +44,7 @@ from .api_client import ApiClient, TehranApiClient, NasdaqApiClient
 from .data_archival import DataArchivalService
 from .incremental_ingest import IncrementalFinancialDataIngestService
 from .market_data_processing import MarketDataProcessingService
-from .sec_edgar_client import SECRestAPIClient
+from .sec_edgar_client import SEDGARFinancialService
 
 __all__ = [
     "BrsApiClient",
@@ -65,7 +65,7 @@ __all__ = [
     "DataArchivalService",
     "IncrementalFinancialDataIngestService",
     "MarketDataProcessingService",
-    "SECRestAPIClient",
+    "SEDGARFinancialService",
     "FinancialStatementType",
     "MarketType",
     "FinancialStatement",

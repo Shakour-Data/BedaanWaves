@@ -93,9 +93,17 @@ compare_symbols.py
 inspect_db.py
 inspect_schema.py
 inspect_values.py
+backend/backfill_sec_financials.py
+backend/sec_cik_lookup.py
+find_parse2.js
+frontend/find_rolldown_parse.js
+frontend/test-parser.js
 
 # Root-level utility scripts
 scripts/
 
 # Machine learning artifacts
 *.joblib
+
+# SEC EDGAR cache
+backend/sec_cik_cache.json

@@ -1,163 +1,377 @@
 """
-SEC EDGAR API Integration for filing retrieval - Implementation for TODO-H2
-Provides access to SEC filings including 10-K, 10-Q, and other financial statements.
+SEC EDGAR API Integration for historical financial data.
+Fetches quarterly (10-Q) and annual (10-K) financial statements for US companies.
 """
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-import aiohttp
 import asyncio
-from datetime import datetime
-from enum import Enum
-from app.services.core.base_service import DataService
+import json
+import logging
+import re
+from datetime import datetime, date
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import aiohttp
+from sqlalchemy import select, func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import create_async_engine
+
 from app.core.config import get_settings
-from app.services.data.financial_data_ingest_service import (
-    FinancialStatementType, 
-    MarketType,
-    FinancialStatement,
-)
+from app.db.base import async_session_maker
+from app.models.models import Asset, IRFinancialStatement, IRFundamentalRatio
+from app.services.core.base_service import DataService
 
-class SecFormType(str, Enum):
-    """SEC filing types"""
-    INCOME_STATEMENT = "INCOME_STATEMENT"
-    BALANCE_SHEET = "BALANCE_SHEET"
-    CASH_FLOW = "CASH_FLOW"
-    FORM_10K = "10K"
-    FORM_10Q = "10Q"
-    FORM_8K = "8K"
-    FORM_S1 = "S1"
-    FORM_DEF_14A = "DEF_14A"
+logger = logging.getLogger(__name__)
 
-class SECRestAPIClient(DataService):
-    """
-    SEC REST API client for retrieving financial filings
-    Implements incremental ingestion with change detection
-    """
-    
-    def __init__(self, base_url: str = "https://data.sec.gov"):
-        super().__init__("SECRestAPIClient")
-        self.base_url = base_url.rstrip("/") + "/"
-        self.session = None
+SEC_BASE_URL = "https://data.sec.gov"
+SEARCH_URL = "https://efts.sec.gov/LATEST/search-index"
+COMPANY_FACTS_URL = f"{SEC_BASE_URL}/api/xbrl/companyfacts"
+SUBMISSIONS_URL = f"{SEC_BASE_URL}/submissions"
+
+SEC_HEADERS = {
+    "User-Agent": "BedaanWaves-SEC-Client/1.0 (bedaanwaves@finance)",
+    "Accept": "application/json",
+}
+
+CIK_CACHE_PATH = Path(__file__).parent.parent.parent.parent / "sec_cik_cache.json"
+RATE_LIMIT_DELAY = 0.6
+
+
+class SEDGARFinancialService(DataService):
+    """Service for fetching historical financial data from SEC EDGAR."""
+
+    def __init__(self):
+        super().__init__("SEDGARFinancialService")
         self.settings = get_settings()
-        self.logger = self.get_logger()
-        
-        # For tracking changes and ensuring data integrity
-        self._last_fetch_timestamp = 0
-        
-    async def initialize(self) -> None:
-        """Initialize the client and session"""
-        headers = {
-            "User-Agent": f"BedaanWaves-SEC-Client/1.0 (bedaanwaves@finance)",
-        }
-        self.session = aiohttp.ClientSession(headers=headers)
-        self.logger.info("SECRestAPIClient initialized with secure User-Agent")
-        
-        # Create database for tracking tracked filings
-        self._tracked_filings = set()
-        self.logger.debug("SEC filing tracker initialized")
-    
-    async def shutdown(self) -> None:
-        """Shutdown the client and session"""
-        if self.session and not self.session.closed:
-            await self.session.close()
-            self.logger.info("SECRestAPIClient shutdown")
-    
-    async def fetch_financial_statements(
-        self,
-        symbol: str,
-        statement_types: List[FinancialStatementType],
-        periods: Optional[List[str]] = None
-    ) -> List[FinancialStatement]:
-        """
-        Fetch financial statements from SEC EDGAR API with incremental ingestion
-        Implements change detection for efficient data updates
-        """
-        if not self.session:
-            raise RuntimeError("Client not initialized. Call initialize() first.")
-        
-        # Simplify SEC ticker to company name mapping
-        company_name = symbol.replace("=", "").replace(".", "-")
-        
-        # Get the most recent filing type based on requested statement types
-        filing_types = []
-        if FinancialStatementType.INCOME in statement_types:
-            filing_types.append(SecFormType.INCOME_STATEMENT)
-        if FinancialStatementType.BALANCE_SHEET in statement_types:
-            filing_types.append(SecFormType.BALANCE_SHEET)
-        if FinancialStatementType.CASH_FLOW in statement_types:
-            filing_types.append(SecFormType.CASH_FLOW)
-        
-        statements = []
-        for filing_type in filing_types:
+        self._cik_cache: Dict[str, str] = {}
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._load_cik_cache()
+
+    def _load_cik_cache(self) -> None:
+        if CIK_CACHE_PATH.exists():
             try:
-                filing_data = await self._fetch_filing(filing_type, symbol)
-                if filing_data and filing_data.get("data"):
-                    # Parse and standardize the financial data
-                    financial_data = await self._parse_filing_data(filing_data)
-                    statements.append(financial_data)
-            except Exception as e:
-                self.logger.error(f"Failed to fetch {filing_type} for {symbol}: {e}")
-        
-        return statements
-    
-    async def _fetch_filing(self, filing_type: SecFormType, symbol: str) -> Optional[Dict[str, Any]]:
-        """Fetch a specific filing type from SEC"""
-        # SEC doesn't provide direct ticker-based filing lookup
-        # This would normally query by CIK (Company Registration Number)
-        # For this implementation, we'll simulate the lookup
-        
-        # In a real implementation, this would:
-        # 1. Find the company's CIK
-        # 2. Search for filings by that CIK
-        # 3. Filter by filing type and date
-        
-        # Simulate a successful response for demonstration purposes
-        doc_number = "1234567"
-        url = f"{self.base_url}/api/xbrl/companyfinancials/{doc_number}"
-        
-        if self.session:
-            try:
-                async with self.session.get(url) as response:
-                    if response.status == 200:
-                        return await response.json()
-            except Exception as e:
-                self.logger.error(f"Error fetching from SEC: {e}")
-        
-        # Fallback mock data
-        return {
-            "symbol": symbol,
-            "filing_type": filing_type.value,
-            "fiscal_period": "2023-12-31",
-            "financials": {
-                "revenue": 1000000,
-                "net_income": 150000,
-                "total_assets": 2000000,
-                "earnings_per_share": 2.50,
-                "book_value_per_share": 10.00,
-            },
-            "status": "success",
-            "timestamp": datetime.now().isoformat()
-        }
-    
-    async def _parse_filing_data(self, filing_data: Dict[str, Any]) -> FinancialStatement:
-        """Parse SEC filing data into standard FinancialStatement format"""
+                self._cik_cache = json.loads(CIK_CACHE_PATH.read_text())
+            except Exception:
+                self._cik_cache = {}
+
+    def _save_cik_cache(self) -> None:
         try:
-            # Extract key financial metrics
-            financials = filing_data.get("financials", {})
-            
-            # Map to standardized format
-            return FinancialStatement(
-                asset_id=filing_data.get("symbol", ""),
-                symbol=filing_data.get("symbol", ""),
-                market=MarketType.US,  # SEC filings are for US companies
-                statement_type=FinancialStatementType.INCOME,  # Placeholder
-                period=filing_data.get("fiscal_period", ""),
-                fiscal_year=int(filing_data.get("fiscal_year", 0)),
-                fiscal_quarter=None,
-                data=financials,
-                source="SEC_EDGAR",
-                fetched_at=datetime.now(),
-                as_of=datetime.fromisoformat(filing_data.get("timestamp", "")) if filing_data.get("timestamp") else None
-            )
-        except Exception as e:
-            self.logger.error(f"Error parsing filing data: {e}")
+            CIK_CACHE_PATH.write_text(json.dumps(self._cik_cache))
+        except Exception:
+            pass
+
+    async def initialize(self) -> None:
+        if not self._session:
+            self._session = aiohttp.ClientSession(headers=SEC_HEADERS)
+
+    async def shutdown(self) -> None:
+        if self._session and not self._session.closed:
+            await self._session.close()
+
+    async def _rate_limit(self) -> None:
+        await asyncio.sleep(RATE_LIMIT_DELAY)
+
+    async def lookup_cik(self, symbol: str, company_name: str = "") -> Optional[str]:
+        if symbol in self._cik_cache:
+            return self._cik_cache[symbol]
+
+        if not self._session:
+            await self.initialize()
+
+        queries = [symbol]
+        if company_name:
+            queries.append(company_name)
+
+        for query in queries:
+            await self._rate_limit()
+            try:
+                url = f"{SEARCH_URL}?q=%22{query}%22&forms=10-Q"
+                async with self._session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    if resp.status != 200:
+                        continue
+                    text = await resp.text()
+                    data = json.loads(text)
+                    hits = data.get("hits", {}).get("hits", [])
+                    for hit in hits[:20]:
+                        source = hit.get("_source", {})
+                        display_names = source.get("display_names", [])
+                        for display in display_names:
+                            match = re.search(
+                                rf'\(\s*[^)]*\b{re.escape(symbol)}\b[^)]*\)\s*\(CIK\s+(\d+)\)',
+                                display,
+                                re.IGNORECASE,
+                            )
+                            if match:
+                                cik = match.group(1).zfill(10)
+                                self._cik_cache[symbol] = cik
+                                self._save_cik_cache()
+                                return cik
+            except Exception as exc:
+                logger.debug(f"CIK lookup failed for {symbol} with query {query}: {exc}")
+        return None
+
+    async def fetch_company_facts(self, cik: str) -> Optional[Dict[str, Any]]:
+        if not self._session:
+            await self.initialize()
+        await self._rate_limit()
+        url = f"{COMPANY_FACTS_URL}/CIK{cik}.json"
+        try:
+            async with self._session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Company facts failed for CIK {cik}: {resp.status}")
+                    return None
+                return await resp.json()
+        except Exception as exc:
+            logger.error(f"Company facts error for CIK {cik}: {exc}")
             return None
+
+    async def ingest_sec_financials(self, symbol: str, asset_id: str) -> Dict[str, int]:
+        asset_uuid = asset_id if isinstance(asset_id, str) else str(asset_id)
+        company_name = ""
+        ticker = None
+
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(symbol)
+            info = ticker.info or {}
+            company_name = info.get("longName", "")
+        except Exception:
+            pass
+
+        cik = await self.lookup_cik(symbol, company_name)
+        if not cik:
+            logger.warning(f"No CIK found for {symbol}")
+            return {"statements": 0, "ratios": 0, "errors": 1}
+
+        facts_data = await self.fetch_company_facts(cik)
+        if not facts_data:
+            return {"statements": 0, "ratios": 0, "errors": 1}
+
+        facts = facts_data.get("facts", {})
+        us_gaap = facts.get("us-gaap", {})
+        if not us_gaap:
+            return {"statements": 0, "ratios": 0, "errors": 0}
+
+        statements: List[IRFinancialStatement] = []
+        ratios: List[IRFundamentalRatio] = []
+
+        income_keys = [
+            "Revenues",
+            "RevenueFromContractWithCustomerExcludingAssessedTax",
+            "SalesRevenueNet",
+            "OperatingIncomeLoss",
+            "NetIncomeLoss",
+            "NetIncomeLossAvailableToCommonStockholdersDiluted",
+            "EarningsPerShareDiluted",
+            "EarningsPerShareBasic",
+            "CostOfRevenue",
+            "GrossProfit",
+        ]
+        balance_keys = [
+            "Assets",
+            "AssetsCurrent",
+            "Liabilities",
+            "LiabilitiesCurrent",
+            "StockholdersEquity",
+            "CashAndCashEquivalentsAtCarryingValue",
+            "PropertyPlantAndEquipmentNet",
+            "LongTermDebt",
+            "LongTermDebtCurrent",
+            "CommonStockSharesOutstanding",
+            "CommonStockValue",
+        ]
+        cashflow_keys = [
+            "NetCashProvidedByUsedInOperatingActivities",
+            "NetCashProvidedByUsedInInvestingActivities",
+            "NetCashProvidedByUsedInFinancingActivities",
+            "PaymentsToAcquirePropertyPlantAndEquipment",
+            "PaymentsOfDividends",
+            "PaymentsForRepurchaseOfCommonStock",
+        ]
+
+        def _to_period(fp: str, fy: int, end: str) -> str:
+            if fp and fp.startswith("Q"):
+                quarter = fp[1]
+                return f"{fy}Q{quarter}"
+            if fp == "FY":
+                return f"{fy}Annual"
+            if end:
+                try:
+                    dt = datetime.strptime(end, "%Y-%m-%d")
+                    quarter = (dt.month - 1) // 3 + 1
+                    return f"{dt.year}Q{quarter}"
+                except Exception:
+                    pass
+            return str(fy)
+
+        def _extract_entries(fact_name: str, form_type: str):
+            fact = us_gaap.get(fact_name)
+            if not fact:
+                return []
+            units = fact.get("units", {})
+            return [e for e in units.get("USD", []) if e.get("form") == form_type]
+
+        for key in income_keys:
+            for entry in _extract_entries(key, "10-Q"):
+                period = _to_period(entry.get("fp", ""), entry.get("fy"), entry.get("end"))
+                try:
+                    as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
+                except Exception:
+                    as_of = None
+                statements.append(
+                    IRFinancialStatement(
+                        asset_id=asset_uuid,
+                        market="NASDAQ",
+                        period=period,
+                        statement_type="INCOME",
+                        fiscal_year=entry.get("fy"),
+                        data={key: entry.get("val")},
+                        as_of=as_of,
+                    )
+                )
+            for entry in _extract_entries(key, "10-K"):
+                period = _to_period("FY", entry.get("fy"), entry.get("end"))
+                try:
+                    as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
+                except Exception:
+                    as_of = None
+                statements.append(
+                    IRFinancialStatement(
+                        asset_id=asset_uuid,
+                        market="NASDAQ",
+                        period=period,
+                        statement_type="INCOME",
+                        fiscal_year=entry.get("fy"),
+                        data={key: entry.get("val")},
+                        as_of=as_of,
+                    )
+                )
+
+        for key in balance_keys:
+            for entry in _extract_entries(key, "10-Q"):
+                period = _to_period(entry.get("fp", ""), entry.get("fy"), entry.get("end"))
+                try:
+                    as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
+                except Exception:
+                    as_of = None
+                statements.append(
+                    IRFinancialStatement(
+                        asset_id=asset_uuid,
+                        market="NASDAQ",
+                        period=period,
+                        statement_type="BALANCE_SHEET",
+                        fiscal_year=entry.get("fy"),
+                        data={key: entry.get("val")},
+                        as_of=as_of,
+                    )
+                )
+            for entry in _extract_entries(key, "10-K"):
+                period = _to_period("FY", entry.get("fy"), entry.get("end"))
+                try:
+                    as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
+                except Exception:
+                    as_of = None
+                statements.append(
+                    IRFinancialStatement(
+                        asset_id=asset_uuid,
+                        market="NASDAQ",
+                        period=period,
+                        statement_type="BALANCE_SHEET",
+                        fiscal_year=entry.get("fy"),
+                        data={key: entry.get("val")},
+                        as_of=as_of,
+                    )
+                )
+
+        for key in cashflow_keys:
+            for entry in _extract_entries(key, "10-Q"):
+                period = _to_period(entry.get("fp", ""), entry.get("fy"), entry.get("end"))
+                try:
+                    as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
+                except Exception:
+                    as_of = None
+                statements.append(
+                    IRFinancialStatement(
+                        asset_id=asset_uuid,
+                        market="NASDAQ",
+                        period=period,
+                        statement_type="CASH_FLOW",
+                        fiscal_year=entry.get("fy"),
+                        data={key: entry.get("val")},
+                        as_of=as_of,
+                    )
+                )
+            for entry in _extract_entries(key, "10-K"):
+                period = _to_period("FY", entry.get("fy"), entry.get("end"))
+                try:
+                    as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
+                except Exception:
+                    as_of = None
+                statements.append(
+                    IRFinancialStatement(
+                        asset_id=asset_uuid,
+                        market="NASDAQ",
+                        period=period,
+                        statement_type="CASH_FLOW",
+                        fiscal_year=entry.get("fy"),
+                        data={key: entry.get("val")},
+                        as_of=as_of,
+                    )
+                )
+
+        if statements:
+            async with async_session_maker() as session:
+                for stmt in statements:
+                    stmt_data = {
+                        "asset_id": asset_uuid,
+                        "market": stmt.market,
+                        "period": stmt.period,
+                        "statement_type": stmt.statement_type,
+                        "fiscal_year": stmt.fiscal_year,
+                        "data": stmt.data,
+                        "as_of": stmt.as_of,
+                    }
+                    upsert = pg_insert(IRFinancialStatement).values(stmt_data)
+                    upsert = upsert.on_conflict_do_update(
+                        index_elements=["asset_id", "period", "statement_type", "market"],
+                        set_={"data": upsert.excluded.data, "as_of": upsert.excluded.as_of},
+                    )
+                    await session.execute(upsert)
+                await session.commit()
+
+        eps_entry = next(iter(_extract_entries("EarningsPerShareDiluted", "10-Q")), None)
+        if eps_entry:
+            period = _to_period(eps_entry.get("fp", ""), eps_entry.get("fy"), eps_entry.get("end"))
+            try:
+                as_of = datetime.strptime(eps_entry["end"], "%Y-%m-%d").date()
+            except Exception:
+                as_of = None
+            ratios.append(
+                IRFundamentalRatio(
+                    asset_id=asset_uuid,
+                    market="NASDAQ",
+                    period=period,
+                    eps=eps_entry.get("val"),
+                    as_of=as_of,
+                )
+            )
+
+        if ratios:
+            async with async_session_maker() as session:
+                for ratio in ratios:
+                    ratio_data = {
+                        "asset_id": asset_uuid,
+                        "market": ratio.market,
+                        "period": ratio.period,
+                        "eps": ratio.eps,
+                        "as_of": ratio.as_of,
+                    }
+                    upsert = pg_insert(IRFundamentalRatio).values(ratio_data)
+                    upsert = upsert.on_conflict_do_update(
+                        index_elements=["asset_id", "period", "market"],
+                        set_={"eps": upsert.excluded.eps, "as_of": upsert.excluded.as_of},
+                    )
+                    await session.execute(upsert)
+                await session.commit()
+
+        return {"statements": len(statements), "ratios": len(ratios), "errors": 0}

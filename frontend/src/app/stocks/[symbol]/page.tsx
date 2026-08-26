@@ -13,6 +13,7 @@ import { useParams } from "next/navigation";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { TradingViewWidget } from "@/components/charts/TradingViewWidget";
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -244,6 +245,11 @@ export default function StockDetailPage() {
         ) : (
           <CandlestickChart candles={visibleCandles} timeframe="1d" height={420} />
         )}
+      </TarotCard>
+
+      <TarotCard>
+        <h3 className="mb-3 text-lg font-semibold">نمودار TradingView</h3>
+        <TradingViewWidget symbol={`NASDAQ:${symbol}`} theme="light" height={420} />
       </TarotCard>
     </div>
   );
