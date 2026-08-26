@@ -54,9 +54,6 @@ export default function HomePage() {
           <Link href="/stocks">
             <PrimaryButton>View Nasdaq Stocks</PrimaryButton>
           </Link>
-          <p className="text-gray-400 text-sm">
-            Backend running on port 3000 | Frontend on port 3005
-          </p>
         </div>
       </section>
     </main>

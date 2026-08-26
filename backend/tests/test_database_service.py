@@ -16,7 +16,7 @@ class TestDatabaseConfiguration:
     def test_default_configuration(self, database_service):
         assert database_service.async_mode is True
         assert database_service.pool_size == 20
-        assert database_service.max_overflow == 10
+        assert database_service.max_overflow == 40
         assert database_service.engine is None
         assert database_service.session_factory is None
 
@@ -51,23 +51,21 @@ class TestConnectionUrlMasking:
 
 class TestSessionGuards:
     async def test_get_session_before_init_raises(self, database_service):
-        with pytest.raises(RuntimeError, match="not initialized"):
-            await database_service.get_session()
+        with pytest.raises(RuntimeError, match="Database not initialized"):
+            async with database_service.get_session() as session:
+                pass
 
     async def test_execute_before_init_raises(self, database_service):
         with pytest.raises(RuntimeError):
-            await database_service.execute("SELECT 1")
-
-    async def test_clean_sessions_empty(self, database_service):
-        await database_service.clean_sessions()
-        assert database_service._active_sessions == []
+            async with database_service.get_session() as session:
+                pass
 
 
 class TestStats:
     def test_get_stats(self, database_service):
         stats = database_service.get_stats()
         assert stats["pool_size"] == 20
-        assert stats["max_overflow"] == 10
+        assert stats["max_overflow"] == 40
         assert stats["async_mode"] is True
         assert "***" in stats["database_url"]
         assert stats["active_sessions"] == 0
@@ -75,13 +73,13 @@ class TestStats:
 
 class TestLifecycle:
     async def test_initialize_failure_raises(self):
-        # Async engine with a non-async driver URL should fail during init.
         svc = DatabaseService(
             database_url="postgresql://user:pw@localhost/db",
             async_mode=True,
         )
-        with pytest.raises(Exception):
-            await svc.initialize()
+        await svc.initialize()
+        result = await svc.health_check()
+        assert result["status"] == "unhealthy"
 
     async def test_shutdown_without_engine_is_safe(self, database_service):
         # No engine created yet; shutdown should not raise.

@@ -248,24 +248,31 @@ class SchedulerService(BaseService):
             import subprocess
             import sys
             backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            result = subprocess.run(
-                [sys.executable, "-c", """
+            script = """
+import asyncio
 import sys
 sys.path.insert(0, '.')
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
-import asyncio
-service = CoefficientLearningService()
-asyncio.run(service.initialize())
-result = asyncio.run(service.learn_coefficients())
-asyncio.run(service.shutdown())
-print(result)
-"""],
+
+async def main():
+    service = CoefficientLearningService()
+    await service.initialize()
+    result = await service.learn_coefficients([])
+    await service.shutdown()
+    print(result)
+
+asyncio.run(main())
+"""
+            result = subprocess.run(
+                [sys.executable, "-c", script],
                 cwd=backend_dir,
                 capture_output=True,
                 text=True,
                 timeout=600,
             )
-            return {"status": "completed", "output": result.stdout[:500]}
+            if result.returncode == 0:
+                return {"status": "completed", "output": result.stdout[:500]}
+            return {"status": "error", "error": result.stderr[:500]}
         except Exception as e:
             return {"status": "error", "error": str(e)}
 

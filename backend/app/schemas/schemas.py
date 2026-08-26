@@ -305,6 +305,26 @@ class RegisterRequest(BaseModel):
     full_name: Optional[str] = None
 
 
+# Password Reset Schemas
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    valid: bool
+    email_hint: Optional[str] = None
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+
+class PasswordResetResponse(BaseModel):
+    status: str = "success"
+    message: str
+
+
 # User Profile Schemas
 class UserProfileUpdate(BaseModel):
     email: Optional[EmailStr] = None

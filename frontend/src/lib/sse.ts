@@ -28,11 +28,9 @@ export interface SSEConnection {
 
 let activeConnections: Map<string, SSEConnection> = new Map();
 
-function getAuthHeaders(): Record<string, string> {
-  const token = typeof window !== 'undefined' 
-    ? localStorage.getItem('access_token') 
-    : '';
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token');
 }
 
 export function createSSEConnection<T = unknown>(
@@ -64,17 +62,14 @@ export function createSSEConnection<T = unknown>(
     }
 
     const fullUrl = `${API_BASE_URL}${endpoint}`;
-    const headers = { ...getAuthHeaders(), ...options.headers };
+    const token = getAuthToken();
 
-    const params = new URLSearchParams();
-    Object.entries(headers).forEach(([key, value]) => {
-      params.append(key, value);
-    });
-
-    const urlWithAuth = `${fullUrl}?${params.toString()}`;
+    const url = token
+      ? `${fullUrl}?token=${encodeURIComponent(token)}`
+      : fullUrl;
 
     try {
-      eventSource = new EventSource(urlWithAuth);
+      eventSource = new EventSource(url);
     } catch (err) {
       console.error('Failed to create EventSource:', err);
       if (reconnect && reconnectAttempts < maxReconnectAttempts) {

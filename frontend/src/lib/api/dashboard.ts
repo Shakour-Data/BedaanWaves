@@ -42,12 +42,6 @@ interface SignalsSummaryResponse {
   average_confidence: Record<string, number>;
 }
 
-interface TopPerformersResponse {
-  status: string;
-  timestamp: string;
-  data: { symbol: string; name: string; change_percent: number; current_price: number; volume: number }[];
-}
-
 interface NewsResponse {
   status: string;
   count: number;

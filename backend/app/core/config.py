@@ -28,16 +28,16 @@ class Settings(BaseSettings):
     # ============================================================
     # DATABASE CONFIGURATION
     # ============================================================
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/bedaanwaves_db"
+    DATABASE_URL: str = "postgresql://localhost:5432/bedaanwaves_db"
     DB_DRIVER: str = "postgresql"
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_NAME: str = "bedaanwaves_db"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 20
-    DATABASE_MAX_OVERFLOW: int = 10
+    DATABASE_MAX_OVERFLOW: int = 40
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 3600
     
@@ -73,29 +73,31 @@ class Settings(BaseSettings):
     # CORS CONFIGURATION
     # ============================================================
     CORS_ORIGINS: List[str] = [
-        "http://localhost",
         "http://localhost:3005",
-        "http://localhost:3000",
-        "http://127.0.0.1",
         "http://127.0.0.1:3005",
-        "http://127.0.0.1:3000",
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-    CORS_ALLOW_HEADERS: List[str] = ["*"]
+    CORS_ALLOW_HEADERS: List[str] = [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Requested-With",
+        "X-Correlation-ID",
+    ]
     
     # ============================================================
     # SECURITY & AUTHENTICATION
     # ============================================================
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
-    JWT_SECRET: str = "your-jwt-secret"
+    JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     PASSWORD_MIN_LENGTH: int = 8
-    ENABLE_HTTPS: bool = False
+    ENABLE_HTTPS: bool = True
     
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
@@ -173,10 +175,27 @@ class Settings(BaseSettings):
     ALPHA_VANTAGE_BASE_URL: str = "https://www.alphavantage.co/query"
     
     # News APIs
-    NEWS_SOURCES: List[str] = ["tehran-news", "financial-news", "market-news"]
+    NEWS_SOURCES: List[str] = [
+        "tehran-news",
+        "financial-news",
+        "market-news",
+        "google-news-rss",
+        "yahoo-finance-rss",
+        "cnbc-rss",
+        "reuters-rss",
+        "marketwatch-rss",
+        "sec-edgar",
+        "reddit-json",
+        "stocktwits",
+        "nasdaq-rss",
+        "benzinga-rss",
+    ]
     NEWS_API_URL: str = "https://newsapi.org"
     NEWS_API_KEY: Optional[str] = None
     NEWS_REFRESH_INTERVAL_MINUTES: int = 30
+    MULTI_SOURCE_NEWS_ENABLED: bool = True
+    MULTI_SOURCE_NEWS_TIMEOUT: int = 15
+    MULTI_SOURCE_NEWS_MAX_RETRIES: int = 2
     NLP_MODEL: str = "persian-bert"
     
     # Cryptocurrency APIs
@@ -338,6 +357,16 @@ class Settings(BaseSettings):
     BACKUP_RETENTION_DAYS: int = 30
     BACKUP_PATH: str = "./backups"
     ARCHIVE_PATH: str = "./data/archive"
+    BACKUP_ENCRYPTION_ENABLED: bool = False
+    BACKUP_ENCRYPTION_KEY: Optional[str] = None
+    BACKUP_OFFSITE_ENABLED: bool = False
+    BACKUP_OFFSITE_PROVIDER: str = "s3"
+    BACKUP_OFFSITE_BUCKET: Optional[str] = None
+    BACKUP_OFFSITE_PREFIX: str = "backups"
+    BACKUP_OFFSITE_ENDPOINT: Optional[str] = None
+    BACKUP_OFFSITE_ACCESS_KEY: Optional[str] = None
+    BACKUP_OFFSITE_SECRET_KEY: Optional[str] = None
+    BACKUP_OFFSITE_REGION: str = "us-east-1"
     
     # ============================================================
     # CRYPTO FEATURES (CryptoAndStocks Integration)
@@ -392,6 +421,16 @@ class Settings(BaseSettings):
             raise ValueError(
                 "DEBUG must be False when ENVIRONMENT is 'production'. "
                 "Refusing to start with debug mode enabled in production."
+            )
+        if not self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+            raise ValueError(
+                "SECRET_KEY must be set to a strong random value (>= 32 chars). "
+                "Refusing to start with weak or missing SECRET_KEY."
+            )
+        if not self.JWT_SECRET or len(self.JWT_SECRET) < 32:
+            raise ValueError(
+                "JWT_SECRET must be set to a strong random value (>= 32 chars). "
+                "Refusing to start with weak or missing JWT_SECRET."
             )
         return self
 

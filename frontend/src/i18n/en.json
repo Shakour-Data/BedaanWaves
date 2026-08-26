@@ -53,9 +53,29 @@
       "error_server": "Server error. Please try again."
     },
     "forgot_password": {
-      "submit": "Send reset link",
+      "title": "Reset your password",
+      "welcome_description": "Enter your email and we'll send you a recovery link.",
+      "start_button": "Start recovery",
+      "data_entry_title": "Enter your email",
       "instruction": "Enter your email to receive a password reset link.",
-      "sent_message": "If a valid email was provided, a reset link has been sent."
+      "next_button": "Continue",
+      "back": "Back",
+      "confirmation_title": "Confirm your email",
+      "confirmation_description": "Please confirm the email address below.",
+      "edit_button": "Edit",
+      "send_button": "Send recovery link",
+      "processing": "Sending your recovery link…",
+      "result_title": "Check your email",
+      "sent_message": "Recovery link sent to your email",
+      "result_hint": "The link will expire in 1 hour. If you don't see it, check your spam folder.",
+      "to_login": "Back to login",
+      "error_title": "Something went wrong",
+      "error_default": "An unexpected error occurred. Please try again.",
+      "retry_button": "Retry",
+      "back_to_start": "Back to start",
+      "help_step1": "Check your email address for typos",
+      "help_step2": "Ensure your device is connected to the internet",
+      "help_step3": "If problems persist, contact support"
     },
     "signup": {
       "title": "Create Account",
@@ -83,6 +103,22 @@
       "submit_button": "Sign In",
       "no_account": "Don't have an account?",
       "loading": "Signing in..."
+    },
+    "reset_password": {
+      "title": "Set a new password",
+      "description": "Enter a new password below. It must be at least 8 characters.",
+      "verifying": "Verifying your recovery link…",
+      "confirming": "Updating your password…",
+      "error_title": "Unable to reset password",
+      "request_new": "Request new link",
+      "back_to_login": "Back to login",
+      "success_title": "Password updated",
+      "success_message": "Your password has been updated successfully.",
+      "to_login": "Back to login",
+      "submit": "Update password",
+      "help_1": "Recovery links expire after 1 hour",
+      "help_2": "Request a new recovery link from the login page",
+      "help_3": "Make sure you're connected to the internet"
     }
   }
 }

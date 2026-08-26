@@ -6,6 +6,7 @@ Integrates with SQLAlchemy for ORM functionality.
 """
 
 from typing import Any, Dict, Optional, List, AsyncGenerator
+from contextlib import asynccontextmanager
 from sqlalchemy import create_engine, event, pool, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
@@ -23,7 +24,7 @@ class DatabaseService(BaseService):
     
     Provides:
     - Connection pooling
-    - Session management
+    - Session management via context managers
     - Transaction handling
     - Connection health checks
     """
@@ -37,17 +38,6 @@ class DatabaseService(BaseService):
         max_overflow: Optional[int] = None,
         echo: Optional[bool] = None,
     ):
-        """
-        Initialize database service.
-        
-        Args:
-            service_name: Service identifier
-            database_url: Database connection URL (defaults to settings.DATABASE_URL)
-            async_mode: Use async SQLAlchemy engine
-            pool_size: Connection pool size (defaults to settings)
-            max_overflow: Maximum overflow connections (defaults to settings)
-            echo: Log SQL statements (defaults to settings)
-        """
         super().__init__(service_name)
         self.database_url = database_url or settings.DATABASE_URL
         self.async_mode = async_mode
@@ -58,13 +48,13 @@ class DatabaseService(BaseService):
         self.engine = None
         self.session_factory = None
         self._connection_checks = 0
-        self._active_sessions: List[AsyncSession] = []
+        self._session_counter = 0
+        self._active_session_count = 0
     
     async def initialize(self) -> None:
         """Initialize database service"""
         try:
             if self.async_mode:
-                # Use asyncpg driver for async mode
                 if self.database_url.startswith("postgresql://"):
                     db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
                 else:
@@ -98,7 +88,6 @@ class DatabaseService(BaseService):
                     expire_on_commit=False,
                 )
             
-            # Test connection
             await self.health_check()
             self.logger.info(f"DatabaseService initialized with {self.database_url}")
         
@@ -109,38 +98,46 @@ class DatabaseService(BaseService):
     async def shutdown(self) -> None:
         """Shutdown database service"""
         try:
-            # Close all active sessions
-            for session in self._active_sessions:
-                await session.close()
-            
-            # Dispose engine
             if self.engine:
                 if self.async_mode:
                     await self.engine.dispose()
                 else:
                     self.engine.dispose()
             
+            self._active_session_count = 0
             self.logger.info("DatabaseService shutdown")
         except Exception as e:
             self.logger.error(f"Error during database shutdown: {e}")
     
-    async def get_session(self) -> AsyncSession:
+    @asynccontextmanager
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """
-        Get database session.
+        Get database session as async context manager.
         
-        Returns:
-            AsyncSession instance
+        Usage:
+            async with db_service.get_session() as session:
+                result = await session.execute(query)
         """
         if not self.session_factory:
             raise RuntimeError("Database not initialized")
         
         session = self.session_factory()
-        self._active_sessions.append(session)
-        return session
+        self._session_counter += 1
+        self._active_session_count += 1
+        session_id = self._session_counter
+        
+        try:
+            yield session
+        finally:
+            self._active_session_count -= 1
+            try:
+                await session.close()
+            except Exception as e:
+                self.logger.warning(f"Error closing session {session_id}: {e}")
     
     async def execute(self, query: Any) -> Any:
         """
-        Execute database query.
+        Execute database query with automatic session management.
         
         Args:
             query: SQLAlchemy query object
@@ -148,19 +145,14 @@ class DatabaseService(BaseService):
         Returns:
             Query result
         """
-        session = await self.get_session()
-        try:
-            result = await session.execute(query)
-            return result
-        finally:
-            await session.close()
+        async with self.get_session() as session:
+            return await session.execute(query)
     
     async def health_check(self) -> Dict[str, Any]:
         """Check database health"""
         try:
             self._connection_checks += 1
             
-            # Try to get a connection from pool
             if self.async_mode and self.engine:
                 async with self.engine.connect() as conn:
                     await conn.execute(text("SELECT 1"))
@@ -172,7 +164,7 @@ class DatabaseService(BaseService):
                 "service": self.service_name,
                 "status": "healthy",
                 "connection_checks": self._connection_checks,
-                "active_sessions": len(self._active_sessions),
+                "active_sessions": self._active_session_count,
             }
         except Exception as e:
             self.logger.error(f"Database health check failed: {e}")
@@ -180,24 +172,11 @@ class DatabaseService(BaseService):
                 "service": self.service_name,
                 "status": "unhealthy",
                 "error": str(e),
+                "active_sessions": self._active_session_count,
             }
-    
-    async def clean_sessions(self) -> None:
-        """Clean up closed sessions"""
-        active_sessions = []
-        for session in self._active_sessions:
-            try:
-                if session.is_active:
-                    active_sessions.append(session)
-                else:
-                    await session.close()
-            except:
-                pass
-        self._active_sessions = active_sessions
     
     def get_connection_url(self) -> str:
         """Get database connection URL (without password for security)"""
-        # Parse URL and mask password
         url_parts = self.database_url.split('://')
         if len(url_parts) == 2:
             protocol = url_parts[0]
@@ -217,7 +196,7 @@ class DatabaseService(BaseService):
             "database_url": self.get_connection_url(),
             "pool_size": self.pool_size,
             "max_overflow": self.max_overflow,
-            "active_sessions": len(self._active_sessions),
+            "active_sessions": self._active_session_count,
             "connection_checks": self._connection_checks,
             "async_mode": self.async_mode,
         }

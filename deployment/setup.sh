@@ -103,17 +103,19 @@ start_dev_servers() {
 
 # Setup production services
 setup_production_services() {
+    local username="${1:-bedaanwaves}"
+    local group="${2:-bedaanwaves}"
     log "Setting up production services configuration"
     
     # Create systemd service files
-    cat > /tmp/backend.service << 'EOF'
+    cat > /tmp/backend.service << EOF
 [Unit]
 Description=BedaanWaves Backend Service
 After=network.target
 
 [Service]
-User=<%= username %>
-Group=<%= group %>
+User=${username}
+Group=${group}
 WorkingDirectory=/opt/bedaanwaves/backend
 Environment=PATH=/opt/bedaanwaves/venv/bin:/opt/bedaanwaves/node_modules
 ExecStart=/opt/bedaanwaves/venv/bin/uvicorn app.main:app --workers 4 --host 0.0.0.0 --port 8000
@@ -126,14 +128,14 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-    cat > /tmp/frontend.service << 'EOF'
+    cat > /tmp/frontend.service << EOF
 [Unit]
 Description=BedaanWaves Frontend Service
 After=network.target
 
 [Service]
-User=<%= username %>
-Group=<%= group %>
+User=${username}
+Group=${group}
 WorkingDirectory=/opt/bedaanwaves/frontend
 ExecStart=/opt/bedaanwaves/node_modules/next/dist/bin/next start -p 3005
 Restart=always

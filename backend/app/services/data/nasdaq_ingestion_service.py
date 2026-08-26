@@ -441,59 +441,72 @@ class NasdaqIngestionService(DataService):
             return 0
 
     async def ingest_news_for_symbol(self, symbol: str, days: int = 7) -> int:
-        """Fetch recent news for a symbol from yfinance."""
+        """Fetch recent news for a symbol from yfinance with multi-source fallback."""
         import yfinance as yf
+        news_items = []
+        asset = None
+
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
                 raw_news = ticker.news
-                if not raw_news:
-                    return 0
+                if raw_news:
+                    asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
+                    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
-                asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
-                
-                cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-                news_items = []
-                
-                for item in raw_news:
-                    published_str = item.get("published")
-                    published_dt = None
-                    if published_str:
-                        try:
-                            published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
-                        except (ValueError, TypeError):
-                            published_dt = datetime.now(timezone.utc)
-                    
-                    if published_dt and published_dt < cutoff:
-                        continue
+                    for item in raw_news:
+                        published_str = item.get("published")
+                        published_dt = None
+                        if published_str:
+                            try:
+                                published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
+                            except (ValueError, TypeError):
+                                published_dt = datetime.now(timezone.utc)
 
-                    news_item = News(
-                        source=item.get("publisher", "yfinance"),
-                        title=item.get("title", ""),
-                        body=item.get("summary", ""),
-                        url=item.get("link", ""),
-                        published_at=published_dt.replace(tzinfo=None) if published_dt else None,
-                        asset_id=asset.id,
-                        language="en",
-                    )
-                    news_items.append(news_item)
+                        if published_dt and published_dt < cutoff:
+                            continue
 
-                if news_items:
-                    async with async_session_maker() as session:
-                        # Batch upsert news (avoid duplicates by url)
-                        for item in news_items:
-                            if not item.url:
-                                continue
-                            existing = await session.execute(
-                                select(News).where(News.url == item.url, News.asset_id == item.asset_id)
-                            )
-                            if not existing.scalar_one_or_none():
-                                session.add(item)
-                        await session.commit()
-                return len(news_items)
+                        news_item = News(
+                            source=item.get("publisher", "yfinance"),
+                            title=item.get("title", ""),
+                            body=item.get("summary", ""),
+                            url=item.get("link", ""),
+                            published_at=published_dt.replace(tzinfo=None) if published_dt else None,
+                            asset_id=asset.id,
+                            language="en",
+                        )
+                        news_items.append(news_item)
         except Exception as e:
-            self.logger.error(f"Failed to ingest news for {symbol}: {e}")
-            return 0
+            self.logger.warning(f"yfinance news failed for {symbol}: {e}")
+
+        if not news_items:
+            try:
+                fetcher = MultiSourceNewsFetcher()
+                await fetcher.initialize()
+                asset = asset or await self._ensure_asset(symbol, symbol, "EQUITY")
+                news_items = await fetcher.fetch_news_for_symbol(
+                    symbol=symbol,
+                    days=days,
+                    asset_id=str(asset.id),
+                    language="en",
+                )
+                await fetcher.shutdown()
+            except Exception as e:
+                self.logger.error(f"Multi-source news fetch failed for {symbol}: {e}")
+
+        if news_items:
+            async with async_session_maker() as session:
+                for item in news_items:
+                    if not item.url:
+                        continue
+                    existing = await session.execute(
+                        select(News).where(News.url == item.url, News.asset_id == item.asset_id)
+                    )
+                    if not existing.scalar_one_or_none():
+                        session.add(item)
+                await session.commit()
+
+        return len(news_items)
 
     async def ingest_macro_indicators(self) -> bool:
         """Fetch macro indicators from yfinance macro tickers."""
