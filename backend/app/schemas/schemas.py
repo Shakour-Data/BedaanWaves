@@ -310,6 +310,10 @@ class PasswordResetRequest(BaseModel):
     email: EmailStr
 
 
+class PasswordResetVerifyRequest(BaseModel):
+    token: str
+
+
 class PasswordResetVerifyResponse(BaseModel):
     valid: bool
     email_hint: Optional[str] = None

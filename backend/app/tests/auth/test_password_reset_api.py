@@ -3,7 +3,7 @@
 Tests the request / verify / confirm endpoints using FastAPI's TestClient
 with the service layer mocked out (no DB or email required).
 """
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 import pytest
 from fastapi import FastAPI
@@ -28,9 +28,18 @@ def client(app):
 @pytest.fixture
 def mock_service():
     """Patch all service functions used by the route handlers."""
-    with patch("app.api.routes.password_reset.create_password_reset_token") as mock_create, \
-         patch("app.api.routes.password_reset.verify_reset_token") as mock_verify, \
-         patch("app.api.routes.password_reset.reset_password") as mock_reset:
+    with patch(
+        "app.api.routes.password_reset.create_password_reset_token",
+        new_callable=AsyncMock,
+    ) as mock_create, \
+         patch(
+        "app.api.routes.password_reset.verify_reset_token",
+        new_callable=AsyncMock,
+    ) as mock_verify, \
+         patch(
+        "app.api.routes.password_reset.reset_password",
+        new_callable=AsyncMock,
+    ) as mock_reset:
         yield {
             "create": mock_create,
             "verify": mock_verify,
@@ -59,7 +68,7 @@ class TestRequestPasswordReset:
 
     def test_rejects_invalid_email_format(self, client, mock_service):
         resp = client.post("/api/v1/auth/password-reset/request", json={"email": "not-an-email"})
-        assert resp.status_code == 422  # Pydantic EmailStr validation
+        assert resp.status_code == 422
 
 
 class TestVerifyResetToken:
@@ -97,16 +106,14 @@ class TestConfirmPasswordReset:
         body = resp.json()
         assert "expired" in body["detail"].lower() or "invalid" in body["detail"].lower()
 
-    def test_returns_400_when_password_too_short(self, client, mock_service):
-        mock_service["reset"].return_value = True
+    def test_returns_422_when_password_too_short(self, client, mock_service):
         resp = client.post(
             "/api/v1/auth/password-reset/confirm",
             json={"token": "valid-token", "new_password": "short"},
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_returns_400_when_token_missing(self, client, mock_service):
-        mock_service["reset"].return_value = True
         resp = client.post(
             "/api/v1/auth/password-reset/confirm",
             json={"token": "", "new_password": "newpass123"},
@@ -122,9 +129,6 @@ class TestConfirmPasswordReset:
         assert resp.status_code == 200
 
 
-# ---------------------------------------------------------------------------
-# Shared / language message tests
-# ---------------------------------------------------------------------------
 class TestLanguageSupport:
     def test_request_returns_farsi_message(self, client, mock_service):
         mock_service["create"].return_value = "token"
@@ -133,8 +137,8 @@ class TestLanguageSupport:
             json={"email": "user@example.com"},
         )
         assert resp.status_code == 200
-        # The Persian message should contain Persian characters
-        assert "ایمیل" in resp.json()["message"] or "لینک" in resp.json()["message"]
+        msg = resp.json()["message"]
+        assert "لینک" in msg or "ایمیل" in msg
 
     def test_confirm_returns_farsi_on_invalid_token(self, client, mock_service):
         mock_service["reset"].return_value = False
@@ -143,4 +147,5 @@ class TestLanguageSupport:
             json={"token": "expired", "new_password": "newpass123"},
         )
         assert resp.status_code == 400
-        assert "بازیابی" in resp.json()["detail"] or "لینک" in resp.json()["detail"]
+        detail = resp.json()["detail"]
+        assert "لینک" in detail or "بازیابی" in detail

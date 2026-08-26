@@ -38,6 +38,7 @@ out/
 .nuxt/
 .vercel/
 tsconfig.tsbuildinfo
+temp_emnapi.json
 
 # OS
 .DS_Store

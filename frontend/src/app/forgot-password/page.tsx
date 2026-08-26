@@ -42,10 +42,10 @@ function useT() {
   const dict = lang === "fa" ? fa : en;
   return (key: string): string => {
     const keys = key.split(".");
-    let value: any = dict;
+    let value: unknown = dict;
     for (const k of keys) {
       if (value && typeof value === "object") {
-        value = value[k];
+        value = (value as Record<string, unknown>)[k];
       } else {
         return key;
       }

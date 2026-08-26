@@ -21,7 +21,6 @@ export function ProgressBar({
   const safeCurrent = Math.max(1, Math.min(currentStep, totalSteps));
   const pct = Math.round((safeCurrent / totalSteps) * 100);
 
-  const barWidth = 100;
   const progressPct = ((safeCurrent - 1) / (totalSteps - 1)) * 100;
 
   return (

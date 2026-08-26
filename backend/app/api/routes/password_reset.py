@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from app.schemas.schemas import (
     PasswordResetRequest,
     PasswordResetConfirm,
+    PasswordResetVerifyRequest,
     PasswordResetResponse,
     PasswordResetVerifyResponse,
 )
@@ -65,18 +66,18 @@ async def request_password_reset(
     Always returns a generic ``status: success`` message to prevent account
     enumeration, whether or not the e-mail exists in the database.
     """
-    token_obj = await create_password_reset_token(data.email)
-    # In production: send *token_obj*._raw_token via email using a
+    raw_token = await create_password_reset_token(data.email)
+    # In production: send *raw_token* via email using a
     # task queue / notification service.  For now we log it at WARNING
     # so integration tests can intercept it.
     import logging
 
     logger = logging.getLogger("password_reset")
-    if token_obj is not None:
+    if raw_token is not None:
         logger.warning(
-            "Password reset token generated for user_id=%s raw_token=%s",
-            token_obj.user_id,
-            getattr(token_obj, "_raw_token", "n/a"),
+            "Password reset token generated for email=%s raw_token=%s",
+            data.email,
+            raw_token,
         )
     else:
         logger.info("Password reset requested for unknown email (enumerated-safe)")
@@ -89,13 +90,11 @@ async def request_password_reset(
 
 @router.post("/password-reset/verify", response_model=PasswordResetVerifyResponse)
 async def verify_reset_token_route(
-    token: str,
+    data: PasswordResetVerifyRequest,
     lang: str = Query("en", pattern="^(en|fa)$"),
 ):
     """Verify that a recovery token is valid (not consumed, not expired)."""
-    if not token:
-        return PasswordResetVerifyResponse(valid=False)
-    valid = await verify_reset_token(token)
+    valid = await verify_reset_token(data.token)
     return PasswordResetVerifyResponse(
         valid=valid,
         email_hint=None,  # never disclose the target email

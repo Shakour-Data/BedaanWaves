@@ -1,5 +1,4 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useRouter } from 'next/navigation';
 import ForgotPasswordPage from '@/app/forgot-password/page';
 
 vi.mock('next/navigation', () => ({
@@ -9,8 +8,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/store/useAuthStore', () => ({
-  useAuthStore: (selector: any) => {
-    const state = { currentLang: 'en', setLanguage: vi.fn() };
+  useAuthStore: (selector: (s: { currentLang: string; setLanguage: () => void }) => unknown) => {
+    const state = { currentLang: 'en' as const, setLanguage: vi.fn() };
     return selector ? selector(state) : state;
   },
 }));
