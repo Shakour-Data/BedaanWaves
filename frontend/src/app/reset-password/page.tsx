@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -21,15 +21,17 @@ import fa from "@/i18n/fa.json";
 
 type ResetPhase = "verifying" | "enter_password" | "confirming" | "success" | "error";
 
+type PwdValidationState = "idle" | "validating" | "valid" | "invalid";
+
 function useT() {
   const lang = useAuthStore((s) => s.currentLang) ?? "en";
   const dict = lang === "fa" ? fa : en;
   return (key: string): string => {
     const keys = key.split(".");
-    let value: any = dict;
+    let value: unknown = dict;
     for (const k of keys) {
       if (value && typeof value === "object") {
-        value = value[k];
+        value = (value as Record<string, unknown>)[k];
       } else {
         return key;
       }
@@ -49,18 +51,32 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [pwdError, setPwdError] = useState<string | null>(null);
-  const [pwdState, setPwdState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!token) {
-      setPhase("error");
-      setErrorMsg("No recovery token was provided. Please open the link from your email.");
-      return;
-    }
+  /* Derived password-validation state (computed during render, no effect). */
+  const pwdState: PwdValidationState = useMemo(() => {
+    if (!password) return "idle";
+    if (password.length < 8) return "invalid";
+    if (!confirmPassword) return "valid";
+    return password === confirmPassword ? "valid" : "invalid";
+  }, [password, confirmPassword]);
 
+  const pwdError: string | null = useMemo(() => {
+    if (!password) return null;
+    if (password.length < 8) return "Password must be at least 8 characters.";
+    if (confirmPassword && password !== confirmPassword) return "Passwords do not match.";
+    return null;
+  }, [password, confirmPassword]);
+
+  /* Verify token on mount (async IIFE avoids sync setState in effect). */
+  useEffect(() => {
     void (async () => {
+      if (!token) {
+        setPhase("error");
+        setErrorMsg("No recovery token was provided. Please open the link from your email.");
+        return;
+      }
+
       const result = await verifyResetToken(token);
       if (result.valid) {
         setPhase("enter_password");
@@ -73,44 +89,17 @@ export default function ResetPasswordPage() {
     })();
   }, [token]);
 
-  useEffect(() => {
-    if (!password) {
-      setPwdState("idle");
-      setPwdError(null);
-      return;
-    }
-    if (password.length < 8) {
-      setPwdState("invalid");
-      setPwdError("Password must be at least 8 characters.");
-      return;
-    }
-    if (password === confirmPassword && confirmPassword.length > 0) {
-      setPwdState("valid");
-      setPwdError(null);
-    } else if (confirmPassword.length > 0 && password !== confirmPassword) {
-      setPwdState("invalid");
-      setPwdError("Passwords do not match.");
-    } else {
-      setPwdState("idle");
-      setPwdError(null);
-    }
-  }, [password, confirmPassword]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordsMatch(password, confirmPassword) || !isValidPassword(password)) {
-      setPwdState("invalid");
-      setPwdError("Please fix the errors above before continuing.");
+      setErrorMsg("Please fix the errors above before continuing.");
       return;
     }
     setErrorMsg(null);
     setPhase("confirming");
 
     try {
-      const result: ConfirmResetResult = await confirmResetPassword(
-        token,
-        password,
-      );
+      const result: ConfirmResetResult = await confirmResetPassword(token, password);
 
       if (result.success) {
         setPhase("success");

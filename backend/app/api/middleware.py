@@ -17,7 +17,7 @@ import logging
 import time
 import uuid
 from collections import deque
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request

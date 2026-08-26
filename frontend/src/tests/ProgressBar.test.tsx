@@ -27,8 +27,6 @@ describe('ProgressBar', () => {
 
   it('marks current step with aria-current', () => {
     render(<ProgressBar currentStep={3} totalSteps={5} />);
-    const current = screen.getAllByLabelText('aria-current') as HTMLElement[];
-    // At least one element should have aria-current="step"
     const withAriaCurrent = document.querySelector('[aria-current="step"]');
     expect(withAriaCurrent).not.toBeNull();
   });
