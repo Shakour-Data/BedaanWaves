@@ -134,6 +134,22 @@ export default function AlertsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <DashboardShell title="هشدارها">
+        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition"
+          >
+            تلاش مجدد
+          </button>
+        </TarotCard>
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell title="هشدارها">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

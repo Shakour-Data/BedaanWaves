@@ -18,6 +18,9 @@ class _FakeAsyncResult:
     def all(self):
         return self._items
 
+    def scalar_one_or_none(self):
+        return self._items[0] if self._items else None
+
 
 class _FakeAsyncSession:
     def __init__(self, items=None):
