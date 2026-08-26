@@ -46,6 +46,7 @@ Thumbs.db
 *.bak
 *.tmp
 DatabaseConfigs.txt
+*.bat
 
 # VS Code/JetBrains
 .vscode/
@@ -69,6 +70,8 @@ backend/verify_*.py
 backend/fetch_*.py
 backend/gen_*.py
 backend/complete_*.py
+backend/populate_*.py
+backend/validate_*.py
 
 # Temporary backend output files
 backend/ls_out.txt

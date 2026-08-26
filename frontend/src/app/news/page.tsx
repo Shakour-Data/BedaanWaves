@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -16,13 +15,14 @@ export default function NewsPage() {
   const [newItems, setNewItems] = useState<NewsItem[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function loadNews() {
       setLoading(true);
+      setError(null);
       try {
         // Fetch market news
         const newsRes = await apiClient.get<any>("/news/market?limit=20");
@@ -38,7 +38,7 @@ export default function NewsPage() {
           setNewItems(formattedNews);
         }
       } catch (error) {
-        // Handle error silently
+        if (active) setError("خطا در بارگذاری اخبار. لطفاً دوباره تلاش کنید.");
       } finally {
         if (active) setLoading(false);
       }
@@ -70,6 +70,22 @@ export default function NewsPage() {
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
           در حال بارگذاری اخبار...
         </div>
+      </DashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardShell title="اخبار">
+        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition"
+          >
+            تلاش مجدد
+          </button>
+        </TarotCard>
       </DashboardShell>
     );
   }
