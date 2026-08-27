@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -41,12 +41,10 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaveError(null);
     if (!validatePasswords()) return;
-
     setLoading(true);
     try {
-      const response = await apiClient.post("/users/profile/update", {
+      const response = await apiClient.patch("/users/me", {
         full_name: fullName,
-        new_password: newPassword,
       });
 
       if (response.status === 200) {
