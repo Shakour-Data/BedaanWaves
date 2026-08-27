@@ -21,8 +21,7 @@ export function ErrorMessage({
   actions = [],
   moreHelpSteps = [],
   helpTitle,
-  className,
-}: ErrorMessageProps) {
+  className }: ErrorMessageProps) {
   const hasActions = actions.length > 0;
 
   return (
