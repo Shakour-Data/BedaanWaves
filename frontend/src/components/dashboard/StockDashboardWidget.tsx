@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { exportData } from '@/lib/export';
 import { Asset, fetchSymbols, fetchLatestPrices, LatestPrice } from '@/lib/api/stocks';
+import { ArrowUpIcon, ArrowDownIcon } from '@/components/icons/Icons';
 
 type PriceMap = Record<string, LatestPrice>;
 
@@ -17,7 +18,6 @@ export function StockDashboardWidget() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch symbols first
         const symbolsData = await fetchSymbols({ limit: 20 });
         setSymbols(symbolsData);
 
@@ -34,7 +34,6 @@ export function StockDashboardWidget() {
 
     loadData();
 
-    // Set up auto-refresh every 30 seconds for real-time updates
     const interval = window.setInterval(loadData, 30000);
 
     return () => {
@@ -51,8 +50,8 @@ export function StockDashboardWidget() {
     return changePercent >= 0 ? 'text-green-600' : 'text-red-600';
   };
 
-  const getChangeIcon = (changePercent: number): string => {
-    return changePercent >= 0 ? '▲' : '▼';
+  const ChangeIcon = ({ value }: { value: number }) => {
+    return value >= 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />;
   };
 
   const handleExport = (format: 'csv' | 'xlsx' | 'json') => {
@@ -113,8 +112,8 @@ export function StockDashboardWidget() {
             <div key={symbol.symbol} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start">
                 <h3 className="font-semibold text-gray-900">{symbol.symbol}</h3>
-                <span className={`text-sm ${getChangeColor(changePct)}`}>
-                  {getChangeIcon(changePct) } {changePct.toFixed(2)}%
+                <span className={`inline-flex items-center gap-1 text-sm ${getChangeColor(changePct)}`}>
+                  <ChangeIcon value={changePct} /> {changePct.toFixed(2)}%
                 </span>
               </div>
               <div className="mt-2">
