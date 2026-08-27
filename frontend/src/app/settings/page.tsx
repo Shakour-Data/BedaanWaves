@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/cn";
 
 export default function SettingsPage() {
-  const { currentLang } = useAuthStore();
+  
   const [selectedCountry, setSelectedCountry] = useState("ir");
   const [selectedIndex, setSelectedIndex] = useState("tepix");
   const [selectedStock, setSelectedStock] = useState("");
@@ -79,8 +79,7 @@ export default function SettingsPage() {
           index: selectedIndex,
           stock: selectedStock,
           industry: selectedIndustry,
-          crypto: selectedCrypto,
-        },
+          crypto: selectedCrypto },
         notifications,
         currencies: selectedCurrencies
       });
@@ -92,35 +91,35 @@ export default function SettingsPage() {
   };
 
   const notificationTypes = [
-    { id: "email", label: currentLang === "fa" ? "ایمیل" : "Email", icon: "📧" },
-    { id: "push", label: currentLang === "fa" ? "پوش نوتیفیکیشن" : "Push Notifications", icon: "🔔" },
-    { id: "sms", label: currentLang === "fa" ? "پیامک" : "SMS", icon: "📱" },
-    { id: "telegram", label: currentLang === "fa" ? "تلگرام" : "Telegram", icon: "✈️" }
+    { id: "email", label: false ? "ایمیل" : "Email", icon: "📧" },
+    { id: "push", label: false ? "پوش نوتیفیکیشن" : "Push Notifications", icon: "Alerts" },
+    { id: "sms", label: false ? "پیامک" : "SMS", icon: "📱" },
+    { id: "telegram", label: false ? "تلگرام" : "Telegram", icon: "✈️" }
   ];
 
   if (loading && !marketData) {
     return (
-      <DashboardShell title={t("app.settings.title", currentLang)}>
+      <DashboardShell title={t("app.settings.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.settings.loading", currentLang)}
+          {t("app.settings.loading", "en")}
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.settings.title", currentLang)}>
+    <DashboardShell title={t("app.settings.title", "en")}>
       <div className="flex flex-col gap-6">
-        <TarotCard icon="⚙️" title={t("app.settings.overview_title", currentLang)}>
+        <TarotCard icon="Settings" title={t("app.settings.overview_title", "en")}>
           <p className="text-muted-foreground text-justify">
-            {t("app.settings.overview_desc", currentLang)}
+            {t("app.settings.overview_desc", "en")}
           </p>
         </TarotCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Country Selection - Left Sidebar */}
           <div className="lg:col-span-3">
-            <TarotCard icon="🌍" title={t("app.settings.country_selection", currentLang)}>
+            <TarotCard icon="[Global]" title={t("app.settings.country_selection", "en")}>
               <div className="space-y-2">
                 {countries.map((country) => {
                   const isSelected = selectedCountry === country.id;
@@ -136,7 +135,7 @@ export default function SettingsPage() {
                       )}
                     >
                       <span className="text-2xl">{country.flag}</span>
-                      <div className={currentLang === "fa" ? "text-right" : "text-left"}>
+                      <div className={false ? "text-right" : "text-left"}>
                         <div className="font-medium text-sm">{country.name}</div>
                         <div className="text-xs text-muted-foreground">{country.region}</div>
                       </div>
@@ -151,14 +150,14 @@ export default function SettingsPage() {
           <div className="lg:col-span-9">
             <TarotCard 
               icon={countryInfo?.flag || "🏳️"} 
-              title={t("app.settings.market_config", currentLang).replace("{country}", countryInfo?.name || "")}
+              title={t("app.settings.market_config", "en").replace("{country}", countryInfo?.name || "")}
             >
               {data ? (
                 <div className="space-y-6">
                   {/* Indices Section */}
                   <div>
                     <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                      <span>📊</span> {t("app.settings.indices", currentLang)}
+                      <span>[Chart]</span> {t("app.settings.indices", "en")}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {data.indices?.map((index: any) => (
@@ -178,7 +177,7 @@ export default function SettingsPage() {
                             onChange={() => setSelectedIndex(index.id)}
                             className="text-red-600 focus:ring-red-500"
                           />
-                          <div className={currentLang === "fa" ? "text-right" : "text-left"}>
+                          <div className={false ? "text-right" : "text-left"}>
                             <div className="font-medium text-sm">{index.name}</div>
                             <div className="text-xs text-muted-foreground">{index.desc}</div>
                           </div>
@@ -191,7 +190,7 @@ export default function SettingsPage() {
                   {data.stocks?.length > 0 && (
                     <div>
                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>📈</span> {t("app.settings.stocks", currentLang)}
+                        <span>📈</span> {t("app.settings.stocks", "en")}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {data.stocks.map((stock: any) => (
@@ -211,7 +210,7 @@ export default function SettingsPage() {
                               onChange={() => setSelectedStock(stock.id)}
                               className="text-red-600 focus:ring-red-500"
                             />
-                            <div className={currentLang === "fa" ? "text-right" : "text-left"}>
+                            <div className={false ? "text-right" : "text-left"}>
                               <div className="font-medium text-sm">{stock.name}</div>
                               <div className="text-xs text-muted-foreground">{stock.symbol}</div>
                             </div>
@@ -225,7 +224,7 @@ export default function SettingsPage() {
                   {data.industries?.length > 0 && (
                     <div>
                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>🏭</span> {t("app.settings.industries", currentLang)}
+                        <span>🏭</span> {t("app.settings.industries", "en")}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {data.industries.map((industry: any) => (
@@ -264,7 +263,7 @@ export default function SettingsPage() {
                   {data.crypto?.length > 0 && (
                     <div>
                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>₿</span> {t("app.settings.cryptocurrencies", currentLang)}
+                        <span>₿</span> {t("app.settings.cryptocurrencies", "en")}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {data.crypto.map((coin: any) => (
@@ -285,7 +284,7 @@ export default function SettingsPage() {
                                 onChange={() => setSelectedCrypto(coin.id)}
                                 className="text-red-600 focus:ring-red-500"
                               />
-                              <div className={currentLang === "fa" ? "text-right" : "text-left"}>
+                              <div className={false ? "text-right" : "text-left"}>
                                 <div className="font-medium text-sm">{coin.name}</div>
                                 <div className="text-xs text-muted-foreground">{coin.symbol} | ${coin.price}</div>
                               </div>
@@ -305,7 +304,7 @@ export default function SettingsPage() {
                   {/* Currencies Section */}
                   <div>
                     <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                      <span>💱</span> {t("app.settings.trading_currencies", currentLang)}
+                      <span>💱</span> {t("app.settings.trading_currencies", "en")}
                     </h4>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {["IRR", "USD", "EUR", "GBP", "JPY", "CNY", "BTC", "ETH"].map((currency) => (
@@ -328,7 +327,7 @@ export default function SettingsPage() {
                   {/* Notification Settings */}
                   <div className="pt-4 border-t border-border/60">
                     <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                      <span>🔔</span> {t("app.settings.notification_prefs", currentLang)}
+                      <span>Alerts</span> {t("app.settings.notification_prefs", "en")}
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {notificationTypes.map((type) => (
@@ -347,7 +346,7 @@ export default function SettingsPage() {
                               onChange={() => toggleNotification(type.id as keyof typeof notifications)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--color-surface)] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                           </div>
                         </label>
                       ))}
@@ -357,14 +356,14 @@ export default function SettingsPage() {
                   {/* Save Button */}
                   <div className="flex justify-end gap-3 pt-6">
                     <PrimaryButton onClick={handleSave} className="px-8 shadow-lg shadow-red-600/20">
-                      {t("app.settings.save_settings", currentLang)}
+                      {t("app.settings.save_settings", "en")}
                     </PrimaryButton>
                   </div>
                 </div>
               ) : (
                 <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-4">
                   <div className="text-4xl">📭</div>
-                  <p>{t("app.settings.no_config", currentLang)}</p>
+                  <p>{t("app.settings.no_config", "en")}</p>
                 </div>
               )}
             </TarotCard>
