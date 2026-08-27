@@ -8,8 +8,7 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type BarData,
-} from "lightweight-charts";
+  type BarData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 
 interface BarChartProps {
@@ -21,15 +20,13 @@ const LIGHT = {
   background: "#ffffff",
   text: "#5c5c5c",
   grid: "#eeeeee",
-  border: "#e0e0e0",
-};
+  border: "#e0e0e0" };
 
 const DARK = {
   background: "#1e1e1e",
   text: "#a8a8a8",
   grid: "#2a2a2a",
-  border: "#333333",
-};
+  border: "#333333" };
 
 export function BarChart({ data, height = 320 }: BarChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -42,8 +39,7 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
       data.map((d) => ({
         time: d.time as BarData["time"],
         value: d.value,
-        color: d.color,
-      })),
+        color: d.color })),
     [data]
   );
 
@@ -56,26 +52,21 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
       layout: {
         background: { type: ColorType.Solid, color: colors.background },
         textColor: colors.text,
-        fontFamily: "inherit",
-      },
+        fontFamily: "inherit" },
       grid: {
         vertLines: { color: colors.grid },
-        horzLines: { color: colors.grid },
-      },
+        horzLines: { color: colors.grid } },
       rightPriceScale: { borderColor: colors.border },
       timeScale: { borderColor: colors.border },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }),
-      },
-      autoSize: false,
-    });
+        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) },
+      autoSize: false });
     chartRef.current = chart;
 
     const series = chart.addSeries(BarSeries, {
-      priceFormat: { type: "volume" },
-    });
+      priceFormat: { type: "volume" } });
     series.setData(chartData);
 
     chart.timeScale().fitContent();
