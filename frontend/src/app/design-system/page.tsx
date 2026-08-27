@@ -124,13 +124,13 @@ export default function DesignSystemPage() {
           <h2 className="mb-4">3. Spacing Scale</h2>
           <div className="card flex flex-wrap gap-4">
             {[
-              { label: "xs", value: "var(--spacing-xs)" },
-              { label: "sm", value: "var(--spacing-sm)" },
-              { label: "md", value: "var(--spacing-md)" },
-              { label: "lg", value: "var(--spacing-lg)" },
-              { label: "xl", value: "var(--spacing-xl)" },
-              { label: "2xl", value: "var(--spacing-2xl)" },
-              { label: "3xl", value: "var(--spacing-3xl)" },
+              { label: "xs", value: "var(--spacing-vxs)" },
+              { label: "sm", value: "var(--spacing-vsm)" },
+              { label: "md", value: "var(--spacing-vmd)" },
+              { label: "lg", value: "var(--spacing-vlg)" },
+              { label: "xl", value: "var(--spacing-vxl)" },
+              { label: "2xl", value: "var(--spacing-v2xl)" },
+              { label: "3xl", value: "var(--spacing-v3xl)" },
             ].map((space) => (
               <div key={space.label} className="flex flex-col items-center gap-2">
                 <div
@@ -561,7 +561,7 @@ export default function DesignSystemPage() {
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-[var(--color-primary)] text-white rounded-md p-4 text-center text-sm font-medium"
+                className="bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-md p-4 text-center text-sm font-medium"
               >
                 {i + 1}
               </div>
