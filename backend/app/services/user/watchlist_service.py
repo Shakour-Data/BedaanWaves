@@ -145,4 +145,5 @@ class WatchlistService:
                 await session.close()
 
 
-
+# Global instance
+watchlist_service = WatchlistService()

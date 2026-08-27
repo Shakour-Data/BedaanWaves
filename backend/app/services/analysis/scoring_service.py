@@ -190,8 +190,8 @@ class ScoringService(AnalysisService):
         Get weights for a specific hierarchy level, trying ML first then falling back to static.
         
         Args:
-            level: The hierarchy level to get weights for
-                   Currently only "dimensions" is implemented for 6D aggregation
+            level: The hierarchy level to get weights for.
+                Currently only "dimensions" is implemented for 6D aggregation.
                    
         Returns:
             Dictionary of item names to weights (should sum to ~1.0)
@@ -251,15 +251,15 @@ class ScoringService(AnalysisService):
         Perform 6D scoring analysis using ML-learned or static weights.
         
         Args:
-            data: Input data containing ticker, market, and scores for each dimension
-                  Expected format:
-                  {
-                      "ticker": "AAPL",
-                      "market": "TSE",
-                      "fundamental": {"pe_ratio": 12.5, "roe": 0.15, ...},
-                      "technical": {"rsi": 55, "macd": 0.5, ...},
-                      ...
-                  }
+            data: Input data containing ticker, market, and scores for each dimension.
+                Expected format:
+                {
+                    "ticker": "AAPL",
+                    "market": "TSE",
+                    "fundamental": {"pe_ratio": 12.5, "roe": 0.15, ...},
+                    "technical": {"rsi": 55, "macd": 0.5, ...},
+                    ...
+                }
                   
         Returns:
             Dictionary containing scores, overall score, grade, and signals

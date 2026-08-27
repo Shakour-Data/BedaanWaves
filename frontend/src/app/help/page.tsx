@@ -1,115 +1,112 @@
-﻿"use client";
+"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useState } from "react";
 import Link from "next/link";
-import {
-  CodeIcon,
-  DatabaseIcon,
-  HelpIcon,
-  MethodologyIcon,
-} from "@/components/icons/Icons";
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
 
 type DocumentationSection = {
   id: string;
   title: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: string;
   description: string;
   contentType: "text" | "table" | "list";
   category: "frontend" | "database" | "api";
 };
 
-const documentationSections: DocumentationSection[] = [
-  {
-    id: "frontend-pages",
-    title: "صفحات فرانت‌اند",
-    Icon: CodeIcon,
-    description: "لیست کامل تمام صفحات فرانت‌اند با مسیرها، ویژگی‌ها و وضعیت یکپارچگی API",
-    contentType: "table",
-    category: "frontend",
-  },
-  {
-    id: "component-guide",
-    title: "راهنمای کامپوننت‌ها",
-    Icon: CodeIcon,
-    description: "تمام کامپوننت‌های UI با مثال‌های استفاده و ویژگی‌ها",
-    contentType: "list",
-    category: "frontend",
-  },
-  {
-    id: "data-flow",
-    title: "معماری جریان داده",
-    Icon: CodeIcon,
-    description: "جریان داده از ابتدا تا انتها از بک‌اند به نمایش فرانت‌اند",
-    contentType: "text",
-    category: "frontend",
-  },
-  {
-    id: "schema-overview",
-    title: "schema پایگاه داده",
-    Icon: DatabaseIcon,
-    description: "تعریف کامل جداول پایگاه داده و روابط",
-    contentType: "text",
-    category: "database",
-  },
-  {
-    id: "api-endpoints",
-    title: "نقاط پایانی API",
-    Icon: MethodologyIcon,
-    description: "لیست کامل نقاط پایانی API با پارامترها و پاسخ‌ها",
-    contentType: "table",
-    category: "api",
-  },
-];
-
-const frontendPages = [
-  { name: "صفحه اصلی", path: "/", description: "صفحه فرود", status: "فعال" },
-  { name: "ورود", path: "/login", description: "رابط احراز هویت", status: "فعال" },
-  { name: "ثبت نام", path: "/register", description: "ثبت نام کاربر", status: "فعال" },
-  { name: "داشبورد", path: "/dashboard", description: "نمای کلی بازار", status: "API زنده" },
-  { name: "لیست سهام", path: "/stocks", description: "فهرست نمادها با قیمت", status: "API زنده" },
-  { name: "جزئیات نماد", path: "/stocks/[symbol]", description: "تجزیه و تحلیل تک نماد", status: "API زنده" },
-  { name: "تحلیل", path: "/analysis", description: "رابط تحلیل چند زبانه", status: "API زنده" },
-  { name: "پورتفولیو", path: "/portfolio", description: "مدیریت پورتفولیو شخصی", status: "API زنده" },
-  { name: "تنظیمات", path: "/settings", description: "پیکربندی و ترجیحات", status: "فعال" },
-  { name: "پروفایل", path: "/settings/profile", description: "مدیریت پروفایل کاربر", status: "نیاز به هماهنگی" },
-  { name: "اخبار", path: "/news", description: "تجمیع اخبار بازار", status: "درست شده" },
-  { name: "هشدارها", path: "/alerts", description: "اعلان‌های سیستم", status: "API زنده" },
-  { name: "امتیازدهی", path: "/scoring", description: "روش‌شناسی امتیازدهی ۶ بعدی", status: "فعال" },
-  { name: "روش‌شناسی", path: "/methodology", description: "راهنمای توضیح تحلیل", status: "فعال" },
-  { name: "راهنما", path: "/help", description: "مستندات پلتفرم", status: "فعال" },
-];
-
-const uiComponents = [
-  { name: "DashboardShell", type: "چیدمان", description: "پوسته اصلی چیدمان با احراز هویت و ناوبری" },
-  { name: "Sidebar", type: "ناوبری", description: "نوار کناری اصلی با لینک‌های صفحه" },
-  { name: "Topbar", type: "ناوبری", description: "نوار بالایی با کنترل‌های تم و زبان" },
-  { name: "TarotCard", type: "کامپوننت UI", description: "کارت استایل شده با افکت‌های هاور و سایه" },
-  { name: "PrimaryButton", type: "دکمه", description: "دکمه عمل اصلی با افکت درخشان" },
-  { name: "StatCard", type: "نمایش داده", description: "نمایش آمار با آیکون" },
-  { name: "AssetTable", type: "جدول داده", description: "جدول نمادهای مالی با ستون‌های قیمت" },
-  { name: "SignalList", type: "نمایش داده", description: "تجسم سیگنال‌های معاملاتی ML" },
-  { name: "NewsList", type: "لیست داده", description: "نمایش مقالات خبری با زمان‌بندی" },
-];
-
-const coreTables = [
-  { name: "USER", description: "حساب‌های کاربری و احراز هویت", rows: 50, columns: 15 },
-  { name: "PREFERENCE", description: "تنظیمات و ترجیحات کاربر", rows: 50, columns: 12 },
-  { name: "MARKET_DATA", description: "داده‌های قیمت لحظه‌ای بازار", rows: 10000, columns: 20 },
-  { name: "HISTORICAL_PRICES", description: "داده‌های قیمت تاریخی برای تحلیل", rows: 100000, columns: 15 },
-  { name: "STOCK", description: "لیست اصلی اوراق", rows: 1000, columns: 25 },
-  { name: "INDICE", description: "شاخص‌های بازار و معیارها", rows: 50, columns: 18 },
-  { name: "SIGNAL", description: "سیگنال‌های معاملاتی ML", rows: 1000, columns: 20 },
-  { name: "ALERT", description: "اعلان‌های کاربر", rows: 1000, columns: 15 },
-  { name: "FAVORITE", description: "ردیابی علاقه‌مندی‌های کاربر", rows: 500, columns: 10 },
-  { name: "TRANSACTION_LOG", description: "ردیابی تمام فعالیت‌ها", rows: 5000, columns: 25 },
-];
-
 export default function HelpPage() {
+  const { currentLang } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState("frontend");
   const [activeSection, setActiveSection] = useState("frontend-pages");
+
+  const documentationSections: DocumentationSection[] = [
+    {
+      id: "frontend-pages",
+      title: t("app.help.sections.frontend_pages.title", currentLang),
+      icon: "📄",
+      description: t("app.help.sections.frontend_pages.desc", currentLang),
+      contentType: "table",
+      category: "frontend"
+    },
+    {
+      id: "component-guide",
+      title: t("app.help.sections.component_guide.title", currentLang),
+      icon: "🧩",
+      description: t("app.help.sections.component_guide.desc", currentLang),
+      contentType: "list",
+      category: "frontend"
+    },
+    {
+      id: "data-flow",
+      title: t("app.help.sections.data_flow.title", currentLang),
+      icon: "🔄",
+      description: t("app.help.sections.data_flow.desc", currentLang),
+      contentType: "text",
+      category: "frontend"
+    },
+    {
+      id: "schema-overview",
+      title: t("app.help.sections.schema_overview.title", currentLang),
+      icon: "🗄️",
+      description: t("app.help.sections.schema_overview.desc", currentLang),
+      contentType: "text",
+      category: "database"
+    },
+    {
+      id: "api-endpoints",
+      title: t("app.help.sections.api_endpoints.title", currentLang),
+      icon: "🔌",
+      description: t("app.help.sections.api_endpoints.desc", currentLang),
+      contentType: "table",
+      category: "api"
+    },
+  ];
+
+  const frontendPages = [
+    { name: currentLang === "fa" ? "صفحه اصلی" : "Home Page", path: "/", description: currentLang === "fa" ? "بررسی اجمالی صفحه لندینگ" : "Landing page overview", status: currentLang === "fa" ? "فعال" : "Working" },
+    { name: currentLang === "fa" ? "صفحه ورود" : "Login Page", path: "/login", description: currentLang === "fa" ? "رابط احراز هویت" : "Authentication interface", status: currentLang === "fa" ? "فعال" : "Working" },
+    { name: currentLang === "fa" ? "صفحه ثبت‌نام" : "Register Page", path: "/register", description: currentLang === "fa" ? "ثبت‌نام کاربر" : "User registration", status: currentLang === "fa" ? "فعال" : "Working" },
+    { name: currentLang === "fa" ? "داشبورد" : "Dashboard", path: "/dashboard", description: currentLang === "fa" ? "مرور بازار با آمار" : "Market overview with statistics", status: "Live API" },
+    { name: currentLang === "fa" ? "لیست سهام" : "Stocks List", path: "/stocks", description: currentLang === "fa" ? "لیست نمادها با قیمت‌ها" : "Symbol list with prices", status: "Live API" },
+    { name: currentLang === "fa" ? "جزئیات سهم" : "Stock Detail", path: "/stocks/[symbol]", description: currentLang === "fa" ? "تحلیل دارایی تکی" : "Single asset analysis", status: "Live API" },
+    { name: currentLang === "fa" ? "تحلیل" : "Analysis", path: "/analysis", description: currentLang === "fa" ? "رابط تحلیل چند تب" : "Multi-tab analysis interface", status: "Live API" },
+    { name: currentLang === "fa" ? "پورتفولیو" : "Portfolio", path: "/portfolio", description: currentLang === "fa" ? "مدیریت پورتفولیو شخصی" : "Personal portfolio management", status: "Live API" },
+    { name: currentLang === "fa" ? "تنظیمات" : "Settings", path: "/settings", description: currentLang === "fa" ? "پیکربندی و ترجیحات" : "Configuration and preferences", status: currentLang === "fa" ? "فعال" : "Working" },
+    { name: currentLang === "fa" ? "پروفایل تنظیمات" : "Settings Profile", path: "/settings/profile", description: currentLang === "fa" ? "مدیریت پروفایل کاربر" : "User profile management", status: currentLang === "fa" ? "نیاز به همگام‌سازی" : "Needs sync" },
+    { name: currentLang === "fa" ? "اخبار" : "News", path: "/news", description: currentLang === "fa" ? "تجمیع اخبار بازار" : "Market news aggregation", status: currentLang === "fa" ? "اصلاح شده" : "Fixed" },
+    { name: currentLang === "fa" ? "هشدارها" : "Alerts", path: "/alerts", description: currentLang === "fa" ? "اعلان‌های سیستم" : "System notifications", status: "Live API" },
+    { name: currentLang === "fa" ? "امتیازدهی" : "Scoring", path: "/scoring", description: currentLang === "fa" ? "متدولوژی امتیازدهی 6D" : "6D scoring methodology", status: currentLang === "fa" ? "فعال" : "Working" },
+    { name: currentLang === "fa" ? "روش‌شناسی" : "Methodology", path: "/methodology", description: currentLang === "fa" ? "راهنمای توضیح تحلیل" : "Analysis explanation guide", status: currentLang === "fa" ? "فعال" : "Working" },
+    { name: currentLang === "fa" ? "راهنما" : "Help", path: "/help", description: currentLang === "fa" ? "مستندات پلتفرم" : "Platform documentation", status: currentLang === "fa" ? "فعال" : "Working" }
+  ];
+
+  const uiComponents = [
+    { name: "DashboardShell", type: currentLang === "fa" ? "طرح‌بندی" : "Layout", description: currentLang === "fa" ? "لفاف طرح اصلی با احراز هویت و ناوبری" : "Main layout wrapper with auth and navigation" },
+    { name: "Sidebar", type: currentLang === "fa" ? "ناوبری" : "Navigation", description: currentLang === "fa" ? "نوار کناری ناوبری اصلی با لینک‌های صفحه" : "Main navigation sidebar with page links" },
+    { name: "Topbar", type: currentLang === "fa" ? "ناوبری" : "Navigation", description: currentLang === "fa" ? "نوار ناوبری بالایی با کنترل‌های تم/زبان" : "Top navigation bar with theme/language controls" },
+    { name: "TarotCard", type: currentLang === "fa" ? "کامپوننت رابط کاربری" : "UI Component", description: currentLang === "fa" ? "کارت طراحی شده با جلوه‌های هاور و سایه‌ها" : "Styled card with hover effects and shadows" },
+    { name: "PrimaryButton", type: currentLang === "fa" ? "دکمه" : "Button", description: currentLang === "fa" ? "دکمه اقدام اصلی با جلوه درخشش" : "Primary action button with glow effect" },
+    { name: "StatCard", type: currentLang === "fa" ? "نمایش داده" : "Data Display", description: currentLang === "fa" ? "نمایش معیارهای آماری با آیکون‌ها" : "Statistical metrics display with icons" },
+    { name: "AssetTable", type: currentLang === "fa" ? "جدول داده" : "Data Table", description: currentLang === "fa" ? "جدول نمادهای مالی با ستون‌های قیمت" : "Financial symbol table with price columns" },
+    { name: "SignalList", type: currentLang === "fa" ? "نمایش داده" : "Data Display", description: currentLang === "fa" ? "تجسم سیگنال‌های معاملاتی ML" : "ML trading signals visualization" },
+    { name: "NewsList", type: currentLang === "fa" ? "لیست داده" : "Data List", description: currentLang === "fa" ? "نمایش مقالات خبری با برچسب زمانی" : "News articles display with timestamps" }
+  ];
+
+  const coreTables = [
+    { name: "USER", description: currentLang === "fa" ? "حساب‌های کاربری و احراز هویت" : "User accounts and authentication", rows: 50, columns: 15 },
+    { name: "PREFERENCE", description: currentLang === "fa" ? "تنظیمات و ترجیحات کاربر" : "User settings and preferences", rows: 50, columns: 12 },
+    { name: "MARKET_DATA", description: currentLang === "fa" ? "داده‌های قیمت لحظه‌ای بازار" : "Real-time market price data", rows: 10000, columns: 20 },
+    { name: "HISTORICAL_PRICES", description: currentLang === "fa" ? "داده‌های قیمت تاریخی برای تحلیل" : "Historical price data for analysis", rows: 100000, columns: 15 },
+    { name: "STOCK", description: currentLang === "fa" ? "لیست اصلی اوراق بهادار" : "Master security list", rows: 1000, columns: 25 },
+    { name: "INDICE", description: currentLang === "fa" ? "شاخص‌های بازار و معیارها" : "Market indices and benchmarks", rows: 50, columns: 18 },
+    { name: "SIGNAL", description: currentLang === "fa" ? "سیگنال‌های معاملاتی ML" : "ML trading signals", rows: 1000, columns: 20 },
+    { name: "ALERT", description: currentLang === "fa" ? "اعلان‌های کاربر" : "User notifications", rows: 1000, columns: 15 },
+    { name: "FAVORITE", description: currentLang === "fa" ? "ردیابی موارد علاقه کاربر" : "User favorites tracking", rows: 500, columns: 10 },
+    { name: "TRANSACTION_LOG", description: currentLang === "fa" ? "ردپای حسابرسی تمامی فعالیت‌ها" : "Audit trail of all activities", rows: 5000, columns: 25 }
+  ];
 
   const filteredSections = documentationSections.filter(
     (section) => section.category === activeCategory
@@ -118,52 +115,49 @@ export default function HelpPage() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "frontend":
-        return CodeIcon;
+        return "🌐";
       case "database":
-        return DatabaseIcon;
+        return "🗄️";
       case "api":
-        return MethodologyIcon;
+        return "🔌";
       default:
-        return HelpIcon;
+        return "❓";
     }
   };
 
   return (
-    <DashboardShell title="راهنما و مستندات">
+    <DashboardShell title={t("app.help.title", currentLang)}>
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard title="سیستم مستندات تعاملی">
+        <TarotCard icon="📘" title={t("app.help.overview_title", currentLang)}>
           <p className="text-muted-foreground text-justify">
-            به سیستم مستندات جامع BedaanWaves خوش آمدید. این مرکز راهنمای یکپارچه
-            اطلاعات دقیقی در مورد تمام صفحات فرانت‌اند، کامپوننت‌ها، ساختار پایگاه داده
-            و یکپارچگی‌های API ارائه می‌دهد. از سیستم ناوبری برای کاوش مناطق مشخص
-            مستندات استفاده کنید.
+            {t("app.help.overview_desc", currentLang)}
           </p>
         </TarotCard>
 
         {/* Category Tabs */}
         <div className="flex flex-wrap gap-3">
           {[
-            { id: "frontend", label: "مستندات فرانت‌اند", Icon: CodeIcon },
-            { id: "database", label: "مستندات پایگاه داده", Icon: DatabaseIcon },
-            { id: "api", label: "مستندات API", Icon: MethodologyIcon },
+            { id: "frontend", label: t("app.help.categories.frontend", currentLang), icon: "🌐" },
+            { id: "database", label: t("app.help.categories.database", currentLang), icon: "🗄️" },
+            { id: "api", label: t("app.help.categories.api", currentLang), icon: "🔌" }
           ].map((cat) => (
             <button
               key={cat.id}
               onClick={() => {
                 setActiveCategory(cat.id);
                 const firstSection = documentationSections.find(
-                  (s) => s.category === cat.id,
+                  (s) => s.category === cat.id
                 );
                 if (firstSection) setActiveSection(firstSection.id);
               }}
               className={`px-6 py-3 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                 activeCategory === cat.id
-                  ? "bg-blue-500 text-white shadow-lg"
+                  ? "bg-red-600 text-white shadow-lg transform scale-105"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              <cat.Icon className="h-5 w-5" />
+              <span className="text-xl">{cat.icon}</span>
               <span>{cat.label}</span>
             </button>
           ))}
@@ -172,8 +166,8 @@ export default function HelpPage() {
         {/* Main Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Navigation */}
-          <div className="lg:col-span-1">
-            <TarotCard title="فهرست مستندات">
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <TarotCard icon="📂" title={t("app.help.index_title", currentLang)}>
               <div className="space-y-2">
                 {filteredSections.map((section) => (
                   <button
@@ -181,13 +175,13 @@ export default function HelpPage() {
                     onClick={() => setActiveSection(section.id)}
                     className={`w-full text-right p-3 rounded-lg transition-all text-sm ${
                       activeSection === section.id
-                        ? "bg-blue-50 border border-blue-500 text-blue-900"
+                        ? "bg-red-50 border border-red-500 text-red-900 dark:bg-red-900/20 dark:text-red-100"
                         : "hover:bg-muted/50 text-muted-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <section.Icon className="h-5 w-5" />
-                      <div>
+                      <span className="text-lg">{section.icon}</span>
+                      <div className="text-right">
                         <div className="font-medium">{section.title}</div>
                         <div className="text-xs opacity-70">
                           {section.description}
@@ -200,16 +194,16 @@ export default function HelpPage() {
             </TarotCard>
 
             {/* Quick Access */}
-            <TarotCard title="دسترسی سریع">
+            <TarotCard icon="🚀" title={t("app.help.quick_access", currentLang)}>
               <div className="space-y-3">
                 <Link href="/dashboard" passHref>
-                  <PrimaryButton className="w-full">
-                    رفتن به داشبورد
+                  <PrimaryButton className="w-full cursor-pointer">
+                    {t("app.help.go_dashboard", currentLang)}
                   </PrimaryButton>
                 </Link>
                 <Link href="/scoring" passHref>
-                  <PrimaryButton className="w-full">
-                    مشاهده سیستم امتیازدهی
+                  <PrimaryButton className="w-full cursor-pointer">
+                    {t("app.help.view_scoring", currentLang)}
                   </PrimaryButton>
                 </Link>
               </div>
@@ -220,15 +214,17 @@ export default function HelpPage() {
           <div className="lg:col-span-3">
             {/* Frontend Pages Table */}
             {activeSection === "frontend-pages" && (
-              <TarotCard title="مستندات صفحات فرانت‌اند">
+              <TarotCard icon="📄" title={t("app.help.sections.frontend_pages.title", currentLang)}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b-2 border-border">
-                        <th className="text-right p-3 font-semibold">صفحه</th>
-                        <th className="text-right p-3 font-semibold">مسیر</th>
-                        <th className="text-right p-3 font-semibold">توضیحات</th>
-                        <th className="text-right p-3 font-semibold">وضعیت</th>
+                        <th className="text-right p-3 font-semibold">{t("app.help.table.page", currentLang)}</th>
+                        <th className="text-right p-3 font-semibold">{t("app.help.table.path", currentLang)}</th>
+                        <th className="text-right p-3 font-semibold">
+                          {t("app.help.table.description", currentLang)}
+                        </th>
+                        <th className="text-right p-3 font-semibold">{t("app.help.table.status", currentLang)}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -245,9 +241,9 @@ export default function HelpPage() {
                           <td className="p-3">
                             <span
                               className={`px-2 py-1 rounded text-xs font-medium ${
-                                page.status.includes("API زنده")
+                                page.status === "Live API"
                                   ? "bg-green-500/20 text-green-700"
-                                  : page.status.includes("نیاز")
+                                  : page.status === "Needs sync" || page.status === "نیاز به همگام‌سازی"
                                   ? "bg-yellow-500/20 text-yellow-700"
                                   : "bg-blue-500/20 text-blue-700"
                               }`}
@@ -261,11 +257,11 @@ export default function HelpPage() {
                   </table>
                 </div>
                 <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">
-                    <strong>کل صفحات:</strong> 15 |
-                    <strong> API زنده:</strong> 10 |
-                    <strong> استاتیک:</strong> 5 |
-                    <strong> نیاز به هماهنگی:</strong> 1
+                  <p className="text-xs text-muted-foreground flex gap-4 flex-wrap">
+                    <span><strong>{t("app.help.stats.total_pages", currentLang)}</strong> 15</span>
+                    <span><strong>{t("app.help.stats.live_api", currentLang)}</strong> 10</span>
+                    <span><strong>{t("app.help.stats.static", currentLang)}</strong> 5</span>
+                    <span><strong>{t("app.help.stats.needs_sync", currentLang)}</strong> 1</span>
                   </p>
                 </div>
               </TarotCard>
@@ -273,7 +269,7 @@ export default function HelpPage() {
 
             {/* Component Reference */}
             {activeSection === "component-guide" && (
-              <TarotCard title="راهنمای کامپوننت‌های UI">
+              <TarotCard icon="🧩" title={t("app.help.sections.component_guide.title", currentLang)}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {uiComponents.map((comp, i) => (
                     <div
@@ -281,13 +277,13 @@ export default function HelpPage() {
                       className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                        <div className="w-8 h-8 rounded bg-red-100 dark:bg-red-900 flex items-center justify-center text-red-600 font-bold text-sm">
                           {comp.name.charAt(0)}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-sm mb-1">{comp.name}</h4>
                           <p className="text-xs text-muted-foreground mb-1">
-                            نوع: {comp.type}
+                            {currentLang === "fa" ? "نوع:" : "Type:"} {comp.type}
                           </p>
                           <p className="text-xs">{comp.description}</p>
                         </div>
@@ -300,14 +296,15 @@ export default function HelpPage() {
 
             {/* Database Schema */}
             {activeSection === "schema-overview" && (
-              <TarotCard title="نمای کلی Schema پایگاه داده">
+              <TarotCard icon="🗄️" title={t("app.help.sections.schema_overview.title", currentLang)}>
                 <div className="space-y-4">
                   {coreTables.map((table, i) => (
                     <div key={i} className="border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="font-semibold text-sm">{table.name}</h4>
                         <div className="text-xs text-muted-foreground">
-                          {table.rows.toLocaleString()} ردیف | {table.columns} ستون
+                          {table.rows.toLocaleString()} {currentLang === "fa" ? "ردیف" : "rows"} |{" "}
+                          {table.columns} {currentLang === "fa" ? "ستون" : "columns"}
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -316,13 +313,13 @@ export default function HelpPage() {
                     </div>
                   ))}
                   <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                    <h5 className="font-medium text-sm mb-2">روابط</h5>
+                    <h5 className="font-medium text-sm mb-2">{currentLang === "fa" ? "روابط" : "Relationships"}</h5>
                     <div className="text-xs space-y-1">
-                      <div>• USER ↔ PREFERENCE: یک به یک</div>
-                      <div>• USER ↔ ALERT: یک به چند</div>
-                      <div>• MARKET_DATA ↔ HISTORICAL_PRICES: یک به چند</div>
-                      <div>• STOCK ↔ SIGNAL: یک به چند</div>
-                      <div>• INDUSTRY ↔ STOCK: یک به چند</div>
+                      <div>• USER ↔ PREFERENCE: One-to-One</div>
+                      <div>• USER ↔ ALERT: One-to-Many</div>
+                      <div>• MARKET_DATA ↔ HISTORICAL_PRICES: One-to-Many</div>
+                      <div>• STOCK ↔ SIGNAL: One-to-Many</div>
+                      <div>• INDUSTRY ↔ STOCK: One-to-Many</div>
                     </div>
                   </div>
                 </div>
@@ -331,42 +328,44 @@ export default function HelpPage() {
 
             {/* Data Flow */}
             {activeSection === "data-flow" && (
-              <TarotCard title="معماری جریان داده">
+              <TarotCard icon="🔄" title={t("app.help.sections.data_flow.title", currentLang)}>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    خط کامل داده از سرویس‌های بک‌اند به نمایش فرانت‌اند:
+                    {currentLang === "fa" 
+                      ? "خط لوله داده کامل انتها به انتها از سرویس‌های بک‌اِند تا نمایش در فرانت‌اِند:"
+                      : "Complete end-to-end data pipeline from backend services to frontend display:"}
                   </p>
                   <div className="space-y-3">
                     {[
                       {
                         step: 1,
-                        title: "دریافت API",
-                        desc: "فرانت‌اند نقاط پایانی REST امن را فراخوانی می‌کند",
+                        title: currentLang === "fa" ? "دریافت API" : "API Reception",
+                        desc: currentLang === "fa" ? "فرانت‌اِند نقاط دسترسی امن REST را فراخوانی می‌کند" : "Frontend calls secured REST endpoints"
                       },
                       {
                         step: 2,
-                        title: "پردازش داده",
-                        desc: "تجزیه و تبدیل پاسخ",
+                        title: currentLang === "fa" ? "پردازش داده‌ها" : "Data Processing",
+                        desc: currentLang === "fa" ? "تجزیه و تبدیل پاسخ‌ها" : "Response parsing and transformation"
                       },
                       {
                         step: 3,
-                        title: "به‌روزرسانی وضعیت",
-                        desc: "قلاب‌های React وضعیت کامپوننت را به روز می‌کنند",
+                        title: currentLang === "fa" ? "به‌روزرسانی وضعیت" : "State Update",
+                        desc: currentLang === "fa" ? "هوک‌های React وضعیت کامپوننت را به‌روز می‌کنند" : "React hooks update component state"
                       },
                       {
                         step: 4,
-                        title: "رندر",
-                        desc: "تولید UI پویا با رندر شرطی",
-                      },
+                        title: currentLang === "fa" ? "رندر" : "Render",
+                        desc: currentLang === "fa" ? "تولید رابط کاربری پویا با رندر مشروط" : "Dynamic UI generation with conditional rendering"
+                      }
                     ].map((s) => (
                       <div
                         key={s.step}
                         className="flex items-start gap-3 p-3 border rounded-lg"
                       >
-                        <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">
+                        <div className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-sm font-bold">
                           {s.step}
                         </div>
-                        <div>
+                        <div className="text-right">
                           <div className="font-medium text-sm">{s.title}</div>
                           <div className="text-xs text-muted-foreground">
                             {s.desc}
@@ -379,16 +378,16 @@ export default function HelpPage() {
               </TarotCard>
             )}
 
-            {/* Fallback */}
+            {/* API Endpoints */}
             {activeSection === "api-endpoints" && (
-              <TarotCard title="نقاط پایانی API">
+              <TarotCard icon="🔌" title={t("app.help.sections.api_endpoints.title", currentLang)}>
                 <div className="space-y-3">
                   <div className="border rounded p-3">
                     <div className="font-medium text-sm mb-2">
                       /analysis/scoring
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      POST - امتیازدهی جامع ۶ بعدی برای یک تیکر
+                      POST - {currentLang === "fa" ? "امتیازدهی جامع 6D برای یک نماد" : "Comprehensive 6D scoring for a ticker"}
                     </p>
                   </div>
                   <div className="border rounded p-3">
@@ -396,19 +395,22 @@ export default function HelpPage() {
                       /analysis/scoring/rank
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      POST - نمره و رتبه‌بندی چند سهام
+                      POST - {currentLang === "fa" ? "امتیازدهی و رتبه‌بندی چندین سهم" : "Score and rank multiple stocks"}
                     </p>
                   </div>
                   {[
-                    { path: "/market/symbols", method: "GET" },
-                    { path: "/market/latest-prices", method: "GET" },
-                    { path: "/analysis/signals-summary", method: "GET" },
-                    { path: "/news/market", method: "GET" },
+                    { path: "/market/symbols", method: "GET", desc: currentLang === "fa" ? "دریافت لیست نمادها" : "Get symbol list" },
+                    { path: "/market/latest-prices", method: "GET", desc: currentLang === "fa" ? "دریافت آخرین قیمت‌ها" : "Get latest prices" },
+                    { path: "/analysis/signals-summary", method: "GET", desc: currentLang === "fa" ? "خلاصه سیگنال‌های تحلیل" : "Analysis signals summary" },
+                    { path: "/news/market", method: "GET", desc: currentLang === "fa" ? "اخبار بازار" : "Market news" }
                   ].map((api, i) => (
                     <div key={i} className="border rounded p-3">
-                      <div className="font-medium text-sm">
-                        {api.method} {api.path}
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="font-medium text-sm">
+                          {api.method} {api.path}
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground">{api.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -416,9 +418,11 @@ export default function HelpPage() {
             )}
 
             {!activeSection && (
-              <TarotCard title="یک بخش انتخاب کنید">
+              <TarotCard icon="❓" title={currentLang === "fa" ? "انتخاب یک بخش" : "Select a Section"}>
                 <p className="text-muted-foreground text-center py-8">
-                  یک بخش مستندات از پنل سمت چپ انتخاب کنید تا اطلاعات دقیق مشاهده شود.
+                  {currentLang === "fa" 
+                    ? "یک بخش از مستندات را از پنل سمت راست انتخاب کنید تا اطلاعات دقیق را مشاهده کنید."
+                    : "Select a documentation section from the left panel to view detailed information."}
                 </p>
               </TarotCard>
             )}

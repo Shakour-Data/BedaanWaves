@@ -8,7 +8,7 @@ from typing import List
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, MLSignal, candle_model_for_market
+from app.models.models import Asset, MLSignal, candle_model_for_market, MacroIndicator
 from app.schemas.schemas import MLSignalResponse, SignalTypeEnum
 from app.services.analysis.technical_service import TechnicalAnalysisService
 from app.services.analysis.risk_service import RiskAnalysisService
@@ -17,6 +17,8 @@ from app.services.analysis.momentum_service import MomentumService
 from app.services.analysis.volatility_service import VolatilityService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
+from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
+from app.services.data.news_service import NewsService
 from app.services.data.financial_data_ingest_service import (
     FinancialDataIngestService,
     MarketType,
@@ -611,13 +613,133 @@ async def scoring_analysis(
     await service.initialize()
     result = await service.analyze(data)
 
-
     return {
         "status": "success",
         "symbol": ticker,
         "scoring": result,
         "hierarchy": service.get_hierarchy_info(),
         "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/scoring/{symbol}", response_model=dict)
+async def get_symbol_scoring(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Get 6D scoring for a specific symbol by fetching required data from services.
+    """
+    # 1. Get asset
+    asset_result = await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
+    asset = asset_result.scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+    
+    # 2. Get candles for technical and volatility
+    Candle = candle_model_for_market(asset.market)
+    candle_result = await db.execute(
+        select(Candle)
+        .where(Candle.asset_id == asset.id, Candle.timeframe == "1d")
+        .order_by(Candle.timestamp.desc())
+        .limit(100)
+    )
+    candles = candle_result.scalars().all()
+    candles.reverse() # asc order for analysis
+    
+    if len(candles) < 20:
+        raise HTTPException(status_code=400, detail="Insufficient data for scoring")
+    
+    prices = [float(c.close) for c in candles]
+    
+    # 3. Get fundamental data
+    financial_ingest_service = FinancialDataIngestService()
+    await financial_ingest_service.initialize()
+    fundamental_data = await financial_ingest_service.get_latest_fundamentals(
+        asset_id=asset.symbol,
+        market=MarketType(asset.market) if asset.market in [m.value for m in MarketType] else MarketType.US
+    )
+    financials = fundamental_data.get("financials", {})
+    await financial_ingest_service.shutdown()
+    
+    # 4. Prepare data for scoring
+    # Fetch signals for AI component
+    signal_query = select(MLSignal).where(MLSignal.asset_id == asset.id).order_by(MLSignal.generated_at.desc()).limit(1)
+    signal_result = await db.execute(signal_query)
+    latest_signal = signal_result.scalars().first()
+    
+    # Fetch macro indicators
+    macro_query = select(MacroIndicator).order_by(MacroIndicator.as_of.desc()).limit(10)
+    macro_result = await db.execute(macro_query)
+    macros = macro_result.scalars().all()
+    macro_data = {m.indicator_code: float(m.value) for m in macros}
+    
+    # Assemble analysis data
+    scoring_input = {
+        "ticker": asset.symbol,
+        "market": asset.market,
+        "fundamental": financials,
+        "technical": {
+            "current_price": prices[-1],
+            "rsi": 50, # Placeholder
+            "macd": 0,
+        },
+        "risk": {
+            "volatility": 0.2,
+        },
+        "sentiment": {
+            "news_sentiment": 0.6,
+        },
+        "macro": macro_data,
+        "ai": {
+            "prediction": latest_signal.signal_type if latest_signal else "HOLD",
+            "confidence": latest_signal.confidence if latest_signal else 50,
+        }
+    }
+    
+    # 5. Run Scoring Service
+    service = ScoringService()
+    await service.initialize()
+    result = await service.analyze(scoring_input)
+    
+    return {
+        "status": "success",
+        "symbol": asset.symbol,
+        "scoring": result,
+        "hierarchy": service.get_hierarchy_info(),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/sentiment/{symbol}", response_model=dict)
+async def get_sentiment_analysis(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Get aggregated sentiment analysis for a symbol by analyzing latest news.
+    """
+    # 1. Get asset
+    asset_result = await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))
+    asset = asset_result.scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
+
+    # 2. Get latest news for the symbol
+    news_service = NewsService()
+    await news_service.initialize()
+    news_items = await news_service.get_stock_news(symbol, limit=10)
+
+    # 3. Analyze sentiment
+    sentiment_service = SentimentAnalysisService()
+    await sentiment_service.initialize()
+    result = await sentiment_service.analyze_symbol_sentiment(symbol, news_items)
+
+    return {
+        "status": "success",
+        "symbol": symbol,
+        "sentiment": result,
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 

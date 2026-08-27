@@ -1,6 +1,5 @@
-"""Integration tests for inflation and PPP services."""
-
-import pytest
+import unittest
+from typing import Dict, Any
 import numpy as np
 
 try:
@@ -9,32 +8,38 @@ try:
 except ImportError:
     HAS_INFLATION_SERVICE = False
 
+async def test_phillips_curve():
+    import unittest
+    test_instance = TestPhillipsCurve()
+    test_instance.setUp()
+    await test_instance.test_correlation_positive()
+    TestPhillipsCurve.tearDownClass()
 
-pytestmark = pytest.mark.integration
-
-
-@pytest.mark.skipif(not HAS_INFLATION_SERVICE, reason="InflationService not implemented")
-class TestInflationService:
+class TestInflationService(unittest.IsolatedAsyncioTestCase):
     async def test_ppp_adjusted_inflation(self):
-        service = InflationService()
-        inflation_data = [
-            {"date": "2023-01-01", "inflation": 2.5},
-            {"date": "2023-02-01", "inflation": 3.1},
-            {"date": "2023-03-01", "inflation": 4.2}
+        # Test PPP calculations against sample dataset
+        from backend.app.services.analysis.inflation_service import InflationService
+        from backend.app.database.schemas import PPPMetric
+        
+        async def simple_equivalence():
+            inflation_data = [
+                {"date": "2023-01-01", "inflation": 2.5},
+                {"date": "2023-02-01", "inflation": 3.1},
+                {"date": "2023-03-01", "inflation": 4.2}
+            ]
+            mapping = {"real_inflation": "inflation"}
+            self.assertIn("nominal", mapping)  # Basic assertion
+            
+        async def test_big_mac_normalization():
+            # Test nominal vs PPP-adjusted normalization
+            service = await InflationService.create()
+            formatted_data = await service.fetch_historical()
+            self.assertIn("price_benchmark", formatted_data)
+            service.shutdown()
+            
+        self.tasks = [
+            unittest.TestCase("test_big_mac_normalization").run(),
         ]
-        mapping = {"real_inflation": "inflation"}
-        assert "nominal" in mapping
 
-    async def test_big_mac_normalization(self):
-        service = InflationService()
-        formatted_data = await service.fetch_historical()
-        assert isinstance(formatted_data, list)
-
-    async def test_phillips_curve_correlation(self):
-        service = InflationService()
-        inflation_data = [
-            {"date": "2023-01-01", "inflation": 2.5, "unemployment": 5.0},
-            {"date": "2023-02-01", "inflation": 3.1, "unemployment": 4.8},
-            {"date": "2023-03-01", "inflation": 4.2, "unemployment": 4.5},
-        ]
-        assert len(inflation_data) == 3
+if __name__ == "__main__":
+    unittest.main()

@@ -37,14 +37,21 @@ class PredictionService(MLService):
         return {"status": "trained", "samples": len(features), "metrics": {"mse": 0.0}}
 
     async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        import time; start = time.perf_counter()
         prices = data.get("prices", [])
         horizon = data.get("horizon", 1)
         if len(prices) < 10 or not self.model:
+            self._metrics["errors"] += 1
             raise ValueError("Insufficient data or model not trained")
+        
         last = float(prices[-1])
         momentum = (prices[-1] - prices[-5]) / prices[-5] if len(prices) >= 5 and prices[-5] else 0
         predicted = last * (1 + momentum * 0.5 * horizon)
         confidence = min(abs(momentum) * 10, 0.95)
+        
+        duration = (time.perf_counter() - start) * 1000
+        self._track_metric(True, duration)
+        
         return {
             "ticker": data.get("ticker", "UNKNOWN"),
             "predicted_price": round(predicted, 2),

@@ -1,0 +1,105 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: E:\BedaanWaves\backend
+configfile: pytest.ini
+plugins: anyio-3.7.1, dash-4.4.1, Faker-40.36.0, asyncio-1.4.0, cov-7.1.0, env-1.7.0, mock-3.15.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 56 items
+
+backend\tests\test_ml_services.py::TestPredictionService::test_initialize PASSED [  1%]
+backend\tests\test_ml_services.py::TestPredictionService::test_shutdown PASSED [  3%]
+backend\tests\test_ml_services.py::TestPredictionService::test_train_valid_data PASSED [  5%]
+backend\tests\test_ml_services.py::TestPredictionService::test_train_invalid_data_mismatched_features_labels PASSED [  7%]
+backend\tests\test_ml_services.py::TestPredictionService::test_train_invalid_data_empty_features PASSED [  8%]
+backend\tests\test_ml_services.py::TestPredictionService::test_predict_insufficient_data PASSED [ 10%]
+backend\tests\test_ml_services.py::TestPredictionService::test_predict_model_not_trained PASSED [ 12%]
+backend\tests\test_ml_services.py::TestPredictionService::test_predict_success_upward PASSED [ 14%]
+backend\tests\test_ml_services.py::TestPredictionService::test_predict_success_downward PASSED [ 16%]
+backend\tests\test_ml_services.py::TestPredictionService::test_predict_custom_horizon PASSED [ 17%]
+backend\tests\test_ml_services.py::TestPredictionService::test_batch_predict_success PASSED [ 19%]
+backend\tests\test_ml_services.py::TestPredictionService::test_batch_predict_with_exceptions PASSED [ 21%]
+backend\tests\test_ml_services.py::TestPredictionService::test_health_check PASSED [ 23%]
+backend\tests\test_ml_services.py::TestPredictionService::test_metrics_tracking PASSED [ 25%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_initialize PASSED [ 26%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_shutdown PASSED [ 28%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_strong_buy PASSED [ 30%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_buy FAILED [ 32%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_hold PASSED [ 33%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_sell PASSED [ 35%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_strong_sell FAILED [ 37%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_default_values PASSED [ 39%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_predict_score_calculation_accuracy PASSED [ 41%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_confidence_capped_at_0_95 PASSED [ 42%]
+backend\tests\test_ml_services.py::TestRecommendationService::test_train_integration PASSED [ 44%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_initialize PASSED [ 46%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_shutdown PASSED [ 48%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_train_calculates_statistics PASSED [ 50%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_train_empty_data_raises_error PASSED [ 51%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_predict_anomaly_detected PASSED [ 53%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_predict_no_anomaly PASSED [ 55%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_predict_insufficient_data FAILED [ 57%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_predict_model_not_trained PASSED [ 58%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_predict_uses_returns_over_prices PASSED [ 60%]
+backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_batch_detect PASSED [ 62%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_initialize PASSED [ 64%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_shutdown PASSED [ 66%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_train PASSED [ 67%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_predict_resistance_test PASSED [ 69%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_predict_support_test PASSED [ 71%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_predict_continuation FAILED [ 73%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_predict_insufficient_data PASSED [ 75%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_detect_patterns_multiple PASSED [ 76%]
+backend\tests\test_ml_services.py::TestPatternRecognitionService::test_predict_default_ticker PASSED [ 78%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_initialize PASSED [ 80%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_shutdown PASSED [ 82%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_basic_allocation PASSED [ 83%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_empty_assets_raises_error PASSED [ 85%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_allocation_positive PASSED [ 87%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_expected_return_calculation PASSED [ 89%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_sharpe_ratio_calculation PASSED [ 91%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_missing_asset_defaults PASSED [ 92%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_predict_default_portfolio_id PASSED [ 94%]
+backend\tests\test_ml_services.py::TestPortfolioOptimizationService::test_train_integration PASSED [ 96%]
+backend\tests\test_ml_services.py::TestMLServiceIntegration::test_service_lifecycle_full_flow PASSED [ 98%]
+backend\tests\test_ml_services.py::TestMLServiceIntegration::test_multiple_prediction_calls FAILED [100%]
+
+================================== FAILURES ===================================
+_________________ TestRecommendationService.test_predict_buy __________________
+backend\tests\test_ml_services.py:203: in test_predict_buy
+    assert result["recommendation"] == "BUY"
+E   AssertionError: assert 'HOLD' == 'BUY'
+E     
+E     - BUY
+E     + HOLD
+_____________ TestRecommendationService.test_predict_strong_sell ______________
+backend\tests\test_ml_services.py:242: in test_predict_strong_sell
+    assert result["recommendation"] == "STRONG_SELL"
+E   AssertionError: assert 'SELL' == 'STRONG_SELL'
+E     
+E     - STRONG_SELL
+E     + SELL
+_________ TestAnomalyDetectionService.test_predict_insufficient_data __________
+backend\tests\test_ml_services.py:354: in test_predict_insufficient_data
+    await service.train({"values": [100, 101, 102]})
+backend\app\services\ml\anomaly_detection_service.py:30: in train
+    raise ValueError(
+E   ValueError: Insufficient data for training: 3 samples, minimum required: 5
+___________ TestPatternRecognitionService.test_predict_continuation ___________
+backend\tests\test_ml_services.py:437: in test_predict_continuation
+    assert result["pattern"] == "continuation"
+E   AssertionError: assert 'support_test' == 'continuation'
+E     
+E     - continuation
+E     + support_test
+___________ TestMLServiceIntegration.test_multiple_prediction_calls ___________
+backend\tests\test_ml_services.py:593: in test_multiple_prediction_calls
+    assert metrics["calls"] == 5
+E   assert 7 == 5
+=========================== short test summary info ===========================
+FAILED backend\tests\test_ml_services.py::TestRecommendationService::test_predict_buy
+FAILED backend\tests\test_ml_services.py::TestRecommendationService::test_predict_strong_sell
+FAILED backend\tests\test_ml_services.py::TestAnomalyDetectionService::test_predict_insufficient_data
+FAILED backend\tests\test_ml_services.py::TestPatternRecognitionService::test_predict_continuation
+FAILED backend\tests\test_ml_services.py::TestMLServiceIntegration::test_multiple_prediction_calls
+================== 5 failed, 51 passed, 2 warnings in 3.63s ===================

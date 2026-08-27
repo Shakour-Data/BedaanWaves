@@ -184,3 +184,53 @@ export async function fetchLatestPrice(symbol: string): Promise<LatestPrice | nu
     return null;
   }
 }
+
+/** امتیازدهی ۶ بعدی یک نماد. */
+export async function fetchScoring(symbol: string): Promise<any | null> {
+  try {
+    const res = await apiClient.get<any>(`/analysis/scoring/${encodeURIComponent(symbol)}`);
+    return res.data?.scoring ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** تحلیل بنیادی یک نماد. */
+export async function fetchFundamental(symbol: string): Promise<any | null> {
+  try {
+    const res = await apiClient.get<any>(`/analysis/fundamental/${encodeURIComponent(symbol)}`);
+    return res.data?.fundamental ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** تحلیل تکنیکال یک نماد. */
+export async function fetchTechnical(symbol: string): Promise<any | null> {
+  try {
+    const res = await apiClient.get<any>(`/analysis/technical/${encodeURIComponent(symbol)}`);
+    return res.data?.indicators ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** تحلیل ریسک یک نماد. */
+export async function fetchRisk(symbol: string): Promise<any | null> {
+  try {
+    const res = await apiClient.get<any>(`/analysis/risk/${encodeURIComponent(symbol)}`);
+    return res.data?.risk ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** تحلیل احساسات یک نماد. */
+export async function fetchSentiment(symbol: string): Promise<any | null> {
+  try {
+    const res = await apiClient.get<any>(`/analysis/sentiment/${encodeURIComponent(symbol)}`);
+    return res.data?.sentiment ?? null;
+  } catch {
+    return null;
+  }
+}

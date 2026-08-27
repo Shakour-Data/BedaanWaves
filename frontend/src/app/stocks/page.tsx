@@ -12,6 +12,8 @@ import { PageLoading } from "@/components/ui/PageLoading";
 import { Input } from "@/components/ui/input";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
 
 import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
@@ -46,12 +48,28 @@ function matchesFilter(asset: Asset, filter: MarketFilter): boolean {
 }
 
 export default function StocksPage() {
+  const { currentLang } = useAuthStore();
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [prices, setPrices] = useState<Record<string, LatestPrice>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<MarketFilter>("NASDAQ");
   const [search, setSearch] = useState("");
+
+  const FILTERS: { key: MarketFilter; label: string }[] = [
+    { key: "ALL", label: currentLang === "fa" ? "همه" : "All" },
+    { key: "NASDAQ", label: "Nasdaq" },
+  ];
+
+  const MARKET_LABEL: Record<Market, string> = {
+    TSE: t("app.stocks.markets.tse", currentLang),
+    OTC: t("app.stocks.markets.otc", currentLang),
+    BINANCE: t("app.stocks.markets.binance", currentLang),
+    KRAKEN: t("app.stocks.markets.kraken", currentLang),
+    COINBASE: t("app.stocks.markets.coinbase", currentLang),
+    NYSE: t("app.stocks.markets.nyse", currentLang),
+    NASDAQ: t("app.stocks.markets.nasdaq", currentLang),
+  };
 
   useEffect(() => {
     let active = true;
@@ -91,9 +109,10 @@ export default function StocksPage() {
           a.name.toLowerCase().includes(q),
       );
   }, [assets, filter, search]);
+
   if (loading) {
     return (
-      <DashboardShell title="لیست سهام">
+      <DashboardShell title={t("app.stocks.title", currentLang)}>
         <PageLoading />
       </DashboardShell>
     );
@@ -101,14 +120,14 @@ export default function StocksPage() {
 
   if (error || !assets) {
     return (
-      <DashboardShell title="لیست سهام">
-        <TarotCard icon="️" title="خطا در اتصال به سرور" className="max-w-md mx-auto border-error/20 bg-error/5">
+      <DashboardShell title={t("app.stocks.title", currentLang)}>
+        <TarotCard icon="⚠️" title={t("app.stocks.error_title", currentLang)} className="max-w-md mx-auto border-error/20 bg-error/5">
           <div className="py-6 text-center">
             <p className="text-sm text-error font-medium mb-4">
-              امکان دریافت لیست نمادها وجود ندارد. لطفاً از اتصال سرور اطمینان حاصل کنید.
+              {t("app.stocks.error_desc", currentLang)}
             </p>
             <PrimaryButton onClick={() => window.location.reload()} variant="outline" size="sm">
-              تلاش مجدد
+              {t("app.stocks.retry", currentLang)}
             </PrimaryButton>
             {error ? <p className="mt-4 text-[10px] text-muted-foreground break-all">{error}</p> : null}
           </div>
@@ -118,7 +137,7 @@ export default function StocksPage() {
   }
 
   return (
-    <DashboardShell title="لیست سهام">
+    <DashboardShell title={t("app.stocks.title", currentLang)}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Filters + Search */}
         <section className="flex flex-col sm:flex-row items-center gap-4 bg-surface p-4 rounded-xl border border-border/60 shadow-sm">
@@ -131,39 +150,42 @@ export default function StocksPage() {
                 className={cn(
                   "flex-1 sm:flex-none rounded-lg px-4 py-1.5 text-xs font-semibold transition duration-fast ease-flow",
                   filter === f.key
-                    ? "bg-surface text-primary shadow-sm"
+                    ? "bg-red-600 text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {f.label === "All" ? "همه" : f.label}
+                {f.label}
               </button>
             ))}
           </div>
           <div className="relative w-full sm:w-64 sm:ms-auto">
-            <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground pointer-events-none" aria-hidden="true">
-              
+            <span className={cn(
+              "absolute inset-y-0 flex items-center text-muted-foreground pointer-events-none",
+              currentLang === "fa" ? "right-3" : "left-3"
+            )} aria-hidden="true">
+              🔍
             </span>
             <Input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="جستجوی نماد یا نام..."
-              className="ps-10 h-9"
+              placeholder={t("app.stocks.search_placeholder", currentLang)}
+              className={cn("h-9", currentLang === "fa" ? "pr-10" : "pl-10")}
             />
           </div>
         </section>
 
-        <TarotCard icon="" title={`لیست نمادها (${filtered.length.toLocaleString("fa-IR")})`}>
+        <TarotCard icon="📈" title={`${t("app.stocks.list_title", currentLang)} (${currentLang === "fa" ? filtered.length.toLocaleString("fa-IR") : filtered.length})`}>
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
-                  <th className="px-3 py-3 text-right font-bold text-xs uppercase tracking-wider">نماد</th>
-                  <th className="px-3 py-3 text-right font-bold text-xs uppercase tracking-wider">نام</th>
-                  <th className="px-3 py-3 text-center font-bold text-xs uppercase tracking-wider">بازار</th>
-                  <th className="px-3 py-3 text-right font-bold text-xs uppercase tracking-wider">صنعت</th>
-                  <th className="px-3 py-3 text-left font-bold text-xs uppercase tracking-wider">قیمت</th>
-                  <th className="px-3 py-3 text-left font-bold text-xs uppercase tracking-wider">تغییر</th>
+                  <th className="px-3 py-3 text-right font-bold text-xs uppercase tracking-wider">{t("app.stocks.symbol", currentLang)}</th>
+                  <th className="px-3 py-3 text-right font-bold text-xs uppercase tracking-wider">{t("app.stocks.name", currentLang)}</th>
+                  <th className="px-3 py-3 text-center font-bold text-xs uppercase tracking-wider">{t("app.stocks.market", currentLang)}</th>
+                  <th className="px-3 py-3 text-right font-bold text-xs uppercase tracking-wider">{t("app.stocks.sector", currentLang)}</th>
+                  <th className="px-3 py-3 text-left font-bold text-xs uppercase tracking-wider">{t("app.stocks.price", currentLang)}</th>
+                  <th className="px-3 py-3 text-left font-bold text-xs uppercase tracking-wider">{t("app.stocks.change", currentLang)}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
@@ -177,7 +199,7 @@ export default function StocksPage() {
                       <td className="px-3 py-4 font-bold">
                         <Link
                           href={`/stocks/${encodeURIComponent(a.symbol)}`}
-                          className="text-primary hover:text-red-700 transition-colors"
+                          className="text-red-600 hover:text-red-700 transition-colors"
                         >
                           {a.symbol}
                         </Link>
@@ -190,7 +212,7 @@ export default function StocksPage() {
                       </td>
                       <td className="px-3 py-4 text-muted-foreground text-xs">{a.sector ?? "—"}</td>
                       <td className="px-3 py-4 text-left font-mono text-xs">
-                        {p ? p.price.toLocaleString("fa-IR") : "—"}
+                        {p ? (currentLang === "fa" ? p.price.toLocaleString("fa-IR") : p.price.toLocaleString()) : "—"}
                       </td>
                       <td className="px-3 py-4 text-left">
                         {p ? <ChangeBadge value={p.change_pct} /> : "—"}
@@ -202,8 +224,8 @@ export default function StocksPage() {
                   <tr>
                     <td colSpan={6} className="px-3 py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center">
-                        <div className="text-4xl mb-2"></div>
-                        <p>هیچ نمادی یافت نشد</p>
+                        <div className="text-4xl mb-2">📁</div>
+                        <p>{t("app.stocks.no_results", currentLang)}</p>
                       </div>
                     </td>
                   </tr>
