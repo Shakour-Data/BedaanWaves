@@ -8,7 +8,11 @@ import { AssetTable } from "@/components/dashboard/AssetTable";
 import { apiClient } from "@/lib/api";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
 
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function AlertsPage() {
+  const { currentLang } = useAuthStore();
   const [alertType, setAlertType] = useState("all");
   const [activeAlerts, setActiveAlerts] = useState<SignalRow[]>([]);
   const [watchlistAlerts, setWatchlistAlerts] = useState<AssetRow[]>([]);
@@ -86,13 +90,14 @@ export default function AlertsPage() {
         // Build notification history
         const notifications = notificationsRes.data || [];
         const history = notifications
-          .filter((n: any) => n.type === "ALERT" || n.type === "SIGNAL" || n.title?.includes("هشدار"))
+          .filter((n: any) => n.type === "ALERT" || n.type === "SIGNAL" || n.title?.includes("هشدار") || n.title?.includes("Alert"))
           .slice(0, 10)
           .map((n: any) => ({
             time: formatTimeAgo(n.created_at),
             alert: n.title,
             type: n.extra?.signal_type || "INFO",
-            status: n.read ? "executed" : "active",
+            status: n.read ? t("app.alerts.status.executed", currentLang) : t("app.alerts.status.active", currentLang),
+            statusKey: n.read ? "executed" : "active",
           }));
         setAlertHistory(history);
 
@@ -105,7 +110,7 @@ export default function AlertsPage() {
 
     loadAlerts();
     return () => { active = false; };
-  }, []);
+  }, [currentLang]);
 
   const filteredAlerts = alertType === "all"
     ? activeAlerts
@@ -116,39 +121,39 @@ export default function AlertsPage() {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return "همین الان";
-    if (minutes < 60) return `${minutes} دقیقه پیش`;
-    if (hours < 24) return `${hours} ساعت پیش`;
-    return `${days} روز پیش`;
+    if (minutes < 1) return t("app.alerts.time.now", currentLang);
+    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", currentLang)}`;
+    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", currentLang)}`;
+    return `${days} ${t("app.alerts.time.days_ago", currentLang)}`;
   };
 
   if (loading) {
     return (
-      <DashboardShell title="هشدارها">
+      <DashboardShell title={t("app.alerts.title", currentLang)}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          در حال بارگذاری هشدارها...
+          {t("app.alerts.loading", currentLang)}
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title="هشدارها">
+    <DashboardShell title={t("app.alerts.title", currentLang)}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="" title="فیلتر هشدارها">
+          <TarotCard icon="🔍" title={t("app.alerts.filters", currentLang)}>
             <div className="space-y-2">
               {[
-                { id: "all", label: "همه" },
-                { id: "BUY", label: "خرید" },
-                { id: "SELL", label: "فروش" },
-                { id: "HOLD", label: "نگهداری" },
+                { id: "all", label: t("app.alerts.types.all", currentLang) },
+                { id: "BUY", label: t("app.alerts.types.buy", currentLang) },
+                { id: "SELL", label: t("app.alerts.types.sell", currentLang) },
+                { id: "HOLD", label: t("app.alerts.types.hold", currentLang) },
               ].map((type) => (
                 <button
                   key={type.id}
                   onClick={() => setAlertType(type.id)}
-                  className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${alertType === type.id ? "bg-success text-success-foreground" : "hover:bg-muted/50"}`}
+                  className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${alertType === type.id ? "bg-secondary text-white font-bold shadow-sm" : "hover:bg-neutral/50 text-muted-foreground"}`}
                 >
                   {type.label}
                 </button>
@@ -156,13 +161,13 @@ export default function AlertsPage() {
             </div>
           </TarotCard>
 
-          <TarotCard icon="" title="آمار هشدارها">
+          <TarotCard icon="📊" title={t("app.alerts.stats", currentLang)}>
             <div className="space-y-3">
               {[
-                { label: "هشدارهای فعال", value: filteredAlerts.length },
-                { label: "هشدار خرید", value: activeAlerts.filter(a => a.type === "BUY").length },
-                { label: "هشدار فروش", value: activeAlerts.filter(a => a.type === "SELL").length },
-                { label: "هشدار نگهداری", value: activeAlerts.filter(a => a.type === "HOLD").length },
+                { label: t("app.alerts.stats_labels.active", currentLang), value: filteredAlerts.length },
+                { label: t("app.alerts.stats_labels.buy", currentLang), value: activeAlerts.filter(a => a.type === "BUY").length },
+                { label: t("app.alerts.stats_labels.sell", currentLang), value: activeAlerts.filter(a => a.type === "SELL").length },
+                { label: t("app.alerts.stats_labels.hold", currentLang), value: activeAlerts.filter(a => a.type === "HOLD").length },
               ].map((stat, i) => (
                 <div key={i} className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">{stat.label}</span>
@@ -175,42 +180,42 @@ export default function AlertsPage() {
 
         {/* Active Alerts */}
         <div className="lg:col-span-3 space-y-4">
-          <TarotCard icon="" title={`هشدارهای فعال (${filteredAlerts.length})`}>
+          <TarotCard icon="🔔" title={`${t("app.alerts.active_alerts", currentLang)} (${filteredAlerts.length})`}>
             {filteredAlerts.length > 0 ? (
               <SignalList signals={filteredAlerts} />
             ) : (
-              <p className="text-muted-foreground py-4">هشدار فعالی وجود ندارد</p>
+              <p className="text-muted-foreground py-4">{t("app.alerts.empty", currentLang)}</p>
             )}
           </TarotCard>
 
-          <TarotCard icon="️" title="نمادهای واچ‌لیست">
+          <TarotCard icon="⭐" title={t("app.alerts.watchlist_symbols", currentLang)}>
             {watchlistAlerts.length > 0 ? (
               <AssetTable rows={watchlistAlerts} />
             ) : (
-              <p className="text-muted-foreground py-4">واچ‌لیست خالی است</p>
+              <p className="text-muted-foreground py-4">{t("app.alerts.watchlist_empty", currentLang)}</p>
             )}
           </TarotCard>
 
-          <TarotCard icon="" title="تاریخچه هشدارها">
+          <TarotCard icon="📜" title={t("app.alerts.history", currentLang)}>
             {alertHistory.length > 0 ? (
               <div className="space-y-3">
                 {alertHistory.map((alert, i) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{alert.time}</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${alert.type === "BUY" ? "bg-success/20 text-success" : alert.type === "SELL" ? "bg-primary/20 text-primary" : "bg-accent/20 text-accent-foreground"}`}>
-                        {alert.type}
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${alert.type === "BUY" ? "bg-success/20 text-success" : alert.type === "SELL" ? "bg-primary/20 text-primary" : "bg-accent/20 text-accent-foreground"}`}>
+                        {t(`app.alerts.types.${alert.type.toLowerCase()}`, currentLang)}
                       </span>
                       <span className="font-medium">{alert.alert}</span>
                     </div>
-                    <span className={`text-xs ${alert.status === "executed" ? "text-success" : "text-secondary"}`}>
+                    <span className={`text-xs ${alert.statusKey === "executed" ? "text-success" : "text-secondary"}`}>
                       {alert.status}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground py-4">تاریخچه هشدار خالی است</p>
+              <p className="text-muted-foreground py-4">{t("app.alerts.history_empty", currentLang)}</p>
             )}
           </TarotCard>
         </div>

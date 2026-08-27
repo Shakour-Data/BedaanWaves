@@ -97,4 +97,5 @@ class PreferenceService:
                 await session.close()
 
 
-
+# Global instance
+preference_service = PreferenceService()

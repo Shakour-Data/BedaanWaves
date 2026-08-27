@@ -10,9 +10,12 @@ import { AssetTable } from "@/components/dashboard/AssetTable";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { NewsItem, AssetRow } from "@/lib/dashboard-data";
 
 export default function NewsPage() {
+  const { currentLang } = useAuthStore();
   const [newItems, setNewItems] = useState<NewsItem[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,10 +56,10 @@ export default function NewsPage() {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return "همین الان";
-    if (minutes < 60) return `${minutes} دقیقه پیش`;
-    if (hours < 24) return `${hours} ساعت پیش`;
-    return `${days} روز پیش`;
+    if (minutes < 1) return t("app.alerts.time.now", currentLang);
+    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", currentLang)}`;
+    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", currentLang)}`;
+    return `${days} ${t("app.alerts.time.days_ago", currentLang)}`;
   };
 
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
@@ -66,32 +69,38 @@ export default function NewsPage() {
 
   if (loading) {
     return (
-      <DashboardShell title="اخبار">
+      <DashboardShell title={t("app.news.title", currentLang)}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          در حال بارگذاری اخبار...
+          {t("app.news.loading", currentLang)}
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title="اخبار">
+    <DashboardShell title={t("app.news.title", currentLang)}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="" title="فیلترها">
+          <TarotCard icon="🔍" title={currentLang === "fa" ? "فیلترها" : "Filters"}>
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedSource(null)}
-                className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${selectedSource === null ? "bg-secondary text-secondary-foreground" : "hover:bg-muted/50"}`}
+                className={cn(
+                  "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
+                  selectedSource === null ? "bg-red-600 text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                )}
               >
-                همه اخبار
+                {currentLang === "fa" ? "همه اخبار" : "All News"}
               </button>
               {sources.map((source) => (
                 <button
                   key={source}
                   onClick={() => setSelectedSource(source)}
-                  className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${selectedSource === source ? "bg-secondary text-secondary-foreground" : "hover:bg-muted/50"}`}
+                  className={cn(
+                    "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
+                    selectedSource === source ? "bg-red-600 text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                  )}
                 >
                   {source}
                 </button>
@@ -100,16 +109,18 @@ export default function NewsPage() {
           </TarotCard>
 
           {/* Trending Topics */}
-          <TarotCard icon="" title="موضوعات داغ">
+          <TarotCard icon="🔥" title={currentLang === "fa" ? "موضوعات داغ" : "Trending Topics"}>
             <div className="space-y-2">
               {topTopics.map((topic, i) => (
                 <div key={i} className="flex items-center justify-between font-medium text-sm">
                   <span className="flex-1">{topic.topic}</span>
-                  <span className="text-xs text-muted-foreground">{topic.count} خبر</span>
+                  <span className="text-xs text-muted-foreground">{topic.count} {currentLang === "fa" ? "خبر" : "news"}</span>
                 </div>
               ))}
               {topTopics.length === 0 && (
-                <p className="text-sm text-muted-foreground">موضوع داغی یافت نشد</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentLang === "fa" ? "موضوع داغی یافت نشد" : "No trending topics found"}
+                </p>
               )}
             </div>
           </TarotCard>
@@ -117,7 +128,13 @@ export default function NewsPage() {
 
         {/* News List */}
         <div className="lg:col-span-3">
-          <TarotCard icon="" title={selectedSource ? `اخبار از ${selectedSource}` : "همه اخبار"}>
+          <TarotCard 
+            icon="📰" 
+            title={selectedSource 
+              ? (currentLang === "fa" ? `اخبار از ${selectedSource}` : `News from ${selectedSource}`) 
+              : (currentLang === "fa" ? "همه اخبار" : "All News")
+            }
+          >
             <NewsList items={filteredNews} />
           </TarotCard>
         </div>

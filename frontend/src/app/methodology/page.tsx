@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -6,159 +6,111 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
 import { useState } from "react";
 
-const analysisMethods = [
-  {
-    id: "scoring",
-    title: "6D Scoring System",
-    icon: "",
-    description: "Comprehensive multi-dimensional stock evaluation",
-    steps: [
-      "Collect data across six dimensions (fundamental, technical, sentiment, risk, macro, AI)",
-      "Calculate individual scores (0-100) for each dimension",
-      "Apply ML-optimized weights to dimension scores",
-      "Compute final weighted score and assign grade (A-E)"
-    ],
-    details: "Uses a 4-level hierarchy with 305 nodes to evaluate investments across six equally-weighted dimensions. Machine learning dynamically optimizes weights based on historical performance.",
-    apiEndpoints: [
-      "/analysis/scoring",
-      "/analysis/scoring/rank"
-    ]
-  },
-  {
-    id: "ranking",
-    title: "Ranking System",
-    icon: "",
-    description: "Stock ranking by performance metrics",
-    steps: [
-      "Calculate 6D scores for all eligible securities",
-      "Sort by selected metric (overall score or specific dimension)",
-      "Return top N results (default: 10)"
-    ],
-    details: "Users can rank by any of the six dimensions or the composite score. Results are cached for 5 minutes to reduce API load.",
-    apiEndpoints: [
-      "/analysis/scoring/rank"
-    ]
-  },
-  {
-    id: "technical",
-    title: "Technical Analysis",
-    icon: "",
-    description: "Price and volume-based indicators",
-    steps: [
-      "Fetch historical price/volume data (minimum 20 periods)",
-      "Calculate indicators (RSI, MACD, moving averages, Bollinger Bands)",
-      "Generate trading signals based on indicator crossovers and thresholds"
-    ],
-    details: "Provides 50+ technical indicators including momentum oscillators, trend-following tools, and volatility measures.",
-    apiEndpoints: [
-      "/analysis/technical/{symbol}"
-    ]
-  },
-  {
-    id: "fundamental",
-    title: "Fundamental Analysis",
-    icon: "",
-    description: "Financial statement analysis",
-    steps: [
-      "Retrieve latest financial statements from CODAL, Yahoo Finance, or Alpha Vantage",
-      "Calculate key ratios (P/E, P/B, ROE, Debt/Equity, etc.)",
-      "Assess earnings quality and growth sustainability"
-    ],
-    details: "Analyzes income statements, balance sheets, and cash flow statements from multiple global data sources.",
-    apiEndpoints: [
-      "/analysis/fundamental/{symbol}"
-    ]
-  },
-  {
-    id: "momentum",
-    title: "Momentum Analysis",
-    icon: "",
-    description: "Short-term price trend identification",
-    steps: [
-      "Calculate price changes over multiple timeframes (1D, 1W, 1M, 3M)",
-      "Identify assets with strongest relative momentum",
-      "Filter for stocks showing consistent upward trends"
-    ],
-    details: "Focuses on relative strength and trend persistence to identify potential outperformers.",
-    apiEndpoints: [
-      "/analysis/momentum/{symbol}"
-    ]
-  },
-  {
-    id: "risk",
-    title: "Risk Analysis",
-    icon: "️",
-    description: "Volatility and downside risk assessment",
-    steps: [
-      "Calculate daily returns from historical price data",
-      "Compute volatility (standard deviation of returns)",
-      "Calculate Value-at-Risk (VaR) and Conditional VaR",
-      "Determine Sharpe, Sortino, and Calmar ratios"
-    ],
-    details: "Provides comprehensive risk metrics including maximum drawdown, beta, and tail risk measures.",
-    apiEndpoints: [
-      "/analysis/risk/{symbol}",
-      "/analysis/volatility/{symbol}"
-    ]
-  },
-  {
-    id: "sentiment",
-    title: "Sentiment Analysis",
-    icon: "️",
-    description: "Market sentiment from news and social media",
-    steps: [
-      "Collect financial news and social media mentions",
-      "Apply NLP models to extract sentiment scores",
-      "Aggregate sentiment by source and time period"
-    ],
-    details: "Uses transformer-based NLP models to analyze text sentiment from multiple sources in real-time.",
-    apiEndpoints: [
-      "/analysis/sentiment/{symbol}"
-    ]
-  },
-  {
-    id: "ai",
-    title: "AI/ML Analysis",
-    icon: "",
-    description: "Machine learning-based predictions",
-    steps: [
-      "Train LSTM/Prophet models on historical price data",
-      "Generate price forecasts for multiple time horizons",
-      "Detect chart patterns and anomalies using computer vision"
-    ],
-    details: "Combines time series forecasting, pattern recognition, and anomaly detection for predictive insights.",
-    apiEndpoints: [
-      "/analysis/prediction/{symbol}"
-    ]
-  }
-];
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function MethodologyPage() {
+  const { currentLang } = useAuthStore();
   const [activeMethod, setActiveMethod] = useState("scoring");
 
+  const analysisMethods = [
+    {
+      id: "scoring",
+      title: t("app.methodology.methods.scoring.title", currentLang),
+      icon: "💯",
+      description: t("app.methodology.methods.scoring.desc", currentLang),
+      steps: t("app.methodology.methods.scoring.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.scoring.details", currentLang),
+      apiEndpoints: ["/analysis/scoring", "/analysis/scoring/rank"]
+    },
+    {
+      id: "ranking",
+      title: t("app.methodology.methods.ranking.title", currentLang),
+      icon: "🏆",
+      description: t("app.methodology.methods.ranking.desc", currentLang),
+      steps: t("app.methodology.methods.ranking.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.ranking.details", currentLang),
+      apiEndpoints: ["/analysis/scoring/rank"]
+    },
+    {
+      id: "technical",
+      title: t("app.methodology.methods.technical.title", currentLang),
+      icon: "📈",
+      description: t("app.methodology.methods.technical.desc", currentLang),
+      steps: t("app.methodology.methods.technical.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.technical.details", currentLang),
+      apiEndpoints: ["/analysis/technical/{symbol}"]
+    },
+    {
+      id: "fundamental",
+      title: t("app.methodology.methods.fundamental.title", currentLang),
+      icon: "🏦",
+      description: t("app.methodology.methods.fundamental.desc", currentLang),
+      steps: t("app.methodology.methods.fundamental.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.fundamental.details", currentLang),
+      apiEndpoints: ["/analysis/fundamental/{symbol}"]
+    },
+    {
+      id: "momentum",
+      title: t("app.methodology.methods.momentum.title", currentLang),
+      icon: "🚀",
+      description: t("app.methodology.methods.momentum.desc", currentLang),
+      steps: t("app.methodology.methods.momentum.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.momentum.details", currentLang),
+      apiEndpoints: ["/analysis/momentum/{symbol}"]
+    },
+    {
+      id: "risk",
+      title: t("app.methodology.methods.risk.title", currentLang),
+      icon: "🛡️",
+      description: t("app.methodology.methods.risk.desc", currentLang),
+      steps: t("app.methodology.methods.risk.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.risk.details", currentLang),
+      apiEndpoints: ["/analysis/risk/{symbol}", "/analysis/volatility/{symbol}"]
+    },
+    {
+      id: "sentiment",
+      title: t("app.methodology.methods.sentiment.title", currentLang),
+      icon: "🎭",
+      description: t("app.methodology.methods.sentiment.desc", currentLang),
+      steps: t("app.methodology.methods.sentiment.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.sentiment.details", currentLang),
+      apiEndpoints: ["/analysis/sentiment/{symbol}"]
+    },
+    {
+      id: "ai",
+      title: t("app.methodology.methods.ai.title", currentLang),
+      icon: "🤖",
+      description: t("app.methodology.methods.ai.desc", currentLang),
+      steps: t("app.methodology.methods.ai.steps", currentLang) as unknown as string[],
+      details: t("app.methodology.methods.ai.details", currentLang),
+      apiEndpoints: ["/analysis/prediction/{symbol}"]
+    }
+  ];
+
   return (
-    <DashboardShell title="Analysis Methodology">
+    <DashboardShell title={t("app.methodology.title", currentLang)}>
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard icon="" title="Methodology Overview">
-          <p className="text-muted-foreground text-justify">
-            BedaanWaves employs a multi-faceted approach to financial analysis, combining traditional fundamental/technical analysis with cutting-edge machine learning techniques. Each analysis type serves a specific purpose in the investment decision-making process.
+        <TarotCard icon="📘" title={t("app.methodology.overview", currentLang)}>
+          <p className="text-muted-foreground text-justify leading-relaxed">
+            {t("app.methodology.desc", currentLang)}
           </p>
         </TarotCard>
 
         {/* Method Tabs */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap pb-2">
           {analysisMethods.map((method) => (
             <button
               key={method.id}
               onClick={() => setActiveMethod(method.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap flex items-center gap-2 ${
                 activeMethod === method.id
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  ? "bg-secondary text-white shadow-md transform scale-105"
+                  : "bg-neutral text-muted-foreground hover:bg-neutral/80"
               }`}
             >
-              <span className="mr-2">{method.icon}</span>
+              <span>{method.icon}</span>
               {method.title}
             </button>
           ))}
@@ -167,33 +119,45 @@ export default function MethodologyPage() {
         {/* Active Method Content */}
         {analysisMethods.map((method) => (
           activeMethod === method.id && (
-            <TarotCard key={method.id} icon={method.icon} title={method.title}>
-              <div className="space-y-4">
-                <p className="text-muted-foreground">{method.description}</p>
+            <TarotCard key={method.id} icon={method.icon} title={method.title} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-6">
+                <p className="text-foreground font-medium leading-relaxed border-r-4 border-secondary pr-4">{method.description}</p>
 
                 {/* Steps */}
-                <div>
-                  <h4 className="font-medium mb-2">Process Steps:</h4>
+                <div className="bg-neutral/30 p-4 rounded-xl border border-border/40">
+                  <h4 className="font-bold text-secondary mb-3 flex items-center gap-2">
+                    <span>📝</span>
+                    {t("app.methodology.process_steps", currentLang)}
+                  </h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                    {method.steps.map((step, i) => (
-                      <li key={i}>{step}</li>
+                    {Array.isArray(method.steps) && method.steps.map((step, i) => (
+                      <li key={i} className="hover:text-foreground transition-colors">{step}</li>
                     ))}
                   </ol>
                 </div>
 
                 {/* Details */}
                 <div>
-                  <h4 className="font-medium mb-2">Technical Details:</h4>
-                  <p className="text-sm text-muted-foreground">{method.details}</p>
+                  <h4 className="font-bold text-secondary mb-2 flex items-center gap-2">
+                    <span>🔍</span>
+                    {t("app.methodology.technical_details", currentLang)}
+                  </h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{method.details}</p>
                 </div>
 
                 {/* API Endpoints */}
                 {method.apiEndpoints && (
-                  <div>
-                    <h4 className="font-medium mb-2">API Endpoints:</h4>
-                    <ul className="list-disc list-inset space-y-1 text-sm font-mono">
+                  <div className="bg-neutral/50 p-4 rounded-xl border border-border/20">
+                    <h4 className="font-bold text-secondary mb-3 flex items-center gap-2">
+                      <span>🔗</span>
+                      {t("app.methodology.api_endpoints", currentLang)}
+                    </h4>
+                    <ul className="space-y-1 text-xs font-mono bg-background/50 p-2 rounded-lg">
                       {method.apiEndpoints.map((endpoint, i) => (
-                        <li key={i}>{endpoint}</li>
+                        <li key={i} className="text-muted-foreground truncate" dir="ltr text-left">
+                          <span className="text-secondary mr-2">GET</span>
+                          {endpoint}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -206,37 +170,37 @@ export default function MethodologyPage() {
         {/* Secondary Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Capabilities */}
-          <TarotCard icon="" title="Key Capabilities">
+          <TarotCard icon="🚀" title={t("app.methodology.key_capabilities", currentLang)}>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>Coverage: Iran, Global, and Crypto Markets</span>
+                <span className="text-green-500">✅</span>
+                <span>{t("app.methodology.coverage", currentLang)}</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>Real-time data updates (24/7)</span>
+                <span className="text-green-500">✅</span>
+                <span>{t("app.methodology.realtime", currentLang)}</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>ML-optimized weighting system</span>
+                <span className="text-green-500">✅</span>
+                <span>{t("app.methodology.ml_optimized", currentLang)}</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>Customizable user preferences</span>
+                <span className="text-green-500">✅</span>
+                <span>{t("app.methodology.customizable", currentLang)}</span>
               </li>
             </ul>
           </TarotCard>
 
           {/* Disclaimers */}
-          <TarotCard icon="" title="Important Notes">
+          <TarotCard icon="⚠️" title={t("app.methodology.important_notes", currentLang)}>
             <div className="space-y-3 text-sm">
               <div>
-                <h5 className="font-medium mb-1">Disclaimer:</h5>
-                <p className="text-muted-foreground">This is an analytical tool, not financial advice.</p>
+                <h5 className="font-medium mb-1">{t("app.methodology.disclaimer_title", currentLang)}</h5>
+                <p className="text-muted-foreground">{t("app.methodology.disclaimer_desc", currentLang)}</p>
               </div>
               <div>
-                <h5 className="font-medium mb-1">Accuracy:</h5>
-                <p className="text-muted-foreground">Results based on historical data, not guaranteed future performance.</p>
+                <h5 className="font-medium mb-1">{t("app.methodology.accuracy_title", currentLang)}</h5>
+                <p className="text-muted-foreground">{t("app.methodology.accuracy_desc", currentLang)}</p>
               </div>
             </div>
           </TarotCard>
@@ -245,10 +209,10 @@ export default function MethodologyPage() {
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-3">
           <Link href="/scoring">
-            <PrimaryButton className="w-full cursor-pointer">Explore 6D Scoring</PrimaryButton>
+            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.explore_scoring", currentLang)}</PrimaryButton>
           </Link>
           <Link href="/analysis">
-            <PrimaryButton className="w-full cursor-pointer">Run Analysis</PrimaryButton>
+            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.run_analysis", currentLang)}</PrimaryButton>
           </Link>
         </div>
       </div>

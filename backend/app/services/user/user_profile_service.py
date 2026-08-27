@@ -83,4 +83,5 @@ class UserProfileService:
                 await session.close()
 
 
-
+# Global instance
+user_profile_service = UserProfileService()

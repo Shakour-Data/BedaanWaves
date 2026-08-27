@@ -317,7 +317,8 @@ print(result)
                         .where(IntlPriceCandle.asset_id == asset_id)
                         .where(IntlPriceCandle.timeframe == "1d")
                         .order_by(IntlPriceCandle.timestamp.desc())
-                        .limit=50)
+                        .limit(50)
+                    )
                     candles = candle_result.all()
 
                     if len(candles) >= 20:

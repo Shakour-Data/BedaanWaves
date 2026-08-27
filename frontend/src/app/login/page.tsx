@@ -6,24 +6,7 @@ import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
-import en from "@/i18n/en.json";
-import fa from "@/i18n/fa.json";
-
-// Simple translation function
-const t = (key: string) => {
-  const lang = typeof window !== "undefined" ? localStorage.getItem("lang") || "en" : "en";
-  const dict = lang === "fa" ? fa : en;
-  const keys = key.split(".");
-  let value: any = dict;
-  for (const k of keys) {
-    if (value && typeof value === "object") {
-      value = (value as any)[k];
-    } else {
-      return key;
-    }
-  }
-  return typeof value === "string" ? value : key;
-};
+import { t } from "@/lib/i18n";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

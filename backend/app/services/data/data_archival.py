@@ -174,20 +174,50 @@ class DataArchivalService(DataService):
     
     def _load_archive_index(self) -> Dict:
         """Load archive index from storage"""
+        index_file = Path(self.archive_path) / "index.json"
+        if index_file.exists():
+            try:
+                with open(index_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.error(f"Failed to load archive index: {e}")
         return {}
-    
+
     def _save_archive_index(self) -> None:
         """Save archive index to storage"""
-        pass
-    
+        index_file = Path(self.archive_path) / "index.json"
+        try:
+            Path(self.archive_path).mkdir(parents=True, exist_ok=True)
+            with open(index_file, "w", encoding="utf-8") as f:
+                json.dump(self._archive_index, f, indent=2)
+        except Exception as e:
+            self.logger.error(f"Failed to save archive index: {e}")
+
     def _persist_archive(self, archive_id: str, data: Dict) -> None:
         """Persist archive data to storage"""
-        pass
-    
+        archive_file = Path(self.archive_path) / f"{archive_id}.json"
+        try:
+            with open(archive_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, default=str)
+        except Exception as e:
+            self.logger.error(f"Failed to persist archive {archive_id}: {e}")
+
     def _load_archive(self, archive_id: str) -> Optional[Dict]:
         """Load archive data from storage"""
+        archive_file = Path(self.archive_path) / f"{archive_id}.json"
+        if archive_file.exists():
+            try:
+                with open(archive_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.error(f"Failed to load archive {archive_id}: {e}")
         return None
-    
+
     def _delete_archive_file(self, archive_id: str) -> None:
         """Delete archive file from storage"""
-        pass
+        archive_file = Path(self.archive_path) / f"{archive_id}.json"
+        if archive_file.exists():
+            try:
+                archive_file.unlink()
+            except Exception as e:
+                self.logger.error(f"Failed to delete archive file {archive_id}: {e}")

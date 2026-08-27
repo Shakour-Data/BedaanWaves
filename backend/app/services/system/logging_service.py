@@ -278,27 +278,25 @@ class LoggingService(BaseService):
             
         # Move from buffer to store
         async with self._lock:
-            if self._log_buffer:
+            buffer_copy = list(self._log_buffer)
+            self._log_buffer.clear()
+            
+            for entry in buffer_copy:
                 # Add to permanent store
-                while self._log_buffer and len(self._log_store) < self.max_entries:
-                    self._log_store.append(self._log_buffer.popleft())
-                # If store is full, remove oldest to make room
-                while self._log_buffer and len(self._log_store) >= self.max_entries:
-                    # Remove oldest from store
-                    if self._log_store:
-                        removed = self._log_store.popleft()
-                        # Update counts (simplified)
-                        self._level_counts[removed.level] = max(0, self._level_counts[removed.level] - 1)
-                        self._logger_counts[removed.logger] = max(0, self._logger_counts[removed.logger] - 1)
-                    # Add from buffer
-                    self._log_store.append(self._log_buffer.popleft())
+                if len(self._log_store) >= self.max_entries:
+                    removed = self._log_store.popleft()
+                    # Update counts
+                    self._level_counts[removed.level] = max(0, self._level_counts[removed.level] - 1)
+                    self._logger_counts[removed.logger] = max(0, self._logger_counts[removed.logger] - 1)
+                
+                self._log_store.append(entry)
         
         # Write to disk
         try:
             log_file = self.log_dir / f"app_{datetime.now(timezone.utc).strftime('%Y%m%d')}.log"
             async with self._lock:
                 with open(log_file, "a", encoding="utf-8") as f:
-                    for entry in list(self._log_store)[-len(self._log_buffer):] if self._log_buffer else []:
+                    for entry in buffer_copy:
                         f.write(json.dumps(entry.to_dict()) + "\n")
         except Exception as exc:
             self.logger.error(f"Failed to write log file: {exc}", exc_info=True)

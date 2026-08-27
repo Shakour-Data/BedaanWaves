@@ -15,14 +15,19 @@ interface DashboardShellProps {
 
 export function DashboardShell({ title, children }: DashboardShellProps) {
   const { theme, sidebarOpen, setSidebarOpen } = useAppStore();
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout, currentLang } = useAuthStore();
   const router = useRouter();
+
+  const isRTL = currentLang === "fa";
 
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") root.classList.add("dark");
     else root.classList.remove("dark");
-  }, [theme]);
+    
+    // Set direction on document root
+    root.setAttribute("dir", isRTL ? "rtl" : "ltr");
+  }, [theme, isRTL]);
 
   useEffect(() => {
     if (sidebarOpen) {
@@ -65,7 +70,10 @@ export function DashboardShell({ title, children }: DashboardShellProps) {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="absolute inset-y-0 right-0 w-64 animate-in slide-in-from-right duration-300 ease-flow">
+          <div className={cn(
+            "absolute inset-y-0 w-64 animate-in duration-300 ease-flow",
+            isRTL ? "right-0 slide-in-from-right" : "left-0 slide-in-from-left"
+          )}>
             <Sidebar />
           </div>
         </div>

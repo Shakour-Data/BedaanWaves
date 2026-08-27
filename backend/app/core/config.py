@@ -28,13 +28,13 @@ class Settings(BaseSettings):
     # ============================================================
     # DATABASE CONFIGURATION
     # ============================================================
-    DATABASE_URL: str = "postgresql://administrator:Sedghi%404343@85.198.10.73:5432/bedaanwaves_db"
+    DATABASE_URL: str = "postgresql://administrator:placeholder@localhost:5432/bedaanwaves_db"
     DB_DRIVER: str = "postgresql"
-    DB_HOST: str = "85.198.10.73"
+    DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_NAME: str = "bedaanwaves_db"
-    DB_USER: str = "administrator"
-    DB_PASSWORD: str = "Sedghi@4343"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = ""
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     API_BASE_PATH: str = "/api/v1"
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 3000
+    API_PORT: int = 8000
     API_VERSION: str = "1.0.0"
     API_TITLE: str = "BedaanWaves API"
     API_TIMEOUT: int = 30
@@ -72,14 +72,7 @@ class Settings(BaseSettings):
     # ============================================================
     # CORS CONFIGURATION
     # ============================================================
-    CORS_ORIGINS: List[str] = [
-        "http://localhost",
-        "http://localhost:3005",
-        "http://localhost:3000",
-        "http://127.0.0.1",
-        "http://127.0.0.1:3005",
-        "http://127.0.0.1:3000",
-    ]
+    CORS_ORIGINS: List[str] = ["*"]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
     CORS_ALLOW_HEADERS: List[str] = ["*"]

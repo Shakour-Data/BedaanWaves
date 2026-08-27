@@ -165,4 +165,5 @@ class NotificationService:
                 await session.close()
 
 
-
+# Global instance
+notification_service = NotificationService()

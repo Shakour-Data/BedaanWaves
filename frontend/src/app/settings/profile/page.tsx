@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { useAppStore } from "@/store/useAppStore";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
+import { t } from "@/lib/i18n";
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { user, currentLang } = useAuthStore();
   const [fullName, setFullName] = useState(user?.name || "");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -32,7 +33,7 @@ export default function ProfilePage() {
 
   const validatePasswords = (): boolean => {
     if (newPassword && confirmPassword && newPassword !== confirmPassword) {
-      setConfirmPasswordError("رمز عبور جدید و تکرار آن باید یکسان باشند");
+      setConfirmPasswordError(t("app.settings.profile.error_password_match", currentLang));
       return false;
     }
     setConfirmPasswordError("");
@@ -45,40 +46,37 @@ export default function ProfilePage() {
         
         setLoading(true);
         try {
-          // Note: Backend currently supports full_name update via PATCH /users/me
-          // Password update is not yet implemented in the backend services.
           const response = await apiClient.patch("/users/me", {
             full_name: fullName,
           });
           
           if (response.status === 200) {
-            // Success: refresh user data if needed
             window.location.reload();
           } else {
-            throw new Error("بروز خطا در ذخیره اطلاعات");
+            throw new Error(t("app.settings.profile.error_save", currentLang));
           }
           } catch (error) {
-            // Handle error (e.g., show toast)
+            // Handle error
           } finally {
           setLoading(false);
         }
       };
 
   return (
-    <DashboardShell title="پروفایل کاربری">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <DashboardShell title={t("app.settings.profile.title", currentLang)}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
         {/* User Profile */}
-        <TarotCard icon="" title="پروفایل کاربر" className="lg:col-span-3">
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-2xl">
-              
+        <TarotCard icon="👤" title={t("app.settings.profile.user_profile", currentLang)} className="lg:col-span-3">
+          <div className="flex items-center gap-6 py-2">
+            <div className="w-24 h-24 rounded-full bg-neutral flex items-center justify-center text-4xl border-4 border-surface shadow-lg">
+              👤
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold">{fullName || user?.name || "کاربر نمایشی"}</h3>
-              <p className="text-sm text-muted-foreground">{user?.email || "user@example.com"}</p>
-              <div className="mt-2 flex gap-2">
-                <span className="px-2 py-1 rounded text-xs bg-secondary text-secondary-foreground">
-                  عضو از: ۱۴۰۲/۰۱/۰۱
+              <h3 className="text-2xl font-black">{fullName || user?.name || (currentLang === "fa" ? "کاربر" : "User")}</h3>
+              <p className="text-muted-foreground font-mono">{user?.email || "user@example.com"}</p>
+              <div className="mt-3 flex gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600/10 text-red-600 border border-red-600/20">
+                  {t("app.settings.profile.member_since", currentLang).replace("{date}", "۱۴۰۲/۰۱/۰۱")}
                 </span>
               </div>
             </div>
@@ -86,93 +84,112 @@ export default function ProfilePage() {
         </TarotCard>
 
         {/* Account Info */}
-        <TarotCard icon="" title="اطلاعات حساب" className="lg:col-span-2">
-          <div className="space-y-4">
+        <TarotCard icon="📄" title={t("app.settings.profile.account_info", currentLang)} className="lg:col-span-1">
+          <div className="space-y-6">
             <div>
-              <div className="text-sm font-medium mb-2">ایمیل</div>
-              <span className="text-sm text-muted-foreground">{user?.email || "user@example.com"}</span>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.email", currentLang)}</div>
+              <span className="text-sm font-medium">{user?.email || "user@example.com"}</span>
             </div>
 
             <div>
-              <div className="text-sm font-medium mb-2">نام نمایشی</div>
-              <span className="text-sm text-muted-foreground">{fullName}</span>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.display_name", currentLang)}</div>
+              <span className="text-sm font-medium">{fullName}</span>
             </div>
 
             <div>
-              <div className="text-sm font-medium mb-2">وضعیت ورود</div>
-              <span className="text-sm text-muted-foreground">{user?.isActive ? "فعال" : "غیرفعال"}</span>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.login_status", currentLang)}</div>
+              <span className={cn(
+                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold",
+                user?.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              )}>
+                {user?.isActive ? t("app.settings.profile.active", currentLang) : t("app.settings.profile.inactive", currentLang)}
+              </span>
             </div>
 
             <div>
-              <div className="text-sm font-medium mb-2">تاریخ ثبت‌نام</div>
-              <span className="text-sm text-muted-foreground">۱۴۰۲/۰۱/۰۱</span>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.joined_date", currentLang)}</div>
+              <span className="text-sm font-medium">۱۴۰۲/۰۱/۰۱</span>
             </div>
           </div>
         </TarotCard>
 
         {/* Security Settings */}
-        <TarotCard icon="" title="تنظیمات امنیتی" className="lg:col-span-2">
-          <div className="space-y-4">
-            <div className="border-b border-border pb-2 mb-4">
-              <div className="font-medium mb-2">تغییر رمز عبور</div>
-              <div className="flex items-center gap-2">
-                <span className="cursor-pointer mr-3">
-                  <span className="text-xl">{showPassword ? "" : "️"}</span>
-                </span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleToggleShowPassword}
-                disabled={loading}
-                className="ml-2 px-3 py-2 rounded-xl bg-secondary text-sm text-secondary hover:bg-primary/10 transition duration-fast ease-flow"
-                aria-label={showPassword ? "مخفی کردن رمز" : "نمایش رمز"}
-              >
-                {showPassword ? "" : "️"}
-              </button>
+        <TarotCard icon="🔐" title={t("app.settings.profile.security_settings", currentLang)} className="lg:col-span-2">
+          <form onSubmit={handleSave} className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold mb-2">{t("app.settings.profile.full_name", currentLang)}</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-red-600 focus:ring-4 focus:ring-red-600/10"
+              />
             </div>
 
-            <div>
-              <div className="font-medium mb-2">رمز عبور جدید</div>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                disabled={loading}
-                className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
-                placeholder="حداقل ۸ کاراکتر"
-              />
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-                className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
-                placeholder="تکرار رمز جدید"
-              />
+            <div className="pt-4 border-t border-border/60">
+              <h4 className="font-bold mb-4 flex items-center gap-2">
+                <span>🔑</span> {t("app.settings.profile.change_password", currentLang)}
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2 relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-red-600 focus:ring-4 focus:ring-red-600/10 disabled:opacity-60"
+                    placeholder={currentLang === "fa" ? "رمز عبور فعلی" : "Current Password"}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleToggleShowPassword}
+                    className={cn(
+                      "absolute inset-y-0 flex items-center text-xl hover:text-red-600 transition-colors",
+                      currentLang === "fa" ? "left-4" : "right-4"
+                    )}
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+
+                <div className="space-y-4 md:col-span-2">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-red-600 focus:ring-4 focus:ring-red-600/10 disabled:opacity-60"
+                    placeholder={t("app.settings.profile.new_password", currentLang)}
+                  />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-red-600 focus:ring-4 focus:ring-red-600/10 disabled:opacity-60"
+                    placeholder={t("app.settings.profile.confirm_password", currentLang)}
+                  />
+                </div>
+              </div>
+              
               {confirmPasswordError && (
-                <p className="text-sm mt-1 text-primary flex items-center">
-                  <span className="text-xl">️</span>
-                  {confirmPasswordError}
+                <p className="text-sm mt-3 text-red-600 flex items-center gap-2 font-bold">
+                  <span>⚠️</span> {confirmPasswordError}
                 </p>
               )}
             </div>
 
-            <button
-              type="submit"
-              onClick={handleSave}
-              disabled={loading}
-              className="mt-4 w-full justify-center px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/20 transition duration-fast ease-flow"
-            >
-              {loading ? "در حال ذخیره..." : "ذخیره تغییرات"}
-            </button>
-          </div>
+            <div className="pt-4 flex justify-end">
+              <PrimaryButton
+                type="submit"
+                disabled={loading}
+                className="w-full md:w-auto px-8 shadow-lg shadow-red-600/20"
+              >
+                {loading ? t("app.settings.profile.saving", currentLang) : t("app.settings.profile.save_changes", currentLang)}
+              </PrimaryButton>
+            </div>
+          </form>
         </TarotCard>
       </div>
     </DashboardShell>

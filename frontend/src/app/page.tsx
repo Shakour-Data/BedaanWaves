@@ -1,38 +1,42 @@
+"use client";
+
 import Link from "next/link";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-
-const features = [
-  {
-    title: "Nasdaq Market Data",
-    desc: "Real-time and historical price data for Nasdaq Composite and all constituents",
-  },
-  {
-    title: "Fundamental Analysis",
-    desc: "Quarterly financial statements, ratios, and key metrics for US equities",
-  },
-  {
-    title: "AI-Powered Signals",
-    desc: "Machine learning predictions and technical analysis for informed decisions",
-  },
-];
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function HomePage() {
+  const { currentLang } = useAuthStore();
+
+  const features = [
+    {
+      title: t("app.home.features.market_data.title", currentLang),
+      desc: t("app.home.features.market_data.desc", currentLang),
+    },
+    {
+      title: t("app.home.features.fundamental.title", currentLang),
+      desc: t("app.home.features.fundamental.desc", currentLang),
+    },
+    {
+      title: t("app.home.features.ai.title", currentLang),
+      desc: t("app.home.features.ai.desc", currentLang),
+    },
+  ];
+
   return (
     <main className="min-h-screen">
       <section className="px-4 pt-10 pb-6">
         <h1 className="text-center text-4xl font-bold text-gray-800 mb-4">
-          BedaanWaves - Nasdaq Market Analysis Platform
+          {t("app.home.hero_title", currentLang)}
         </h1>
         <p className="text-center text-gray-600 text-lg mb-12 max-w-2xl mx-auto">
-          Comprehensive market analysis and AI trading platform focused on
-          Nasdaq Composite index and its constituents. 5 years of historical data,
-          fundamentals, and AI signals.
+          {t("app.home.hero_desc", currentLang)}
         </p>
       </section>
 
       <section className="px-4 pb-12">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-          Key Features
+          {t("app.home.features_title", currentLang)}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {features.map((item) => (
@@ -52,7 +56,7 @@ export default function HomePage() {
       <section className="px-4 pb-12 text-center">
         <div className="flex flex-col items-center gap-4">
           <Link href="/stocks">
-            <PrimaryButton>View Nasdaq Stocks</PrimaryButton>
+            <PrimaryButton>{t("app.home.view_stocks", currentLang)}</PrimaryButton>
           </Link>
           <p className="text-gray-400 text-sm">
             Backend running on port 3000 | Frontend on port 3005

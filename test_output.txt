@@ -1,0 +1,56 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: E:\BedaanWaves\backend
+configfile: pytest.ini
+plugins: anyio-3.7.1, dash-4.4.1, Faker-40.36.0, asyncio-1.4.0, cov-7.1.0, env-1.7.0, mock-3.15.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 45 items
+
+backend\tests\test_database_service.py::TestDatabaseConfiguration::test_default_configuration PASSED [  2%]
+backend\tests\test_database_service.py::TestDatabaseConfiguration::test_custom_configuration PASSED [  4%]
+backend\tests\test_database_service.py::TestConnectionUrlMasking::test_password_is_masked PASSED [  6%]
+backend\tests\test_database_service.py::TestConnectionUrlMasking::test_url_without_credentials PASSED [  8%]
+backend\tests\test_database_service.py::TestConnectionUrlMasking::test_malformed_url_returned_as_is PASSED [ 11%]
+backend\tests\test_database_service.py::TestSessionGuards::test_get_session_before_init_raises PASSED [ 13%]
+backend\tests\test_database_service.py::TestSessionGuards::test_execute_before_init_raises PASSED [ 15%]
+backend\tests\test_database_service.py::TestSessionGuards::test_clean_sessions_empty PASSED [ 17%]
+backend\tests\test_database_service.py::TestStats::test_get_stats PASSED [ 20%]
+backend\tests\test_database_service.py::TestLifecycle::test_initialize_failure_raises PASSED [ 22%]
+backend\tests\test_database_service.py::TestLifecycle::test_shutdown_without_engine_is_safe PASSED [ 24%]
+backend\tests\test_database_service.py::TestLifecycle::test_health_check_reports_unhealthy_without_engine PASSED [ 26%]
+backend\tests\test_database_service.py::TestCheckDatabaseHelper::test_check_database_delegates PASSED [ 28%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_string_default PASSED [ 31%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_string_from_env PASSED [ 33%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_int_valid PASSED [ 35%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_int_invalid_returns_default PASSED [ 37%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_float_valid PASSED [ 40%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_float_invalid_returns_default PASSED [ 42%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_truthy[true] PASSED [ 44%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_truthy[1] PASSED [ 46%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_truthy[yes] PASSED [ 48%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_truthy[on] PASSED [ 51%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_truthy[TRUE] PASSED [ 53%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_truthy[On] PASSED [ 55%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_falsy[false] PASSED [ 57%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_falsy[0] PASSED [ 60%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_falsy[no] PASSED [ 62%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_falsy[off] PASSED [ 64%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_falsy[FALSE] PASSED [ 66%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_bool_unknown_returns_default PASSED [ 68%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_list PASSED [ 71%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_list_empty_returns_default PASSED [ 73%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_json_valid PASSED [ 75%]
+backend\tests\test_config_service.py::TestConfigTypeConversion::test_get_json_invalid_returns_default PASSED [ 77%]
+backend\tests\test_config_service.py::TestConfigSections::test_config_has_all_sections PASSED [ 80%]
+backend\tests\test_config_service.py::TestConfigSections::test_get_config_section PASSED [ 82%]
+backend\tests\test_config_service.py::TestConfigSections::test_get_config_unknown_section PASSED [ 84%]
+backend\tests\test_config_service.py::TestConfigSections::test_set_config PASSED [ 86%]
+backend\tests\test_config_service.py::TestConfigEnvironment::test_is_development_default PASSED [ 88%]
+backend\tests\test_config_service.py::TestConfigEnvironment::test_is_production_true PASSED [ 91%]
+backend\tests\test_config_service.py::TestConfigEnvironment::test_is_development_true PASSED [ 93%]
+backend\tests\test_config_service.py::TestConfigEnvironment::test_is_debug PASSED [ 95%]
+backend\tests\test_config_service.py::TestConfigLifecycle::test_initialize_and_shutdown PASSED [ 97%]
+backend\tests\test_config_service.py::TestConfigLifecycle::test_find_env_file_returns_none_when_absent PASSED [100%]
+
+======================= 45 passed, 2 warnings in 1.30s ========================
