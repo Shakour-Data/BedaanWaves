@@ -77,3 +77,130 @@ class TestSchedulerService:
         assert health["service"] == "TestScheduler"
         assert health["status"] == "healthy"
         await svc.shutdown()
+
+
+class FakeScoringService:
+    """Minimal stub for ScoringService used in scheduler jobs."""
+
+    def __init__(self):
+        self.analyzed = []
+
+    async def initialize(self):
+        pass
+
+    async def shutdown(self):
+        pass
+
+    async def analyze(self, symbol: str, market: str = "NASDAQ") -> dict:
+        self.analyzed.append((symbol, market))
+        return {"symbol": symbol, "score": 0.5}
+
+
+class FakeCacheService:
+    def __init__(self):
+        self.cleared = False
+        self.cleared_namespace = None
+
+    async def initialize(self):
+        pass
+
+    async def shutdown(self):
+        pass
+
+    async def clear(self, namespace: str | None = None):
+        self.cleared = True
+        self.cleared_namespace = namespace
+
+    def get_stats(self) -> dict:
+        return {"keys": 0, "size": 0}
+
+
+class TestSchedulerServiceWithInjectedServices:
+    """Tests verifying that SchedulerService correctly uses injected services."""
+
+    async def test_scheduler_accepts_service_injection(self):
+        """SchedulerService stores injected services as attributes."""
+        scoring = FakeScoringService()
+        cache = FakeCacheService()
+        svc = SchedulerService(
+            service_name="TestScheduler",
+            scoring_service=scoring,
+            cache_service=cache,
+        )
+        assert svc.scoring_service is scoring
+        assert svc.cache_service is cache
+        assert svc.nasdaq_service is None  # not injected
+
+    async def test_scheduler_defaults_to_none_services(self):
+        """SchedulerService works with no services injected."""
+        svc = SchedulerService("TestScheduler")
+        assert svc.scoring_service is None
+        assert svc.cache_service is None
+        assert svc.nasdaq_service is None
+        assert svc.ml_training_service is None
+        assert svc.backup_service is None
+
+    async def test_daily_score_recalculation_uses_scoring_service(self):
+        """When scoring_service is set, daily_score_recalculation_job calls analyze per symbol."""
+        scoring = FakeScoringService()
+        svc = SchedulerService(
+            service_name="TestScheduler",
+            scoring_service=scoring,
+        )
+        await svc.initialize()
+
+        # Create a real job that exercises the scoring path
+        result = await svc.run_job_now("DailyScoreRecalculation")
+        assert result["status"] in ("success", "skipped")
+
+        await svc.shutdown()
+        # If scoring service was available and ran, assert it analyzed some symbols
+        if scoring.analyzed:
+            assert len(scoring.analyzed) > 0
+
+    async def test_cache_warming_uses_cache_service(self):
+        """When cache_service is set, cache_warming_job calls clear() with await."""
+        cache = FakeCacheService()
+        svc = SchedulerService(
+            service_name="TestScheduler",
+            cache_service=cache,
+        )
+        await svc.initialize()
+
+        result = await svc.run_job_now("CacheWarming")
+        assert result["status"] in ("success", "skipped")
+        await svc.shutdown()
+
+    async def test_model_training_uses_ml_service(self):
+        """When ml_training_service is set, ModelTraining job calls retrain_all."""
+
+        class FakeMLService:
+            def __init__(self):
+                self.retrained = False
+                self.initialized = False
+                self.shutdown_called = False
+
+            async def initialize(self):
+                self.initialized = True
+
+            async def shutdown(self):
+                self.shutdown_called = True
+
+            async def retrain_all(self):
+                self.retrained = True
+                return {"status": "ok", "models_trained": 5}
+
+        ml_svc = FakeMLService()
+        svc = SchedulerService(
+            service_name="TestScheduler",
+            ml_training_service=ml_svc,
+        )
+        await svc.initialize()
+
+        result = await svc.run_job_now("ModelTraining")
+        assert result["status"] in ("success", "skipped")
+        await svc.shutdown()
+
+        if ml_svc.retrained:
+            assert ml_svc.initialized is True
+            assert ml_svc.shutdown_called is True

@@ -243,7 +243,93 @@ class CoefficientLearningService(MLService):
             self.logger.error(f"Error during coefficient learning: {e}")
             # Return current coefficients (may be defaults or previously learned)
             return self.learned_coefficients
-    
+
+    async def retrain_all(self) -> Dict[str, Any]:
+        """Retrain all hierarchical coefficient models from stored performance data.
+
+        Queries ``raw_performance_scores`` (optionally ``processed_feature_data``)
+        for processed records and feeds them into :meth:`learn_coefficients`.
+
+        Returns:
+            Dictionary describing the retraining outcome.
+        """
+        try:
+            from app.db.base import async_session_maker
+            from app.models.models import RawPerformanceScore
+
+            async with async_session_maker() as session:
+                from sqlalchemy import select, func, desc
+
+                total = await session.execute(
+                    select(func.count()).select_from(RawPerformanceScore)
+                )
+                total_records = total.scalar_one_or_none() or 0
+
+                if total_records < self.min_samples_for_training:
+                    self.logger.warning(
+                        f"Insufficient performance data for retraining: "
+                        f"{total_records} records (need {self.min_samples_for_training})"
+                    )
+                    return {
+                        "status": "skipped",
+                        "reason": "insufficient_data",
+                        "records_available": total_records,
+                        "min_required": self.min_samples_for_training,
+                    }
+
+                result = await session.execute(
+                    select(
+                        RawPerformanceScore.dimension_scores,
+                        RawPerformanceScore.sub_dimension_scores,
+                        RawPerformanceScore.aspect_scores,
+                        RawPerformanceScore.sub_aspect_scores,
+                        RawPerformanceScore.target_return,
+                        RawPerformanceScore.target_price_change,
+                    )
+                    .where(RawPerformanceScore.is_processed == True)
+                    .where(RawPerformanceScore.data_quality == "VALIDATED")
+                    .order_by(desc(RawPerformanceScore.captured_at))
+                    .limit(5000)
+                )
+                rows = result.fetchall()
+
+            performance_data = []
+            for row in rows:
+                record = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "dimension_scores": row.dimension_scores,
+                    "sub_dimension_scores": row.sub_dimension_scores,
+                    "aspect_scores": row.aspect_scores,
+                    "sub_aspect_scores": row.sub_aspect_scores,
+                    "target_metric": float(row.target_return or 0.0),
+                    "volatility": float(row.target_volatility or 0.0),
+                    "price_change": float(row.target_price_change or 0.0),
+                }
+                performance_data.append(record)
+
+            self.logger.info(
+                f"Retraining ML models with {len(performance_data)} performance records"
+            )
+            learned = await self.learn_coefficients(performance_data)
+
+            await self._save_models()
+
+            return {
+                "status": "completed",
+                "records_used": len(performance_data),
+                "last_training_time": self.last_training_time.isoformat()
+                if self.last_training_time
+                else None,
+                "coefficients": {
+                    level: len(coeffs)
+                    for level, coeffs in learned.items()
+                    if coeffs
+                },
+            }
+        except Exception as e:
+            self.logger.error(f"Error during retrain_all: {e}")
+            return {"status": "error", "error": str(e)}
+
     async def _prepare_training_data(self, 
                                    performance_data: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """
