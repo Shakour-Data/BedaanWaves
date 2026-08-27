@@ -1,5 +1,5 @@
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 
 export default function StocksLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell title="سهام">{children}</DashboardShell>;
+  return <NewDashboardShell title="Stocks">{children}</NewDashboardShell>;
 }
