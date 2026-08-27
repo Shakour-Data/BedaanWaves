@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Final validation of BedaanWaves project setup."""
 
+import re
 import sys
 import asyncio
 import json
@@ -21,8 +22,11 @@ async def main():
     async for session in get_async_session():
         print("\nTable Validation:")
         for table in tables_to_check:
+            if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', table):
+                print(f"  [SKIP] Invalid table name: {table}")
+                continue
             try:
-                result = await session.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                result = await session.execute(text('SELECT COUNT(*) FROM ' + table))
                 count = result.scalar()
                 status = "PASS" if count > 0 else "FAIL"
                 print(f"  [{status}] {table}: {count} rows")

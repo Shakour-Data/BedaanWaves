@@ -6,7 +6,7 @@ Enables customizable financial data filtering based on geographic and sector pre
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime, date
+from datetime import timezone, datetime, date
 import asyncio
 import json
 from app.services.core.base_service import BaseService
@@ -317,7 +317,7 @@ class UserMarketSettingsService(BaseService):
             "regions": settings.get("regions", self.default_settings["regions"]),
             "exchanges": settings.get("exchanges", self.default_settings["exchanges"]),
             "currencies": settings.get("currencies", self.default_settings["currencies"]),
-            "last_updated": datetime.utcnow().isoformat()
+            "last_updated": datetime.now(timezone.utc).isoformat()
         }
         
         return effective_filters

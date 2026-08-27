@@ -184,10 +184,18 @@ class DatabaseService(BaseService):
         try:
             self._connection_checks += 1
             
-            if self.async_mode and self.engine:
+            if not self.engine:
+                return {
+                    "service": self.service_name,
+                    "status": "unhealthy",
+                    "error": "Database engine not initialized",
+                    "active_sessions": self._active_session_count,
+                }
+            
+            if self.async_mode:
                 async with self.engine.connect() as conn:
                     await conn.execute(text("SELECT 1"))
-            elif self.engine:
+            else:
                 with self.engine.connect() as conn:
                     conn.execute(text("SELECT 1"))
             

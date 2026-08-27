@@ -225,7 +225,7 @@ class FakeAsyncSession:
             if col.key == "id":
                 setattr(obj, col.key, _uuid.uuid4())
             elif col.key in ("created_at", "updated_at"):
-                setattr(obj, col.key, _dt.datetime.utcnow())
+                setattr(obj, col.key, _dt.datetime.now(_dt.timezone.utc))
             elif not callable(col.default.arg):
                 setattr(obj, col.key, col.default.arg)
 

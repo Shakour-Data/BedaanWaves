@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
-from datetime import datetime
+from datetime import timezone, datetime
 from typing import List
 import logging
 
@@ -60,7 +60,7 @@ async def get_signal(
             and_(
                 MLSignal.asset_id == asset.id,
                 MLSignal.is_active == True,
-                MLSignal.valid_until >= datetime.utcnow(),
+                MLSignal.valid_until >= datetime.now(timezone.utc),
             )
         )
         .order_by(MLSignal.generated_at.desc())
@@ -99,7 +99,7 @@ async def get_signals_summary(
     query = select(MLSignal).where(
         and_(
             MLSignal.is_active == True,
-            MLSignal.valid_until >= datetime.utcnow(),
+            MLSignal.valid_until >= datetime.now(timezone.utc),
             MLSignal.confidence >= min_confidence * 100,
         )
     )
@@ -135,7 +135,7 @@ async def get_signals_summary(
     
     return {
         "status": "success",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "total_signals": len(signals),
         "summary": summary,
         "average_confidence": avg_confidence,
@@ -210,7 +210,7 @@ async def get_top_performers(
     
     return {
         "status": "success",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": top,
     }
 
@@ -241,7 +241,7 @@ async def get_risk_analysis(
     
     # Calculate returns
     from datetime import timedelta
-    start_date = datetime.utcnow() - timedelta(days=period_days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=period_days)
     
     candle_query = (
         select(candle_model_for_market(asset.market))
@@ -293,7 +293,7 @@ async def get_risk_analysis(
             "max_drawdown": round(float(max_drawdown) * 100, 2),
             "avg_return": round(float(np.mean(returns)) * 100, 4),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -352,7 +352,7 @@ async def technical_analysis(
         "market": asset.market,
         "data_points": len(candles),
         "indicators": result,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -415,7 +415,7 @@ async def risk_analysis(
         "market": asset.market,
         "data_points": len(returns),
         "risk": result,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -471,7 +471,7 @@ async def fundamental_analysis(
             "status": "success",
             "symbol": symbol,
             "fundamental": result,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
@@ -522,7 +522,7 @@ async def momentum_analysis(
         "market": asset.market,
         "data_points": len(candles),
         "momentum": result.get("momentum", {}),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -569,7 +569,7 @@ async def volatility_analysis(
         "market": asset.market,
         "data_points": len(candles),
         "volatility": result.get("volatility", {}),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -618,7 +618,7 @@ async def scoring_analysis(
         "symbol": ticker,
         "scoring": result,
         "hierarchy": service.get_hierarchy_info(),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -801,7 +801,7 @@ async def score_and_rank_stocks(
         "limit": limit,
         "stocks": ranked_stocks,
         "hierarchy": service.get_hierarchy_info(),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -856,7 +856,7 @@ async def batch_fundamental_analysis(
                 results[symbol] = {
                     "status": "success",
                     "fundamental": result,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
             finally:
                 await stock_service.shutdown()
@@ -871,7 +871,7 @@ async def batch_fundamental_analysis(
         "failed": len(errors),
         "results": results,
         "errors": errors,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -898,7 +898,7 @@ async def crypto_fundamental_analysis(
             "status": "success",
             "crypto_id": crypto_id,
             "fundamental": result,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
@@ -914,5 +914,5 @@ async def fundamental_analysis_health() -> dict:
             "crypto_fundamental": True,
             "stock_fundamental_ingestion": True,
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

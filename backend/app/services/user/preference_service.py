@@ -21,8 +21,8 @@ class PreferenceService:
     async def get_preference(
         self, user_id: UUID, key: str, session=None
     ) -> Optional[UserPreference]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(UserPreference).where(
@@ -38,8 +38,8 @@ class PreferenceService:
     async def set_preference(
         self, user_id: UUID, key: str, value, session=None
     ) -> UserPreference:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(UserPreference).where(
@@ -63,8 +63,8 @@ class PreferenceService:
     async def list_preferences(
         self, user_id: UUID, session=None
     ) -> List[UserPreference]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(UserPreference).where(UserPreference.user_id == user_id)
@@ -77,8 +77,8 @@ class PreferenceService:
     async def delete_preference(
         self, user_id: UUID, key: str, session=None
     ) -> bool:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(UserPreference).where(

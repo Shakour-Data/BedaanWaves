@@ -6,7 +6,7 @@ Manages user-defined cryptocurrency portfolios and selections.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import timezone, datetime
 import asyncio
 from app.services.core.base_service import BaseService
 import logging
@@ -318,7 +318,7 @@ class CustomCryptoSelectionService(BaseService):
             "name": name,
             "symbols": validation["validated"],
             "weights": weights,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "category_distribution": self._calculate_category_distribution(validation["validated"]),
             "risk_distribution": self._calculate_risk_distribution(validation["validated"])
         }

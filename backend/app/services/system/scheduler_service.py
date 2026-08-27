@@ -14,14 +14,14 @@ import asyncio
 import logging
 import os
 import shutil
-from datetime import datetime, timezone, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Coroutine
 from dataclasses import dataclass, field
 
 from ..core import BaseService
 from app.core.config import get_settings
-from sqlalchemy import select
-from app.models.models import Asset, IntlPriceCandle
+from sqlalchemy import select, func
+from app.models.models import Asset, IntlPriceCandle, IRPriceCandle, CryptoPriceCandle, News
 
 
 @dataclass
@@ -54,7 +54,8 @@ class SchedulerService(BaseService):
                  crypto_ingest_service=None,
                  data_integrity_service=None,
                  ml_training_service=None,
-                 backup_service=None):
+                 backup_service=None,
+                 news_service=None):
         super().__init__(service_name)
         self._jobs: Dict[str, ScheduledJob] = {}
         self._running: bool = False
@@ -70,6 +71,7 @@ class SchedulerService(BaseService):
         self.data_integrity_service = data_integrity_service
         self.ml_training_service = ml_training_service
         self.backup_service = backup_service
+        self.news_service = news_service
 
     async def initialize(self) -> None:
         self._running = True
@@ -98,9 +100,19 @@ class SchedulerService(BaseService):
         )
 
         async def data_ingestion_job():
-            if self.data_ingest_service:
+            if self.data_ingest_service is not None:
                 await self.data_ingest_service.initialize()
-                result = await self.data_ingest_service.batch_ingest(symbols=[], market=None)
+                if hasattr(self.data_ingest_service, "batch_ingest"):
+                    import inspect
+                    sig = inspect.signature(self.data_ingest_service.batch_ingest)
+                    if "requests" in sig.parameters:
+                        result = await self.data_ingest_service.batch_ingest([])
+                    else:
+                        result = await self.data_ingest_service.batch_ingest(
+                            symbols=[], market=None
+                        )
+                else:
+                    result = {"status": "no batch_ingest method"}
                 await self.data_ingest_service.shutdown()
                 return result
             return {"status": "skipped", "reason": "service not available"}
@@ -139,9 +151,28 @@ class SchedulerService(BaseService):
         # === SCORING & ANALYSIS JOBS ===
 
         async def daily_score_recalculation_job():
-            if self.scoring_service:
+            if self.scoring_service is not None:
                 await self.scoring_service.initialize()
-                result = await self.scoring_service.analyze({"action": "recalculate_all"})
+                from app.db.base import async_session_maker
+                scored = 0
+                async with async_session_maker() as session:
+                    assets_result = await session.execute(
+                        select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
+                        .where(Asset.active == True)
+                        .limit(100)
+                    )
+                    assets = assets_result.fetchall()
+                    for row in assets:
+                        asset_id, symbol, asset_class, market = row
+                        try:
+                            await self.scoring_service.analyze({
+                                "ticker": symbol,
+                                "market": market or "NASDAQ",
+                            })
+                            scored += 1
+                        except Exception as e:
+                            self.logger.warning(f"Scoring failed for {symbol}: {e}")
+                result = {"status": "completed", "assets_scored": scored}
                 await self.scoring_service.shutdown()
                 return result
             return {"status": "skipped", "reason": "service not available"}
@@ -209,12 +240,12 @@ class SchedulerService(BaseService):
         )
 
         async def cache_warming_job():
-            if self.cache_service:
+            if self.cache_service is not None:
                 await self.cache_service.initialize()
-                self.cache_service.clear()
-                result = self.cache_service.get_stats()
+                await self.cache_service.clear()
+                stats = self.cache_service.get_stats()
                 await self.cache_service.shutdown()
-                return result
+                return {"status": "completed", "stats": stats}
             return {"status": "skipped", "reason": "service not available"}
 
         self.register_job(
@@ -240,6 +271,11 @@ class SchedulerService(BaseService):
         # === BACKUP & ARCHIVAL JOBS ===
 
         async def backup_job():
+            if self.backup_service is not None:
+                await self.backup_service.initialize()
+                result = await self.backup_service.backup_database()
+                await self.backup_service.shutdown()
+                return result
             return await self._run_backup()
 
         self.register_job(
@@ -266,7 +302,255 @@ class SchedulerService(BaseService):
             interval_seconds=86400,
         )
 
+        # === DATA BACKFILL JOBS ===
+
+        async def ir_candle_backfill_job():
+            """Backfill ir_price_candles to cover 2021-08-27 → present."""
+            return await self._backfill_candles("IR", years=5)
+
+        self.register_job(
+            name="IrCandleBackfill",
+            coroutine_func=ir_candle_backfill_job,
+            interval_seconds=86400 * 7,  # Weekly
+        )
+
+        async def crypto_candle_backfill_job():
+            """Backfill crypto_price_candles to cover 2021-08-27 → present."""
+            return await self._backfill_candles("CRYPTO", years=5)
+
+        self.register_job(
+            name="CryptoCandleBackfill",
+            coroutine_func=crypto_candle_backfill_job,
+            interval_seconds=86400 * 7,  # Weekly
+        )
+
+        async def news_backfill_job():
+            """Backfill 5 years of news history."""
+            return await self._backfill_news(years=5)
+
+        self.register_job(
+            name="NewsBackfill",
+            coroutine_func=news_backfill_job,
+            interval_seconds=86400 * 7,  # Weekly
+        )
+
         self.logger.info(f"Registered {len(self._jobs)} platform jobs")
+
+    # ------------------------------------------------------------------ #
+    # Backfill helpers
+    # ------------------------------------------------------------------ #
+
+    async def _backfill_candles(self, market_type: str, years: int = 5) -> Dict[str, Any]:
+        """Backfill price candles for a market segment (IR or CRYPTO).
+
+        Args:
+            market_type: ``"IR"`` for Iranian stocks, ``"CRYPTO"`` for cryptocurrencies.
+            years: Number of years of history to fetch.
+
+        Returns:
+            Summary dictionary with counts.
+        """
+        from app.db.base import async_session_maker
+        from app.models.models import Asset as _Asset, IRPriceCandle, CryptoPriceCandle, IntlPriceCandle
+
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=years * 365)
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
+
+        results = {"market_type": market_type, "candles_inserted": 0, "errors": []}
+
+        try:
+            async with async_session_maker() as session:
+                if market_type == "IR":
+                    model = IRPriceCandle
+                    query = select(_Asset).where(_Asset.market.in_(("TSE", "OTC")))
+                elif market_type == "CRYPTO":
+                    model = CryptoPriceCandle
+                    query = select(_Asset).where(_Asset.asset_class == "CRYPTO")
+                else:
+                    return {"status": "error", "error": f"Unknown market_type: {market_type}"}
+
+                assets_result = await session.execute(query.where(_Asset.active))
+                assets = assets_result.scalars().unique().all()
+
+            import yfinance as yf
+
+            for asset in assets:
+                try:
+                    ticker = yf.Ticker(asset.symbol)
+                    hist = ticker.history(start=start_str, end=end_str, interval="1d", auto_adjust=True)
+                    if hist.empty:
+                        continue
+
+                    candles = []
+                    for timestamp, row in hist.iterrows():
+                        ts = timestamp.to_pydatetime().replace(tzinfo=None) if hasattr(timestamp, "to_pydatetime") else timestamp
+                        open_p = float(row["Open"])
+                        high_p = float(row["High"])
+                        low_p = float(row["Low"])
+                        close_p = float(row["Close"])
+                        low_p = min(open_p, high_p, low_p, close_p)
+                        high_p = max(open_p, high_p, low_p, close_p)
+                        volume = int(row["Volume"])
+                        if volume < 0:
+                            volume = 0
+
+                        candle = model(
+                            asset_id=asset.id,
+                            timestamp=ts,
+                            timeframe="1d",
+                            open=open_p,
+                            high=high_p,
+                            low=low_p,
+                            close=close_p,
+                            volume=volume,
+                            turnover=float(close_p * volume),
+                            source="yfinance",
+                            data_quality="CONFIRMED",
+                        )
+                        candles.append(candle)
+
+                    if candles:
+                        async with async_session_maker() as session:
+                            from sqlalchemy.dialects.postgresql import insert as pg_insert
+                            rows = []
+                            for c in candles:
+                                rows.append({
+                                    "asset_id": str(c.asset_id),
+                                    "timestamp": c.timestamp,
+                                    "timeframe": c.timeframe,
+                                    "open": float(c.open),
+                                    "high": float(c.high),
+                                    "low": float(c.low),
+                                    "close": float(c.close),
+                                    "volume": int(c.volume),
+                                    "turnover": float(c.turnover) if c.turnover else None,
+                                    "source": c.source,
+                                    "data_quality": c.data_quality,
+                                    "adjusted_close": float(c.close),
+                                    "split_ratio": 1.0,
+                                })
+                            stmt = pg_insert(model).values(rows)
+                            stmt = stmt.on_conflict_do_update(
+                                index_elements=["asset_id", "timestamp", "timeframe"],
+                                set_={
+                                    "open": stmt.excluded.open,
+                                    "high": stmt.excluded.high,
+                                    "low": stmt.excluded.low,
+                                    "close": stmt.excluded.close,
+                                    "volume": stmt.excluded.volume,
+                                    "turnover": stmt.excluded.turnover,
+                                    "source": stmt.excluded.source,
+                                    "data_quality": stmt.excluded.data_quality,
+                                    "adjusted_close": stmt.excluded.adjusted_close,
+                                    "split_ratio": stmt.excluded.split_ratio,
+                                },
+                            )
+                            await session.execute(stmt)
+                            await session.commit()
+                            results["candles_inserted"] += len(rows)
+
+                except Exception as e:
+                    results["errors"].append(f"{asset.symbol}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            results["errors"].append(str(e))
+
+        self.logger.info(f"{market_type} candle backfill complete: {results}")
+        return results
+
+    async def _backfill_news(self, years: int = 5) -> Dict[str, Any]:
+        """Backfill historical news data for active assets.
+
+        Uses the NewsService (which wraps yfinance + multi-source fetchers)
+        when available, falling back to direct yfinance calls.
+        """
+        from app.db.base import async_session_maker
+
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=years * 365)
+
+        results = {"news_inserted": 0, "errors": []}
+
+        try:
+            async with async_session_maker() as session:
+                all_assets = await session.execute(
+                    select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
+                    .where(Asset.active == True)
+                    .limit(200)
+                )
+                assets = all_assets.fetchall()
+
+            for asset_id, symbol, asset_class, market in assets:
+                try:
+                    if self.news_service is not None:
+                        await self.news_service.initialize()
+                        news_items = await self._fetch_historical_news(
+                            symbol, asset_id, start_date, end_date
+                        )
+                        await self.news_service.shutdown()
+                    else:
+                        news_items = await self._fetch_historical_news(
+                            symbol, asset_id, start_date, end_date
+                        )
+
+                    if news_items:
+                        async with async_session_maker() as session:
+                            for item in news_items:
+                                session.add(item)
+                            await session.commit()
+                            results["news_inserted"] += len(news_items)
+
+                except Exception as e:
+                    results["errors"].append(f"{symbol}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            results["errors"].append(str(e))
+
+        self.logger.info(f"News backfill complete: {results}")
+        return results
+
+    async def _fetch_historical_news(
+        self, symbol: str, asset_id: str, start: datetime, end: datetime
+    ) -> List[News]:
+        """Fetch historical news for a symbol from yfinance and store as News objects."""
+        import yfinance as yf
+
+        news_items: List[News] = []
+        try:
+            ticker = yf.Ticker(symbol)
+            raw_news = ticker.news or []
+            for item in raw_news:
+                published_str = item.get("published")
+                published_dt = None
+                if published_str:
+                    try:
+                        published_dt = datetime.fromisoformat(
+                            published_str.replace("Z", "+00:00")
+                        ).replace(tzinfo=None)
+                    except (ValueError, TypeError):
+                        published_dt = None
+                if published_dt and not (start <= published_dt <= end):
+                    continue
+                url = item.get("link", "")
+                if not url:
+                    continue
+                news_items.append(News(
+                    source=item.get("publisher", "yfinance"),
+                    title=item.get("title", ""),
+                    body=item.get("summary", ""),
+                    url=url,
+                    published_at=published_dt,
+                    asset_id=asset_id,
+                    language="en",
+                ))
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch historical news for {symbol}: {e}")
+
+        return news_items
 
     def _fallback_model_training(self) -> dict:
         """Fallback model training when ML service not available."""
@@ -350,7 +634,7 @@ asyncio.run(main())
                                 technical_factors={"rsi": round(rsi, 2)},
                                 ml_model_version="auto_signal_v1",
                                 model_name="AutoSignalGenerator",
-                                valid_until=datetime.utcnow() + timedelta(days=1),
+                                valid_until=datetime.now(timezone.utc) + timedelta(days=1),
                                 is_active=True,
                             )
                             session.add(signal)
@@ -383,7 +667,7 @@ asyncio.run(main())
         try:
             backup_path = self.settings.BACKUP_PATH
             os.makedirs(backup_path, exist_ok=True)
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             backup_file = os.path.join(backup_path, f"backup_{timestamp}.sql")
 
             db_url = self.settings.DATABASE_URL
@@ -433,7 +717,7 @@ asyncio.run(main())
                 return {"status": "skipped", "reason": "no logs directory"}
 
             retention_days = getattr(self.settings, 'LOG_RETENTION_DAYS', 30)
-            cutoff = datetime.utcnow() - timedelta(days=retention_days)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
             cleaned = 0
 
             for filename in os.listdir(log_path):

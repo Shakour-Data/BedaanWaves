@@ -6,7 +6,7 @@ Enables users to filter stocks by industry sectors and sub-sectors.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import timezone, datetime
 import asyncio
 from app.services.core.base_service import BaseService
 import logging
@@ -286,7 +286,7 @@ class SectorFilterService(BaseService):
             "sub_sector_distribution": sub_sector_dist,
             "etf_ticker": etf,
             "assets": sector_assets[:10],  # Top 10 assets
-            "analysis_timestamp": datetime.utcnow().isoformat()
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat()
         }
     
     async def get_industry_index(self, industry: str) -> Optional[str]:

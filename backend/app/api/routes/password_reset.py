@@ -14,6 +14,7 @@ Error philosophy (spec.yaml): "Never blame user; always suggest next action".
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import JSONResponse
+import logging
 
 from app.schemas.schemas import (
     PasswordResetRequest,
@@ -29,6 +30,7 @@ from app.services.user.password_reset_service import (
 )
 from app.services.user.auth_service import get_user_by_email
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["password-reset"])
 
 # ---------------------------------------------------------------------------
@@ -67,17 +69,10 @@ async def request_password_reset(
     enumeration, whether or not the e-mail exists in the database.
     """
     raw_token = await create_password_reset_token(data.email)
-    # In production: send *raw_token* via email using a
-    # task queue / notification service.  For now we log it at WARNING
-    # so integration tests can intercept it.
-    import logging
-
-    logger = logging.getLogger("password_reset")
     if raw_token is not None:
-        logger.warning(
-            "Password reset token generated for email=%s raw_token=%s",
+        logger.info(
+            "Password reset token generated for email=%s (token hash stored)",
             data.email,
-            raw_token,
         )
     else:
         logger.info("Password reset requested for unknown email (enumerated-safe)")
