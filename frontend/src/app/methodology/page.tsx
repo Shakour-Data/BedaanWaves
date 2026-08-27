@@ -10,91 +10,91 @@ import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function MethodologyPage() {
-  const { currentLang } = useAuthStore();
+  
   const [activeMethod, setActiveMethod] = useState("scoring");
 
   const analysisMethods = [
     {
       id: "scoring",
-      title: t("app.methodology.methods.scoring.title", currentLang),
+      title: t("app.methodology.methods.scoring.title", "en"),
       icon: "💯",
-      description: t("app.methodology.methods.scoring.desc", currentLang),
-      steps: t("app.methodology.methods.scoring.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.scoring.details", currentLang),
+      description: t("app.methodology.methods.scoring.desc", "en"),
+      steps: t("app.methodology.methods.scoring.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.scoring.details", "en"),
       apiEndpoints: ["/analysis/scoring", "/analysis/scoring/rank"]
     },
     {
       id: "ranking",
-      title: t("app.methodology.methods.ranking.title", currentLang),
+      title: t("app.methodology.methods.ranking.title", "en"),
       icon: "🏆",
-      description: t("app.methodology.methods.ranking.desc", currentLang),
-      steps: t("app.methodology.methods.ranking.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.ranking.details", currentLang),
+      description: t("app.methodology.methods.ranking.desc", "en"),
+      steps: t("app.methodology.methods.ranking.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.ranking.details", "en"),
       apiEndpoints: ["/analysis/scoring/rank"]
     },
     {
       id: "technical",
-      title: t("app.methodology.methods.technical.title", currentLang),
+      title: t("app.methodology.methods.technical.title", "en"),
       icon: "📈",
-      description: t("app.methodology.methods.technical.desc", currentLang),
-      steps: t("app.methodology.methods.technical.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.technical.details", currentLang),
+      description: t("app.methodology.methods.technical.desc", "en"),
+      steps: t("app.methodology.methods.technical.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.technical.details", "en"),
       apiEndpoints: ["/analysis/technical/{symbol}"]
     },
     {
       id: "fundamental",
-      title: t("app.methodology.methods.fundamental.title", currentLang),
+      title: t("app.methodology.methods.fundamental.title", "en"),
       icon: "🏦",
-      description: t("app.methodology.methods.fundamental.desc", currentLang),
-      steps: t("app.methodology.methods.fundamental.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.fundamental.details", currentLang),
+      description: t("app.methodology.methods.fundamental.desc", "en"),
+      steps: t("app.methodology.methods.fundamental.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.fundamental.details", "en"),
       apiEndpoints: ["/analysis/fundamental/{symbol}"]
     },
     {
       id: "momentum",
-      title: t("app.methodology.methods.momentum.title", currentLang),
+      title: t("app.methodology.methods.momentum.title", "en"),
       icon: "🚀",
-      description: t("app.methodology.methods.momentum.desc", currentLang),
-      steps: t("app.methodology.methods.momentum.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.momentum.details", currentLang),
+      description: t("app.methodology.methods.momentum.desc", "en"),
+      steps: t("app.methodology.methods.momentum.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.momentum.details", "en"),
       apiEndpoints: ["/analysis/momentum/{symbol}"]
     },
     {
       id: "risk",
-      title: t("app.methodology.methods.risk.title", currentLang),
-      icon: "🛡️",
-      description: t("app.methodology.methods.risk.desc", currentLang),
-      steps: t("app.methodology.methods.risk.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.risk.details", currentLang),
+      title: t("app.methodology.methods.risk.title", "en"),
+      icon: "[Security]",
+      description: t("app.methodology.methods.risk.desc", "en"),
+      steps: t("app.methodology.methods.risk.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.risk.details", "en"),
       apiEndpoints: ["/analysis/risk/{symbol}", "/analysis/volatility/{symbol}"]
     },
     {
       id: "sentiment",
-      title: t("app.methodology.methods.sentiment.title", currentLang),
+      title: t("app.methodology.methods.sentiment.title", "en"),
       icon: "🎭",
-      description: t("app.methodology.methods.sentiment.desc", currentLang),
-      steps: t("app.methodology.methods.sentiment.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.sentiment.details", currentLang),
+      description: t("app.methodology.methods.sentiment.desc", "en"),
+      steps: t("app.methodology.methods.sentiment.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.sentiment.details", "en"),
       apiEndpoints: ["/analysis/sentiment/{symbol}"]
     },
     {
       id: "ai",
-      title: t("app.methodology.methods.ai.title", currentLang),
+      title: t("app.methodology.methods.ai.title", "en"),
       icon: "🤖",
-      description: t("app.methodology.methods.ai.desc", currentLang),
-      steps: t("app.methodology.methods.ai.steps", currentLang) as unknown as string[],
-      details: t("app.methodology.methods.ai.details", currentLang),
+      description: t("app.methodology.methods.ai.desc", "en"),
+      steps: t("app.methodology.methods.ai.steps", "en") as unknown as string[],
+      details: t("app.methodology.methods.ai.details", "en"),
       apiEndpoints: ["/analysis/prediction/{symbol}"]
     }
   ];
 
   return (
-    <DashboardShell title={t("app.methodology.title", currentLang)}>
+    <DashboardShell title={t("app.methodology.title", "en")}>
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard icon="📘" title={t("app.methodology.overview", currentLang)}>
+        <TarotCard icon="📘" title={t("app.methodology.overview", "en")}>
           <p className="text-muted-foreground text-justify leading-relaxed">
-            {t("app.methodology.desc", currentLang)}
+            {t("app.methodology.desc", "en")}
           </p>
         </TarotCard>
 
@@ -106,7 +106,7 @@ export default function MethodologyPage() {
               onClick={() => setActiveMethod(method.id)}
               className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap flex items-center gap-2 ${
                 activeMethod === method.id
-                  ? "bg-secondary text-white shadow-md transform scale-105"
+                  ? "bg-secondary text-[var(--color-text-primary)] shadow-md transform scale-105"
                   : "bg-neutral text-muted-foreground hover:bg-neutral/80"
               }`}
             >
@@ -127,7 +127,7 @@ export default function MethodologyPage() {
                 <div className="bg-neutral/30 p-4 rounded-xl border border-border/40">
                   <h4 className="font-bold text-secondary mb-3 flex items-center gap-2">
                     <span>📝</span>
-                    {t("app.methodology.process_steps", currentLang)}
+                    {t("app.methodology.process_steps", "en")}
                   </h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
                     {Array.isArray(method.steps) && method.steps.map((step, i) => (
@@ -139,8 +139,8 @@ export default function MethodologyPage() {
                 {/* Details */}
                 <div>
                   <h4 className="font-bold text-secondary mb-2 flex items-center gap-2">
-                    <span>🔍</span>
-                    {t("app.methodology.technical_details", currentLang)}
+                    <span>Search</span>
+                    {t("app.methodology.technical_details", "en")}
                   </h4>
                   <p className="text-sm text-muted-foreground leading-relaxed">{method.details}</p>
                 </div>
@@ -150,7 +150,7 @@ export default function MethodologyPage() {
                   <div className="bg-neutral/50 p-4 rounded-xl border border-border/20">
                     <h4 className="font-bold text-secondary mb-3 flex items-center gap-2">
                       <span>🔗</span>
-                      {t("app.methodology.api_endpoints", currentLang)}
+                      {t("app.methodology.api_endpoints", "en")}
                     </h4>
                     <ul className="space-y-1 text-xs font-mono bg-background/50 p-2 rounded-lg">
                       {method.apiEndpoints.map((endpoint, i) => (
@@ -170,37 +170,37 @@ export default function MethodologyPage() {
         {/* Secondary Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Capabilities */}
-          <TarotCard icon="🚀" title={t("app.methodology.key_capabilities", currentLang)}>
+          <TarotCard icon="🚀" title={t("app.methodology.key_capabilities", "en")}>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.coverage", currentLang)}</span>
+                <span>{t("app.methodology.coverage", "en")}</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.realtime", currentLang)}</span>
+                <span>{t("app.methodology.realtime", "en")}</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.ml_optimized", currentLang)}</span>
+                <span>{t("app.methodology.ml_optimized", "en")}</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.customizable", currentLang)}</span>
+                <span>{t("app.methodology.customizable", "en")}</span>
               </li>
             </ul>
           </TarotCard>
 
           {/* Disclaimers */}
-          <TarotCard icon="⚠️" title={t("app.methodology.important_notes", currentLang)}>
+          <TarotCard icon="⚠️" title={t("app.methodology.important_notes", "en")}>
             <div className="space-y-3 text-sm">
               <div>
-                <h5 className="font-medium mb-1">{t("app.methodology.disclaimer_title", currentLang)}</h5>
-                <p className="text-muted-foreground">{t("app.methodology.disclaimer_desc", currentLang)}</p>
+                <h5 className="font-medium mb-1">{t("app.methodology.disclaimer_title", "en")}</h5>
+                <p className="text-muted-foreground">{t("app.methodology.disclaimer_desc", "en")}</p>
               </div>
               <div>
-                <h5 className="font-medium mb-1">{t("app.methodology.accuracy_title", currentLang)}</h5>
-                <p className="text-muted-foreground">{t("app.methodology.accuracy_desc", currentLang)}</p>
+                <h5 className="font-medium mb-1">{t("app.methodology.accuracy_title", "en")}</h5>
+                <p className="text-muted-foreground">{t("app.methodology.accuracy_desc", "en")}</p>
               </div>
             </div>
           </TarotCard>
@@ -209,10 +209,10 @@ export default function MethodologyPage() {
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-3">
           <Link href="/scoring">
-            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.explore_scoring", currentLang)}</PrimaryButton>
+            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.explore_scoring", "en")}</PrimaryButton>
           </Link>
           <Link href="/analysis">
-            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.run_analysis", currentLang)}</PrimaryButton>
+            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.run_analysis", "en")}</PrimaryButton>
           </Link>
         </div>
       </div>
