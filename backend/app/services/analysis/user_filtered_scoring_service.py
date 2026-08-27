@@ -23,13 +23,15 @@ class UserFilteredScoringService(BaseService):
     before scoring and ranking assets.
     """
     
-    def __init__(self,
-                 service_name: str = "UserFilteredScoringService",
-                 scoring_service: Optional[ScoringService] = None,
-                 stock_service: Optional[StockService] = None,
-                 crypto_client: Optional[CryptoApiClient] = None,
-                 market_service: Optional[MarketService] = None,
-                 logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        service_name: str = "UserFilteredScoringService",
+        scoring_service: Optional[ScoringService] = None,
+        stock_service: Optional[StockService] = None,
+        crypto_client: Optional[CryptoApiClient] = None,
+        market_service: Optional[MarketService] = None,
+        logger: Optional[logging.Logger] = None
+    ):
         """
         Initialize user filtered scoring service.
         

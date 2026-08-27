@@ -107,9 +107,11 @@ class MetricTaxonomyService(BaseService):
         stock_type = self.get_metric_type(stock_metric)
         return crypto_type == stock_type
 
-    async def normalize_cross_asset(self, 
-                                 crypto_data: Dict[str, float], 
-                                 stock_data: Dict[str, float]) -> Dict[str, Any]:
+    async def normalize_cross_asset(
+        self,
+        crypto_data: Dict[str, float],
+        stock_data: Dict[str, float]
+    ) -> Dict[str, Any]:
         """Normalize crypto and stock data for cross-asset comparison."""
         normalized = {
             "crypto": {},

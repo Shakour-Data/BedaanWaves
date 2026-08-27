@@ -11,7 +11,11 @@ import { PageLoading } from "@/components/ui/PageLoading";
 import { fetchDashboardData, type DashboardData } from "@/lib/api/dashboard";
 import { cn } from "@/lib/cn";
 
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function DashboardPage() {
+  const { currentLang } = useAuthStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,14 +35,14 @@ export default function DashboardPage() {
 
   if (loading || !data) {
     return (
-      <DashboardShell title="داشبورد">
+      <DashboardShell title={t("app.dashboard.title", currentLang)}>
         <PageLoading />
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title="داشبورد">
+    <DashboardShell title={t("app.dashboard.title", currentLang)}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         <div className={cn(
           "rounded-xl px-4 py-3 text-sm flex items-center gap-2 border",
@@ -47,7 +51,7 @@ export default function DashboardPage() {
             : "bg-accent/10 text-accent-foreground border-accent/20"
         )}>
           <span className={cn("h-2 w-2 rounded-full", data.live ? "bg-success" : "bg-accent")} />
-          {data.live ? "اتصال زنده به بازار برقرار است" : "در حال نمایش داده‌های نمونه (عدم اتصال به سرور)"}
+          {data.live ? t("app.dashboard.live_connected", currentLang) : t("app.dashboard.live_disconnected", currentLang)}
         </div>
 
         {/* Market Stats */}
@@ -59,20 +63,20 @@ export default function DashboardPage() {
 
         {/* Top Movers + Watchlist */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <TarotCard icon="" title="بیشترین تغییرات" className="lg:col-span-2">
+          <TarotCard icon="📈" title={t("app.dashboard.top_movers", currentLang)} className="lg:col-span-2">
             <AssetTable rows={data.topMovers} />
           </TarotCard>
-          <TarotCard icon="⭐" title="دیده‌بان">
+          <TarotCard icon="⭐" title={t("app.dashboard.watchlist", currentLang)}>
             <AssetTable rows={data.watchlist} />
           </TarotCard>
         </section>
 
         {/* ML Signals + News */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <TarotCard icon="" title="سیگنال‌های هوش مصنوعی" className="lg:col-span-2">
+          <TarotCard icon="🤖" title={t("app.dashboard.ai_signals", currentLang)} className="lg:col-span-2">
             <SignalList signals={data.signals} />
           </TarotCard>
-          <TarotCard icon="" title="آخرین اخبار">
+          <TarotCard icon="📰" title={t("app.dashboard.latest_news", currentLang)}>
             <NewsList items={data.news} />
           </TarotCard>
         </section>

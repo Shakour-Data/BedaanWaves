@@ -6,98 +6,88 @@ import { SignalList } from "@/components/dashboard/SignalList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
+import { 
+  fetchFundamental, 
+  fetchTechnical, 
+  fetchSentiment, 
+  fetchScoring 
+} from "@/lib/api/stocks";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
-
-const analysisTabs = [
-  { id: "technical", label: "تحلیل تکنیکال", icon: "" },
-  { id: "fundamental", label: "تحلیل بنیادی", icon: "" },
-  { id: "scoring", label: "بررسی ۶ بعدی", icon: "" },
-  { id: "sentiment", label: "احساسات بازار", icon: "️‍️" },
-];
+import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function AnalysisPage() {
+  const { currentLang } = useAuthStore();
   const [activeTab, setActiveTab] = useState("technical");
   const [topSignals, setTopSignals] = useState<SignalRow[]>([]);
   const [topMovers, setTopMovers] = useState<AssetRow[]>([]);
+  const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const analysisTabs = [
+    { id: "technical", label: t("app.analysis.tabs.technical", currentLang), icon: "📈" },
+    { id: "fundamental", label: t("app.analysis.tabs.fundamental", currentLang), icon: "🏦" },
+    { id: "scoring", label: t("app.analysis.tabs.scoring", currentLang), icon: "💯" },
+    { id: "sentiment", label: t("app.analysis.tabs.sentiment", currentLang), icon: "🎭" },
+  ];
 
   useEffect(() => {
     let active = true;
 
     async function loadAnalysisData() {
       setLoading(true);
-      setTopSignals([]);
-      setTopMovers([]);
-
       try {
-        // Fetch signal summary
-        const summaryRes = await apiClient.get<{ status: string; data: any; summary: Record<string, number> }>(
-          "/analysis/signals-summary?min_confidence=0.6"
-        );
-
-        // Fetch top performers (TSE)
-        const performersRes = await apiClient.get<{ status: string; data: any[] }>(
-          "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ"
-        );
-
-        // Fetch symbols to map performer data
-        const symbolsRes = await apiClient.get<{ symbol: string; name: string; market: string }[]>(
-          "/market/symbols?market=NASDAQ&limit=50"
-        );
+        const summaryRes = await apiClient.get<any>("/analysis/signals-summary?min_confidence=0.6");
+        const performersRes = await apiClient.get<any>("/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ");
+        const symbolsRes = await apiClient.get<any[]>("/market/symbols?market=NASDAQ&limit=50");
 
         if (!active) return;
 
-        // Build signal list from summary
-        if (summaryRes.data.status === "success") {
-          const signalTypes = Object.entries(summaryRes.data.data?.summary ?? {})
+        // Process signals
+        const signals: SignalRow[] = [];
+        if (summaryRes.data?.status === "success") {
+          const signalTypes = Object.entries(summaryRes.data?.summary ?? {})
             .filter(([, count]) => Number(count) > 0)
-            .sort(([, a], [, b]) => Number(b) - Number(a))
-            .slice(0, 5);
+            .sort(([, a], [, b]) => Number(b) - Number(a));
 
-          const signals: SignalRow[] = [];
-
-          // Get signals for top performers instead of per-type
-          const topPerformerSymbols = (performersRes.data.data ?? [])
-            .sort((a: any, b: any) => Math.abs(b.change_percent) - Math.abs(a.change_percent))
-            .slice(0, 5);
-
-          for (const performer of topPerformerSymbols) {
-            try {
-              const signalRes = await apiClient.get<{ status: string; data: any }>(
-                `/analysis/signals/${encodeURIComponent(performer.symbol)}`
-              );
-              if (signalRes.data.status === "success") {
-                signals.push({
-                  symbol: performer.symbol,
-                  type: signalRes.data.data.signal_type || "HOLD",
-                  confidence: signalRes.data.data.confidence ?? 50,
-                  model: signalRes.data.data.model_name || "ML",
-                });
-              }
-            } catch {}
+          for (const [type, count] of signalTypes) {
+            const typeSymbols = ((summaryRes.data as any)?.sample_symbols || {} as Record<string, string[]>)[type] || [];
+            for (const symbol of typeSymbols.slice(0, 3)) {
+              signals.push({
+                symbol,
+                type: type as SignalRow["type"],
+                confidence: summaryRes.data.average_confidence?.[type] ?? 50,
+                model: "ML",
+              });
+            }
           }
-
-          setTopSignals(signals);
         }
+        setTopSignals(signals.slice(0, 5));
 
-        // Build top movers from performers data and symbols
-        if (performersRes.data.status === "success" && symbolsRes.data.length > 0) {
-          const symbolMap = new Map(symbolsRes.data.map((s) => [s.symbol, s.name]));
-          const movers: AssetRow[] = (performersRes.data.data ?? [])
-            .map((p: any) => ({
-              symbol: p.symbol,
-              name: symbolMap.get(p.symbol) || p.name || "",
-              market: p.market === "NASDAQ" || p.market === "NYSE" ? "NASDAQ" :
-                      p.market === "BINANCE" || p.market === "KRAKEN" ? "BINANCE" : "TSE",
-              price: p.current_price ?? p.price ?? 0,
-              changePct: p.change_percent ?? p.change_pct ?? 0,
-            }))
-            .sort((a: AssetRow, b: AssetRow) => Math.abs(b.changePct) - Math.abs(a.changePct));
+        const symbolMap = new Map(symbolsRes.data.map((s: any) => [s.symbol, s.name]));
+        const movers: AssetRow[] = (performersRes.data.data ?? []).map((p: any) => ({
+          symbol: p.symbol,
+          name: symbolMap.get(p.symbol) || p.name || "",
+          market: "NASDAQ",
+          price: p.current_price,
+          changePct: p.change_percent,
+        }));
+        setTopMovers(movers.slice(0, 5));
 
-          setTopMovers(movers.slice(0, 5));
+        // Fetch detailed analysis for the top symbol if available
+        if (movers.length > 0) {
+          const topSymbol = movers[0].symbol;
+          const [fundamental, technical, sentiment, scoring] = await Promise.all([
+            fetchFundamental(topSymbol),
+            fetchTechnical(topSymbol),
+            fetchSentiment(topSymbol),
+            fetchScoring(topSymbol)
+          ]);
+          setAnalysisData({ fundamental, technical, sentiment, scoring, symbol: topSymbol });
         }
       } catch (error) {
-        // Handle error silently
+        console.error("Error loading analysis data:", error);
       } finally {
         if (active) setLoading(false);
       }
@@ -109,16 +99,16 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <DashboardShell title="تحلیل‌ها">
+      <DashboardShell title={t("app.analysis.title", currentLang)}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          در حال بارگذاری تحلیل‌ها...
+          {t("app.analysis.loading", currentLang)}
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title="تحلیل‌ها">
+    <DashboardShell title={t("app.analysis.title", currentLang)}>
       <div className="flex flex-col gap-6">
         {/* Analysis Tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -127,46 +117,46 @@ export default function AnalysisPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-semibold transition duration-fast ease-flow whitespace-nowrap",
+                "px-4 py-2 rounded-full text-sm font-semibold transition duration-fast ease-flow whitespace-nowrap flex items-center gap-2",
                 activeTab === tab.id
                   ? "bg-secondary text-white shadow-sm"
                   : "bg-neutral text-muted-foreground hover:bg-neutral/80"
               )}
             >
-              <span className="mr-2">{tab.icon}</span>
+              <span>{tab.icon}</span>
               {tab.label}
             </button>
           ))}
         </div>
 
         {/* Signal Analysis */}
-        <TarotCard icon="" title="سیگنال‌های برتر">
+        <TarotCard icon="📡" title={t("app.analysis.top_signals", currentLang)}>
           {topSignals.length > 0 ? (
             <SignalList signals={topSignals} />
           ) : (
-            <p className="text-muted-foreground py-4 text-center">سیگنالی یافت نشد</p>
+            <p className="text-muted-foreground py-4 text-center">{t("app.analysis.no_signals", currentLang)}</p>
           )}
         </TarotCard>
 
         {/* Top Movers */}
-        <TarotCard icon="" title="بیشترین تغییرات">
+        <TarotCard icon="🚀" title={t("app.analysis.top_movers", currentLang)}>
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
-            <p className="text-muted-foreground py-4 text-center">داده‌ای یافت نشد</p>
+            <p className="text-muted-foreground py-4 text-center">{t("app.analysis.no_data", currentLang)}</p>
           )}
         </TarotCard>
 
         {/* Technical Analysis Panel */}
         {activeTab === "technical" && (
-          <TarotCard icon="" title="نمودارهای تکنیکال">
+          <TarotCard icon="📊" title={t("app.analysis.technical_charts", currentLang)}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {topMovers.slice(0, 3).map((mover, i) => (
                 <div key={i} className="p-4 rounded-xl bg-neutral/50 border border-border/40 transition duration-fast ease-flow hover:bg-neutral">
                   <div className="font-bold text-lg text-foreground">{mover.symbol}</div>
                   <div className="text-xs text-muted-foreground mt-1">{mover.name}</div>
                   <div className="text-xl font-bold mt-2 text-foreground">
-                    {mover.price.toLocaleString("fa-IR")}
+                    {mover.price.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US")}
                   </div>
                   <div className={`text-sm mt-1 font-semibold ${mover.changePct >= 0 ? "text-success" : "text-primary"}`}>
                     {mover.changePct >= 0 ? "▲" : "▼"} {Math.abs(mover.changePct).toFixed(2)}%
@@ -179,44 +169,95 @@ export default function AnalysisPage() {
 
         {/* Fundamental Analysis Panel */}
         {activeTab === "fundamental" && (
-          <TarotCard icon="" title="شاخص‌های بنیادی کلیدی">
+          <TarotCard icon="🏦" title={t("app.analysis.fundamental_indicators", currentLang).replace("{symbol}", analysisData?.symbol || "")}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {["P/E", "P/B", "ROE", "Debt/Eq", "EPS", "Dividend Yield", "Market Cap", "Revenue Growth"].map((metric, i) => (
+              {Object.entries(analysisData?.fundamental || {}).slice(0, 8).map(([key, value]: [string, any], i) => (
                 <div key={i} className="text-center p-3 rounded-xl bg-neutral/50 border border-border/40">
-                  <div className="text-xs text-muted-foreground">{metric}</div>
-                  <div className="text-sm font-bold mt-1 text-foreground">—</div>
+                  <div className="text-xs text-muted-foreground uppercase">{key.replace(/_/g, " ")}</div>
+                  <div className="text-sm font-bold mt-1 text-foreground">
+                    {typeof value === "number" ? value.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US") : value || "—"}
+                  </div>
                 </div>
               ))}
+              {(!analysisData?.fundamental || Object.keys(analysisData.fundamental).length === 0) && (
+                <div className="col-span-full py-4 text-center text-muted-foreground text-xs">
+                  {t("app.analysis.fundamental_not_found", currentLang)}
+                </div>
+              )}
             </div>
           </TarotCard>
         )}
 
         {/* 6D Scoring Panel */}
         {activeTab === "scoring" && (
-          <TarotCard icon="" title="بررسی ۶ بعدی">
-            <div className="p-8 text-center text-muted-foreground">
-              <div className="text-4xl mb-4"></div>
-              <p>سامانه ۶ بعدی تحلیل سرمایه‌گذاری در حال بارگذاری است...</p>
-              <p className="text-xs mt-2">این بخش به زودی فعال خواهد شد.</p>
-            </div>
+          <TarotCard icon="💯" title={`${t("app.nav.scoring", currentLang)} (${analysisData?.symbol || ""})`}>
+            {analysisData?.scoring ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl">
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("app.analysis.overall_score", currentLang)}</div>
+                    <div className="text-3xl font-bold text-secondary">
+                      {analysisData.scoring.overall_score?.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US")}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground">{t("app.analysis.grade", currentLang)}</div>
+                    <div className="text-2xl font-bold text-foreground">{analysisData.scoring.grade}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {Object.entries(analysisData.scoring.dimensions || {}).map(([dim, score]: [string, any], i) => (
+                    <div key={i} className="p-3 rounded-xl border border-border/40 bg-neutral/30">
+                      <div className="text-xs text-muted-foreground capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, currentLang)}</div>
+                      <div className="text-lg font-bold mt-1">{score?.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US")}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>{t("app.analysis.scoring_not_found", currentLang)}</p>
+              </div>
+            )}
           </TarotCard>
         )}
 
         {/* Sentiment Panel */}
         {activeTab === "sentiment" && (
-          <TarotCard icon="️" title="احساس و ذهنیت بازار">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { label: "احساسات خبری", value: "محاسبه در حال اجراست", trend: "stable", color: "text-muted-foreground" },
-                { label: "احساسات اجتماعی", value: "محاسبه در حال اجراست", trend: "stable", color: "text-muted-foreground" },
-                { label: "احساسات کریپتو", value: "محاسبه در حال اجراست", trend: "stable", color: "text-muted-foreground" },
-              ].map((sentiment, i) => (
-                <div key={i} className="text-center p-6 rounded-xl bg-neutral/50 border border-border/40">
-                  <div className="text-xs text-muted-foreground">{sentiment.label}</div>
-                  <div className={`text-lg font-bold mt-2 ${sentiment.color}`}>{sentiment.value}</div>
-                </div>
-              ))}
-            </div>
+          <TarotCard icon="🎭" title={t("app.analysis.sentiment_title", currentLang).replace("{symbol}", analysisData?.symbol || "")}>
+            {analysisData?.sentiment ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { 
+                    label: t("app.analysis.sentiment_labels.overall", currentLang), 
+                    value: t(`app.analysis.sentiment_values.${analysisData.sentiment.label?.toLowerCase()}`, currentLang), 
+                    score: analysisData.sentiment.confidence, 
+                    color: analysisData.sentiment.label === "positive" ? "text-success" : analysisData.sentiment.label === "negative" ? "text-primary" : "text-muted-foreground" 
+                  },
+                  { 
+                    label: t("app.analysis.sentiment_labels.news_count", currentLang), 
+                    value: t("app.analysis.sentiment_values.news_items", currentLang).replace("{count}", analysisData.sentiment.news_count?.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US") || "0"), 
+                    score: null, 
+                    color: "text-foreground" 
+                  },
+                  { 
+                    label: t("app.analysis.sentiment_labels.confidence", currentLang), 
+                    value: `${(analysisData.sentiment.confidence * 100).toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: 0 })}٪`, 
+                    score: null, 
+                    color: "text-secondary" 
+                  },
+                ].map((sentiment, i) => (
+                  <div key={i} className="text-center p-6 rounded-xl bg-neutral/50 border border-border/40">
+                    <div className="text-xs text-muted-foreground">{sentiment.label}</div>
+                    <div className={`text-lg font-bold mt-2 ${sentiment.color}`}>{sentiment.value}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>{t("app.analysis.sentiment_not_found", currentLang)}</p>
+              </div>
+            )}
           </TarotCard>
         )}
       </div>

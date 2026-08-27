@@ -30,13 +30,17 @@ class PatternRecognitionService(MLService):
         prices = data.get("prices", [])
         if len(prices) < 20:
             raise ValueError("Insufficient data for pattern recognition")
-        local_max = max(prices[-10:])
-        local_min = min(prices[-10:])
+        
+        # Use previous 10 items for range to compare against current
+        historical_window = prices[-11:-1]
+        local_max = max(historical_window)
+        local_min = min(historical_window)
         current = prices[-1]
-        if current >= local_max:
+        
+        if current > local_max:
             pattern = "resistance_test"
             probability = 0.75
-        elif current <= local_min:
+        elif current < local_min:
             pattern = "support_test"
             probability = 0.75
         else:

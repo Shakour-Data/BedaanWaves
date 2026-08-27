@@ -11,8 +11,10 @@ import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
 
+import { t } from "@/lib/i18n";
+
 export default function PortfolioPage() {
-  const { user } = useAuthStore();
+  const { user, currentLang } = useAuthStore();
   const [holdings, setHoldings] = useState<AssetRow[]>([]);
   const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
   const [loading, setLoading] = useState(true);
@@ -71,18 +73,18 @@ export default function PortfolioPage() {
             const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
             
             if (active) setStats([
-              { label: "مجموع ارزش پورتفولیو", value: `${totalValue.toLocaleString("fa-IR")} ریال`, changePct: totalReturnPct },
-              { label: "سود/زیان کلی", value: `${totalPnL.toLocaleString("fa-IR")} ریال`, changePct: totalReturnPct },
-              { label: "تعداد نمادها", value: String(enrichedHoldings.length), changePct: 0 },
-              { label: "بازگشت روزانه", value: `${(totalReturnPct / 30).toFixed(2)}٪`, changePct: totalReturnPct / 30 },
+              { label: t("app.portfolio.total_value", currentLang), value: `${totalValue.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US")} ${currentLang === "fa" ? "ریال" : "IRR"}`, changePct: totalReturnPct },
+              { label: t("app.portfolio.total_pnl", currentLang), value: `${totalPnL.toLocaleString(currentLang === "fa" ? "fa-IR" : "en-US")} ${currentLang === "fa" ? "ریال" : "IRR"}`, changePct: totalReturnPct },
+              { label: t("app.portfolio.symbols_count", currentLang), value: String(enrichedHoldings.length), changePct: 0 },
+              { label: t("app.portfolio.daily_return", currentLang), value: `${(totalReturnPct / 30).toFixed(2)}٪`, changePct: totalReturnPct / 30 },
             ]);
           } else {
             if (active) setHoldings([]);
             if (active) setStats([
-              { label: "مجموع ارزش پورتفولیو", value: "۰ ریال", changePct: 0 },
-              { label: "سود/زیان کلی", value: "۰ ریال", changePct: 0 },
-              { label: "تعداد نمادها", value: "۰", changePct: 0 },
-              { label: "بازگشت روزانه", value: "۰٪", changePct: 0 },
+              { label: t("app.portfolio.total_value", currentLang), value: currentLang === "fa" ? "۰ ریال" : "0 IRR", changePct: 0 },
+              { label: t("app.portfolio.total_pnl", currentLang), value: currentLang === "fa" ? "۰ ریال" : "0 IRR", changePct: 0 },
+              { label: t("app.portfolio.symbols_count", currentLang), value: "0", changePct: 0 },
+              { label: t("app.portfolio.daily_return", currentLang), value: "0%", changePct: 0 },
             ]);
           }
         } else {
@@ -90,7 +92,7 @@ export default function PortfolioPage() {
           if (active) setStats([]);
         }
       } catch (err) {
-        if (active) setError("خطا در بارگذاری پورتفولیو. مطمئن شوید بک‌اند در دسترس است و لاگین کرده‌اید.");
+        if (active) setError(t("app.portfolio.error_loading", currentLang));
       } finally {
         if (active) setLoading(false);
       }
@@ -100,15 +102,15 @@ export default function PortfolioPage() {
       loadPortfolio();
     } else {
       setLoading(false);
-      setError("لطفاً ابتدا وارد شوید");
+      setError(t("app.portfolio.login_required", currentLang));
     }
 
     return () => { active = false; };
-  }, [user]);
+  }, [user, currentLang]);
 
   if (loading) {
     return (
-      <DashboardShell title="پورتفولیو">
+      <DashboardShell title={t("app.portfolio.title", currentLang)}>
         <PageLoading />
       </DashboardShell>
     );
@@ -116,12 +118,12 @@ export default function PortfolioPage() {
 
   if (error) {
     return (
-      <DashboardShell title="پورتفولیو">
-        <TarotCard icon="️" title="خطا در دریافت اطلاعات" className="max-w-md mx-auto border-error/20 bg-error/5">
+      <DashboardShell title={t("app.portfolio.title", currentLang)}>
+        <TarotCard icon="⚠️" title={t("app.portfolio.error_loading", currentLang)} className="max-w-md mx-auto border-error/20 bg-error/5">
           <div className="py-4 text-center">
             <p className="text-sm text-error font-medium mb-4">{error}</p>
             <PrimaryButton onClick={() => window.location.reload()} variant="outline" size="sm">
-              تلاش مجدد
+              {t("app.auth.submit", currentLang)}
             </PrimaryButton>
           </div>
         </TarotCard>
@@ -130,7 +132,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <DashboardShell title="پورتفولیو">
+    <DashboardShell title={t("app.portfolio.title", currentLang)}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Portfolio Summary */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -140,34 +142,44 @@ export default function PortfolioPage() {
         </section>
 
         {/* Holdings */}
-        <TarotCard icon="" title="دارایی‌های فعلی">
+        <TarotCard icon="💼" title={t("app.portfolio.current_holdings", currentLang)}>
           {holdings.length > 0 ? (
             <AssetTable rows={holdings} />
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border-2 border-dashed border-border rounded-xl">
-              <div className="text-4xl mb-4"></div>
-              <p className="text-lg font-bold text-foreground mb-2">پورتفولیو شما خالی است</p>
-              <p className="text-sm mb-6 max-w-xs text-center">هنوز هیچ دارایی در سبد خود ثبت نکرده‌اید. برای شروع، نمادهای مورد نظر خود را اضافه کنید.</p>
+              <div className="text-4xl mb-4">📭</div>
+              <p className="text-lg font-bold text-foreground mb-2">{t("app.portfolio.empty_title", currentLang)}</p>
+              <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc", currentLang)}</p>
               <PrimaryButton onClick={() => window.location.href = "/stocks"} size="lg">
-                مشاهده لیست سهام
+                {t("app.portfolio.view_stocks", currentLang)}
               </PrimaryButton>
             </div>
           )}
         </TarotCard>
 
-        {/* Performance Chart Placeholder */}
+        {/* Performance & Distribution - Improved UI instead of Coming Soon */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TarotCard icon="" title="عملکرد پورتفولیو">
-            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40">
-              <div className="text-2xl mb-2"></div>
-              <p className="text-sm">نمودار عملکرد به‌زودی...</p>
+          <TarotCard icon="📈" title={t("app.portfolio.performance", currentLang)}>
+            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40 relative overflow-hidden group">
+              <div className="text-4xl mb-4 opacity-20 group-hover:scale-110 transition-transform duration-500">📊</div>
+              <p className="text-sm font-medium z-10">{t("app.portfolio.coming_soon", currentLang)}</p>
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs px-3 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
+                  {currentLang === "fa" ? "در حال توسعه..." : "Under Development..."}
+                </span>
+              </div>
             </div>
           </TarotCard>
 
-          <TarotCard icon="" title="توزیع دارایی‌ها">
-            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40">
-              <div className="text-2xl mb-2"></div>
-              <p className="text-sm">توزیع دارایی‌ها به‌زودی...</p>
+          <TarotCard icon="🥧" title={t("app.portfolio.distribution", currentLang)}>
+            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40 relative overflow-hidden group">
+              <div className="text-4xl mb-4 opacity-20 group-hover:scale-110 transition-transform duration-500">💹</div>
+              <p className="text-sm font-medium z-10">{t("app.portfolio.coming_soon", currentLang)}</p>
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs px-3 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
+                  {currentLang === "fa" ? "در حال توسعه..." : "Under Development..."}
+                </span>
+              </div>
             </div>
           </TarotCard>
         </div>
