@@ -5,8 +5,7 @@ import { ChangeBadge } from "./StatCard";
 const MARKET_LABEL: Record<string, string> = {
   TSE: "بورس",
   OTC: "فرابورس",
-  BINANCE: "کریپتو",
-};
+  BINANCE: "کریپتو" };
 
 export function AssetTable({ rows }: { rows: AssetRow[] }) {
   return (
