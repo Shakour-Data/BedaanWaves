@@ -5,11 +5,17 @@ import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useState } from "react";
 import Link from "next/link";
+import {
+  CodeIcon,
+  DatabaseIcon,
+  HelpIcon,
+  MethodologyIcon,
+} from "@/components/icons/Icons";
 
 type DocumentationSection = {
   id: string;
   title: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string }>;
   description: string;
   contentType: "text" | "table" | "list";
   category: "frontend" | "database" | "api";
@@ -19,7 +25,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "frontend-pages",
     title: "صفحات فرانت‌اند",
-    icon: "",
+    Icon: CodeIcon,
     description: "لیست کامل تمام صفحات فرانت‌اند با مسیرها، ویژگی‌ها و وضعیت یکپارچگی API",
     contentType: "table",
     category: "frontend",
@@ -27,7 +33,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "component-guide",
     title: "راهنمای کامپوننت‌ها",
-    icon: "",
+    Icon: CodeIcon,
     description: "تمام کامپوننت‌های UI با مثال‌های استفاده و ویژگی‌ها",
     contentType: "list",
     category: "frontend",
@@ -35,7 +41,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "data-flow",
     title: "معماری جریان داده",
-    icon: "",
+    Icon: CodeIcon,
     description: "جریان داده از ابتدا تا انتها از بک‌اند به نمایش فرانت‌اند",
     contentType: "text",
     category: "frontend",
@@ -43,7 +49,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "schema-overview",
     title: "schema پایگاه داده",
-    icon: "️",
+    Icon: DatabaseIcon,
     description: "تعریف کامل جداول پایگاه داده و روابط",
     contentType: "text",
     category: "database",
@@ -51,7 +57,7 @@ const documentationSections: DocumentationSection[] = [
   {
     id: "api-endpoints",
     title: "نقاط پایانی API",
-    icon: "",
+    Icon: MethodologyIcon,
     description: "لیست کامل نقاط پایانی API با پارامترها و پاسخ‌ها",
     contentType: "table",
     category: "api",
@@ -112,13 +118,13 @@ export default function HelpPage() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "frontend":
-        return "";
+        return CodeIcon;
       case "database":
-        return "️";
+        return DatabaseIcon;
       case "api":
-        return "";
+        return MethodologyIcon;
       default:
-        return "";
+        return HelpIcon;
     }
   };
 
@@ -138,16 +144,16 @@ export default function HelpPage() {
         {/* Category Tabs */}
         <div className="flex flex-wrap gap-3">
           {[
-            { id: "frontend", label: "مستندات فرانت‌اند", icon: "" },
-            { id: "database", label: "مستندات پایگاه داده", icon: "️" },
-            { id: "api", label: "مستندات API", icon: "" },
+            { id: "frontend", label: "مستندات فرانت‌اند", Icon: CodeIcon },
+            { id: "database", label: "مستندات پایگاه داده", Icon: DatabaseIcon },
+            { id: "api", label: "مستندات API", Icon: MethodologyIcon },
           ].map((cat) => (
             <button
               key={cat.id}
               onClick={() => {
                 setActiveCategory(cat.id);
                 const firstSection = documentationSections.find(
-                  (s) => s.category === cat.id
+                  (s) => s.category === cat.id,
                 );
                 if (firstSection) setActiveSection(firstSection.id);
               }}
@@ -157,7 +163,7 @@ export default function HelpPage() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              <span className="text-xl">{cat.icon}</span>
+              <cat.Icon className="h-5 w-5" />
               <span>{cat.label}</span>
             </button>
           ))}
@@ -180,7 +186,7 @@ export default function HelpPage() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{section.icon}</span>
+                      <section.Icon className="h-5 w-5" />
                       <div>
                         <div className="font-medium">{section.title}</div>
                         <div className="text-xs opacity-70">

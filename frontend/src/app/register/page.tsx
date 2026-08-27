@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAuthT } from "@/i18n/auth";
+import { FaEyeIcon, FaEyeSlashIcon } from "@/app/reset-password/icons";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -107,7 +108,7 @@ export default function RegisterPage() {
                 aria-label={showPassword ? t("auth_hide_password") : t("auth_show_password")}
                 className="absolute inset-y-0 left-3 flex items-center text-[#64748B] transition hover:text-[#1E293B]"
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? <FaEyeSlashIcon className="h-4 w-4" /> : <FaEyeIcon className="h-4 w-4" />}
               </button>
             </div>
           </div>

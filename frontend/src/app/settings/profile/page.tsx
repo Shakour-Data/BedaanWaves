@@ -6,6 +6,7 @@ import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { apiClient } from "@/lib/api";
+import { FaEyeIcon, FaEyeSlashIcon } from "@/app/reset-password/icons";
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
@@ -129,7 +130,7 @@ export default function ProfilePage() {
                   className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm hover:bg-muted/50 transition"
                   aria-label={showPassword ? "مخفی کردن رمز" : "نمایش رمز"}
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? <FaEyeSlashIcon className="h-4 w-4" /> : <FaEyeIcon className="h-4 w-4" />}
                 </button>
               </div>
             </div>

@@ -8,15 +8,16 @@ import { AreaChart } from "@/components/charts/AreaChart";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { BarChart } from "@/components/charts/BarChart";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { AnalysisIcon, ChartBarIcon, TargetIcon, NewspaperIcon } from "@/components/icons/Icons";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
 
 const analysisTabs = [
-  { id: "technical", label: "تحلیل تکنیکال", icon: "" },
-  { id: "fundamental", label: "تحلیل بنیادی", icon: "" },
-  { id: "scoring", label: "بررسی ۶ بعدی", icon: "" },
-  { id: "sentiment", label: "احساسات بازار", icon: "️‍️" },
+  { id: "technical", label: "تحلیل تکنیکال", Icon: AnalysisIcon },
+  { id: "fundamental", label: "تحلیل بنیادی", Icon: ChartBarIcon },
+  { id: "scoring", label: "بررسی ۶ بعدی", Icon: TargetIcon },
+  { id: "sentiment", label: "احساسات بازار", Icon: NewspaperIcon },
 ];
 
 export default function AnalysisPage() {
@@ -198,13 +199,13 @@ export default function AnalysisPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "bg-secondary text-secondary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              <span className="mr-2">{tab.icon}</span>
+              <tab.Icon className="h-4 w-4" />
               {tab.label}
             </button>
           ))}

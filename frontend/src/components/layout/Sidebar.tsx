@@ -4,15 +4,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
+import {
+  DashboardIcon,
+  StockIcon,
+  PortfolioIcon,
+  AnalysisIcon,
+  NewsIcon,
+  AlertIcon,
+  ScoringIcon,
+  MethodologyIcon,
+  HelpIcon,
+  SettingsIcon,
+  LoginIcon,
+  UserIcon,
+} from "@/components/icons/Icons";
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string }>;
   ready: boolean;
 }
 
-const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", icon: "", ready: true };
+const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", Icon: LoginIcon, ready: true };
 const SECONDARY_COLOR = "#64748B";
 
 export function Sidebar() {
@@ -21,20 +35,20 @@ export function Sidebar() {
 
   const navItems: NavItem[] = isAuthenticated
     ? [
-        { href: "/dashboard", label: "داشبورد", icon: "", ready: true },
-        { href: "/stocks", label: "سهام", icon: "", ready: true },
-        { href: "/portfolio", label: "پورتفولیو", icon: "", ready: true },
-        { href: "/analysis", label: "تحلیل", icon: "", ready: true },
-        { href: "/news", label: "اخبار", icon: "", ready: true },
-        { href: "/alerts", label: "هشدارها", icon: "", ready: true },
-        { href: "/scoring", label: "امتیازدهی", icon: "", ready: true },
-        { href: "/methodology", label: "روش‌شناسی", icon: "", ready: true },
-        { href: "/help", label: "راهنما", icon: "", ready: true },
-        { href: "/settings", label: "تنظیمات", icon: "️", ready: true },
+        { href: "/dashboard", label: "داشبورد", Icon: DashboardIcon, ready: true },
+        { href: "/stocks", label: "سهام", Icon: StockIcon, ready: true },
+        { href: "/portfolio", label: "پورتفولیو", Icon: PortfolioIcon, ready: true },
+        { href: "/analysis", label: "تحلیل", Icon: AnalysisIcon, ready: true },
+        { href: "/news", label: "اخبار", Icon: NewsIcon, ready: true },
+        { href: "/alerts", label: "هشدارها", Icon: AlertIcon, ready: true },
+        { href: "/scoring", label: "امتیازدهی", Icon: ScoringIcon, ready: true },
+        { href: "/methodology", label: "روش‌شناسی", Icon: MethodologyIcon, ready: true },
+        { href: "/help", label: "راهنما", Icon: HelpIcon, ready: true },
+        { href: "/settings", label: "تنظیمات", Icon: SettingsIcon, ready: true },
       ]
     : [
-        { href: "/dashboard", label: "داشبورد", icon: "", ready: true },
-        { href: "/stocks", label: "سهام", icon: "", ready: true },
+        { href: "/dashboard", label: "داشبورد", Icon: DashboardIcon, ready: true },
+        { href: "/stocks", label: "سهام", Icon: StockIcon, ready: true },
         AUTH_ITEM,
       ];
 
@@ -57,8 +71,8 @@ export function Sidebar() {
       )}
     >
       <div className="mb-3 flex items-center gap-2 px-1">
-        <span className="text-2xl" aria-hidden="true">
-          
+        <span className="text-2xl font-bold text-primary" aria-hidden="true">
+          B
         </span>
         <span className="text-lg font-bold text-foreground">BedaanWaves</span>
       </div>
@@ -76,9 +90,7 @@ export function Sidebar() {
               )}
               style={getNavItemStyle(active)}
             >
-              <span className="text-xl" aria-hidden="true">
-                {item.icon}
-              </span>
+              <item.Icon className="h-5 w-5" />
               <span className="flex-1">{item.label}</span>
               {!item.ready ? (
                 <span className="rounded-full bg-accent/30 px-2 py-0.5 text-xs text-accent-foreground">
@@ -107,7 +119,7 @@ export function Sidebar() {
         {isAuthenticated && user ? (
           <div className="rounded-xl bg-[var(--color-neutral)]/60 p-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span aria-hidden="true"></span>
+              <UserIcon className="h-4 w-4" />
               <span className="flex-1 truncate">{user.name}</span>
             </div>
             <button

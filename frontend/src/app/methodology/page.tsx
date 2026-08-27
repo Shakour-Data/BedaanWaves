@@ -5,12 +5,22 @@ import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
 import { useState } from "react";
+import {
+  ScoringIcon,
+  TrendUpIcon,
+  AnalysisIcon,
+  ChartBarIcon,
+  TargetIcon,
+  AlertIcon,
+  NewspaperIcon,
+  CpuIcon,
+} from "@/components/icons/Icons";
 
 const analysisMethods = [
   {
     id: "scoring",
     title: "سیستم امتیازدهی ۶ بعدی",
-    icon: "",
+    Icon: ScoringIcon,
     description: "ارزیابی جامع چند بعدی سهام",
     steps: [
       "جمع‌آوری داده‌ها در شش بعد (بنیادی، تکنیکال، احساسات، ریسک، ماکرو، هوش مصنوعی)",
@@ -27,7 +37,7 @@ const analysisMethods = [
   {
     id: "ranking",
     title: "سیستم رتبه‌بندی",
-    icon: "",
+    Icon: TrendUpIcon,
     description: "رتبه‌بندی سهام بر اساس معیارهای عملکرد",
     steps: [
       "محاسبه نمرات ۶ بعدی برای تمام اوراق قابل قبول",
@@ -42,7 +52,7 @@ const analysisMethods = [
   {
     id: "technical",
     title: "تحلیل تکنیکال",
-    icon: "",
+    Icon: AnalysisIcon,
     description: "شاخص‌های مبتنی بر قیمت و حجم",
     steps: [
       "دریافت داده‌های قیمت/حجم تاریخی (حداقل 20 دوره)",
@@ -57,7 +67,7 @@ const analysisMethods = [
   {
     id: "fundamental",
     title: "تحلیل بنیادی",
-    icon: "",
+    Icon: ChartBarIcon,
     description: "تحلیل صورت‌های مالی",
     steps: [
       "دریافت آخرین صورت‌های مالی از CODAL، Yahoo Finance یا Alpha Vantage",
@@ -72,7 +82,7 @@ const analysisMethods = [
   {
     id: "momentum",
     title: "تحلیل مومنتوم",
-    icon: "",
+    Icon: TargetIcon,
     description: "شناسایی روند قیمت کوتاه‌مدت",
     steps: [
       "محاسبه تغییرات قیمت در چند بازه زمانی (۱ روز، ۱ هفته، ۱ ماه، ۳ ماه)",
@@ -87,7 +97,7 @@ const analysisMethods = [
   {
     id: "risk",
     title: "تحلیل ریسک",
-    icon: "️",
+    Icon: AlertIcon,
     description: "ارزیابی ریسک نوسان و downside",
     steps: [
       "محاسبه بازده روزانه از داده‌های قیمت تاریخی",
@@ -104,7 +114,7 @@ const analysisMethods = [
   {
     id: "sentiment",
     title: "تحلیل احساسات",
-    icon: "️",
+    Icon: NewspaperIcon,
     description: "احساسات بازار از اخبار و شبکه‌های اجتماعی",
     steps: [
       "جمع‌آوری اخبار مالی و memos شبکه‌های اجتماعی",
@@ -119,7 +129,7 @@ const analysisMethods = [
   {
     id: "ai",
     title: "تحلیل هوش مصنوعی / ML",
-    icon: "",
+    Icon: CpuIcon,
     description: "پیش‌بینی‌های مبتنی بر یادگیری ماشین",
     steps: [
       "آموزش مدل‌های LSTM/Prophet بر روی داده‌های قیمت تاریخی",
@@ -154,13 +164,13 @@ export default function MethodologyPage() {
             <button
               key={method.id}
               onClick={() => setActiveMethod(method.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 activeMethod === method.id
                   ? "bg-secondary text-secondary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              <span className="mr-2">{method.icon}</span>
+              <method.Icon className="h-4 w-4" />
               {method.title}
             </button>
           ))}
@@ -169,7 +179,7 @@ export default function MethodologyPage() {
         {/* Active Method Content */}
         {analysisMethods.map((method) => (
           activeMethod === method.id && (
-            <TarotCard key={method.id} icon={method.icon} title={method.title}>
+            <TarotCard key={method.id} icon={<method.Icon className="h-5 w-5" />} title={method.title}>
               <div className="space-y-4">
                 <p className="text-muted-foreground">{method.description}</p>
 
@@ -211,19 +221,19 @@ export default function MethodologyPage() {
           <TarotCard title="قابلیت‌های کلیدی">
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
-                <span className="text-green-500">●</span>
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
                 <span>پوشش: ایران، جهانی و بازارهای کریپتو</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500">●</span>
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
                 <span>به‌روزرسانی داده‌های لحظه‌ای (۲۴/۷)</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500">●</span>
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
                 <span>سیستم وزن‌دهی بهینه‌شده ML</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500">●</span>
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
                 <span>ترجیحات قابل سفارشی‌سازی کاربر</span>
               </li>
             </ul>

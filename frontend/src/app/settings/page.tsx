@@ -5,13 +5,14 @@ import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
+import { BellIcon, GlobeIcon, MailIcon, PhoneIcon, PlaneIcon } from "@/components/icons/Icons";
 
 const countries = [
-  { id: "ir", name: "Iran", flag: "🇮🇷", region: "Middle East" },
-  { id: "us", name: "USA", flag: "🇺🇸", region: "North America" },
-  { id: "eu", name: "Europe", flag: "🇪🇺", region: "Europe" },
-  { id: "as", name: "Asia", flag: "🌏", region: "Asia Pacific" },
-  { id: "crypto", name: "Cryptocurrency", flag: "₿", region: "Digital" },
+  { id: "ir", name: "Iran", region: "Middle East" },
+  { id: "us", name: "USA", region: "North America" },
+  { id: "eu", name: "Europe", region: "Europe" },
+  { id: "as", name: "Asia", region: "Asia Pacific" },
+  { id: "crypto", name: "Cryptocurrency", region: "Digital" },
 ];
 
 const marketData = {
@@ -104,10 +105,10 @@ const marketData = {
 };
 
 const notificationTypes = [
-  { id: "email", label: "اعلان‌های ایمیل", icon: "📧" },
-  { id: "push", label: "اعلان‌های Push", icon: "🔔" },
-  { id: "sms", label: "هشدارهای SMS", icon: "📱" },
-  { id: "telegram", label: "ربات تلگرام", icon: "✈️" },
+  { id: "email", label: "اعلان‌های ایمیل", Icon: MailIcon },
+  { id: "push", label: "اعلان‌های Push", Icon: BellIcon },
+  { id: "sms", label: "هشدارهای SMS", Icon: PhoneIcon },
+  { id: "telegram", label: "ربات تلگرام", Icon: PlaneIcon },
 ];
 
 export default function SettingsPage() {
@@ -217,7 +218,7 @@ export default function SettingsPage() {
                         ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
                       `}
                     >
-                      <span className="text-2xl">{country.flag}</span>
+                      <GlobeIcon className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <div className="font-medium text-sm">{country.name}</div>
                         <div className="text-xs text-muted-foreground">{country.region}</div>
@@ -232,7 +233,6 @@ export default function SettingsPage() {
           {/* Main Content */}
           <div className="lg:col-span-9">
             <TarotCard
-              icon={countryInfo?.flag}
               title={`پیکربندی بازار ${countryInfo?.name}`}
             >
               <div className="space-y-6">
@@ -390,7 +390,7 @@ export default function SettingsPage() {
                         className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{type.icon}</span>
+                          <type.Icon className="h-5 w-5 text-muted-foreground" />
                           <span className="font-medium text-sm">{type.label}</span>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">

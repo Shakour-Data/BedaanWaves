@@ -42,12 +42,14 @@ export default function DashboardPage() {
     <DashboardShell title="داشبورد">
       <div className="flex flex-col gap-4">
         {data.live ? (
-          <div className="rounded-xl bg-success/10 px-3 py-2 text-sm text-success">
-            ● داده‌های زنده از بک‌اند دریافت شد
+          <div className="flex items-center gap-2 rounded-xl bg-success/10 px-3 py-2 text-sm text-success">
+            <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
+            داده‌های زنده از بک‌اند دریافت شد
           </div>
         ) : (
-          <div className="rounded-xl bg-accent/30 px-3 py-2 text-sm text-accent-foreground">
-            ● داده‌های نمونه (بک‌اند در دسترس نیست)
+          <div className="flex items-center gap-2 rounded-xl bg-accent/30 px-3 py-2 text-sm text-accent-foreground">
+            <span className="h-2 w-2 rounded-full bg-accent-foreground" aria-hidden="true" />
+            داده‌های نمونه (بک‌اند در دسترس نیست)
           </div>
         )}
 
