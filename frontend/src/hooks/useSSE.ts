@@ -53,8 +53,7 @@ export function useSSE<T = unknown>(
       reconnect: options?.reconnect ?? true,
       reconnectInterval: options?.reconnectInterval ?? 5000,
       maxReconnectAttempts: options?.maxReconnectAttempts ?? 10,
-      headers: options?.headers,
-    });
+      headers: options?.headers });
 
     return () => {
       connectionRef.current?.disconnect();
@@ -83,8 +82,7 @@ export function useSSE<T = unknown>(
     error,
     reconnect,
     disconnect,
-    clearEvents,
-  };
+    clearEvents };
 }
 
 export function useSSELatest<T = unknown>(
