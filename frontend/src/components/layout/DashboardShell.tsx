@@ -15,10 +15,10 @@ interface DashboardShellProps {
 
 export function DashboardShell({ title, children }: DashboardShellProps) {
   const { theme, sidebarOpen, setSidebarOpen } = useAppStore();
-  const { isAuthenticated, logout, currentLang } = useAuthStore();
+  const { isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
 
-  const isRTL = currentLang === "fa";
+  const isRTL = false;
 
   useEffect(() => {
     const root = document.documentElement;
