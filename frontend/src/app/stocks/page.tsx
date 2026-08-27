@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
+import { SearchIcon } from "@/components/icons/Icons";
 import {
   fetchSymbols,
   fetchLatestPrices,
@@ -127,7 +128,7 @@ export default function StocksPage() {
           ))}
         </div>
         <label className="ms-auto flex items-center gap-2 rounded-xl bg-neutral/60 px-3 py-2 text-sm text-muted-foreground">
-          <span aria-hidden="true">🔍</span>
+          <SearchIcon className="h-4 w-4" />
           <input
             type="search"
             value={search}

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from jose import JWTError, jwt
 import bcrypt
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
@@ -95,7 +95,6 @@ async def ensure_admin_user() -> None:
         full_name="Admin User",
     )
     async with async_session_maker() as session:
-        from sqlalchemy import update
         await session.execute(
             update(User).where(User.username == "admin").values(is_admin=True)
         )

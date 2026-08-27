@@ -1,19 +1,21 @@
 import { cn } from "@/lib/cn";
 import type { MarketStat } from "@/lib/dashboard-data";
 import { semanticColors } from "@/styles/design-tokens";
+import { ArrowUpIcon, ArrowDownIcon } from "@/components/icons/Icons";
 
 export function ChangeBadge({ value }: { value: number }) {
   const up = value >= 0;
   const color = up ? semanticColors.success : semanticColors.error;
   return (
     <span
-      className="rounded-full px-2 py-0.5 text-xs font-semibold"
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
       style={{
         backgroundColor: `${color}26`,
         color,
       }}
     >
-      {up ? "▲" : "▼"} {Math.abs(value).toFixed(2)}٪
+      {up ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
+      {Math.abs(value).toFixed(2)}٪
     </span>
   );
 }

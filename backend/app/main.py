@@ -240,7 +240,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not ensure admin user: {e}")
 
     try:
-        # Step 5: Initialize dependency container
+        # Step 6: Initialize dependency container
         container = DependencyContainer()
 
         container.register_instance("config_service", ConfigService())
