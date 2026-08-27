@@ -1,51 +1,62 @@
 import Link from "next/link";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import {
+  TrendUpIcon,
+  ChartBarIcon,
+  CpuIcon,
+  BriefcaseIcon,
+  BellIcon,
+  NewspaperIcon,
+  SearchIcon,
+  GlobeIcon,
+  TargetIcon,
+} from "@/components/icons/Icons";
 
 const features = [
   {
     title: "Real-Time Market Data",
     desc: "Live and historical OHLCV data for NASDAQ, NYSE, TSE/OTC, and crypto markets with multiple timeframes.",
-    icon: "📈",
+    Icon: TrendUpIcon,
   },
   {
     title: "Fundamental Analysis",
     desc: "Quarterly financials, ratios (P/E, P/B, EPS, ROE), and key metrics for stocks across all supported markets.",
-    icon: "📊",
+    Icon: ChartBarIcon,
   },
   {
     title: "AI-Powered Signals",
     desc: "Machine-learning predictions, technical indicators, and anomaly detection to support informed decisions.",
-    icon: "🤖",
+    Icon: CpuIcon,
   },
   {
     title: "Portfolio Tracking",
     desc: "Track positions, unrealized P&L, allocation, and performance across personal and watchlist portfolios.",
-    icon: "💼",
+    Icon: BriefcaseIcon,
   },
   {
     title: "Smart Alerts",
     desc: "Configure price, signal, and news alerts with multi-channel notifications (email, SMS, push, webhook).",
-    icon: "🔔",
+    Icon: BellIcon,
   },
   {
     title: "News & Sentiment",
     desc: "Aggregated market news with multilingual NLP summaries and sentiment scoring for assets.",
-    icon: "📰",
+    Icon: NewspaperIcon,
   },
   {
     title: "Advanced Screening",
     desc: "Filter universes by fundamental, technical, and custom criteria across sectors and markets.",
-    icon: "🔍",
+    Icon: SearchIcon,
   },
   {
     title: "Crypto & International",
     desc: "Seamless coverage of Binance, Kraken, Coinbase, and major international exchanges alongside Tehran markets.",
-    icon: "🌍",
+    Icon: GlobeIcon,
   },
   {
     title: "Scoring & Methodology",
     desc: "Hierarchical multi-dimensional scoring with transparent methodology and coefficient learning pipeline.",
-    icon: "🎯",
+    Icon: TargetIcon,
   },
 ];
 
@@ -85,7 +96,9 @@ export default function HomePage() {
                 key={item.title}
                 className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="mb-3 text-3xl">{item.icon}</div>
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <item.Icon className="h-5 w-5" />
+                </div>
                 <h3 className="text-lg font-semibold text-[#0F172A]">
                   {item.title}
                 </h3>

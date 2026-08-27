@@ -10,6 +10,7 @@ import { LineChart } from "@/components/charts/LineChart";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
+import { ArrowUpIcon, ArrowDownIcon } from "@/components/icons/Icons";
 import type { AssetRow } from "@/lib/dashboard-data";
 
 export default function PortfolioPage() {
@@ -153,9 +154,10 @@ export default function PortfolioPage() {
             <TarotCard key={i} className="text-center">
               <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
               <span className="text-lg font-bold mt-1 block">{stat.value}</span>
-              {stat.changePct !== undefined && (
-                <span className={`text-xs mt-1 block ${stat.changePct >= 0 ? "text-success" : "text-error"}`}>
-                  {stat.changePct >= 0 ? "▲" : "▼"} {Math.abs(stat.changePct).toFixed(2)}%
+               {stat.changePct !== undefined && (
+                <span className={`inline-flex items-center gap-1 text-xs mt-1 ${stat.changePct >= 0 ? "text-success" : "text-error"}`}>
+                  {stat.changePct >= 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
+                  {Math.abs(stat.changePct).toFixed(2)}%
                 </span>
               )}
             </TarotCard>

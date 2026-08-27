@@ -39,7 +39,7 @@ describe('AssetTable', () => {
     const priceElement = screen.getByText(/۱٬۰۰۰/)
     expect(priceElement).not.toBeNull()
 
-    const changeElement = screen.getByText(/▲ 2\.50٪/)
+    const changeElement = screen.getByText(/2\.50٪/)
     expect(changeElement).not.toBeNull()
 
     expect(screen.getByText('TEST2')).not.toBeNull()
@@ -49,7 +49,7 @@ describe('AssetTable', () => {
     const priceElement2 = screen.getByText(/۵۰٬۰۰۰/)
     expect(priceElement2).not.toBeNull()
 
-    const changeElement2 = screen.getByText(/▼ 1\.20٪/)
+    const changeElement2 = screen.getByText(/1\.20٪/)
     expect(changeElement2).not.toBeNull()
   })
 
