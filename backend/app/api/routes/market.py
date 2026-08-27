@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from datetime import datetime, timedelta
-from typing import List, Dict
+from typing import List, Dict, Any
 import logging
 
 from app.db.base import get_async_session

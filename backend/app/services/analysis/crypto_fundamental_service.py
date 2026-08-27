@@ -3,6 +3,7 @@
 Provides fundamental analysis for cryptocurrency assets based on market cap, supply, and volume.
 """
 from typing import Any, Dict, Optional
+from collections import deque
 from datetime import datetime, timezone
 
 from ..core import AnalysisService

@@ -93,10 +93,16 @@ class _FakeBrsClient:
 
 
 class _FakeNewsClient:
-    async def get_news(self, *args, **kwargs):
+    async def get_market_news(self, *args, **kwargs):
+        return []
+
+    async def get_stock_news(self, *args, **kwargs):
         return []
 
     async def search(self, *args, **kwargs):
+        return []
+
+    async def get_related_news(self, *args, **kwargs):
         return []
 
 

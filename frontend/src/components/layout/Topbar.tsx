@@ -3,6 +3,7 @@
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
+import { SunIcon, MoonIcon, UserIcon, LogoutIcon } from "@/components/icons/Icons";
 
 interface TopbarProps {
   title: string;
@@ -26,7 +27,7 @@ export function Topbar({ title }: TopbarProps) {
             theme === "dark" ? "text-accent" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {theme === "dark" ? "" : "️"}
+          {theme === "dark" ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
         </button>
 
         <div className="flex items-center gap-2 rounded-xl bg-secondary/10 px-3 py-2 text-sm text-secondary">
@@ -40,7 +41,7 @@ export function Topbar({ title }: TopbarProps) {
           aria-label="خروج"
           className="rounded-xl p-2 text-muted-foreground transition duration-fast ease-flow hover:text-foreground"
         >
-          <span aria-hidden="true">→</span>
+          <LogoutIcon className="h-5 w-5" />
         </button>
       </div>
     </header>

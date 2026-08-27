@@ -103,4 +103,6 @@ ON CONFLICT DO NOTHING;
 -- ===============================================
 -- Done
 -- ===============================================
-SELECT 'Nasdaq tables and sample data created. Run python scripts/seed_nasdaq.py to load all constituents.' AS status;
+-- Full Nasdaq constituent list is loaded from database/insert_nasdaq_symbols.sql
+-- Run: psql -U postgres -d bedaanwaves_db -f database/insert_nasdaq_symbols.sql
+SELECT 'Nasdaq tables and sample data created. Run database/insert_nasdaq_symbols.sql to load all 5569 constituents.' AS status;

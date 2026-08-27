@@ -19,7 +19,8 @@ ENV/
 .venv/
 env/
 .env
-*.log
+**/.env
+*.env
 
 # Node.js
 node_modules/
@@ -37,6 +38,7 @@ out/
 .nuxt/
 .vercel/
 tsconfig.tsbuildinfo
+temp_emnapi.json
 
 # OS
 .DS_Store
@@ -44,6 +46,8 @@ Thumbs.db
 *.swp
 *.bak
 *.tmp
+DatabaseConfigs.txt
+*.bat
 
 # VS Code/JetBrains
 .vscode/
@@ -61,10 +65,22 @@ pginst_extracted/
 # Temporary backend test scripts
 backend/check_routes.py
 backend/test_*.py
+backend/check_*.py
+backend/run_*.py
+backend/verify_*.py
+backend/fetch_*.py
+backend/gen_*.py
+backend/complete_*.py
+backend/populate_*.py
+backend/validate_*.py
 
 # Temporary backend output files
 backend/ls_out.txt
 backend/test_out.txt
+
+# Backend logs
+backend/logs/
+backend/*.log
 
 # Temporary utility scripts
 remove_emojis.py
@@ -72,9 +88,23 @@ backend/scripts/seed_real_data.py
 backend/scripts/seed.py
 backend/scripts/seed_data.py
 backend/scripts/seed_local.py
+backend/generate_processed_data.py
+backend/complete_snapshots.py
+compare_symbols.py
+inspect_db.py
+inspect_schema.py
+inspect_values.py
+backend/backfill_sec_financials.py
+backend/sec_cik_lookup.py
+find_parse2.js
+frontend/find_rolldown_parse.js
+frontend/test-parser.js
 
 # Root-level utility scripts
 scripts/
 
 # Machine learning artifacts
 *.joblib
+
+# SEC EDGAR cache
+backend/sec_cik_cache.json

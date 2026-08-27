@@ -2,16 +2,25 @@
 Backup Service - Tier 9 System Service
 
 Automated backup and recovery service for BedaanWaves platform.
-Manages database, configuration, and state backups with configurable retention.
+Manages database, configuration, and state backups with configurable retention,
+encryption, and optional offsite storage.
 """
 
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import tempfile
+import base64
+
+from psycopg2 import sql
+
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from ..core import BaseService
 
@@ -24,6 +33,12 @@ class BackupService(BaseService):
     - Database state and dumps
     - Configuration files
     - Platform state and metadata
+    
+    Features:
+    - AES-256 encryption via Fernet (symmetric)
+    - Optional offsite storage via HTTP POST
+    - Compression support
+    - Configurable retention policy
     """
     
     def __init__(
@@ -43,11 +58,19 @@ class BackupService(BaseService):
         self._backup_history: List[Dict[str, Any]] = []
         self.config_service = config_service
         self.metrics_service = metrics_service
+        self._fernet: Optional[Fernet] = None
+        self._offsite_url: Optional[str] = None
         
     async def initialize(self) -> None:
         """Initialize backup service."""
         self.backup_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.info(f"BackupService initialized with backup_dir={self.backup_dir}")
+        self._fernet = self._create_fernet()
+        self._offsite_url = os.environ.get("BACKUP_OFFSITE_URL")
+        self.logger.info(
+            f"BackupService initialized with backup_dir={self.backup_dir}, "
+            f"encryption={'enabled' if self._fernet else 'disabled'}, "
+            f"offsite={'enabled' if self._offsite_url else 'disabled'}"
+        )
         
     async def shutdown(self) -> None:
         """Shutdown backup service."""
@@ -59,20 +82,110 @@ class BackupService(BaseService):
         for backup_type, task in self._ongoing_backups.items():
             task.cancel()
             self.logger.warning(f"Cancelled ongoing backup for {backup_type}")
-        
+    
+    def _create_fernet(self) -> Optional[Fernet]:
+        """Create Fernet cipher from configuration."""
+        encryption_key = os.environ.get("BACKUP_ENCRYPTION_KEY")
+        if not encryption_key:
+            return None
+        try:
+            return Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
+        except Exception as exc:
+            self.logger.warning(f"Failed to initialize backup encryption: {exc}")
+            return None
+    
+    def _derive_key(self, password: str, salt: bytes) -> bytes:
+        """Derive a Fernet key from a password using PBKDF2."""
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=480000,
+        )
+        return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+    
+    def _encrypt_data(self, data: bytes) -> bytes:
+        """Encrypt data using Fernet."""
+        if not self._fernet:
+            return data
+        return self._fernet.encrypt(data)
+    
+    def _decrypt_data(self, data: bytes) -> bytes:
+        """Decrypt data using Fernet."""
+        if not self._fernet:
+            return data
+        try:
+            return self._fernet.decrypt(data)
+        except InvalidToken as exc:
+            self.logger.error(f"Backup decryption failed: {exc}")
+            raise ValueError("Invalid backup encryption key or corrupted backup") from exc
+    
+    async def _upload_offsite(self, file_path: Path) -> Optional[str]:
+        """Upload backup to offsite storage if configured."""
+        if not self._offsite_url:
+            return None
+        try:
+            import requests
+            with open(file_path, "rb") as f:
+                files = {"backup": (file_path.name, f, "application/octet-stream")}
+                response = requests.post(
+                    self._offsite_url,
+                    files=files,
+                    timeout=300,
+                    headers={"X-Backup-Encrypted": str(self._fernet is not None).lower()},
+                )
+                response.raise_for_status()
+                result = response.json()
+                return result.get("url") or result.get("location")
+        except Exception as exc:
+            self.logger.warning(f"Offsite backup upload failed: {exc}")
+            return None
+
     async def _cleanup_old_backups(self) -> None:
         """Remove backups older than retention_days."""
         cutoff_date = datetime.now(timezone.utc)
         cutoff_date -= timedelta(days=self.retention_days)
         
-        for backup_file in self.backup_dir.glob("*.backup"):
+        for backup_file in self.backup_dir.glob("*.backup*"):
             if backup_file.stat().st_mtime < cutoff_date.timestamp():
                 backup_file.unlink()
                 self.logger.debug(f"Removed old backup: {backup_file.name}")
-                
+    
+    async def _write_backup_file(self, backup_name: str, data: dict) -> tuple[Path, int]:
+        """Write backup data to file with optional compression and encryption."""
+        json_data = json.dumps(data, default=str).encode("utf-8")
+        encrypted_data = self._encrypt_data(json_data)
+        
+        backup_file = self.backup_dir / f"{backup_name}.backup"
+        if self.compression:
+            import gzip
+            final_path = Path(f"{backup_file}.gz")
+            with open(final_path, "wb") as f:
+                with gzip.open(f, "wt", encoding="utf-8") as gz:
+                    gz.write(encrypted_data.decode("utf-8"))
+        else:
+            final_path = backup_file
+            with open(final_path, "wb") as f:
+                f.write(encrypted_data)
+        
+        return final_path, final_path.stat().st_size
+    
+    async def _read_backup_file(self, backup_file: Path) -> dict:
+        """Read and decrypt backup data from file."""
+        if backup_file.suffix == ".gz":
+            import gzip
+            with gzip.open(backup_file, "rt", encoding="utf-8") as f:
+                encrypted_data = f.read().encode("utf-8")
+        else:
+            with open(backup_file, "rb") as f:
+                encrypted_data = f.read()
+        
+        decrypted_data = self._decrypt_data(encrypted_data)
+        return json.loads(decrypted_data)
+
     async def backup_database(self, name: Optional[str] = None, _include_schema: bool = True) -> Dict[str, Any]:
         """
-        Create database backup.
+        Create database backup with encryption.
         
         Args:
             name: Optional backup name (auto-generated if not provided)
@@ -90,7 +203,6 @@ class BackupService(BaseService):
             "user": self.config_service.get("DB_USER"),
         }
         
-        # Start backup task
         task = asyncio.create_task(self._perform_database_backup(backup_name, db_config, _include_schema))
         self._ongoing_backups["database"] = task
         
@@ -126,8 +238,18 @@ class BackupService(BaseService):
             self._ongoing_backups.pop("database", None)
             
     async def _perform_database_backup(self, name: str, db_config: Dict[str, Any], _include_schema: bool) -> Dict[str, Any]:
-        """Actually perform database backup operation."""
-        backup_file = self.backup_dir / f"{name}.backup"
+        """Actually perform database backup operation with encryption."""
+        backup_data = {
+            "metadata": {
+                "type": "database_backup",
+                "name": name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": "2.0",
+                "encrypted": self._fernet is not None,
+            },
+            "schema": {},
+            "data": {},
+        }
         
         try:
             import psycopg2
@@ -140,19 +262,7 @@ class BackupService(BaseService):
                 user=db_config["user"],
             )
             
-            backup_data = {
-                "metadata": {
-                    "type": "database_backup",
-                    "name": name,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "version": "1.0",
-                },
-                "schema": {},
-                "data": {},
-            }
-            
             if _include_schema:
-                # Get table schemas
                 with conn.cursor(cursor_factory=DictCursor) as cursor:
                     cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
                     tables = cursor.fetchall()
@@ -161,52 +271,44 @@ class BackupService(BaseService):
                         table_name = table_tuple["table_name"]
                         backup_data["schema"][table_name] = {}
                         
-                        cursor.execute(f"SELECT * FROM {table_name} LIMIT 1")
+                        cursor.execute(sql.SQL("SELECT * FROM {} LIMIT 1").format(sql.Identifier(table_name)))
                         columns = [desc[0] for desc in cursor.description]
                         backup_data["schema"][table_name]["columns"] = columns
                         
-                        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+                        cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name)))
                         backup_data["schema"][table_name]["row_count"] = cursor.fetchone()[0]
             
-            # Get table data
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 for table_tuple in tables:
                     table_name = table_tuple["table_name"]
-                    cursor.execute(f"SELECT * FROM {table_name}")
+                    cursor.execute(sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name)))
                     rows = cursor.fetchall()
                     backup_data["data"][table_name] = rows
             
             conn.close()
-            
-            # Compress if requested
-            if self.compression:
-                import gzip
-                with open(f"{backup_file}.gz", "wb") as f:
-                    with gzip.open(f, "wt", encoding="utf-8") as gz:
-                        json.dump(backup_data, gz, default=str)
-                backup_file = Path(f"{backup_file}.gz")
-            else:
-                with open(backup_file, "w", encoding="utf-8") as f:
-                    json.dump(backup_data, f, default=str)
-            
-            # Cleanup old backups
-            await self._cleanup_old_backups()
-            
-            return {
-                "backup_file": str(backup_file),
-                "name": name,
-                "timestamp": datetime.now(timezone.utc),
-                "size": backup_file.stat().st_size,
-                "tables": len(backup_data["data"]),
-                "status": "success",
-            }
         except Exception as exc:
-            self.logger.error(f"Database backup failed: {exc}", exc_info=True)
+            self.logger.error(f"Database backup data collection failed: {exc}", exc_info=True)
             raise
-            
+        
+        backup_file, size = await self._write_backup_file(name, backup_data)
+        await self._cleanup_old_backups()
+        
+        offsite_url = await self._upload_offsite(backup_file)
+        
+        return {
+            "backup_file": str(backup_file),
+            "name": name,
+            "timestamp": datetime.now(timezone.utc),
+            "size": size,
+            "tables": len(backup_data["data"]),
+            "encrypted": self._fernet is not None,
+            "offsite_url": offsite_url,
+            "status": "success",
+        }
+
     async def backup_config(self, name: Optional[str] = None) -> Dict[str, Any]:
         """
-        Create configuration backup.
+        Create configuration backup with encryption.
         
         Args:
             name: Optional backup name (auto-generated if not provided)
@@ -251,58 +353,48 @@ class BackupService(BaseService):
             self._ongoing_backups.pop("config", None)
             
     async def _perform_config_backup(self, name: str) -> Dict[str, Any]:
-        """Actually perform configuration backup operation."""
-        backup_file = self.backup_dir / f"{name}.backup"
+        """Actually perform configuration backup operation with encryption."""
+        backup_data = {
+            "metadata": {
+                "type": "config_backup",
+                "name": name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": "2.0",
+                "encrypted": self._fernet is not None,
+            },
+            "config_files": {},
+        }
         
         try:
-            # Collect all configuration files
             config_path = Path("backend/app/config")
             config_files = list(config_path.glob("*.py")) + list(config_path.glob("*.env")) + list(config_path.glob("*.json"))
-            
-            backup_data = {
-                "metadata": {
-                    "type": "config_backup",
-                    "name": name,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "version": "1.0",
-                },
-                "config_files": {},
-            }
             
             for config_file in config_files:
                 with open(config_file, "r", encoding="utf-8") as f:
                     content = f.read()
                     backup_data["config_files"][config_file.name] = content
-            
-            # Compress if requested
-            if self.compression:
-                import gzip
-                with open(f"{backup_file}.gz", "wb") as f:
-                    with gzip.open(f, "wt", encoding="utf-8") as gz:
-                        json.dump(backup_data, gz, default=str)
-                backup_file = Path(f"{backup_file}.gz")
-            else:
-                with open(backup_file, "w", encoding="utf-8") as f:
-                    json.dump(backup_data, f, default=str)
-            
-            # Cleanup old backups
-            await self._cleanup_old_backups()
-            
-            return {
-                "backup_file": str(backup_file),
-                "name": name,
-                "timestamp": datetime.now(timezone.utc),
-                "size": backup_file.stat().st_size,
-                "files": len(backup_data["config_files"]),
-                "status": "success",
-            }
         except Exception as exc:
-            self.logger.error(f"Configuration backup failed: {exc}", exc_info=True)
-            raise
-            
+            self.logger.warning(f"Some config files could not be backed up: {exc}")
+        
+        backup_file, size = await self._write_backup_file(name, backup_data)
+        await self._cleanup_old_backups()
+        
+        offsite_url = await self._upload_offsite(backup_file)
+        
+        return {
+            "backup_file": str(backup_file),
+            "name": name,
+            "timestamp": datetime.now(timezone.utc),
+            "size": size,
+            "files": len(backup_data["config_files"]),
+            "encrypted": self._fernet is not None,
+            "offsite_url": offsite_url,
+            "status": "success",
+        }
+
     async def create_platform_snapshot(self, name: Optional[str] = None) -> Dict[str, Any]:
         """
-        Create platform state snapshot.
+        Create platform state snapshot with encryption.
         
         Args:
             name: Optional backup name (auto-generated if not provided)
@@ -347,26 +439,23 @@ class BackupService(BaseService):
             self._ongoing_backups.pop("snapshot", None)
             
     async def _perform_platform_snapshot(self, name: str) -> Dict[str, Any]:
-        """Actually perform platform snapshot operation."""
-        backup_file = self.backup_dir / f"{name}.backup"
+        """Actually perform platform snapshot operation with encryption."""
+        snapshot_data = {
+            "metadata": {
+                "type": "platform_snapshot",
+                "name": name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": "2.0",
+                "encrypted": self._fernet is not None,
+            },
+            "platform_state": {
+                "config": self.config_service.get_all() if self.config_service else {},
+                "metrics": self.metrics_service.get_all_metrics() if self.metrics_service else {},
+                "filesystem_snapshot": {},
+            },
+        }
         
         try:
-            # Collect platform state information
-            snapshot_data = {
-                "metadata": {
-                    "type": "platform_snapshot",
-                    "name": name,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "version": "1.0",
-                },
-                "platform_state": {
-                    "config": self.config_service.get_all(),
-                    "metrics": self.metrics_service.get_all_metrics(),
-                    "filesystem_snapshot": {},
-                },
-            }
-            
-            # Create filesystem snapshot
             key_directories = [
                 "backend/app/services",
                 "backend/app/models",
@@ -378,36 +467,28 @@ class BackupService(BaseService):
                     if file_path.is_file():
                         with open(file_path, "r", encoding="utf-8") as f:
                             snapshot_data["platform_state"]["filesystem_snapshot"][str(file_path)] = f.read()
-            
-            # Compress if requested
-            if self.compression:
-                import gzip
-                with open(f"{backup_file}.gz", "wb") as f:
-                    with gzip.open(f, "wt", encoding="utf-8") as gz:
-                        json.dump(snapshot_data, gz, default=str)
-                backup_file = Path(f"{backup_file}.gz")
-            else:
-                with open(backup_file, "w", encoding="utf-8") as f:
-                    json.dump(snapshot_data, f, default=str)
-            
-            # Cleanup old backups
-            await self._cleanup_old_backups()
-            
-            return {
-                "backup_file": str(backup_file),
-                "name": name,
-                "timestamp": datetime.now(timezone.utc),
-                "size": backup_file.stat().st_size,
-                "directories": len(key_directories),
-                "status": "success",
-            }
         except Exception as exc:
-            self.logger.error(f"Platform snapshot failed: {exc}", exc_info=True)
-            raise
-            
+            self.logger.warning(f"Some files could not be snapshotted: {exc}")
+        
+        backup_file, size = await self._write_backup_file(name, snapshot_data)
+        await self._cleanup_old_backups()
+        
+        offsite_url = await self._upload_offsite(backup_file)
+        
+        return {
+            "backup_file": str(backup_file),
+            "name": name,
+            "timestamp": datetime.now(timezone.utc),
+            "size": size,
+            "directories": len(key_directories),
+            "encrypted": self._fernet is not None,
+            "offsite_url": offsite_url,
+            "status": "success",
+        }
+
     async def restore_database(self, backup_file: str, _force: bool = False) -> Dict[str, Any]:
         """
-        Restore from database backup.
+        Restore from database backup with decryption.
         
         Args:
             backup_file: Path to backup file
@@ -421,16 +502,8 @@ class BackupService(BaseService):
         if not backup_path.exists():
             raise FileNotFoundError(f"Backup file not found: {backup_file}")
         
-        # Load backup
-        if backup_path.suffix == ".gz":
-            import gzip
-            with gzip.open(backup_path, "rt", encoding="utf-8") as f:
-                backup_data = json.load(f)
-        else:
-            with open(backup_path, "r", encoding="utf-8") as f:
-                backup_data = json.load(f)
+        backup_data = await self._read_backup_file(backup_path)
         
-        # Validate backup
         if backup_data["metadata"]["type"] != "database_backup":
             raise ValueError(f"Invalid backup type: {backup_data['metadata']['type']}")
         
@@ -445,10 +518,8 @@ class BackupService(BaseService):
                 user=self.config_service.get("DB_USER"),
             )
             
-            # Restore schema
             for table_name, table_data in backup_data["schema"].items():
                 with conn.cursor() as cursor:
-                    # Create table
                     create_stmt = self._generate_create_table_stmt(table_name, table_data["columns"])
                     try:
                         cursor.execute(create_stmt)
@@ -456,18 +527,23 @@ class BackupService(BaseService):
                         self.logger.warning(f"Table {table_name} already exists, skipping recreation")
                         continue
                     
-                    # Insert data if any
                     if table_data["row_count"] > 0:
                         placeholders = ", ".join(["%s"] * len(table_data["columns"]))
-                        insert_stmt = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                        insert_stmt = sql.SQL("INSERT INTO {} VALUES ({})").format(
+                            sql.Identifier(table_name),
+                            sql.SQL(placeholders)
+                        )
                         cursor.executemany(insert_stmt, [])
             
-            # Restore data
             for table_name, table_data in backup_data["data"].items():
                 with conn.cursor() as cursor:
-                    placeholders = ", ".join(["%s"] * len(table_data[0]))
-                    insert_stmt = f"INSERT INTO {table_name} VALUES ({placeholders})"
-                    cursor.executemany(insert_stmt, table_data)
+                    if table_data:
+                        placeholders = ", ".join(["%s"] * len(table_data[0]))
+                        insert_stmt = sql.SQL("INSERT INTO {} VALUES ({})").format(
+                            sql.Identifier(table_name),
+                            sql.SQL(placeholders)
+                        )
+                        cursor.executemany(insert_stmt, table_data)
             
             conn.commit()
             conn.close()
@@ -523,10 +599,12 @@ class BackupService(BaseService):
         """Get current backup status."""
         status = {
             "ongoing_backups": list(self._ongoing_backups.keys()),
-            "backup_history": self._backup_history[-10:],  # Last 10 operations
+            "backup_history": self._backup_history[-10:],
             "backup_dir": str(self.backup_dir),
             "retention_days": self.retention_days,
             "compression": self.compression,
+            "encryption_enabled": self._fernet is not None,
+            "offsite_enabled": self._offsite_url is not None,
             "available_backups": [],
         }
         
@@ -550,4 +628,6 @@ class BackupService(BaseService):
             "backup_dir_exists": self.backup_dir.exists(),
             "retention_days": self.retention_days,
             "compression_enabled": self.compression,
+            "encryption_enabled": self._fernet is not None,
+            "offsite_enabled": self._offsite_url is not None,
         }

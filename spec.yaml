@@ -1,0 +1,94 @@
+user_friendly_spec:
+  version: 1.0
+  language_family: "Persian & English"
+  feedback_modes: ["visual", "auditory", "haptic"]
+  error_philosophy: "Never blame user; always suggest next action"
+  learning_mechanism: "None (static) - to ensure predictability"
+  testing_protocol: "A/B testing with 100 real users across 3 scenarios"
+
+# Machine-readable finite state machine for the password-recovery flow.
+# Every transition is guarded so invalid state jumps are structurally impossible.
+state_machine:
+  states: ["Welcome", "Data_Entry", "Confirmation", "Processing", "Result", "Error_Recovery"]
+  transitions:
+    Welcome:
+      on: Start_Button
+      go_to: Data_Entry
+    Data_Entry:
+      on: Valid_Input
+      go_to: Confirmation
+    Data_Entry:
+      on: Invalid_Input
+      go_to: Error_Recovery
+    Confirmation:
+      on: Confirm
+      go_to: Processing
+    Confirmation:
+      on: Edit
+      go_to: Data_Entry
+    Processing:
+      on: Success
+      go_to: Result
+    Processing:
+      on: Fail
+      go_to: Error_Recovery
+    Error_Recovery:
+      on: Retry
+      go_to: Data_Entry
+    Error_Recovery:
+      on: Cancel
+      go_to: Welcome
+
+# Quantitative usability targets the implementation must satisfy.
+metrics:
+  task_completion_rate_first_attempt: ">= 95%"
+  avg_task_time_seconds: "<= 120"
+  user_error_rate: "<= 5%"
+  sus_score: ">= 70"
+
+# Principle traceability - every design decision maps to one of these keys.
+principles:
+  predictability: "Every user action yields an expected, consistent response"
+  self_explanatory: "Every UI section includes a brief explanation (tooltip or help text)"
+  minimal_cognitive_load: "Display <= 7 options at any given moment (Miller's Law)"
+  immediate_feedback: "Every interaction responds within <= 300 ms with a status message"
+  accessibility: "WCAG 2.1 Level AA (contrast, font size, screen reader support)"
+  error_recovery: "Every error shows a non-technical message with >= 2 actionable solutions"
+
+# Mandatory edge cases that must be handled.
+edge_cases:
+  - "Empty input or special characters"
+  - "Temporary internet disconnection (auto-save locally)"
+  - "Responsive design 320px to 1920px"
+  - "Dark/Light mode auto-switch with contrast adjustment"
+  - "Full screen-reader support - aria-label on all elements"
+
+# UI component specification constraints.
+components:
+  primary_cta_button:
+    color: "#005A9C"
+    max_text_words: 3
+    min_clickable_area_px: 44
+    min_spacing_from_others_px: 20
+  input_field:
+    has_fixed_label: true
+    has_example_placeholder: true
+    has_realtime_validation: true
+    validation_message_below_field: true
+  navigation_menu:
+    max_top_level_items: 5
+    icon_plus_text: true
+    active_indicator: "underline or color change"
+  error_message:
+    parts: ["warning icon", "error text (no codes)", "More Help button with step guide"]
+  progress_indicator:
+    has_progress_bar: true
+    has_percentage: true
+    has_step_count: "e.g. Step 2 of 4"
+
+# Anti-patterns that are strictly forbidden.
+anti_patterns:
+  - "Technical jargon in user-facing messages"
+  - "Sudden repositioning of buttons across steps"
+  - "Pop-ups overlapping while user is typing"
+  - "Horizontal scrolling on any page"

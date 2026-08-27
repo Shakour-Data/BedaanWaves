@@ -646,14 +646,14 @@ Total: 305 hierarchy nodes
 - Build: npm run build -> Next.js standalone
 - Runtime: Node.js or Bun
 - Port: 3005 (dev), 3000 (production)
-- Containerization: Docker
+- Deployment: Direct process execution
 - Hosting: Cloud (AWS, GCP, Azure)
 
 #### Backend Deployment
 - Run: uvicorn main:app --workers 4
 - Port: 8000
 - Reverse Proxy: Nginx/Caddy
-- Containerization: Docker
+- Deployment: Direct process execution
 - Hosting: Cloud or on-premise
 
 #### Database

@@ -11,6 +11,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
     clearMocks: true,
-    setupFiles: ['./src/tests/setup.ts'],
+    setupFiles: ['./src/tests/setup.tsx'],
   },
 })

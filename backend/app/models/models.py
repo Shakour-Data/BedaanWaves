@@ -427,6 +427,27 @@ class RefreshToken(Base):
     __table_args__ = (Index('idx_refresh_user', 'user_id'),)
 
 
+class PasswordResetToken(Base):
+    """Password recovery tokens - single-use, short-lived.
+
+    Traceability: Error_Recovery state (retry / re-request) of the FSM.
+    A token is created when the user requests a reset link and is
+    consumed (marked used) the first time it is redeemed.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+
+    token_hash = Column(String(255), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    consumed = Column(Boolean, default=False)
+    consumed_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    __table_args__ = (Index('idx_password_reset_user', 'user_id'),)
+
+
 class AuditLog(Base):
     """لاگ تغییرات حساس (ورود، تغییر پورتفولیو، دسترسی ادمین)"""
     __tablename__ = "audit_logs"
