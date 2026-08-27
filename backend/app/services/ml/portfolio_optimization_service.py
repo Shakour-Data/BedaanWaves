@@ -44,7 +44,7 @@ class PortfolioOptimizationService(MLService):
         if total_weight > 0:
             allocation = {k: round(v / total_weight, 4) for k, v in allocation.items()}
         return {
-            "portfolio_id": data.get("portfolio_id"),
+            "portfolio_id": data.get("portfolio_id") or data.get("ticker"),
             "allocation": allocation,
             "expected_return": round(sum(allocation.get(a, 0) * returns.get(a, 0) for a in assets), 4),
             "expected_volatility": round(sum(allocation.get(a, 0) * risks.get(a, 0) for a in assets), 4),

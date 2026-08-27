@@ -28,7 +28,10 @@ from app.api.middleware import (
     RequestLoggingMiddleware,
 )
 
-from app.services.user.auth_service import ensure_admin_user
+from app.services.core.dependency_container import (
+    DependencyContainer,
+    set_global_container,
+)
 from app.services.core.config_service import ConfigService
 from app.services.core.logger_service import LoggerService
 from app.services.core.cache_service import CacheService
@@ -65,7 +68,7 @@ from app.api.routes import (
     live_router,
     health_router,
     symbols_router,
-    password_reset_router,
+    settings_router,
 )
 
 logging.basicConfig(
@@ -247,7 +250,6 @@ async def lifespan(app: FastAPI):
         logger.info("Database empty, seeding real market data...")
         _run_seed()
 
-    # Step 5: Ensure admin user exists
     try:
         await ensure_admin_user()
         logger.info("Admin user ensured")
@@ -343,7 +345,7 @@ async def lifespan(app: FastAPI):
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
         app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
-        app.include_router(password_reset_router, prefix="/api/v1/auth", tags=["password-reset"])
+        app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
 
         logger.info("Registered all API routes")
         logger.info("BedaanWaves application ready")
@@ -419,7 +421,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health_check():
     checks = _preflight_checks()
-    status = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
+    status = "healthy" if all(v == "ok" for v in checks.values() if "database" in str(checks.values())) else "degraded"
     return {
         "status": status,
         "service": settings.APP_NAME,

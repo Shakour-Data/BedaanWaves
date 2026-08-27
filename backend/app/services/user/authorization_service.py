@@ -38,3 +38,7 @@ class AuthorizationService:
     def is_admin(self, user: User) -> bool:
         """True when ``user`` is an administrator."""
         return bool(getattr(user, "is_admin", False))
+
+
+# Global instance
+authorization_service = AuthorizationService()

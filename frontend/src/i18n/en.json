@@ -2,6 +2,45 @@
   "app": {
     "title": "BedaanWaves",
     "subtitle": "Market Oscillation Architecture",
+    "settings": {
+      "title": "Market Settings",
+      "overview_title": "Configure Market Settings",
+      "overview_desc": "Configure your personalized market analysis settings. Select countries, indices, stocks, industries, and cryptocurrencies.",
+      "country_selection": "Country Selection",
+      "market_config": "{country} Market Configuration",
+      "indices": "Indices",
+      "stocks": "Stocks",
+      "industries": "Industries",
+      "cryptocurrencies": "Cryptocurrencies",
+      "trading_currencies": "Trading Currencies",
+      "notification_prefs": "Notification Preferences",
+      "save_settings": "Save Settings",
+      "loading": "Loading settings...",
+      "no_config": "No configuration available for this region.",
+      "profile": {
+        "title": "User Profile",
+        "user_profile": "User Profile",
+        "account_info": "Account Info",
+        "security_settings": "Security Settings",
+        "full_name": "Full Name",
+        "email": "Email",
+        "status": "Status",
+        "active": "Active",
+        "inactive": "Inactive",
+        "joined_date": "Joined Date",
+        "member_since": "Member since: {date}",
+        "change_password": "Change Password",
+        "new_password": "New Password",
+        "confirm_password": "Confirm Password",
+        "password_hint": "Min 8 characters",
+        "save_changes": "Save Changes",
+        "saving": "Saving...",
+        "error_password_match": "New password and confirmation must match",
+        "error_save": "Error saving information",
+        "display_name": "Display Name",
+        "login_status": "Login Status"
+      }
+    },
     "nav": {
       "dashboard": "Dashboard",
       "stocks": "Stocks",
@@ -11,25 +50,296 @@
       "news": "News",
       "methodology": "Methodology",
       "help": "Help",
-      "settings": "Settings"
+      "scoring": "Scoring",
+      "settings": "Settings",
+      "logout": "Logout"
     },
     "dashboard": {
       "title": "Dashboard",
-      "live": "Live Market Data"
+      "live_connected": "Live market connection established",
+      "live_disconnected": "Displaying sample data (no server connection)",
+      "top_movers": "Top Movers",
+      "watchlist": "Watchlist",
+      "ai_signals": "AI Signals",
+      "latest_news": "Latest News"
+    },
+    "portfolio": {
+      "title": "Portfolio",
+      "summary": "Portfolio Summary",
+      "total_value": "Total Portfolio Value",
+      "total_pnl": "Total P&L",
+      "symbols_count": "Symbols Count",
+      "daily_return": "Daily Return",
+      "current_holdings": "Current Holdings",
+      "empty_title": "Your portfolio is empty",
+      "empty_desc": "You haven't added any assets to your portfolio yet. Browse stocks to start.",
+      "view_stocks": "View Stocks",
+      "performance": "Portfolio Performance",
+      "distribution": "Asset Distribution",
+      "coming_soon": "This feature will be available soon",
+      "loading": "Loading portfolio...",
+      "error_loading": "Error loading portfolio. Ensure backend is available and you are logged in.",
+      "login_required": "Please login first"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "filters": "Alert Filters",
+      "stats": "Alert Statistics",
+      "active_alerts": "Active Alerts",
+      "watchlist_symbols": "Watchlist Symbols",
+      "history": "Alert History",
+      "empty": "No active alerts found",
+      "watchlist_empty": "Watchlist is empty",
+      "history_empty": "Alert history is empty",
+      "loading": "Loading alerts...",
+      "types": {
+        "all": "All",
+        "buy": "Buy",
+        "sell": "Sell",
+        "hold": "Hold"
+      },
+      "stats_labels": {
+        "active": "Active Alerts",
+        "buy": "Buy Alerts",
+        "sell": "Sell Alerts",
+        "hold": "Hold Alerts"
+      },
+      "status": {
+        "executed": "Executed",
+        "active": "Active"
+      },
+      "time": {
+        "now": "Just now",
+        "minutes_ago": "min ago",
+        "hours_ago": "hr ago",
+        "days_ago": "days ago"
+      }
+    },
+    "methodology": {
+      "title": "Analysis Methodology",
+      "overview": "Methodology Overview",
+      "desc": "BedaanWaves employs a multi-faceted approach to financial analysis, combining traditional fundamental/technical analysis with cutting-edge machine learning techniques. Each analysis type serves a specific purpose in the investment decision-making process.",
+      "process_steps": "Process Steps:",
+      "technical_details": "Technical Details:",
+      "api_endpoints": "API Endpoints:",
+      "key_capabilities": "Key Capabilities",
+      "coverage": "Coverage: Iran, Global, and Crypto Markets",
+      "realtime": "Real-time data updates (24/7)",
+      "ml_optimized": "ML-optimized weighting system",
+      "customizable": "Customizable user preferences",
+      "important_notes": "Important Notes",
+      "disclaimer_title": "Disclaimer:",
+      "disclaimer_desc": "This is an analytical tool, not financial advice.",
+      "accuracy_title": "Accuracy:",
+      "accuracy_desc": "Results based on historical data, not guaranteed future performance.",
+      "explore_scoring": "Explore 6D Scoring",
+      "run_analysis": "Run Analysis",
+      "methods": {
+        "scoring": {
+          "title": "6D Scoring System",
+          "desc": "Comprehensive multi-dimensional stock evaluation",
+          "details": "Uses a 4-level hierarchy with 305 nodes to evaluate investments across six equally-weighted dimensions. Machine learning dynamically optimizes weights based on historical performance.",
+          "steps": [
+            "Collect data across six dimensions (fundamental, technical, sentiment, risk, macro, AI)",
+            "Calculate individual scores (0-100) for each dimension",
+            "Apply ML-optimized weights to dimension scores",
+            "Compute final weighted score and assign grade (A-E)"
+          ]
+        },
+        "ranking": {
+          "title": "Ranking System",
+          "desc": "Stock ranking by performance metrics",
+          "details": "Users can rank by any of the six dimensions or the composite score. Results are cached for 5 minutes to reduce API load.",
+          "steps": [
+            "Calculate 6D scores for all eligible securities",
+            "Sort by selected metric (overall score or specific dimension)",
+            "Return top N results (default: 10)"
+          ]
+        },
+        "technical": {
+          "title": "Technical Analysis",
+          "desc": "Price and volume-based indicators",
+          "details": "Provides 50+ technical indicators including momentum oscillators, trend-following tools, and volatility measures.",
+          "steps": [
+            "Fetch historical price/volume data (minimum 20 periods)",
+            "Calculate indicators (RSI, MACD, moving averages, Bollinger Bands)",
+            "Generate trading signals based on indicator crossovers and thresholds"
+          ]
+        },
+        "fundamental": {
+          "title": "Fundamental Analysis",
+          "desc": "Financial statement analysis",
+          "details": "Analyzes income statements, balance sheets, and cash flow statements from multiple global data sources.",
+          "steps": [
+            "Retrieve latest financial statements from CODAL, Yahoo Finance, or Alpha Vantage",
+            "Calculate key ratios (P/E, P/B, ROE, Debt/Equity, etc.)",
+            "Assess earnings quality and growth sustainability"
+          ]
+        },
+        "momentum": {
+          "title": "Momentum Analysis",
+          "desc": "Short-term price trend identification",
+          "details": "Focuses on relative strength and trend persistence to identify potential outperformers.",
+          "steps": [
+            "Calculate price changes over multiple timeframes (1D, 1W, 1M, 3M)",
+            "Identify assets with strongest relative momentum",
+            "Filter for stocks showing consistent upward trends"
+          ]
+        },
+        "risk": {
+          "title": "Risk Analysis",
+          "desc": "Volatility and downside risk assessment",
+          "details": "Provides comprehensive risk metrics including maximum drawdown, beta, and tail risk measures.",
+          "steps": [
+            "Calculate daily returns from historical price data",
+            "Compute volatility (standard deviation of returns)",
+            "Calculate Value-at-Risk (VaR) and Conditional VaR",
+            "Determine Sharpe, Sortino, and Calmar ratios"
+          ]
+        },
+        "sentiment": {
+          "title": "Sentiment Analysis",
+          "desc": "Market sentiment from news and social media",
+          "details": "Uses transformer-based NLP models to analyze text sentiment from multiple sources in real-time.",
+          "steps": [
+            "Collect financial news and social media mentions",
+            "Apply NLP models to extract sentiment scores",
+            "Aggregate sentiment by source and time period"
+          ]
+        },
+        "ai": {
+          "title": "AI/ML Analysis",
+          "desc": "Machine learning-based predictions",
+          "details": "Combines time series forecasting, pattern recognition, and anomaly detection for predictive insights.",
+          "steps": [
+            "Train LSTM/Prophet models on historical price data",
+            "Generate price forecasts for multiple time horizons",
+            "Detect chart patterns and anomalies using computer vision"
+          ]
+        }
+      }
+    },
+    "scoring": {
+      "title": "6D Scoring Methodology",
+      "search_title": "Check Symbol Score",
+      "search_placeholder": "Search symbol to view score...",
+      "overall_score": "Overall Score",
+      "grade": "Grade:",
+      "system_title": "6D Scoring System",
+      "system_desc": "The 6D scoring system evaluates stocks across six dimensions: Fundamental, Technical, Sentiment, Risk, Macro, and AI factors. The scoring algorithm uses 305 hierarchical nodes across four levels to calculate a final score between 0-100.",
+      "dimensions_title": "6 Main Dimensions",
+      "grading_scale": "Grading Scale",
+      "ml_optimization": "Machine Learning Optimization",
+      "ml_desc": "Static weights serve as fallback values. The ML service dynamically optimizes these weights weekly based on historical performance data.",
+      "hierarchy_title": "305-Node Hierarchy",
+      "hierarchy": {
+        "dimensions": "Dimensions",
+        "sub_dimensions": "Sub-Dimensions",
+        "aspects": "Aspects",
+        "sub_aspects": "Sub-Aspects"
+      },
+      "actions": {
+        "view_analysis": "View Current Analysis",
+        "browse_stocks": "Browse Stocks"
+      },
+      "weight": "Weight:",
+      "dimensions": {
+        "fundamental": "Fundamental Analysis",
+        "technical": "Technical Analysis",
+        "sentiment": "Sentiment Analysis",
+        "risk": "Risk Analysis",
+        "macro": "Macro Analysis",
+        "ai": "AI Analysis",
+        "fundamental_desc": "Evaluation of financial health and intrinsic value",
+        "technical_desc": "Analysis of price patterns and trading volume",
+        "sentiment_desc": "Measuring psychological mood and news surrounding the symbol",
+        "risk_desc": "Calculation of volatility and potential investment risks",
+        "macro_desc": "Impact of macroeconomic indicators on the market",
+        "ai_desc": "Predictions based on advanced machine learning models"
+      },
+      "ml_optimized_desc": "Optimized weekly based on historical performance data."
     },
     "stocks": {
-      "title": "Stocks",
+      "title": "Stocks List",
       "symbol": "Symbol",
       "name": "Name",
       "market": "Market",
+      "sector": "Sector",
       "price": "Price",
       "change": "Change",
-      "loading": "Loading stocks..."
+      "loading": "Loading stocks...",
+      "no_results": "No symbols found",
+      "search_placeholder": "Search symbol or name...",
+      "retry": "Retry",
+      "error_title": "Server Connection Error",
+      "error_desc": "Unable to fetch symbol list. Please ensure the server is connected.",
+      "list_title": "Symbol List",
+      "markets": {
+        "tse": "TSE",
+        "otc": "OTC",
+        "binance": "Crypto (Binance)",
+        "kraken": "Crypto (Kraken)",
+        "coinbase": "Crypto (Coinbase)",
+        "nyse": "NYSE",
+        "nasdaq": "NASDAQ",
+        "crypto": "Crypto"
+      },
+      "detail": {
+        "loading": "Loading symbol {symbol}...",
+        "error_title": "Data Fetch Error",
+        "error_desc": "Could not fetch data for «{symbol}». Ensure backend is running and symbol exists.",
+        "back_to_list": "Back to Stock List",
+        "last_price": "Last Price",
+        "high": "High",
+        "low": "Low",
+        "volume": "Volume",
+        "avg_volume": "Avg Volume",
+        "chart_title": "Price Chart (Daily)",
+        "no_history": "No historical data available for this symbol.",
+        "analysis_6d": "6D Analysis",
+        "overall_score": "Overall Score:",
+        "currency_usd": "USD",
+        "currency_irr": "IRR",
+        "ranges": {
+          "1m": "1 Month",
+          "3m": "3 Months",
+          "all": "All"
+        }
+      }
     },
     "analysis": {
       "title": "Market Analysis",
       "type": "Analysis Type",
-      "loading": "Loading analysis..."
+      "loading": "Loading analysis...",
+      "tabs": {
+        "technical": "Technical Analysis",
+        "fundamental": "Fundamental Analysis",
+        "scoring": "6D Review",
+        "sentiment": "Market Sentiment"
+      },
+      "top_signals": "Top Signals",
+      "top_movers": "Top Movers",
+      "technical_charts": "Technical Charts",
+      "fundamental_indicators": "Key Fundamental Indicators ({symbol})",
+      "no_signals": "No signals found",
+      "no_data": "No data found",
+      "fundamental_not_found": "Fundamental data not found for this symbol",
+      "overall_score": "Final Score",
+      "grade": "Grade",
+      "scoring_not_found": "Scoring data not available",
+      "sentiment_title": "Market Sentiment & Mindset ({symbol})",
+      "sentiment_labels": {
+        "overall": "Overall Sentiment",
+        "news_count": "Analyzed News Count",
+        "confidence": "Analysis Confidence"
+      },
+      "sentiment_values": {
+        "positive": "Positive",
+        "negative": "Negative",
+        "neutral": "Neutral",
+        "news_items": "{count} items"
+      },
+      "sentiment_not_found": "Market sentiment data is currently unavailable"
     },
     "auth": {
       "login": "Login",
@@ -51,6 +361,81 @@
       "error_authentication": "Authentication failed",
       "error_invalid_credentials": "Invalid username or password",
       "error_server": "Server error. Please try again."
+    },
+    "home": {
+      "hero_title": "BedaanWaves - Nasdaq Market Analysis Platform",
+      "hero_desc": "Comprehensive market analysis and AI trading platform focused on Nasdaq Composite index and its constituents. 5 years of historical data, fundamentals, and AI signals.",
+      "features_title": "Key Features",
+      "view_stocks": "View Nasdaq Stocks",
+      "features": {
+        "market_data": {
+          "title": "Nasdaq Market Data",
+          "desc": "Real-time and historical price data for Nasdaq Composite and all constituents"
+        },
+        "fundamental": {
+          "title": "Fundamental Analysis",
+          "desc": "Quarterly financial statements, ratios, and key metrics for US equities"
+        },
+        "ai": {
+          "title": "AI-Powered Signals",
+          "desc": "Machine learning predictions and technical analysis for informed decisions"
+        }
+      }
+    },
+    "help": {
+      "title": "Help & Documentation",
+      "overview_title": "Interactive Documentation System",
+      "overview_desc": "Welcome to the BedaanWaves comprehensive documentation system. This integrated help center provides detailed information about all frontend pages, components, database structure, and API integrations. Use the navigation system to explore specific documentation areas.",
+      "categories": {
+        "frontend": "Frontend Docs",
+        "database": "Database Docs",
+        "api": "API Docs"
+      },
+      "index_title": "Documentation Index",
+      "quick_access": "Quick Access",
+      "go_dashboard": "Go to Dashboard",
+      "view_scoring": "View Scoring System",
+      "sections": {
+        "frontend_pages": {
+          "title": "Frontend Pages",
+          "desc": "Complete list of all frontend pages with paths, features, and API integration status"
+        },
+        "component_guide": {
+          "title": "Component Reference",
+          "desc": "All UI components with usage examples and properties"
+        },
+        "data_flow": {
+          "title": "Data Flow Architecture",
+          "desc": "End-to-end data flow from backend to frontend display"
+        },
+        "schema_overview": {
+          "title": "Database Schema",
+          "desc": "Complete database table definitions and relationships"
+        },
+        "api_endpoints": {
+          "title": "API Endpoints",
+          "desc": "Complete list of API endpoints with parameters and responses"
+        }
+      },
+      "table": {
+        "page": "Page",
+        "path": "Path",
+        "description": "Description",
+        "status": "Status"
+      },
+      "stats": {
+        "total_pages": "Total Pages:",
+        "live_api": "Live API:",
+        "static": "Static:",
+        "needs_sync": "Needs Sync:"
+      }
+    },
+    "news": {
+      "title": "Market News",
+      "latest": "Latest News",
+      "loading": "Loading news...",
+      "no_news": "No news found",
+      "search_placeholder": "Search news..."
     },
     "forgot_password": {
       "title": "Reset your password",
