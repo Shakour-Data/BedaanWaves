@@ -16,8 +16,7 @@ export function ProgressBar({
   currentStep,
   totalSteps,
   stepLabels,
-  className,
-}: ProgressBarProps) {
+  className }: ProgressBarProps) {
   const safeCurrent = Math.max(1, Math.min(currentStep, totalSteps));
   const pct = Math.round((safeCurrent / totalSteps) * 100);
 
