@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
 import "./globals.css";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { AuthGate } from "@/components/layout/AuthGate";
+import { t } from "@/lib/i18n";
+import { getServerLanguage } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
   title: "BedaanWaves | Market Analysis Platform",
@@ -12,43 +12,37 @@ export const metadata: Metadata = {
   openGraph: {
     title: "BedaanWaves | Market Analysis Platform",
     description: "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals.",
-    type: "website",
-  },
+    type: "website" },
   twitter: {
     card: "summary_large_image",
     title: "BedaanWaves | Market Analysis Platform",
-    description: "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals.",
-  },
-};
+    description: "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals." } };
 
-function PublicNav() {
+async function PublicNav() {
+  const locale = await getServerLanguage();
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2">
       <a href="/" className="text-lg font-bold text-foreground">
-        BedaanWaves
+        {t("app.title", locale)}
       </a>
       <nav className="flex items-center gap-4 text-sm">
         <a href="/login" className="text-secondary hover:underline">
-          Login
+          {t("app.auth.login", locale)}
         </a>
         <a href="/register" className="text-secondary hover:underline">
-          Register
+          {t("app.auth.register", locale)}
         </a>
-        <LanguageSwitcher />
       </nav>
     </header>
   );
 }
 
 export default async function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("locale")?.value || "en";
-  const dir = locale === "fa" ? "rtl" : "ltr";
+  children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getServerLanguage();
 
   return (
-    <html lang={locale} dir={dir} data-scroll-behavior="smooth">
+    <html lang={locale} dir="ltr" data-scroll-behavior="smooth">
       <body>
         <AuthGate
           authenticatedContent={children}
