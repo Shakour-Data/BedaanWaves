@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { TarotCard } from "@/components/ui/TarotCard";
+import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
 import { t } from "@/lib/i18n";
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,16 +16,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const loginStore = useAuthStore((s) => s.login);
-  const setLanguage = useAuthStore((s) => s.setLanguage);
-  const currentLang = useAuthStore((s) => s.currentLang);
+  
+  
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const lang = e.target.value as "en" | "fa";
-    setLanguage(lang);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("lang", lang);
-    }
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,8 +36,13 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-3 bg-neutral/30">
-      <TarotCard icon="" title={t("login.title")} className="w-full max-w-md shadow-lg border-border/40">
+    <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
+      <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Welcome Back</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">Sign in to access your dashboard</p>
+        </div>
+        
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error ? (
             <div className="rounded-xl bg-error/10 px-4 py-3 text-sm text-error border border-error/20 animate-in fade-in slide-in-from-top-2">
@@ -51,87 +51,66 @@ export default function LoginPage() {
           ) : null}
 
           <div className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-foreground px-1">{t("login.email")}</span>
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("login.email_placeholder") || t("login.email")}
-                disabled={loading}
-                className="ps-10"
-              />
-            </div>
+            <InputField
+              id="email"
+              type="email"
+              label="Email Address"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@email.com"
+              disabled={loading}
+            />
 
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-foreground px-1">{t("login.password")}</span>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  disabled={loading}
-                  className="ps-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? t("auth.hide_password") : t("auth.show_password")}
-                  className="absolute inset-y-0 left-3 flex items-center text-muted-foreground transition hover:text-foreground focus:outline-none"
-                >
-                  {showPassword ? "" : "️"}
-                </button>
-              </div>
-            </div>
+            <InputField
+              id="password"
+              type={showPassword ? "text" : "password"}
+              label="Password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={loading}
+            />
+            
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-xs text-[var(--color-primary)] hover:underline mt-1"
+            >
+              {showPassword ? "Hide password" : "Show password"}
+            </button>
           </div>
 
           <div className="flex items-center justify-between text-xs px-1">
-            <label className="flex items-center gap-2 text-muted-foreground cursor-pointer group">
-              <input type="checkbox" className="rounded border-border text-primary focus:ring-primary/20" />
-              <span className="group-hover:text-foreground transition-colors">{t("auth.remember_me")}</span>
+            <label className="flex items-center gap-2 text-[var(--color-text-secondary)] cursor-pointer group">
+              <input type="checkbox" className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+              <span className="group-hover:text-[var(--color-text-primary)] transition-colors">Remember me</span>
             </label>
-            <Link href="/forgot-password" disable-nav="true" className="text-primary hover:underline font-medium">
-              {t("login.forgot_password")}
+            <Link href="/forgot-password" disable-nav="true" className="text-[var(--color-primary)] hover:underline font-medium">
+              Forgot password?
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xs text-muted-foreground">{t("auth.language")}:</span>
-            <select
-              value={currentLang}
-              onChange={handleLanguageChange}
-              className="border border-border rounded-lg px-2 py-1 text-xs bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="en">English</option>
-              <option value="fa">فارسی</option>
-            </select>
+          <div className="flex items-center gap-2 px-1 hidden">
           </div>
 
-          <PrimaryButton 
+          <button 
             type="submit" 
             disabled={loading} 
-            className="mt-2 w-full justify-center h-11"
-            size="lg"
+            className="h-10 px-4 mt-2 w-full bg-[var(--color-primary)] text-white font-medium rounded-md hover:bg-[var(--color-primary-hover)] transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                {t("auth.loading")}
-              </span>
-            ) : t("login.submit_button")}
-          </PrimaryButton>
+            {loading ? "Processing..." : "Sign in"}
+          </button>
 
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            {t("login.no_account")}{" "}
-            <Link href="/register" className="text-primary hover:underline font-bold">
-              {t("signup.login_link")}
+          <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
+            Don't have an account?{" "}
+            <Link href="/register" className="text-[var(--color-primary)] hover:underline font-bold">
+              Sign up
             </Link>
           </p>
         </form>
-      </TarotCard>
+      </div>
     </main>
   );
 }
