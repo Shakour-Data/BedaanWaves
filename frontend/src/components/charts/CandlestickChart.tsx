@@ -19,8 +19,7 @@ import {
   type IChartApi,
   type UTCTimestamp,
   type CandlestickData,
-  type HistogramData,
-} from "lightweight-charts";
+  type HistogramData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 import { colors, semanticColors } from "@/styles/design-tokens";
 import type { Candle, Timeframe } from "@/lib/api/stocks";
@@ -72,8 +71,7 @@ const DARK: ThemeColors = {
   up: "#10b981",
   down: "#dc2626",
   volUp: "rgba(16, 185, 129, 0.35)",
-  volDown: "rgba(220, 38, 38, 0.35)",
-};
+  volDown: "rgba(220, 38, 38, 0.35)" };
 
 export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -90,8 +88,7 @@ export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: Ca
       vd.push({
         time,
         value: c.volume,
-        color: c.close >= c.open ? colors.volUp : colors.volDown,
-      });
+        color: c.close >= c.open ? colors.volUp : colors.volDown });
     }
     return { candleData: cd, volumeData: vd };
   }, [candles, timeframe, colors.volUp, colors.volDown]);
@@ -105,21 +102,17 @@ export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: Ca
       layout: {
         background: { type: ColorType.Solid, color: colors.background },
         textColor: colors.text,
-        fontFamily: "inherit",
-      },
+        fontFamily: "inherit" },
       grid: {
         vertLines: { color: colors.grid },
-        horzLines: { color: colors.grid },
-      },
+        horzLines: { color: colors.grid } },
       rightPriceScale: { borderColor: colors.border },
       timeScale: { borderColor: colors.border, timeVisible: INTRADAY.includes(timeframe) },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }),
-      },
-      autoSize: false,
-    });
+        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) },
+      autoSize: false });
     chartRef.current = chart;
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
@@ -128,17 +121,14 @@ export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: Ca
       borderUpColor: colors.up,
       borderDownColor: colors.down,
       wickUpColor: colors.up,
-      wickDownColor: colors.down,
-    });
+      wickDownColor: colors.down });
     candleSeries.setData(candleData);
 
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
-      priceScaleId: "volume",
-    });
+      priceScaleId: "volume" });
     volumeSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 },
-    });
+      scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeries.setData(volumeData);
 
     chart.timeScale().fitContent();
