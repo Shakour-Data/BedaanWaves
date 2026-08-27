@@ -8,8 +8,7 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type AreaData,
-} from "lightweight-charts";
+  type AreaData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 
 interface AreaChartProps {
@@ -23,22 +22,19 @@ const LIGHT = {
   background: "#ffffff",
   text: "#5c5c5c",
   grid: "#eeeeee",
-  border: "#e0e0e0",
-};
+  border: "#e0e0e0" };
 
 const DARK = {
   background: "#1e1e1e",
   text: "#a8a8a8",
   grid: "#2a2a2a",
-  border: "#333333",
-};
+  border: "#333333" };
 
 export function AreaChart({
   data,
   height = 320,
   lineColor = "#64748B",
-  fillColor = "rgba(100,116,139,0.15)",
-}: AreaChartProps) {
+  fillColor = "rgba(100,116,139,0.15)" }: AreaChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const { theme } = useAppStore();
@@ -48,8 +44,7 @@ export function AreaChart({
     () =>
       data.map((d) => ({
         time: d.time as AreaData["time"],
-        value: d.value,
-      })),
+        value: d.value })),
     [data]
   );
 
@@ -62,28 +57,23 @@ export function AreaChart({
       layout: {
         background: { type: ColorType.Solid, color: colors.background },
         textColor: colors.text,
-        fontFamily: "inherit",
-      },
+        fontFamily: "inherit" },
       grid: {
         vertLines: { color: colors.grid },
-        horzLines: { color: colors.grid },
-      },
+        horzLines: { color: colors.grid } },
       rightPriceScale: { borderColor: colors.border },
       timeScale: { borderColor: colors.border },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }),
-      },
-      autoSize: false,
-    });
+        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) },
+      autoSize: false });
     chartRef.current = chart;
 
     const series = chart.addSeries(AreaSeries, {
       lineColor,
       topColor: fillColor,
-      bottomColor: "rgba(100,116,139,0.0)",
-    });
+      bottomColor: "rgba(100,116,139,0.0)" });
     series.setData(chartData);
 
     chart.timeScale().fitContent();
