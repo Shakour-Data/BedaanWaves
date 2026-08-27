@@ -52,8 +52,7 @@ export function StockDashboardWidget() {
           market: symbol.market,
           price: price ? price.price : 0,
           change_pct: price ? price.change_pct : 0,
-          volume: price ? price.volume : 0,
-        };
+          volume: price ? price.volume : 0 };
       });
       
       exportData(dataToExport, { filename, format, includeHeaders: true });
