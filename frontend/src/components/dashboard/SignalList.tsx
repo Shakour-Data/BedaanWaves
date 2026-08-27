@@ -6,16 +6,14 @@ const TYPE_STYLE: Record<SignalRow["type"], string> = {
   SELL: "bg-primary/15 text-primary",
   HOLD: "bg-accent/30 text-accent-foreground",
   STRONG_BUY: "bg-success/25 text-success font-bold",
-  STRONG_SELL: "bg-primary/25 text-primary font-bold",
-};
+  STRONG_SELL: "bg-primary/25 text-primary font-bold" };
 
 const TYPE_LABEL: Record<SignalRow["type"], string> = {
   BUY: "خرید",
   SELL: "فروش",
   HOLD: "نگهداری",
   STRONG_BUY: "خرید قوی",
-  STRONG_SELL: "فروش قوی",
-};
+  STRONG_SELL: "فروش قوی" };
 
 export function SignalList({ signals }: { signals: SignalRow[] }) {
   return (
