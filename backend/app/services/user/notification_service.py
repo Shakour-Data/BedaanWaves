@@ -3,7 +3,7 @@
 Creates, lists, marks-read and deletes user notifications.
 """
 
-from datetime import datetime
+from datetime import timezone, datetime
 from typing import Dict, List, Optional, Tuple
 from uuid import UUID
 
@@ -30,8 +30,8 @@ class NotificationService:
         metadata: Optional[Dict] = None,
         session=None,
     ) -> Notification:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             notification = Notification(
                 user_id=user_id,
@@ -53,8 +53,8 @@ class NotificationService:
     async def get_notification(
         self, notification_id: UUID, user_id: UUID, session=None
     ) -> Optional[Notification]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(Notification).where(
@@ -75,8 +75,8 @@ class NotificationService:
         offset: int = 0,
         session=None,
     ) -> Tuple[List[Notification], int]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             conditions = [Notification.user_id == user_id]
             if unread_only:
@@ -96,8 +96,8 @@ class NotificationService:
     async def mark_read(
         self, notification_id: UUID, user_id: UUID, session=None
     ) -> bool:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(Notification).where(
@@ -110,8 +110,8 @@ class NotificationService:
                 return False
             if not notification.read:
                 notification.read = True
-                from datetime import datetime
-                notification.read_at = datetime.utcnow()
+                from datetime import timezone, datetime
+                notification.read_at = datetime.now(timezone.utc)
                 await session.commit()
             return True
         finally:
@@ -119,10 +119,10 @@ class NotificationService:
                 await session.close()
 
     async def mark_all_read(self, user_id: UUID, session=None) -> int:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
-            from datetime import datetime
+            from datetime import timezone, datetime
 
             result = await session.execute(
                 select(Notification).where(
@@ -130,7 +130,7 @@ class NotificationService:
                     Notification.read.is_(False),
                 )
             )
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             count = 0
             for notification in result.scalars().all():
                 notification.read = True
@@ -145,8 +145,8 @@ class NotificationService:
     async def delete_notification(
         self, notification_id: UUID, user_id: UUID, session=None
     ) -> bool:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(Notification).where(

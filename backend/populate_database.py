@@ -9,7 +9,7 @@ Fixes: Uses correct model names from app.models.models
 import asyncio
 import os
 import sys
-from datetime import datetime, timedelta, date
+from datetime import timezone, datetime, timedelta, date
 from decimal import Decimal
 import random
 import uuid
@@ -157,8 +157,8 @@ async def create_sample_assets(session):
             currency="IRT" if market == "TSE" else "USD",
             active=True,
             metadata={},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         session.add(asset)
 
@@ -494,7 +494,7 @@ async def populate_ml_signals(session, assets):
 
     for asset in assets:
         for i in range(30):
-            timestamp = datetime.utcnow() - timedelta(days=i)
+            timestamp = datetime.now(timezone.utc) - timedelta(days=i)
 
             ml_signal = MLSignal(
                 asset_id=asset.id,
@@ -535,7 +535,7 @@ async def populate_other_tables(session, assets):
             alert_type=alert_type,
             condition_value=Decimal(str(round(random.uniform(50, 2000), 2))),
             triggered=False,
-            created_at=datetime.utcnow() - timedelta(days=random.randint(0, 365)),
+            created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 365)),
         ))
 
     user_count = await session.execute(select(func.count()).select_from(User))
@@ -547,7 +547,7 @@ async def populate_other_tables(session, assets):
                 full_name=f"Test User {i+1}",
                 is_active=True,
                 is_superuser=False,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             ))
 
     portfolio_count = await session.execute(select(func.count()).select_from(Portfolio))
@@ -559,8 +559,8 @@ async def populate_other_tables(session, assets):
                 description="Sample portfolio for testing",
                 cash_balance=Decimal(str(round(random.uniform(10000, 100000), 2))),
                 currency="USD",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
             )
             session.add(portfolio)
             await session.flush()
@@ -572,8 +572,8 @@ async def populate_other_tables(session, assets):
                     asset_id=asset.id,
                     quantity=Decimal(str(round(random.uniform(10, 1000), 4))),
                     avg_cost=Decimal(str(round(random.uniform(50, 1500), 2))),
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 ))
 
     await session.flush()

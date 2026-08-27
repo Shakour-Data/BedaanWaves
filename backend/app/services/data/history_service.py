@@ -5,7 +5,7 @@ Historical data management and retrieval.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from ..core import CachedService
 
 
@@ -100,8 +100,8 @@ class HistoryService(CachedService):
         Returns:
             Price data
         """
-        end_date = datetime.utcnow().date().isoformat()
-        start_date = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+        end_date = datetime.now(timezone.utc).date().isoformat()
+        start_date = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
         
         return await self.get_stock_history(ticker, start_date, end_date, "daily")
     

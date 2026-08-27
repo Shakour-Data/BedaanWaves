@@ -6,7 +6,7 @@ countries, indices, industries, and cryptocurrencies.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import timezone, datetime
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.ml.recommendation_service import RecommendationService
@@ -287,7 +287,7 @@ class UserFilteredRecommendationService(BaseService):
             "target_value": target_value,
             "total_assets": len(recommendations),
             "allocation": allocation,
-            "generated_at": datetime.utcnow().isoformat()
+            "generated_at": datetime.now(timezone.utc).isoformat()
         }
 
 # Factory function for dependency injection

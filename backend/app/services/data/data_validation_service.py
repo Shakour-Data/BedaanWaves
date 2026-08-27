@@ -6,7 +6,7 @@ Ensures historical data meets 3+ year minimum requirement.
 """
 
 from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta, date
+from datetime import timezone, datetime, timedelta, date
 import hashlib
 import json
 import asyncio
@@ -148,7 +148,7 @@ class DataValidationService(CachedService):
                 "market_data": market_data,
                 "historical_data": history_data,
                 "validated": True,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
             # Cache the result
@@ -162,7 +162,7 @@ class DataValidationService(CachedService):
                 "ticker": ticker,
                 "validated": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
 
     async def _validate_stock_data(self, ticker: str) -> Dict[str, Any]:
@@ -230,7 +230,7 @@ class DataValidationService(CachedService):
                 "symbol": symbol,
                 "source_type": source_type,
                 "min_years_required": min_years,
-                "validation_timestamp": datetime.utcnow().isoformat(),
+                "validation_timestamp": datetime.now(timezone.utc).isoformat(),
                 "is_valid": False,
                 "years_available": 0,
                 "earliest_date": None,
@@ -301,7 +301,7 @@ class DataValidationService(CachedService):
                 "source_type": source_type,
                 "error": str(e),
                 "is_valid": False,
-                "validation_timestamp": datetime.utcnow().isoformat()
+                "validation_timestamp": datetime.now(timezone.utc).isoformat()
             }
     
     async def verify_source_authenticity(self, 
@@ -325,7 +325,7 @@ class DataValidationService(CachedService):
         try:
             verification_result = {
                 "source_name": source_name,
-                "verification_timestamp": datetime.utcnow().isoformat(),
+                "verification_timestamp": datetime.now(timezone.utc).isoformat(),
                 "is_authentic": False,
                 "authenticity_score": 0.0,
                 "checks_performed": [],
@@ -409,7 +409,7 @@ class DataValidationService(CachedService):
                 "error": str(e),
                 "is_authentic": False,
                 "authenticity_score": 0.0,
-                "verification_timestamp": datetime.utcnow().isoformat()
+                "verification_timestamp": datetime.now(timezone.utc).isoformat()
             }
     
     async def check_cross_source_consistency(self, 
@@ -434,7 +434,7 @@ class DataValidationService(CachedService):
             consistency_result = {
                 "symbol": symbol,
                 "data_types_checked": data_types,
-                "check_timestamp": datetime.utcnow().isoformat(),
+                "check_timestamp": datetime.now(timezone.utc).isoformat(),
                 "sources_compared": [],
                 "consistency_score": 0.0,
                 "is_consistent": False,
@@ -519,7 +519,7 @@ class DataValidationService(CachedService):
             return {
                 "symbol": symbol,
                 "error": str(e),
-                "check_timestamp": datetime.utcnow().isoformat(),
+                "check_timestamp": datetime.now(timezone.utc).isoformat(),
                 "is_consistent": False,
                 "consistency_score": 0.0
             }
@@ -547,7 +547,7 @@ class DataValidationService(CachedService):
         
         report = {
             "symbol": symbol,
-            "report_timestamp": datetime.utcnow().isoformat(),
+            "report_timestamp": datetime.now(timezone.utc).isoformat(),
             "validations": {},
             "overall_status": "unknown",
             "recommendations": []

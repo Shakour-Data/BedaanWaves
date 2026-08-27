@@ -1,7 +1,7 @@
 """System Routes - Tier 9 (Scheduler, Metrics, Queue)"""
 
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import datetime
+from datetime import timezone, datetime
 from typing import Optional
 import logging
 
@@ -87,7 +87,7 @@ async def get_platform_metrics() -> dict:
     """Get platform-wide metrics summary."""
     svc = _get_metrics()
     metrics = svc.get_all_metrics()
-    return {"status": "success", "timestamp": datetime.utcnow().isoformat(), **metrics}
+    return {"status": "success", "timestamp": datetime.now(timezone.utc).isoformat(), **metrics}
 
 
 @router.get("/metrics/health")

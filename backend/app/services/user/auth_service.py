@@ -1,5 +1,7 @@
 """Authentication Service"""
 
+import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
@@ -88,10 +90,17 @@ async def authenticate_user(username: str, password: str) -> Optional[User]:
 async def ensure_admin_user() -> None:
     if await get_user_by_username("admin"):
         return
+    admin_password = os.environ.get("ADMIN_PASSWORD")
+    if not admin_password:
+        admin_password = secrets.token_urlsafe(16)
+        import logging
+        logging.getLogger(__name__).warning(
+            "ADMIN_PASSWORD not set in environment. Generated temporary admin password: %s", admin_password
+        )
     await create_user(
         username="admin",
         email="admin@bedaanwaves.local",
-        hashed_password=hash_password("admin123"),
+        hashed_password=hash_password(admin_password),
         full_name="Admin User",
     )
     async with async_session_maker() as session:

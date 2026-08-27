@@ -7,7 +7,7 @@ Implements the service locator pattern for dependency injection.
 
 from typing import Any, Dict, Optional, Type, TypeVar, Callable
 import logging
-from datetime import datetime
+from datetime import timezone, datetime
 
 T = TypeVar('T')
 
@@ -29,7 +29,7 @@ class DependencyContainer:
         self._factories: Dict[str, Callable] = {}
         self._singletons: Dict[str, Any] = {}
         self.logger = logging.getLogger("DependencyContainer")
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
         self._is_initialized = False
     
     def register(
@@ -179,7 +179,7 @@ class DependencyContainer:
         return {
             "registered_services": len(self._factories),
             "singleton_instances": len(self._singletons),
-            "uptime_seconds": (datetime.utcnow() - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
         }
     
     def __repr__(self) -> str:
