@@ -4,9 +4,7 @@ import { apiClient } from '@/lib/api'
 
 vi.mock('@/lib/api', () => ({
   apiClient: {
-    get: vi.fn(),
-  },
-}))
+    get: vi.fn() } }))
 
 describe('Dashboard API Service', () => {
   beforeEach(() => {

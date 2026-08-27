@@ -18,8 +18,7 @@ export function exportData(
     filename = 'export',
     format = 'csv',
     includeHeaders = true,
-    customFilename = '',
-  } = options;
+    customFilename = '' } = options;
   
   const filenameWithExt = customFilename 
     ? customFilename 

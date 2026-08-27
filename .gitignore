@@ -62,6 +62,16 @@ DatabaseConfigs.txt
 pginst*.exe
 pginst_extracted/
 
+# Temporary utility scripts
+frontend/cleanup-lang.js
+frontend/refactor.js
+
+# Frontend test results (Playwright)
+frontend/test-results/
+
+# Root-level logs
+logs/
+
 # Temporary backend test scripts
 backend/check_routes.py
 backend/test_*.py

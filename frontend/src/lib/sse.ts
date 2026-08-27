@@ -26,7 +26,7 @@ export interface SSEConnection {
   isConnected: boolean;
 }
 
-let activeConnections: Map<string, SSEConnection> = new Map();
+const activeConnections: Map<string, SSEConnection> = new Map();
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -49,8 +49,7 @@ export function createSSEConnection<T = unknown>(
     onOpen,
     reconnect = true,
     reconnectInterval = 5000,
-    maxReconnectAttempts = 10,
-  } = options;
+    maxReconnectAttempts = 10 } = options;
 
   let eventSource: EventSource | null = null;
   let reconnectAttempts = 0;
@@ -92,8 +91,7 @@ export function createSSEConnection<T = unknown>(
           type: event.type || 'message',
           data: data.data ?? data,
           timestamp: Date.now(),
-          eventId: event.lastEventId || undefined,
-        };
+          eventId: event.lastEventId || undefined };
         onMessage?.(sseEvent);
       } catch (err) {
         console.error('Failed to parse SSE message:', err, event.data);
@@ -130,8 +128,7 @@ export function createSSEConnection<T = unknown>(
     },
     get isConnected() {
       return isConnected;
-    },
-  };
+    } };
 
   activeConnections.set(key, connection);
   return connection;

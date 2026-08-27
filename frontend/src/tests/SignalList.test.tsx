@@ -7,8 +7,7 @@ const TYPE_STYLE: Record<SignalRow['type'], { bg: string; text: string }> = {
   SELL: { bg: 'bg-primary/15', text: 'text-primary' },
   HOLD: { bg: 'bg-accent/30', text: 'text-accent-foreground' },
   STRONG_BUY: { bg: 'bg-success/25', text: 'text-success' },
-  STRONG_SELL: { bg: 'bg-primary/25', text: 'text-primary' },
-}
+  STRONG_SELL: { bg: 'bg-primary/25', text: 'text-primary' } }
 
 describe('SignalList', () => {
   const mockSignals: SignalRow[] = [

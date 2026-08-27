@@ -3,26 +3,22 @@ import ForgotPasswordPage from '@/app/forgot-password/page';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
-  }),
-}));
+    push: vi.fn() }) }));
 
 vi.mock('@/store/useAuthStore', () => ({
-  useAuthStore: (selector: (s: { currentLang: string; setLanguage: () => void }) => unknown) => {
-    const state = { currentLang: 'en' as const, setLanguage: vi.fn() };
+  useAuthStore: (selector: (s: { "en": string; setLanguage: () => void }) => unknown) => {
+    const state = { "en": 'en' as const, setLanguage: vi.fn() };
     return selector ? selector(state) : state;
-  },
-}));
+  } }));
 
 vi.mock('@/lib/password-recovery-api', () => ({
   requestPasswordReset: vi.fn(),
-  isValidEmail: (e: string) => /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(e),
+  isValidEmail: (e: string) => /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2 }$/.test(e),
   isValidPassword: (p: string) => p.length >= 8,
   passwordsMatch: (a: string, b: string) => a === b && a.length > 0,
   saveDraftEmail: vi.fn(),
   getDraftEmail: vi.fn(() => ''),
-  clearDraftEmail: vi.fn(),
-}));
+  clearDraftEmail: vi.fn() }));
 
 import { requestPasswordReset } from '@/lib/password-recovery-api';
 
@@ -81,8 +77,7 @@ describe('ForgotPasswordPage', () => {
   it('shows Result after successful password reset request', async () => {
     vi.mocked(requestPasswordReset).mockResolvedValue({
       success: true,
-      message: 'Recovery link sent to your email',
-    });
+      message: 'Recovery link sent to your email' });
 
     render(<ForgotPasswordPage />);
     fireEvent.click(screen.getByRole('button', { name: /start recovery/i }));
@@ -98,9 +93,7 @@ describe('ForgotPasswordPage', () => {
   it('shows Error_Recovery when API call fails', async () => {
     vi.mocked(requestPasswordReset).mockResolvedValue({
       success: false,
-      message: 'Network error',
-      error: { message: 'Network error', code: 'network' },
-    });
+      message: 'Network error' });
 
     render(<ForgotPasswordPage />);
     fireEvent.click(screen.getByRole('button', { name: /start recovery/i }));
@@ -143,8 +136,7 @@ describe('ForgotPasswordPage', () => {
   it('shows Back button in Processing state', () => {
     vi.mocked(requestPasswordReset).mockResolvedValue({
       success: true,
-      message: 'Sent',
-    });
+      message: 'Sent' });
 
     render(<ForgotPasswordPage />);
     fireEvent.click(screen.getByRole('button', { name: /start recovery/i }));
@@ -158,8 +150,7 @@ describe('ForgotPasswordPage', () => {
   it('shows Back button in Result state', async () => {
     vi.mocked(requestPasswordReset).mockResolvedValue({
       success: true,
-      message: 'Sent',
-    });
+      message: 'Sent' });
 
     render(<ForgotPasswordPage />);
     fireEvent.click(screen.getByRole('button', { name: /start recovery/i }));

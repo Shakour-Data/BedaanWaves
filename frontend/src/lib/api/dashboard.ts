@@ -118,8 +118,7 @@ async function fetchTopMovers(): Promise<AssetRow[]> {
 
     const map = (r: TseDashboardResponse["top_gainers"][number]): AssetRow => ({
       symbol: r.symbol, name: r.name, market: "TSE",
-      price: r.last_close, changePct: r.change_pct,
-    });
+      price: r.last_close, changePct: r.change_pct });
 
     const gainers = (data.top_gainers ?? []).map(map);
     const losers = (data.top_losers ?? []).map(map);
@@ -149,8 +148,7 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
         name: item.asset.name,
         market: item.asset.market as AssetRow["market"],
         price: pricesData[item.asset.symbol].price,
-        changePct: pricesData[item.asset.symbol].change_pct,
-      }));
+        changePct: pricesData[item.asset.symbol].change_pct }));
   } catch {
     return [];
   }
@@ -179,8 +177,7 @@ async function fetchSignals(): Promise<SignalRow[]> {
             symbol: `${type}`,
             type: type as SignalRow["type"],
             confidence: typeData.average_confidence?.[type] ?? 50,
-            model: "ML",
-          });
+            model: "ML" });
         }
       } catch {}
     }
@@ -200,8 +197,7 @@ async function fetchNews(): Promise<NewsItem[]> {
     return (data.data ?? []).map((n) => ({
       title: n.title,
       source: n.source,
-      time: formatTimeAgo(n.published_at),
-    }));
+      time: formatTimeAgo(n.published_at) }));
   } catch {
     return [];
   }
@@ -226,6 +222,5 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     watchlist,
     signals,
     news,
-    live,
-  };
+    live };
 }

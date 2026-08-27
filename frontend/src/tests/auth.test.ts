@@ -8,7 +8,6 @@ describe('Authentication Store', () => {
       token: null,
       refreshToken: null,
       loading: false,
-      currentLang: 'en',
     });
   });
 
@@ -19,10 +18,7 @@ describe('Authentication Store', () => {
     expect(state.token).toBeNull();
   });
 
-  it('should set language', () => {
-    useAuthStore.getState().setLanguage('fa');
-    expect(useAuthStore.getState().currentLang).toBe('fa');
-  });
+
 
   it('should login and set authenticated state', async () => {
     const store = useAuthStore.getState();
@@ -34,8 +30,7 @@ describe('Authentication Store', () => {
       user: { name: 'Test', email: 'test@example.com', role: 'user' },
       isAuthenticated: true,
       token: 'mock-token',
-      refreshToken: 'mock-refresh',
-    });
+      refreshToken: 'mock-refresh' });
     useAuthStore.getState().logout();
     const state = useAuthStore.getState();
     expect(state.isAuthenticated).toBe(false);

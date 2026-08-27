@@ -134,13 +134,11 @@ export interface FetchPriceHistoryParams {
 export async function fetchPriceHistory({
   symbol,
   timeframe = "1d",
-  limit = 500,
-}: FetchPriceHistoryParams): Promise<Candle[]> {
+  limit = 500 }: FetchPriceHistoryParams): Promise<Candle[]> {
   const qs = new URLSearchParams({
     symbol,
     timeframe,
-    limit: String(limit),
-  });
+    limit: String(limit) });
   const res = await apiClient.get<RawCandle[]>(`/market/price-history?${qs.toString()}`);
   return res.data.map((c) => ({
     timestamp: c.timestamp,
@@ -151,8 +149,7 @@ export async function fetchPriceHistory({
     close: num(c.close),
     volume: num(c.volume),
     turnover: c.turnover === undefined || c.turnover === null ? null : num(c.turnover),
-    transactions: c.transactions ?? null,
-  }));
+    transactions: c.transactions ?? null }));
 }
 
 /** آخرین قیمت‌ها برای چند نماد. */
@@ -169,8 +166,7 @@ export async function fetchLatestPrices(symbols: string[]): Promise<Record<strin
       change: num(v.change),
       change_pct: num(v.change_pct),
       volume: num(v.volume),
-      timestamp: v.timestamp,
-    };
+      timestamp: v.timestamp };
   }
   return out;
 }
