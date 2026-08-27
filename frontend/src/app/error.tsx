@@ -7,8 +7,7 @@ import { AlertIcon } from "@/components/icons/Icons";
 
 export default function Error({
   error,
-  reset,
-}: {
+  reset }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
