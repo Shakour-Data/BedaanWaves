@@ -6,7 +6,7 @@ Provides health status endpoints and alerts.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 import asyncio
 from .base_service import BaseService
 
@@ -85,7 +85,7 @@ class HealthChecker(BaseService):
             if asyncio.iscoroutine(result):
                 result = await result
             
-            result['timestamp'] = datetime.utcnow().isoformat()
+            result['timestamp'] = datetime.now(timezone.utc).isoformat()
             self._last_results[name] = result
             return result
         
@@ -94,7 +94,7 @@ class HealthChecker(BaseService):
                 "name": name,
                 "status": "error",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             self._last_results[name] = result
             self.logger.error(f"Health check failed: {name} - {e}")
@@ -112,7 +112,7 @@ class HealthChecker(BaseService):
             results[check_name] = await self.run_check(check_name)
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "checks": results,
             "overall_status": self._aggregate_status(results),
         }

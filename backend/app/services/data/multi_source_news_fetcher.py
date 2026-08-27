@@ -18,7 +18,7 @@ import asyncio
 import logging
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import timezone, datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote_plus, urlencode
 
@@ -173,7 +173,7 @@ class MultiSourceNewsFetcher(DataService):
         for item in news_items:
             item.asset_id = asset_id
             item.language = language
-            item.fetched_at = datetime.utcnow()
+            item.fetched_at = datetime.now(timezone.utc)
 
         self.logger.info(
             f"Fetched {len(news_items)} news items for {symbol} from {len(set(n.source for n in news_items))} sources"
@@ -209,7 +209,7 @@ class MultiSourceNewsFetcher(DataService):
                 if item.url and item.url not in seen_urls:
                     seen_urls.add(item.url)
                     item.language = "en"
-                    item.fetched_at = datetime.utcnow()
+                    item.fetched_at = datetime.now(timezone.utc)
                     news_items.append(item)
                     if len(news_items) >= limit * 3:
                         break

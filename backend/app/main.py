@@ -38,6 +38,16 @@ from app.services.core.cache_service import CacheService
 from app.services.core.database_service import DatabaseService
 from app.services.core.health_checker import HealthChecker
 from app.services.system.scheduler_service import SchedulerService
+from app.services.system.metrics_service import MetricsService
+from app.services.system.backup_service import BackupService
+from app.services.system.data_integrity_service import DataIntegrityService
+from app.services.analysis.scoring_service import ScoringService
+from app.services.ml.coefficient_learning_service import CoefficientLearningService
+from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
+from app.services.crypto.crypto_ingestion_service import CryptoIngestionService
+from app.services.data.ingestion_service import IntelligentIngestionService
+from app.services.data.news_service import NewsService
+from app.services.core.dependency_container import DependencyContainer, set_global_container
 
 from app.api.routes import (
     auth_router,
@@ -90,7 +100,8 @@ def _ensure_directories():
 def _ensure_database():
     """Create database if it doesn't exist."""
     try:
-        from sqlalchemy import create_engine, text
+        from sqlalchemy import create_engine, text, inspect
+        import re
         db_url = settings.DATABASE_URL
         parts = db_url.split("/")
         db_name = parts[-1].split("?")[0]
@@ -101,6 +112,10 @@ def _ensure_database():
         elif db_url.startswith("postgresql+psycopg2://"):
             base_url = base_url.replace("postgresql+psycopg2://", "postgresql://", 1)
 
+        if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', db_name):
+            logger.warning(f"Invalid database name '{db_name}', skipping auto-creation")
+            return
+
         engine = create_engine(f"{base_url}/postgres", future=True)
         with engine.connect() as conn:
             conn.execute(text("COMMIT"))
@@ -110,7 +125,7 @@ def _ensure_database():
             )
             if not result.fetchone():
                 conn.execute(text("COMMIT"))
-                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                conn.execute(text('CREATE DATABASE "{}"'.format(db_name.replace('"', '""'))))
                 logger.info(f"Database '{db_name}' created automatically")
         engine.dispose()
     except Exception as e:
@@ -237,15 +252,69 @@ async def lifespan(app: FastAPI):
     pass
 
     try:
-        # Step 5: Initialize dependency container
+        await ensure_admin_user()
+        logger.info("Admin user ensured")
+    except Exception as e:
+        logger.warning(f"Could not ensure admin user: {e}")
+
+    try:
+        # Step 6: Initialize dependency container with real services
         container = DependencyContainer()
 
-        container.register_instance("config_service", ConfigService())
-        container.register_instance("logger_service", LoggerService())
-        container.register_instance("database_service", DatabaseService())
-        container.register_instance("cache_service", CacheService())
-        container.register_instance("health_checker", HealthChecker())
-        container.register_instance("scheduler_service", SchedulerService())
+        # Core services
+        config_svc = ConfigService()
+        logger_svc = LoggerService()
+        database_svc = DatabaseService()
+        cache_svc = CacheService()
+        health_svc = HealthChecker()
+
+        container.register_instance("config_service", config_svc)
+        container.register_instance("logger_service", logger_svc)
+        container.register_instance("database_service", database_svc)
+        container.register_instance("cache_service", cache_svc)
+        container.register_instance("health_checker", health_svc)
+
+        # Analysis services
+        coefficient_svc = CoefficientLearningService()
+        scoring_svc = ScoringService()
+        container.register_instance("coefficient_learning_service", coefficient_svc)
+        container.register_instance("scoring_service", scoring_svc)
+        container.register_instance("metrics_service", MetricsService())
+
+        # Data services
+        nasdaq_svc = NasdaqIngestionService()
+        crypto_svc = CryptoIngestionService()
+        ingest_svc = IntelligentIngestionService()
+        news_svc = NewsService()
+        container.register_instance("nasdaq_service", nasdaq_svc)
+        container.register_instance("nasdaq_ingestion_service", nasdaq_svc)
+        container.register_instance("crypto_ingestion_service", crypto_svc)
+        container.register_instance("data_ingest_service", ingest_svc)
+        container.register_instance("news_service", news_svc)
+        container.register_instance("data_integrity_service",
+                                   DataIntegrityService())
+
+        # System services
+        backup_svc = BackupService()
+        container.register_instance("backup_service", backup_svc)
+
+        # Scheduler with all real services injected
+        scheduler_svc = SchedulerService(
+            scoring_service=scoring_svc,
+            metrics_service=container.get("metrics_service"),
+            health_checker=health_svc,
+            cache_service=cache_svc,
+            nasdaq_service=nasdaq_svc,
+            data_ingest_service=ingest_svc,
+            crypto_ingest_service=crypto_svc,
+            data_integrity_service=container.get("data_integrity_service"),
+            ml_training_service=coefficient_svc,
+            backup_service=backup_svc,
+            news_service=news_svc,
+        )
+        container.register_instance("scheduler_service", scheduler_svc)
+        container.register_instance("scheduler", scheduler_svc)
+        container.register_instance("metrics", container.get("metrics_service"))
 
         # try:
         #     await container.initialize()

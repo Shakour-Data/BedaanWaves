@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException, Header, Response
 from typing import List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 import logging
 import json
 import csv
@@ -71,7 +71,7 @@ async def get_stock(
         "ticker": ticker,
         "data": data,
         "api_version": version,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
     
     if version == "v1":
@@ -171,7 +171,7 @@ async def export_portfolio_data(
     data = await service.get_multiple(tickers)
     
     export_result = {
-        "export_timestamp": datetime.utcnow().isoformat(),
+        "export_timestamp": datetime.now(timezone.utc).isoformat(),
         "total_records": len(tickers),
         "successful_exports": sum(1 for v in data.values() if "error" not in v),
         "format": format,
@@ -190,7 +190,7 @@ async def export_portfolio_data(
                     d.get("price", ""),
                     d.get("volume", ""),
                     d.get("change", ""),
-                    datetime.utcnow().isoformat()
+                    datetime.now(timezone.utc).isoformat()
                 ])
         export_result["csv_content"] = csv_buffer.getvalue()
     
@@ -235,7 +235,7 @@ async def import_portfolio_data(
             "imported_tickers": imported,
             "errors": errors,
             "api_version": "v1",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")

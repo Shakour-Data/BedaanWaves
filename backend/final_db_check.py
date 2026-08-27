@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import re
 import sys
 sys.path.insert(0, '.')
 import asyncio
@@ -13,8 +14,11 @@ async def check_data():
                   'ml_signals', 'financial_statements', 'news_articles']
         output_lines.append('Database Tables Check:')
         for table_name in tables:
+            if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', table_name):
+                output_lines.append(f'  [SKIP] Invalid table name: {table_name}')
+                continue
             try:
-                cnt = await session.execute(text(f'SELECT COUNT(*) FROM {table_name}'))
+                cnt = await session.execute(text('SELECT COUNT(*) FROM ' + table_name))
                 count = cnt.scalar()
                 status = '[OK]' if count > 0 else '[EMPTY]'
                 output_lines.append(f'  {status} {table_name}: {count:,} rows')

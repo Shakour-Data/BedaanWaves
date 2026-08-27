@@ -6,7 +6,7 @@ translation, and country-specific news categorization.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import timezone, datetime
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
@@ -198,7 +198,7 @@ class MultilingualNewsService(BaseService):
                     "sentiment": sentiment_result,
                     "summary": summary_result,
                     "country": country,
-                    "processed_at": datetime.utcnow().isoformat()
+                    "processed_at": datetime.now(timezone.utc).isoformat()
                 }
                 
                 processed_news.append(processed_item)

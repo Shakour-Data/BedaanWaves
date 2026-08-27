@@ -5,7 +5,7 @@ Transforms raw market data (from raw_market_data table) into processed snapshots
 (market_data_snapshots table) with technical indicators and ML features.
 """
 
-from datetime import datetime, timezone, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -444,7 +444,7 @@ class MarketDataProcessingService(DataService):
                 "source": stmt.excluded.source,
                 "is_fresh": stmt.excluded.is_fresh,
                 "freshness_score": stmt.excluded.freshness_score,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
             },
         )
         await session.execute(stmt)

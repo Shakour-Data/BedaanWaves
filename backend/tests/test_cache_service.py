@@ -1,7 +1,7 @@
 """Unit tests for Tier 1 CacheService and MemoryCacheBackend."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -43,12 +43,12 @@ class TestMemoryCacheBackend:
     async def test_ttl_expiry_on_get(self, memory_backend):
         await memory_backend.set("k", "v", ttl=1)
         # back-date the expiry to force expiration
-        memory_backend._cache["k"]["expiry"] = datetime.utcnow() - timedelta(seconds=1)
+        memory_backend._cache["k"]["expiry"] = datetime.now(timezone.utc) - timedelta(seconds=1)
         assert await memory_backend.get("k") is None
 
     async def test_ttl_expiry_on_exists(self, memory_backend):
         await memory_backend.set("k", "v", ttl=1)
-        memory_backend._cache["k"]["expiry"] = datetime.utcnow() - timedelta(seconds=1)
+        memory_backend._cache["k"]["expiry"] = datetime.now(timezone.utc) - timedelta(seconds=1)
         assert await memory_backend.exists("k") is False
 
     async def test_size(self, memory_backend):

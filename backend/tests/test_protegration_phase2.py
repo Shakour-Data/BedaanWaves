@@ -2,13 +2,18 @@ import unittest
 from typing import Dict, Any
 import numpy as np
 
+try:
+    from app.services.analysis.inflation_service import InflationService
+    HAS_INFLATION_SERVICE = True
+except ImportError:
+    HAS_INFLATION_SERVICE = False
+
 async def test_phillips_curve():
     import unittest
     test_instance = TestPhillipsCurve()
     test_instance.setUp()
     await test_instance.test_correlation_positive()
     TestPhillipsCurve.tearDownClass()
-    
 
 class TestInflationService(unittest.IsolatedAsyncioTestCase):
     async def test_ppp_adjusted_inflation(self):
