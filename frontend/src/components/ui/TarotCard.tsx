@@ -5,8 +5,7 @@ export function TarotCard({
   children,
   icon,
   title,
-  className,
-}: {
+  className }: {
   children: ReactNode;
   icon?: ReactNode;
   title?: string;
@@ -15,17 +14,13 @@ export function TarotCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-surface p-4 shadow-sm",
-        "transition duration-fast ease-flow hover:shadow-md",
+        "bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md p-6 shadow-md transition-shadow duration-150 ease-out",
         className
       )}
     >
-      {(icon || title) && (
-        <div className="mb-3 flex items-center gap-2">
-          {icon ? <span className="text-base">{icon}</span> : null}
-          {title ? (
-            <span className="text-sm font-semibold text-foreground">{title}</span>
-          ) : null}
+      {title && (
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{title}</h3>
         </div>
       )}
       {children}
