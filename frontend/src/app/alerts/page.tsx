@@ -12,7 +12,7 @@ import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function AlertsPage() {
-  const { currentLang } = useAuthStore();
+  
   const [alertType, setAlertType] = useState("all");
   const [activeAlerts, setActiveAlerts] = useState<SignalRow[]>([]);
   const [watchlistAlerts, setWatchlistAlerts] = useState<AssetRow[]>([]);
@@ -56,8 +56,7 @@ export default function AlertsPage() {
                 symbol,
                 type: type as SignalRow["type"],
                 confidence: summaryRes.data.average_confidence?.[type] ?? 50,
-                model: "ML",
-              });
+                model: "ML" });
             }
           }
         }
@@ -81,8 +80,7 @@ export default function AlertsPage() {
                 name: item.asset.name,
                 market: item.asset.market as "TSE" | "OTC" | "BINANCE",
                 price: prices[item.asset.symbol].price,
-                changePct: prices[item.asset.symbol].change_pct,
-              }));
+                changePct: prices[item.asset.symbol].change_pct }));
             setWatchlistAlerts(watchAssets);
           }
         }
@@ -96,9 +94,8 @@ export default function AlertsPage() {
             time: formatTimeAgo(n.created_at),
             alert: n.title,
             type: n.extra?.signal_type || "INFO",
-            status: n.read ? t("app.alerts.status.executed", currentLang) : t("app.alerts.status.active", currentLang),
-            statusKey: n.read ? "executed" : "active",
-          }));
+            status: n.read ? t("app.alerts.status.executed", "en") : t("app.alerts.status.active", "en"),
+            statusKey: n.read ? "executed" : "active" }));
         setAlertHistory(history);
 
       } catch (error) {
@@ -110,7 +107,7 @@ export default function AlertsPage() {
 
     loadAlerts();
     return () => { active = false; };
-  }, [currentLang]);
+  }, ["en"]);
 
   const filteredAlerts = alertType === "all"
     ? activeAlerts
@@ -121,39 +118,39 @@ export default function AlertsPage() {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return t("app.alerts.time.now", currentLang);
-    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", currentLang)}`;
-    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", currentLang)}`;
-    return `${days} ${t("app.alerts.time.days_ago", currentLang)}`;
+    if (minutes < 1) return t("app.alerts.time.now", "en");
+    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", "en")}`;
+    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", "en")}`;
+    return `${days} ${t("app.alerts.time.days_ago", "en")}`;
   };
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.alerts.title", currentLang)}>
+      <DashboardShell title={t("app.alerts.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.alerts.loading", currentLang)}
+          {t("app.alerts.loading", "en")}
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.alerts.title", currentLang)}>
+    <DashboardShell title={t("app.alerts.title", "en")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="🔍" title={t("app.alerts.filters", currentLang)}>
+          <TarotCard icon="Search" title={t("app.alerts.filters", "en")}>
             <div className="space-y-2">
               {[
-                { id: "all", label: t("app.alerts.types.all", currentLang) },
-                { id: "BUY", label: t("app.alerts.types.buy", currentLang) },
-                { id: "SELL", label: t("app.alerts.types.sell", currentLang) },
-                { id: "HOLD", label: t("app.alerts.types.hold", currentLang) },
+                { id: "all", label: t("app.alerts.types.all", "en") },
+                { id: "BUY", label: t("app.alerts.types.buy", "en") },
+                { id: "SELL", label: t("app.alerts.types.sell", "en") },
+                { id: "HOLD", label: t("app.alerts.types.hold", "en") },
               ].map((type) => (
                 <button
                   key={type.id}
                   onClick={() => setAlertType(type.id)}
-                  className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${alertType === type.id ? "bg-secondary text-white font-bold shadow-sm" : "hover:bg-neutral/50 text-muted-foreground"}`}
+                  className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${alertType === type.id ? "bg-secondary text-[var(--color-text-primary)] font-bold shadow-sm" : "hover:bg-neutral/50 text-muted-foreground"}`}
                 >
                   {type.label}
                 </button>
@@ -161,13 +158,13 @@ export default function AlertsPage() {
             </div>
           </TarotCard>
 
-          <TarotCard icon="📊" title={t("app.alerts.stats", currentLang)}>
+          <TarotCard icon="[Chart]" title={t("app.alerts.stats", "en")}>
             <div className="space-y-3">
               {[
-                { label: t("app.alerts.stats_labels.active", currentLang), value: filteredAlerts.length },
-                { label: t("app.alerts.stats_labels.buy", currentLang), value: activeAlerts.filter(a => a.type === "BUY").length },
-                { label: t("app.alerts.stats_labels.sell", currentLang), value: activeAlerts.filter(a => a.type === "SELL").length },
-                { label: t("app.alerts.stats_labels.hold", currentLang), value: activeAlerts.filter(a => a.type === "HOLD").length },
+                { label: t("app.alerts.stats_labels.active", "en"), value: filteredAlerts.length },
+                { label: t("app.alerts.stats_labels.buy", "en"), value: activeAlerts.filter(a => a.type === "BUY").length },
+                { label: t("app.alerts.stats_labels.sell", "en"), value: activeAlerts.filter(a => a.type === "SELL").length },
+                { label: t("app.alerts.stats_labels.hold", "en"), value: activeAlerts.filter(a => a.type === "HOLD").length },
               ].map((stat, i) => (
                 <div key={i} className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">{stat.label}</span>
@@ -180,23 +177,23 @@ export default function AlertsPage() {
 
         {/* Active Alerts */}
         <div className="lg:col-span-3 space-y-4">
-          <TarotCard icon="🔔" title={`${t("app.alerts.active_alerts", currentLang)} (${filteredAlerts.length})`}>
+          <TarotCard icon="Alerts" title={`${t("app.alerts.active_alerts", "en")} (${filteredAlerts.length})`}>
             {filteredAlerts.length > 0 ? (
               <SignalList signals={filteredAlerts} />
             ) : (
-              <p className="text-muted-foreground py-4">{t("app.alerts.empty", currentLang)}</p>
+              <p className="text-muted-foreground py-4">{t("app.alerts.empty", "en")}</p>
             )}
           </TarotCard>
 
-          <TarotCard icon="⭐" title={t("app.alerts.watchlist_symbols", currentLang)}>
+          <TarotCard icon="⭐" title={t("app.alerts.watchlist_symbols", "en")}>
             {watchlistAlerts.length > 0 ? (
               <AssetTable rows={watchlistAlerts} />
             ) : (
-              <p className="text-muted-foreground py-4">{t("app.alerts.watchlist_empty", currentLang)}</p>
+              <p className="text-muted-foreground py-4">{t("app.alerts.watchlist_empty", "en")}</p>
             )}
           </TarotCard>
 
-          <TarotCard icon="📜" title={t("app.alerts.history", currentLang)}>
+          <TarotCard icon="📜" title={t("app.alerts.history", "en")}>
             {alertHistory.length > 0 ? (
               <div className="space-y-3">
                 {alertHistory.map((alert, i) => (
@@ -204,7 +201,7 @@ export default function AlertsPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{alert.time}</span>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${alert.type === "BUY" ? "bg-success/20 text-success" : alert.type === "SELL" ? "bg-primary/20 text-primary" : "bg-accent/20 text-accent-foreground"}`}>
-                        {t(`app.alerts.types.${alert.type.toLowerCase()}`, currentLang)}
+                        {t(`app.alerts.types.${alert.type.toLowerCase()}`, "en")}
                       </span>
                       <span className="font-medium">{alert.alert}</span>
                     </div>
@@ -215,7 +212,7 @@ export default function AlertsPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground py-4">{t("app.alerts.history_empty", currentLang)}</p>
+              <p className="text-muted-foreground py-4">{t("app.alerts.history_empty", "en")}</p>
             )}
           </TarotCard>
         </div>
