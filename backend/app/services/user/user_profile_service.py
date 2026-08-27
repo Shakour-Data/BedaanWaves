@@ -31,8 +31,8 @@ class UserProfileService:
         self.session_factory = session_factory
 
     async def get_profile(self, user_id: UUID, session=None) -> Optional[User]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(select(User).where(User.id == user_id))
             return result.scalars().first()
@@ -50,8 +50,8 @@ class UserProfileService:
 
         Returns the updated User, or ``None`` when the user does not exist.
         """
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(select(User).where(User.id == user_id))
             user = result.scalars().first()

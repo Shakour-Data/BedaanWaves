@@ -5,7 +5,7 @@ User portfolio management.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 from app.services.core.base_service import DataService
 
 
@@ -91,7 +91,7 @@ class PortfolioService(DataService):
             "stock_ticker": stock_ticker,
             "quantity": quantity,
             "purchase_price": purchase_price,
-            "purchase_date": datetime.utcnow().isoformat(),
+            "purchase_date": datetime.now(timezone.utc).isoformat(),
         }
         self.logger.info(f"Added holding: {stock_ticker} to portfolio {portfolio_id}")
         return holding

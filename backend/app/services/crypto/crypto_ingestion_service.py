@@ -5,7 +5,7 @@ Crypto Ingestion Service - tier 2 data ingestion for cryptocurrency markets.
 import asyncio
 import functools
 import time
-from datetime import datetime, timezone
+from datetime import timezone, datetime
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -292,7 +292,7 @@ class FallbackDataSource:
                 "total_supply": total_supply,
                 "price_change_24h_pct": float(price_change_24h),
                 "market_cap_change_24h_pct": float(market_cap_change_24h),
-                "timestamp": datetime.utcnow().replace(tzinfo=utc),
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=utc),
                 "fallback_source": True,
             }
         except Exception as exc:
@@ -309,7 +309,7 @@ class FallbackDataSource:
             "total_supply": 0.0,
             "price_change_24h_pct": 0.0,
             "market_cap_change_24h_pct": 0.0,
-            "timestamp": datetime.utcnow().replace(tzinfo=utc),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=utc),
             "fallback_source": True,
             "quality": "poorest",
             "error_message": "All data sources failed",
@@ -317,7 +317,7 @@ class FallbackDataSource:
 
     def _check_rate_limits(self) -> None:
         """Check and enforce rate limits."""
-        current_time = datetime.utcnow().timestamp()
+        current_time = datetime.now(timezone.utc).timestamp()
         expired_keys = [k for k, (count, ts) in self.rate_limit_tracker.items() if current_time - ts > 3600]
         for key in expired_keys:
             del self.rate_limit_tracker[key]
@@ -333,14 +333,14 @@ class FallbackDataSource:
         if crypto_id not in self.rate_limit_tracker:
             return 0.0
         count, ts = self.rate_limit_tracker[crypto_id]
-        current_time = datetime.utcnow().timestamp()
+        current_time = datetime.now(timezone.utc).timestamp()
         if count >= 120 and current_time - ts < 3600:
             return max(0, 3600 - (current_time - ts)) / 60.0
         return 0.0
 
     def _record_rate_limit(self, crypto_id: str) -> None:
         """Record rate limit hit."""
-        current_time = datetime.utcnow().timestamp()
+        current_time = datetime.now(timezone.utc).timestamp()
         if crypto_id not in self.rate_limit_tracker:
             self.rate_limit_tracker[crypto_id] = (1, current_time)
         else:
@@ -358,7 +358,7 @@ class CryptoRateLimiter:
 
     async def acquire(self) -> None:
         """Acquire permission to make a request, respecting rate limits."""
-        now = datetime.utcnow().timestamp()
+        now = datetime.now(timezone.utc).timestamp()
         self.request_times = [t for t in self.request_times if now - t < self.time_window]
 
         if len(self.request_times) >= self.max_requests:
@@ -372,7 +372,7 @@ class CryptoRateLimiter:
 
     def get_current_usage(self) -> tuple:
         """Return current request count and time window."""
-        now = datetime.utcnow().timestamp()
+        now = datetime.now(timezone.utc).timestamp()
         self.request_times = [t for t in self.request_times if now - t < self.time_window]
         return len(self.request_times), self.time_window
 
@@ -473,7 +473,7 @@ class CryptoIngestionService(DataService):
 
             return {
                 "price": usd_price,
-                "timestamp": datetime.utcnow().replace(tzinfo=utc),
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=utc),
                 "volume": 0,  # Will be populated from other endpoint
             }
         except Exception as exc:
@@ -490,7 +490,7 @@ class CryptoIngestionService(DataService):
                 "price": last_price,
                 "bids": raw.get("bids", []),
                 "asks": raw.get("asks", []),
-                "timestamp": datetime.utcnow().replace(tzinfo=utc),
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=utc),
                 "volume_base": sum(float(bid[1]) for bid in raw.get("bids", [])),
                 "volume_quote": sum(float(ask[1]) * float(ask[0]) for ask in raw.get("asks", [])),
             }
@@ -528,7 +528,7 @@ class CryptoIngestionService(DataService):
             volume=payload.get("volume_base"),
             quote_volume=payload.get("volume_quote"),
             source_timestamp=payload.get("timestamp"),
-            ingested_at=datetime.utcnow().replace(tzinfo=utc),
+            ingested_at=datetime.now(timezone.utc).replace(tzinfo=utc),
             data_quality="RAW",
         )
         stmt = stmt.on_conflict_do_update(
@@ -539,7 +539,7 @@ class CryptoIngestionService(DataService):
                 "quote_volume": payload.get("volume_quote"),
                 "source_timestamp": payload.get("timestamp"),
                 "raw_payload": payload,
-                "ingested_at": datetime.utcnow().replace(tzinfo=utc),
+                "ingested_at": datetime.now(timezone.utc).replace(tzinfo=utc),
             },
         )
         await session.execute(stmt)
@@ -605,7 +605,7 @@ class CryptoIngestionService(DataService):
                     )
                     latest_record = existing.scalars().first()
                     if latest_record:
-                        age_seconds = (datetime.utcnow().replace(tzinfo=timezone.utc) - 
+                        age_seconds = (datetime.now(timezone.utc).replace(tzinfo=timezone.utc) - 
                                        latest_record.ingested_at.replace(tzinfo=timezone.utc)).total_seconds()
                         if age_seconds < 21600:  # 6 hours
                             self.logger.debug(f"Skipping {symbol}, recently updated ({age_seconds:.0f}s ago)")
@@ -677,7 +677,7 @@ class CryptoIngestionService(DataService):
                 "total_supply": total_supply,
                 "price_change_24h_pct": float(price_change_24h),
                 "market_cap_change_24h_pct": float(market_cap_change_24h),
-                "timestamp": datetime.utcnow().replace(tzinfo=utc),
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=utc),
             }
         except Exception as exc:
             self.logger.error(f"Error fetching fundamental data for {crypto_id}: {exc}")

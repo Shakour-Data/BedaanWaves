@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 import logging
 
 from app.services.data.symbol_service import SymbolService
@@ -54,7 +54,7 @@ async def search_symbols(
         "query": q,
         "count": len(results),
         "data": results,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -69,7 +69,7 @@ async def get_exchanges(
         "status": "success",
         "exchanges": exchanges,
         "count": len(exchanges),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -84,7 +84,7 @@ async def get_market_types(
         "status": "success",
         "market_types": market_types,
         "count": len(market_types),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -99,7 +99,7 @@ async def get_countries(
         "status": "success",
         "countries": countries,
         "count": len(countries),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -113,7 +113,7 @@ async def get_symbol_stats(
     return {
         "status": "success",
         "stats": stats,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -140,7 +140,7 @@ async def get_symbols_by_exchange(
         "limit": limit,
         "offset": offset,
         "data": symbols,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -167,7 +167,7 @@ async def get_symbols_by_market_type(
         "limit": limit,
         "offset": offset,
         "data": symbols,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -188,5 +188,5 @@ async def get_symbol(
         "status": "success",
         "symbol": symbol,
         "data": data,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

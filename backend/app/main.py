@@ -35,6 +35,7 @@ from app.services.core.cache_service import CacheService
 from app.services.core.database_service import DatabaseService
 from app.services.core.health_checker import HealthChecker
 from app.services.system.scheduler_service import SchedulerService
+from app.services.core.dependency_container import DependencyContainer, set_global_container
 
 from app.api.routes import (
     auth_router,
@@ -87,7 +88,8 @@ def _ensure_directories():
 def _ensure_database():
     """Create database if it doesn't exist."""
     try:
-        from sqlalchemy import create_engine, text
+        from sqlalchemy import create_engine, text, inspect
+        import re
         db_url = settings.DATABASE_URL
         parts = db_url.split("/")
         db_name = parts[-1].split("?")[0]
@@ -98,6 +100,10 @@ def _ensure_database():
         elif db_url.startswith("postgresql+psycopg2://"):
             base_url = base_url.replace("postgresql+psycopg2://", "postgresql://", 1)
 
+        if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', db_name):
+            logger.warning(f"Invalid database name '{db_name}', skipping auto-creation")
+            return
+
         engine = create_engine(f"{base_url}/postgres", future=True)
         with engine.connect() as conn:
             conn.execute(text("COMMIT"))
@@ -107,7 +113,7 @@ def _ensure_database():
             )
             if not result.fetchone():
                 conn.execute(text("COMMIT"))
-                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                conn.execute(text('CREATE DATABASE "{}"'.format(db_name.replace('"', '""'))))
                 logger.info(f"Database '{db_name}' created automatically")
         engine.dispose()
     except Exception as e:

@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import asyncio  # noqa: E402
 import csv  # noqa: E402
 import logging  # noqa: E402
-from datetime import datetime  # noqa: E402
+from datetime import timezone, datetime  # noqa: E402
 from typing import List, Tuple  # noqa: E402
 
 from sqlalchemy import select  # noqa: E402
@@ -83,7 +83,7 @@ async def seed_nasdaq_symbols():
                     "country_code": stmt.excluded.country_code,
                     "currency": stmt.excluded.currency,
                     "active": stmt.excluded.active,
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                 },
             )
             await session.execute(stmt)

@@ -6,7 +6,7 @@ Allows users to select from top 300 cryptocurrencies for personalized ranking.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import timezone, datetime
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.user.preference_service import PreferenceService
@@ -294,7 +294,7 @@ class UserCryptoSettingsService(BaseService):
             "min_market_cap": settings.get("min_market_cap", self.default_settings["min_market_cap"]),
             "price_change_filter": settings.get("price_change_filter", self.default_settings["price_change_filter"]),
             "custom_watchlist": settings.get("custom_watchlist", self.default_settings["custom_watchlist"]),
-            "last_updated": datetime.utcnow().isoformat()
+            "last_updated": datetime.now(timezone.utc).isoformat()
         }
     
     async def filter_cryptos_by_preferences(self,

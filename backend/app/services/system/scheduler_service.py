@@ -14,7 +14,7 @@ import asyncio
 import logging
 import os
 import shutil
-from datetime import datetime, timezone, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Coroutine
 from dataclasses import dataclass, field
 
@@ -350,7 +350,7 @@ asyncio.run(main())
                                 technical_factors={"rsi": round(rsi, 2)},
                                 ml_model_version="auto_signal_v1",
                                 model_name="AutoSignalGenerator",
-                                valid_until=datetime.utcnow() + timedelta(days=1),
+                                valid_until=datetime.now(timezone.utc) + timedelta(days=1),
                                 is_active=True,
                             )
                             session.add(signal)
@@ -383,7 +383,7 @@ asyncio.run(main())
         try:
             backup_path = self.settings.BACKUP_PATH
             os.makedirs(backup_path, exist_ok=True)
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             backup_file = os.path.join(backup_path, f"backup_{timestamp}.sql")
 
             db_url = self.settings.DATABASE_URL
@@ -433,7 +433,7 @@ asyncio.run(main())
                 return {"status": "skipped", "reason": "no logs directory"}
 
             retention_days = getattr(self.settings, 'LOG_RETENTION_DAYS', 30)
-            cutoff = datetime.utcnow() - timedelta(days=retention_days)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
             cleaned = 0
 
             for filename in os.listdir(log_path):

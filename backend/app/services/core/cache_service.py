@@ -6,7 +6,7 @@ Provides TTL management, pattern-based invalidation, and statistics.
 """
 
 from typing import Any, Dict, Optional, List
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from abc import ABC, abstractmethod
 import hashlib
 import json
@@ -55,7 +55,7 @@ class MemoryCacheBackend(CacheBackend):
         entry = self._cache[key]
         
         # Check TTL
-        if entry['ttl'] and datetime.utcnow() > entry['expiry']:
+        if entry['ttl'] and datetime.now(timezone.utc) > entry['expiry']:
             del self._cache[key]
             return None
         
@@ -64,13 +64,13 @@ class MemoryCacheBackend(CacheBackend):
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         expiry = None
         if ttl:
-            expiry = datetime.utcnow() + timedelta(seconds=ttl)
+            expiry = datetime.now(timezone.utc) + timedelta(seconds=ttl)
         
         self._cache[key] = {
             'value': value,
             'ttl': ttl,
             'expiry': expiry,
-            'created_at': datetime.utcnow(),
+            'created_at': datetime.now(timezone.utc),
         }
     
     async def delete(self, key: str) -> None:
@@ -84,7 +84,7 @@ class MemoryCacheBackend(CacheBackend):
             return False
         
         entry = self._cache[key]
-        if entry['ttl'] and datetime.utcnow() > entry['expiry']:
+        if entry['ttl'] and datetime.now(timezone.utc) > entry['expiry']:
             del self._cache[key]
             return False
         

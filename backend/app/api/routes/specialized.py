@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
-from datetime import datetime, date
+from datetime import timezone, datetime, date
 from typing import List, Optional, Dict, Any
 import logging
 
@@ -71,7 +71,7 @@ async def _build_universe(
                 and_(
                     MLSignal.asset_id.in_(asset_ids),
                     MLSignal.is_active == True,  # noqa: E712
-                    MLSignal.valid_until >= datetime.utcnow(),
+                    MLSignal.valid_until >= datetime.now(timezone.utc),
                 )
             )
             .order_by(MLSignal.generated_at.desc())
@@ -111,7 +111,7 @@ async def sectors_summary(
     svc = _load(SectorAnalysisService)
     await svc.initialize()
     result = await svc.analyze_all(universe)
-    result["timestamp"] = datetime.utcnow().isoformat()
+    result["timestamp"] = datetime.now(timezone.utc).isoformat()
     return {"status": "success", **result}
 
 
@@ -147,7 +147,7 @@ async def compare(data: dict = Body(...)) -> dict:
     svc = _load(ComparisonService)
     await svc.initialize()
     result = await svc.compare(symbols_data)
-    result["timestamp"] = datetime.utcnow().isoformat()
+    result["timestamp"] = datetime.now(timezone.utc).isoformat()
     return result
 
 
@@ -173,7 +173,7 @@ async def correlation(data: dict = Body(...)) -> dict:
         high_threshold=float(data.get("high_threshold", 0.7)),
         low_threshold=float(data.get("low_threshold", -0.7)),
     )
-    result["timestamp"] = datetime.utcnow().isoformat()
+    result["timestamp"] = datetime.now(timezone.utc).isoformat()
     return result
 
 

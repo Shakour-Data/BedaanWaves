@@ -6,7 +6,7 @@ and monitors data quality across all sources in the BedaanWaves platform.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.data.data_validation_service import DataValidationService
@@ -95,10 +95,10 @@ class DataIntegrityService(BaseService):
             Complete integrity report
         """
         self.logger.info("Starting full data integrity check")
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         report = {
-            "check_id": f"integrity_{int(datetime.utcnow().timestamp())}",
+            "check_id": f"integrity_{int(datetime.now(timezone.utc).timestamp())}",
             "timestamp": start_time.isoformat(),
             "checks": {},
             "overall_status": "unknown",
@@ -141,7 +141,7 @@ class DataIntegrityService(BaseService):
             report["alerts"] = self._generate_alerts(report["checks"])
             
             # Update tracking
-            self.last_integrity_check = datetime.utcnow()
+            self.last_integrity_check = datetime.now(timezone.utc)
             
         except Exception as e:
             self.logger.error(f"Error during integrity check: {str(e)}")
@@ -149,7 +149,7 @@ class DataIntegrityService(BaseService):
             report["overall_status"] = "error"
         
         # Calculate duration
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         report["duration_seconds"] = (end_time - start_time).total_seconds()
         
         self.logger.info(f"Integrity check completed in {report['duration_seconds']:.2f}s - Status: {report['overall_status']}")
@@ -303,13 +303,13 @@ class DataIntegrityService(BaseService):
                     data = await self.stock_service.get_stock(symbol)
                 elif asset_type == "indices" and self.market_service:
                     # Simplified - would use actual index data
-                    data = {"timestamp": datetime.utcnow().isoformat()}
+                    data = {"timestamp": datetime.now(timezone.utc).isoformat()}
                 else:
                     data = None
                 
                 if data and "timestamp" in data:
                     data_time = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
-                    age_hours = (datetime.utcnow() - data_time.replace(tzinfo=None)).total_seconds() / 3600
+                    age_hours = (datetime.now(timezone.utc) - data_time.replace(tzinfo=None)).total_seconds() / 3600
                     
                     is_fresh = age_hours <= self.alert_thresholds["data_staleness_hours"]
                     freshness_results[f"{symbol}_{asset_type}"] = {
@@ -475,7 +475,7 @@ class DataIntegrityService(BaseService):
     def _generate_alerts(self, checks: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate alerts based on check results."""
         alerts = []
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         # Source availability alerts
         if "source_availability" in checks:

@@ -8,7 +8,7 @@ Integrates with structlog and Python's logging module.
 import logging
 from typing import Any, Dict, Optional
 from pathlib import Path
-from datetime import datetime
+from datetime import timezone, datetime
 import json
 from .base_service import BaseService
 
@@ -164,7 +164,7 @@ class LoggerService(BaseService):
         
         # Format as JSON
         log_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'message': message,
             **data
         }

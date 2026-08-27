@@ -137,7 +137,7 @@ class ConfigService(BaseService):
     def _load_security_config(self) -> Dict[str, Any]:
         """Load security configuration"""
         return {
-            'jwt_secret': self.get('JWT_SECRET', 'your-secret-key-change-in-production'),
+            'jwt_secret': self.get('JWT_SECRET', ''),
             'jwt_algorithm': self.get('JWT_ALGORITHM', 'HS256'),
             'jwt_expiration_hours': self.get_int('JWT_EXPIRATION_HOURS', 24),
             'password_min_length': self.get_int('PASSWORD_MIN_LENGTH', 8),

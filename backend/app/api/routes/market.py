@@ -4,7 +4,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import List, Dict, Any
 import logging
 
@@ -96,7 +96,7 @@ async def get_price_history(
     
     # Set default dates
     if not end_date:
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
     if not start_date:
         start_date = end_date - timedelta(days=252)
     
@@ -137,7 +137,7 @@ async def get_latest_prices(
     if not symbols:
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": {}
         }
 
@@ -153,7 +153,7 @@ async def get_latest_prices(
     if not assets_by_symbol:
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": {}
         }
     
@@ -212,7 +212,7 @@ async def get_latest_prices(
     
     return {
         "status": "success",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": result
     }
 
@@ -253,7 +253,7 @@ async def get_market_overview(
         "market": market,
         "total_assets": total_assets,
         "sectors": sectors,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -313,7 +313,7 @@ async def tse_dashboard(
             "average_change_pct": 0.0,
             "top_gainers": [],
             "top_losers": [],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     result_rows = []
@@ -339,7 +339,7 @@ async def tse_dashboard(
         "average_change_pct": round(avg_change, 2),
         "top_gainers": ranked_change[:5],
         "top_losers": sorted(ranked_change, key=lambda x: x["change_pct"])[:5],
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -393,7 +393,7 @@ async def industry_ranking(
             "market": "TSE",
             "ranked_industries": 0,
             "ranking": [],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     # Separate latest and previous close per asset
@@ -448,5 +448,5 @@ async def industry_ranking(
         "market": "TSE",
         "ranked_industries": len(ranking),
         "ranking": ranking,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

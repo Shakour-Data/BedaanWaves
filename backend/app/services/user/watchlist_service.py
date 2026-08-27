@@ -26,8 +26,8 @@ class WatchlistService:
         is_default: bool = False,
         session=None,
     ) -> Watchlist:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             watchlist = Watchlist(
                 user_id=user_id,
@@ -44,8 +44,8 @@ class WatchlistService:
                 await session.close()
 
     async def list_watchlists(self, user_id: UUID, session=None) -> List[Watchlist]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(Watchlist).where(Watchlist.user_id == user_id)
@@ -58,8 +58,8 @@ class WatchlistService:
     async def get_watchlist(
         self, watchlist_id: UUID, user_id: UUID, session=None
     ) -> Optional[Watchlist]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(Watchlist).where(
@@ -75,8 +75,8 @@ class WatchlistService:
     async def delete_watchlist(
         self, watchlist_id: UUID, user_id: UUID, session=None
     ) -> bool:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             watchlist = await self.get_watchlist(watchlist_id, user_id, session=session)
             if watchlist is None:
@@ -97,8 +97,8 @@ class WatchlistService:
         alert_threshold_pct: Optional[float] = None,
         session=None,
     ) -> Optional[WatchlistItem]:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             watchlist = await self.get_watchlist(watchlist_id, user_id, session=session)
             if watchlist is None:
@@ -120,8 +120,8 @@ class WatchlistService:
     async def remove_item(
         self, watchlist_id: UUID, item_id: UUID, user_id: UUID, session=None
     ) -> bool:
-        session = session or self.session_factory()
         owns = session is None
+        session = session or self.session_factory()
         try:
             result = await session.execute(
                 select(WatchlistItem).where(

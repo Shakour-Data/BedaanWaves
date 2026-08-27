@@ -6,7 +6,7 @@ Enables users to analyze and compare markets across different countries.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime, date
+from datetime import timezone, datetime, date
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.data.intl_api_client import IntlApiClient
@@ -226,7 +226,7 @@ class InternationalMarketService(BaseService):
             Dictionary mapping country to market data
         """
         snapshot = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "countries": {},
             "regions": {}
         }
@@ -338,7 +338,7 @@ class InternationalMarketService(BaseService):
         """
         comparison = {
             "metric": metric,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "countries": {}
         }
         

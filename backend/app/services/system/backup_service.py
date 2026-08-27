@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -577,8 +578,13 @@ class BackupService(BaseService):
             
     def _generate_create_table_stmt(self, table_name: str, columns: List[str]) -> str:
         """Generate CREATE TABLE statement from column list."""
+        if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', table_name):
+            raise ValueError(f"Invalid table name: {table_name}")
+        
         column_definitions = []
         for i, column_name in enumerate(columns):
+            if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', column_name):
+                raise ValueError(f"Invalid column name: {column_name}")
             column_type = "VARCHAR(255)"
             if column_name.endswith("_id") or column_name.endswith("_id_"):
                 column_type = "INTEGER"
