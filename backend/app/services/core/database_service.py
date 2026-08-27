@@ -5,6 +5,7 @@ Manages database connections, session management, and transaction handling.
 Integrates with SQLAlchemy for ORM functionality.
 """
 
+import asyncio
 from typing import Any, Dict, Optional, List, AsyncGenerator
 from contextlib import asynccontextmanager
 from sqlalchemy import create_engine, event, pool, text
@@ -52,48 +53,78 @@ class DatabaseService(BaseService):
         self._active_session_count = 0
     
     async def initialize(self) -> None:
-        """Initialize database service"""
-        try:
-            if self.async_mode:
-                if self.database_url.startswith("postgresql://"):
-                    db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
-                else:
-                    db_url = self.database_url
-                
-                self.engine = create_async_engine(
-                    db_url,
-                    echo=self.echo,
-                    pool_size=self.pool_size,
-                    max_overflow=self.max_overflow,
-                    pool_pre_ping=True,
-                    pool_recycle=3600,
-                )
-                self.session_factory = async_sessionmaker(
-                    self.engine,
-                    class_=AsyncSession,
-                    expire_on_commit=False,
-                )
-            else:
-                self.engine = create_engine(
-                    self.database_url,
-                    echo=self.echo,
-                    poolclass=pool.QueuePool,
-                    pool_size=self.pool_size,
-                    max_overflow=self.max_overflow,
-                    pool_pre_ping=True,
-                    pool_recycle=3600,
-                )
-                self.session_factory = sessionmaker(
-                    self.engine,
-                    expire_on_commit=False,
-                )
-            
-            await self.health_check()
-            self.logger.info(f"DatabaseService initialized with {self.database_url}")
+        """Initialize database service with retry logic."""
+        max_retries = 5
+        retry_delay = 5
         
+        for attempt in range(max_retries):
+            try:
+                if self.async_mode:
+                    # Use asyncpg driver for async mode
+                    if self.database_url.startswith("postgresql://"):
+                        db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
+                    else:
+                        db_url = self.database_url
+                    
+                    self.engine = create_async_engine(
+                        db_url,
+                        echo=self.echo,
+                        pool_size=self.pool_size,
+                        max_overflow=self.max_overflow,
+                        pool_pre_ping=True,
+                        pool_recycle=3600,
+                        connect_args={
+                            "command_timeout": 60
+                        }
+                    )
+                    self.session_factory = async_sessionmaker(
+                        self.engine,
+                        class_=AsyncSession,
+                        expire_on_commit=False,
+                    )
+                else:
+                    self.engine = create_engine(
+                        self.database_url,
+                        echo=self.echo,
+                        poolclass=pool.QueuePool,
+                        pool_size=self.pool_size,
+                        max_overflow=self.max_overflow,
+                        pool_pre_ping=True,
+                        pool_recycle=3600,
+                    )
+                    self.session_factory = sessionmaker(
+                        self.engine,
+                        expire_on_commit=False,
+                    )
+                
+                # Test connection
+                await self.health_check()
+                health = await self.health_check()
+                if health["status"] == "healthy":
+                    self.logger.info(f"DatabaseService initialized with {self.database_url}")
+                    return
+                else:
+                    raise Exception(f"Health check failed: {health.get('error')}")
+            
+            except Exception as e:
+                self.logger.warning(f"Database connection attempt {attempt + 1}/{max_retries} failed: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                else:
+                    self.logger.error("All database connection attempts failed.")
+                    self.engine = None
+                    self.session_factory = None
+    
+    async def reconnect(self) -> bool:
+        """Attempt to reconnect to the database."""
+        self.logger.info("Attempting to reconnect to database...")
+        try:
+            await self.initialize()
+            health = await self.health_check()
+            return health["status"] == "healthy"
         except Exception as e:
-            self.logger.error(f"Failed to initialize database: {e}")
-            raise
+            self.logger.error(f"Reconnection attempt failed: {e}")
+            return False
     
     async def shutdown(self) -> None:
         """Shutdown database service"""

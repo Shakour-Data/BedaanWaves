@@ -22,6 +22,7 @@ import {
   type HistogramData,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
+import { colors, semanticColors } from "@/styles/design-tokens";
 import type { Candle, Timeframe } from "@/lib/api/stocks";
 
 interface CandlestickChartProps {
@@ -53,25 +54,25 @@ interface ThemeColors {
 }
 
 const LIGHT: ThemeColors = {
-  background: "#ffffff",
-  text: "#5c5c5c",
-  grid: "#eeeeee",
-  border: "#e0e0e0",
-  up: "#2e7d32",
-  down: "#c62828",
-  volUp: "rgba(46, 125, 50, 0.35)",
-  volDown: "rgba(198, 40, 40, 0.35)",
+  background: semanticColors.surface,
+  text: semanticColors.foreground,
+  grid: semanticColors.border,
+  border: semanticColors.border,
+  up: semanticColors.success,
+  down: semanticColors.primary,
+  volUp: `${semanticColors.success}59`, // 35% opacity
+  volDown: `${semanticColors.primary}59`, // 35% opacity
 };
 
 const DARK: ThemeColors = {
-  background: "#1e1e1e",
-  text: "#a8a8a8",
-  grid: "#2a2a2a",
-  border: "#333333",
-  up: "#4caf50",
-  down: "#ef5350",
-  volUp: "rgba(76, 175, 80, 0.35)",
-  volDown: "rgba(239, 83, 80, 0.35)",
+  background: "#1e293b", // Matches professional slate/dark background
+  text: "#f8fafc",
+  grid: "#334155",
+  border: "#334155",
+  up: "#10b981",
+  down: "#dc2626",
+  volUp: "rgba(16, 185, 129, 0.35)",
+  volDown: "rgba(220, 38, 38, 0.35)",
 };
 
 export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: CandlestickChartProps) {

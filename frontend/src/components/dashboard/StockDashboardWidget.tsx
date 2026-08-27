@@ -1,9 +1,11 @@
-"use client";
-
 import { useEffect, useState } from 'react';
 import { exportData } from '@/lib/export';
 import { Asset, fetchSymbols, fetchLatestPrices, LatestPrice } from '@/lib/api/stocks';
-import { ArrowUpIcon, ArrowDownIcon } from '@/components/icons/Icons';
+import { TarotCard } from '@/components/ui/TarotCard';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ChangeBadge } from './StatCard';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { cn } from '@/lib/cn';
 
 type PriceMap = Record<string, LatestPrice>;
 
@@ -18,7 +20,7 @@ export function StockDashboardWidget() {
       setLoading(true);
       setError(null);
       try {
-        const symbolsData = await fetchSymbols({ limit: 20 });
+        const symbolsData = await fetchSymbols({ limit: 10 });
         setSymbols(symbolsData);
 
         if (symbolsData.length > 0) {
@@ -26,41 +28,21 @@ export function StockDashboardWidget() {
           setPrices(priceData || {});
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+        setError(err instanceof Error ? err.message : 'خطا در بارگذاری داده‌ها');
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-
     const interval = window.setInterval(loadData, 30000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
+    return () => window.clearInterval(interval);
   }, []);
-
-  const getMarketLabel = (symbol: string): string => {
-    const price = prices[symbol];
-    return price ? price.symbol : 'TSE';
-  };
-
-  const getChangeColor = (changePercent: number): string => {
-    return changePercent >= 0 ? 'text-green-600' : 'text-red-600';
-  };
-
-  const ChangeIcon = ({ value }: { value: number }) => {
-    return value >= 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />;
-  };
 
   const handleExport = (format: 'csv' | 'xlsx' | 'json') => {
     try {
-      const timestamp = new Date().toLocaleString('fa-IR', {
-        timeZone: 'Asia/Tehran',
-      });
-      
-      const filename = `stock-data-${timestamp.replace(/:/g, '-')}.${format}`;
+      const timestamp = new Date().toISOString();
+      const filename = `stock-data-${timestamp}.${format}`;
       
       const dataToExport = symbols.map((symbol) => {
         const price = prices[symbol.symbol];
@@ -74,90 +56,100 @@ export function StockDashboardWidget() {
         };
       });
       
-      exportData(dataToExport, {
-        filename,
-        format,
-        includeHeaders: true,
-      });
+      exportData(dataToExport, { filename, format, includeHeaders: true });
     } catch (err) {
-      // Handle error silently
+      // Handle error
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Market Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <div className={`h-2 w-2 rounded-full ${loading ? 'bg-blue-500' : 'bg-green-500'}`} />
-          <span className="text-sm text-gray-600">
-            {loading ? 'Loading market data' : 'Market Live'}
+    <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-foreground">داشبورد بازار</h2>
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "h-2 w-2 rounded-full",
+            loading ? "bg-primary animate-pulse" : "bg-success"
+          )} />
+          <span className="text-sm text-muted-foreground">
+            {loading && symbols.length === 0 ? 'در حال دریافت داده‌ها...' : loading ? 'در حال به‌روزرسانی...' : 'بازار زنده'}
           </span>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 mb-3 text-red-600 bg-red-50 border border-red-200 rounded">
-          Error: {error}
+        <div className="p-4 mb-4 text-error bg-error/10 border border-error/20 rounded-xl text-sm animate-in fade-in slide-in-from-top-2">
+          خطا: {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {symbols.map((symbol) => {
-          const price = prices[symbol.symbol];
-          const displayPrice = price ? price.price.toFixed(2) : '--';
-          const changePct = price ? price.change_pct : 0;
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {loading && symbols.length === 0
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border p-4 space-y-4">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-8 w-3/4" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-1/4 rounded-full" />
+                  <Skeleton className="h-4 w-1/4" />
+                </div>
+              </div>
+            ))
+          : symbols.map((symbol) => {
+              const price = prices[symbol.symbol];
+              const displayPrice = price ? price.price.toLocaleString("fa-IR") : '--';
+              const changePct = price ? price.change_pct : 0;
 
-          return (
-            <div key={symbol.symbol} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start">
-                <h3 className="font-semibold text-gray-900">{symbol.symbol}</h3>
-                <span className={`inline-flex items-center gap-1 text-sm ${getChangeColor(changePct)}`}>
-                  <ChangeIcon value={changePct} /> {changePct.toFixed(2)}%
-                </span>
-              </div>
-              <div className="mt-2">
-                <p className="text-2xl font-bold text-gray-900">${displayPrice}</p>
-                <p className={`text-sm ${getChangeColor(changePct)}`}>
-                  {price ? price.change.toFixed(2) : '--'}% {getMarketLabel(symbol.symbol)}
-                </p>
-              </div>
-              <div className="mt-3 text-xs text-gray-500">
-                <p>Volume: {price ? price.volume.toLocaleString() : 'N/A'}</p>
-                <p>Symbol: {symbol.symbol}</p>
-              </div>
-            </div>
-          );
-        })}
+              return (
+                <TarotCard key={symbol.symbol} title={symbol.symbol} className="hover:border-primary/20 transition-all duration-300">
+                  <div className="mt-2">
+                    <p className="text-2xl font-bold text-foreground">{displayPrice}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                       <ChangeBadge value={changePct} />
+                       <span className="text-xs text-muted-foreground">{symbol.market}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-border/60 text-[10px] text-muted-foreground space-y-1">
+                    <p>حجم: {price ? price.volume.toLocaleString("fa-IR") : 'نامشخص'}</p>
+                    <p>نام: {symbol.name}</p>
+                  </div>
+                </TarotCard>
+              );
+            })}
       </div>
 
-      <div className="mt-6 flex justify-between items-center">
-        <div className="text-sm text-gray-600">
-          Last Update: {loading ? 'Real-time' : new Date().toLocaleTimeString('fa-IR', {
-            timeZone: 'Asia/Tehran',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+      <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-border pt-6">
+        <div className="text-xs text-muted-foreground">
+          آخرین به‌روزرسانی: {new Date().toLocaleTimeString('fa-IR')}
         </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handleExport('csv')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex-1"
+        <div className="flex gap-2 w-full sm:w-auto">
+          <PrimaryButton 
+            onClick={() => handleExport('csv')} 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            disabled={symbols.length === 0}
           >
-            Export CSV
-          </button>
-          <button
-            onClick={() => handleExport('xlsx')}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex-1"
+            خروجی CSV
+          </PrimaryButton>
+          <PrimaryButton 
+            onClick={() => handleExport('xlsx')} 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            disabled={symbols.length === 0}
           >
-            Export Excel
-          </button>
-          <button
-            onClick={() => handleExport('json')}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex-1"
+            خروجی Excel
+          </PrimaryButton>
+          <PrimaryButton 
+            onClick={() => handleExport('json')} 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            disabled={symbols.length === 0}
           >
-            Export JSON
-          </button>
+            خروجی JSON
+          </PrimaryButton>
         </div>
       </div>
     </div>

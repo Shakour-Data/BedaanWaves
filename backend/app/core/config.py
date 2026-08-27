@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # ============================================================
     DATABASE_URL: str = "postgresql://localhost:5432/bedaanwaves_db"
     DB_DRIVER: str = "postgresql"
-    DB_HOST: str = "localhost"
+    DB_HOST: str = "85.198.10.73"
     DB_PORT: int = 5432
     DB_NAME: str = "bedaanwaves_db"
     DB_USER: Optional[str] = None

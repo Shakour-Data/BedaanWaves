@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -27,7 +27,6 @@ interface NavItem {
 }
 
 const AUTH_ITEM: NavItem = { href: "/login", label: "ورود", Icon: LoginIcon, ready: true };
-const SECONDARY_COLOR = "#64748B";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -52,22 +51,11 @@ export function Sidebar() {
         AUTH_ITEM,
       ];
 
-  const getNavItemStyle = (active: boolean): Record<string, string> => {
-    if (active) {
-      return {
-        backgroundColor: `${SECONDARY_COLOR}1A`,
-        color: SECONDARY_COLOR,
-        fontWeight: "600",
-      };
-    }
-    return {};
-  };
-
   return (
     <aside
       className={cn(
-        "h-full w-64 shrink-0 border-l border-[var(--color-border)]",
-        "flex flex-col gap-2 p-3 bg-[var(--color-background)]",
+        "h-full w-64 shrink-0 border-l border-border",
+        "flex flex-col gap-2 p-3 bg-background",
       )}
     >
       <div className="mb-3 flex items-center gap-2 px-1">
@@ -83,12 +71,11 @@ export function Sidebar() {
           const inner = (
             <span
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-150",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition duration-fast ease-flow",
                 active
-                  ? "font-semibold"
-                  : "text-muted-foreground hover:bg-black/5 hover:text-foreground",
+                  ? "bg-primary/10 text-primary font-bold shadow-sm"
+                  : "text-muted-foreground hover:bg-neutral hover:text-foreground",
               )}
-              style={getNavItemStyle(active)}
             >
               <item.Icon className="h-5 w-5" />
               <span className="flex-1">{item.label}</span>
@@ -117,7 +104,7 @@ export function Sidebar() {
 
       <div className="mt-auto flex flex-col gap-2">
         {isAuthenticated && user ? (
-          <div className="rounded-xl bg-[var(--color-neutral)]/60 p-3 text-xs text-muted-foreground">
+          <div className="rounded-xl bg-neutral/60 p-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <UserIcon className="h-4 w-4" />
               <span className="flex-1 truncate">{user.name}</span>
@@ -125,13 +112,13 @@ export function Sidebar() {
             <button
               type="button"
               onClick={logout}
-              className="mt-2 w-full rounded-lg border border-[var(--color-border)] px-2 py-1 text-xs transition-colors duration-150 hover:bg-black/5"
+              className="mt-2 w-full rounded-lg border border-border px-2 py-1 text-xs transition duration-fast ease-flow hover:bg-black/5"
             >
               خروج
             </button>
           </div>
         ) : null}
-        <div className="rounded-xl bg-[var(--color-neutral)]/60 p-3 text-xs text-muted-foreground">
+        <div className="rounded-xl bg-neutral/60 p-3 text-xs text-muted-foreground">
           معماری ارتعاشی بازار سرمایه
         </div>
       </div>

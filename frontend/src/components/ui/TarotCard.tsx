@@ -15,8 +15,8 @@ export function TarotCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm",
-        "transition-shadow duration-150 hover:shadow-md",
+        "rounded-xl border border-border bg-surface p-4 shadow-sm",
+        "transition duration-fast ease-flow hover:shadow-md",
         className
       )}
     >
@@ -24,7 +24,7 @@ export function TarotCard({
         <div className="mb-3 flex items-center gap-2">
           {icon ? <span className="text-base">{icon}</span> : null}
           {title ? (
-            <span className="text-sm font-semibold text-[#1E293B]">{title}</span>
+            <span className="text-sm font-semibold text-foreground">{title}</span>
           ) : null}
         </div>
       )}
