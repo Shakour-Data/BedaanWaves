@@ -13,7 +13,12 @@ import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
-import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import dynamic from "next/dynamic";
+
+const CandlestickChart = dynamic(
+  () => import("@/components/charts/CandlestickChart").then((mod) => mod.CandlestickChart),
+  { ssr: false, loading: () => <div className="h-[400px] w-full animate-pulse bg-[var(--color-surface)] rounded-md"></div> }
+);
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -22,37 +27,47 @@ import {
   type Asset,
   type Candle,
   type LatestPrice,
-  type Market,
-} from "@/lib/api/stocks";
+  type Market } from "@/lib/api/stocks";
 
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
+import { DashboardShell } from "@/components/layout/DashboardShell";
+
+// Simple StatBox component
+function StatBox({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-3">
+      <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
+      <p className="text-lg font-semibold text-[var(--color-text-primary)]">{value}</p>
+      {hint && <p className="text-xs text-[var(--color-text-secondary)]">{hint}</p>}
+    </div>
+  );
+}
 
 export default function StockDetailPage() {
-  const { currentLang } = useAuthStore();
+  
   const params = useParams<{ symbol: string }>();
   const symbol = decodeURIComponent(
     Array.isArray(params.symbol) ? params.symbol[0] : params.symbol ?? "",
   );
 
   const MARKET_LABEL: Record<Market, string> = {
-    TSE: t("app.stocks.markets.tse", currentLang),
-    OTC: t("app.stocks.markets.otc", currentLang),
-    BINANCE: t("app.stocks.markets.binance", currentLang),
-    KRAKEN: t("app.stocks.markets.kraken", currentLang),
-    COINBASE: t("app.stocks.markets.coinbase", currentLang),
-    NYSE: t("app.stocks.markets.nyse", currentLang),
-    NASDAQ: t("app.stocks.markets.nasdaq", currentLang),
-  };
+    TSE: t("app.stocks.markets.tse", "en"),
+    OTC: t("app.stocks.markets.otc", "en"),
+    BINANCE: t("app.stocks.markets.binance", "en"),
+    KRAKEN: t("app.stocks.markets.kraken", "en"),
+    COINBASE: t("app.stocks.markets.coinbase", "en"),
+    NYSE: t("app.stocks.markets.nyse", "en"),
+    NASDAQ: t("app.stocks.markets.nasdaq", "en") };
 
-  const RANGES: { key: string; label: string; days: number | null }[] = [
-    { key: "30", label: t("app.stocks.detail.ranges.1m", currentLang), days: 30 },
-    { key: "90", label: t("app.stocks.detail.ranges.3m", currentLang), days: 90 },
-    { key: "all", label: t("app.stocks.detail.ranges.all", currentLang), days: null },
-  ];
+  const RANGES = useMemo(() => [
+    { key: "30", label: t("app.stocks.detail.ranges.1m", "en"), days: 30 },
+    { key: "90", label: t("app.stocks.detail.ranges.3m", "en"), days: 90 },
+    { key: "all", label: t("app.stocks.detail.ranges.all", "en"), days: null },
+  ], []);
 
   function fmt(n: number, digits = 0): string {
-    return currentLang === "fa" 
+    return false 
       ? n.toLocaleString("fa-IR", { maximumFractionDigits: digits })
       : n.toLocaleString("en-US", { maximumFractionDigits: digits });
   }
@@ -85,7 +100,7 @@ export default function StockDetailPage() {
         setLatest(l);
         setScoring(s);
       } catch (e: unknown) {
-        if (active) setError(e instanceof Error ? e.message : t("app.stocks.detail.error_title", currentLang));
+        if (active) setError(e instanceof Error ? e.message : t("app.stocks.detail.error_title", "en"));
       } finally {
         if (active) setLoading(false);
       }
@@ -103,7 +118,7 @@ export default function StockDetailPage() {
     const cfg = RANGES.find((r) => r.key === range);
     if (!cfg || cfg.days === null) return candles;
     return candles.slice(-cfg.days);
-  }, [candles, range]);
+  }, [candles, range, RANGES]);
 
   // آمارِ مشتق‌شده از کندل‌ها (پشتیبانِ latest-prices).
   const derived = useMemo(() => {
@@ -124,21 +139,20 @@ export default function StockDetailPage() {
       rangeHigh: highs.length ? Math.max(...highs) : last.high,
       rangeLow: lows.length ? Math.min(...lows) : last.low,
       lastVolume: last.volume,
-      avgVol,
-    };
+      avgVol };
   }, [candles, visibleCandles]);
 
   const price = latest?.price ?? derived?.price ?? 0;
   const changePct = latest?.change_pct ?? derived?.changePct ?? 0;
   const currency = asset?.currency === "USD" 
-    ? t("app.stocks.detail.currency_usd", currentLang) 
-    : t("app.stocks.detail.currency_irr", currentLang);
+    ? t("app.stocks.detail.currency_usd", "en") 
+    : t("app.stocks.detail.currency_irr", "en");
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.stocks.title", currentLang)}>
+      <DashboardShell title={t("app.stocks.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.stocks.detail.loading", currentLang).replace("{symbol}", symbol)}
+          {t("app.stocks.detail.loading", "en").replace("{symbol}", symbol)}
         </div>
       </DashboardShell>
     );
@@ -146,14 +160,14 @@ export default function StockDetailPage() {
 
   if (error) {
     return (
-      <DashboardShell title={t("app.stocks.title", currentLang)}>
-        <TarotCard icon="⚠️" title={t("app.stocks.detail.error_title", currentLang)}>
+      <DashboardShell title={t("app.stocks.title", "en")}>
+        <TarotCard icon="⚠️" title={t("app.stocks.detail.error_title", "en")}>
           <p className="text-sm text-muted-foreground">
-            {t("app.stocks.detail.error_desc", currentLang).replace("{symbol}", symbol)}
+            {t("app.stocks.detail.error_desc", "en").replace("{symbol}", symbol)}
           </p>
           <p className="mt-2 text-xs text-red-600">{error}</p>
           <Link href="/stocks" className="mt-3 inline-block text-sm text-secondary hover:underline">
-            ← {t("app.stocks.detail.back_to_list", currentLang)}
+            ← {t("app.stocks.detail.back_to_list", "en")}
           </Link>
         </TarotCard>
       </DashboardShell>
@@ -163,12 +177,12 @@ export default function StockDetailPage() {
   const noData = !candles || candles.length === 0;
 
   return (
-    <DashboardShell title={t("app.stocks.title", currentLang)}>
+    <DashboardShell title={t("app.stocks.title", "en")}>
       <div className="flex flex-col gap-3">
         {/* سرتیتر نماد */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/stocks" className="hover:text-foreground">
-            {t("app.nav.stocks", currentLang)}
+            {t("app.nav.stocks", "en")}
           </Link>
           <span>/</span>
           <span className="text-foreground">{symbol}</span>
@@ -188,7 +202,7 @@ export default function StockDetailPage() {
               {asset ? <span className="text-muted-foreground">{asset.name}</span> : null}
               {asset?.sector ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("app.stocks.sector", currentLang)}: {asset.sector}
+                  {t("app.stocks.sector", "en")}: {asset.sector}
                 </span>
               ) : null}
             </div>
@@ -206,26 +220,26 @@ export default function StockDetailPage() {
         {/* آمار لحظه‌ای */}
         {derived ? (
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatBox label={t("app.stocks.detail.last_price", currentLang)} value={fmt(price, 2)} hint={currency} />
+            <StatBox label={t("app.stocks.detail.last_price", "en")} value={fmt(price, 2)} hint={currency} />
             <StatBox
-              label={`${t("app.stocks.detail.high", currentLang)} (${RANGES.find((r) => r.key === range)?.label})`}
+              label={`${t("app.stocks.detail.high", "en")} (${RANGES.find((r) => r.key === range)?.label})`}
               value={fmt(derived.rangeHigh, 2)}
             />
             <StatBox
-              label={`${t("app.stocks.detail.low", currentLang)} (${RANGES.find((r) => r.key === range)?.label})`}
+              label={`${t("app.stocks.detail.low", "en")} (${RANGES.find((r) => r.key === range)?.label})`}
               value={fmt(derived.rangeLow, 2)}
             />
             <StatBox
-              label={t("app.stocks.detail.volume", currentLang)}
+              label={t("app.stocks.detail.volume", "en")}
               value={fmt(derived.lastVolume)}
-              hint={`${t("app.stocks.detail.avg_volume", currentLang)}: ${fmt(derived.avgVol)}`}
+              hint={`${t("app.stocks.detail.avg_volume", "en")}: ${fmt(derived.avgVol)}`}
             />
           </section>
         ) : null}
 
         {/* تحلیل ۶ بعدی */}
         {scoring ? (
-          <TarotCard icon="💎" title={t("app.stocks.detail.analysis_6d", currentLang)}>
+          <TarotCard icon="💎" title={t("app.stocks.detail.analysis_6d", "en")}>
             <div className="flex flex-col md:flex-row items-center gap-8 py-4">
               <div className="flex flex-col items-center justify-center">
                 <div className={cn(
@@ -236,7 +250,7 @@ export default function StockDetailPage() {
                   {scoring.overall_score}
                 </div>
                 <div className="mt-4 text-lg font-bold">
-                  {t("app.stocks.detail.overall_score", currentLang)} {scoring.grade?.replace("_", " ")}
+                  {t("app.stocks.detail.overall_score", "en")} {scoring.grade?.replace("_", " ")}
                 </div>
               </div>
               
@@ -244,7 +258,7 @@ export default function StockDetailPage() {
                 {Object.entries(scoring.dimension_scores || {}).map(([dim, score]: [string, any]) => (
                   <div key={dim} className="p-3 rounded-xl bg-neutral/40 border border-border/40">
                     <div className="text-xs text-muted-foreground uppercase">
-                      {t(`app.scoring.dimensions.${dim.toLowerCase()}`, currentLang)}
+                      {t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="font-bold text-lg">{score}</span>
@@ -276,9 +290,9 @@ export default function StockDetailPage() {
         ) : null}
 
         {/* نمودار */}
-        <TarotCard icon="📊">
+        <TarotCard icon="[Chart]">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">{t("app.stocks.detail.chart_title", currentLang)}</h3>
+            <h3 className="text-lg font-semibold">{t("app.stocks.detail.chart_title", "en")}</h3>
             <div className="flex gap-1">
               {RANGES.map((r) => (
                 <button
@@ -300,7 +314,7 @@ export default function StockDetailPage() {
 
           {noData ? (
             <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-              {t("app.stocks.detail.no_history", currentLang)}
+              {t("app.stocks.detail.no_history", "en")}
             </div>
           ) : (
             <CandlestickChart candles={visibleCandles} timeframe="1d" height={420} />
