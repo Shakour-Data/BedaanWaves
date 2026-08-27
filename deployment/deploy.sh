@@ -108,7 +108,7 @@ deploy() {
     log_info "========================================"
     
     # Create required directories
-    mkdir -p data/archive logs models temp/uploads backend/test_protegration_phase2.py
+    mkdir -p data/archive logs models temp/uploads
     
     # Setup based on OS
     case "$os" in

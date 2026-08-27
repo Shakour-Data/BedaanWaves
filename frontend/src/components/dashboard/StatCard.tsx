@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import type { MarketStat } from "@/lib/dashboard-data";
+import { ArrowUpIcon, ArrowDownIcon } from "@/components/icons/Icons";
 
 export function ChangeBadge({ value }: { value: number }) {
   const up = value >= 0;
@@ -10,7 +11,8 @@ export function ChangeBadge({ value }: { value: number }) {
         up ? "bg-success/15 text-success" : "bg-error/15 text-error"
       )}
     >
-      {up ? "▲" : "▼"} {Math.abs(value).toFixed(2)}٪
+      {up ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
+      {Math.abs(value).toFixed(2)}٪
     </span>
   );
 }

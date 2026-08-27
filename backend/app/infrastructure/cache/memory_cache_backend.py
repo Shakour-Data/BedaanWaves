@@ -1,11 +1,5 @@
 from typing import Any, Dict, Optional
 from datetime import datetime, timedelta, timezone
-from ..cache.i_cache_backend import ICacheBackend # Wait, path is wrong.
-
-# Correcting path based on new structure:
-# backend/app/infrastructure/cache/memory_cache_backend.py
-# backend/app/application/interfaces/i_cache_backend.py
-
 from ...application.interfaces.i_cache_backend import ICacheBackend
 
 class MemoryCacheBackend(ICacheBackend):

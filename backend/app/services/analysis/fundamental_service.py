@@ -67,90 +67,61 @@ class FundamentalAnalysisService(AnalysisService):
         self.logger.info("FundamentalAnalysisService shutdown")
 
     async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Perform fundamental analysis for a symbol.
-        
-        Args:
-            data: Analysis input containing:
-                - ticker: Stock symbol (e.g., 'AAPL', 'MSFT', 'فملی')
-                - financials: Pre-loaded financial data (optional)
-                - market: Market type override (optional)
-                - asset_class: Asset class (optional, auto-detected)
-                - use_ingestion: Auto-fetch data via ingestion service (default: True)
-        
-        Returns:
-            Comprehensive fundamental analysis with ratios, assessment, and health score.
-        """
+        """Perform fundamental analysis for a symbol."""
         ticker = data.get("ticker", "UNKNOWN")
         market_override = data.get("market")
         use_ingestion = data.get("use_ingestion", True)
         
-        # Detect or use specified market
-        if market_override:
-            if isinstance(market_override, str):
-                self.market_type = MarketType(market_override)
-            else:
-                self.market_type = market_override
-        else:
-            self.market_type = self._detect_market(ticker)
-        
-        # Get financial data
+        self.market_type = self._resolve_market_type(ticker, market_override)
         financials = data.get("financials", {})
-        
         if use_ingestion and not financials:
             financials = await self._fetch_financials(ticker)
         
-        analysis = {
+        ratios = await self._compute_all_ratios(financials)
+        assessment = self._determine_assessment(ratios)
+        
+        return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": ticker,
             "market": self.market_type.value if self.market_type else "UNKNOWN",
-            "ratios": {},
-            "assessment": "",
-            "health_score": 0.0,
+            "ratios": ratios,
+            "assessment": assessment,
+            "health_score": self._calculate_health_score(ratios),
         }
-
-        analysis["ratios"].update(
-            await self._calculate_valuation_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_profitability_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_liquidity_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_efficiency_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_solvency_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_dividend_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_growth_ratios(financials)
-        )
-        analysis["ratios"].update(
-            await self._calculate_cash_flow_ratios(financials)
-        )
-
-        analysis["health_score"] = self._calculate_health_score(analysis["ratios"])
-
-        profitability = analysis["ratios"].get("net_margin", 0.0)
-        liquidity = analysis["ratios"].get("current_ratio", 0.0)
-        leverage = analysis["ratios"].get("debt_to_equity", 999.0)
-        solvency = analysis["ratios"].get("interest_coverage", 0.0)
-
-        if profitability > 15 and liquidity > 1.5 and leverage < 1.0 and solvency > 3.0:
-            analysis["assessment"] = "Strong"
-        elif profitability > 8 and liquidity > 1.0 and leverage < 2.0 and solvency > 1.5:
-            analysis["assessment"] = "Moderate"
-        elif profitability > 0 and liquidity > 0.5 and leverage < 4.0 and solvency > 0.5:
-            analysis["assessment"] = "Weak"
-        else:
-            analysis["assessment"] = "Distressed"
+    
+    def _resolve_market_type(self, ticker: str, market_override: Any) -> Optional[MarketType]:
+        """Resolve market type from override or auto-detection."""
+        if market_override:
+            return MarketType(market_override) if isinstance(market_override, str) else market_override
+        return self._detect_market(ticker)
+    
+    async def _compute_all_ratios(self, financials: Dict[str, Any]) -> Dict[str, Any]:
+        """Compute all fundamental analysis ratios."""
+        ratios: Dict[str, Any] = {}
+        ratios.update(await self._calculate_valuation_ratios(financials))
+        ratios.update(await self._calculate_profitability_ratios(financials))
+        ratios.update(await self._calculate_liquidity_ratios(financials))
+        ratios.update(await self._calculate_efficiency_ratios(financials))
+        ratios.update(await self._calculate_solvency_ratios(financials))
+        ratios.update(await self._calculate_dividend_ratios(financials))
+        ratios.update(await self._calculate_growth_ratios(financials))
+        ratios.update(await self._calculate_cash_flow_ratios(financials))
+        return ratios
+    
+    def _determine_assessment(self, ratios: Dict[str, Any]) -> str:
+        """Determine overall assessment based on key ratios."""
+        profitability = ratios.get("net_margin", 0.0)
+        liquidity = ratios.get("current_ratio", 0.0)
+        leverage = ratios.get("debt_to_equity", 999.0)
+        solvency = ratios.get("interest_coverage", 0.0)
         
-        return analysis
+        if profitability > 15 and liquidity > 1.5 and leverage < 1.0 and solvency > 3.0:
+            return "Strong"
+        if profitability > 8 and liquidity > 1.0 and leverage < 2.0 and solvency > 1.5:
+            return "Moderate"
+        if profitability > 0 and liquidity > 0.5 and leverage < 4.0 and solvency > 0.5:
+            return "Weak"
+        return "Distressed"
 
     # ── Macro Economic Analysis Methods (TODO-Z1 to TODO-Z4) ──
     

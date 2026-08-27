@@ -3,7 +3,6 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-import yfinance as yf
 from fastapi import APIRouter, Depends, Query, HTTPException
 
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
@@ -16,6 +15,7 @@ router = APIRouter(tags=["intl"])
 @router.get("/quote/{symbol}", response_model=dict)
 async def get_intl_quote(symbol: str):
     """Get real-time quote for an international stock."""
+    import yfinance as yf
     nasdaq_service = NasdaqIngestionService()
     await nasdaq_service.initialize()
     try:

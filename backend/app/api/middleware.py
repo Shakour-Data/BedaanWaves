@@ -7,8 +7,9 @@ Provides four FastAPI/Starlette middlewares:
 * ``AuthGuardMiddleware``      - the global authentication guard. When
   ``REQUIRE_AUTH`` is enabled it rejects unauthenticated requests to every
   protected API path (with a configurable public allow-list).
-* ``RateLimitMiddleware``     - in-memory sliding-window rate limiting keyed by
-  client IP, honoring the ``RATE_LIMIT_*`` configuration.
+* ``RateLimitMiddleware``     - Redis-backed distributed sliding-window rate
+  limiting keyed by client IP, honoring the ``RATE_LIMIT_*`` configuration.
+  Falls back to in-memory limiting when Redis is unavailable.
 * ``RequestLoggingMiddleware`` - logs incoming requests and responses with timing.
 """
 
@@ -16,7 +17,7 @@ import logging
 import time
 import uuid
 from collections import deque
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -24,6 +25,7 @@ from starlette.responses import JSONResponse, Response
 
 from app.core.config import get_settings
 from app.services.user.auth_service import decode_token
+from app.infrastructure.utils.redis_rate_limiter import RedisRateLimiter
 
 settings = get_settings()
 
@@ -109,16 +111,20 @@ class AuthGuardMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """In-memory sliding-window rate limiter keyed by client IP with automatic eviction."""
+    """Redis-backed distributed sliding-window rate limiter keyed by client IP.
+
+    Falls back to in-memory limiting when Redis is unavailable.
+    """
 
     def __init__(self, app, *, enabled: bool = True):
         super().__init__(app)
         self.enabled = enabled
         self.per_minute = settings.RATE_LIMIT_REQUESTS_PER_MINUTE
         self.per_hour = settings.RATE_LIMIT_REQUESTS_PER_HOUR
+        self._redis_limiter = RedisRateLimiter(redis_url=settings.REDIS_URL)
         self._windows: Dict[str, deque] = {}
-        self._last_activity: Dict[str, float] = {}  # Track last request time per IP
-        self._eviction_interval = 3600  # Evict keys with no activity for 1 hour
+        self._last_activity: Dict[str, float] = {}
+        self._eviction_interval = 3600
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not self.enabled:
@@ -129,10 +135,33 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         key = _client_ip(request)
         now = time.monotonic()
-        self._last_activity[key] = now  # Update last activity time
 
-        # Periodic eviction of inactive keys (simple approach)
-        if len(self._windows) > 1000:  # Only run eviction when we have many keys
+        allowed, info = await self._redis_limiter.is_allowed(
+            key, self.per_minute, self.per_hour
+        )
+
+        if not info.get("redis_available", False):
+            fallback_blocked = self._fallback_rate_limit(key, now)
+            if fallback_blocked:
+                return self._too_many_requests("Rate limit exceeded (fallback)")
+
+        if not allowed:
+            return self._too_many_requests(
+                "Hourly rate limit exceeded"
+                if info.get("hour_count", 0) >= self.per_hour
+                else "Rate limit exceeded"
+            )
+
+        response = await call_next(request)
+        response.headers["X-RateLimit-Limit-Minute"] = str(self.per_minute)
+        remaining = max(0, self.per_minute - info.get("minute_count", 0))
+        response.headers["X-RateLimit-Remaining-Minute"] = str(remaining)
+        return response
+
+    def _fallback_rate_limit(self, key: str, now: float) -> bool:
+        """In-memory fallback when Redis is unavailable. Returns True if blocked."""
+        self._last_activity[key] = now
+        if len(self._windows) > 1000:
             cutoff = now - self._eviction_interval
             inactive_keys = [k for k, t in self._last_activity.items() if t < cutoff]
             for k in inactive_keys:
@@ -140,26 +169,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 self._last_activity.pop(k, None)
 
         window = self._windows.setdefault(key, deque())
-
-        # Drop entries older than one hour.
         cutoff = now - 3600
         while window and window[0] < cutoff:
             window.popleft()
 
         if len(window) >= self.per_hour:
-            return self._too_many_requests("Hourly rate limit exceeded")
-        # Drop entries older than one minute for the per-minute check.
+            return True
+
         minute_cutoff = now - 60
         while window and window[0] < minute_cutoff:
             window.popleft()
         if len(window) >= self.per_minute:
-            return self._too_many_requests("Rate limit exceeded")
+            return True
 
         window.append(now)
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit-Minute"] = str(self.per_minute)
-        response.headers["X-RateLimit-Remaining-Minute"] = str(max(0, self.per_minute - len(window)))
-        return response
+        return False
 
     @staticmethod
     def _too_many_requests(detail: str) -> JSONResponse:

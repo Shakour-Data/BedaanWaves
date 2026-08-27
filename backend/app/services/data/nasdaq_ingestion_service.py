@@ -3,7 +3,7 @@ Nasdaq Ingestion Service - Fetches Nasdaq Composite index and ALL constituent da
 
 Data sources:
 - Price history: yfinance (Yahoo Finance)
-- Fundamentals: yfinance
+- Fundamentals: yfinance + SEC EDGAR (10-Q/10-K)
 - Board/Officers: yfinance companyOfficers + SEC EDGAR
 - News: yfinance ticker.news
 - Macro: yfinance macro tickers (^GSPC, ^VIX, ^TNX, DX-Y.NYB, GC=F, CL=F)
@@ -40,6 +40,8 @@ from app.models.models import (
     News,
     MacroIndicator,
 )
+from app.services.data.multi_source_news_fetcher import MultiSourceNewsFetcher
+from app.services.data.sec_edgar_client import SEDGARFinancialService
 from app.db.base import async_session_maker
 
 logger = logging.getLogger(__name__)
@@ -74,6 +76,7 @@ class NasdaqIngestionService(DataService):
         self.settings = get_settings()
         self._symbols: List[str] = []
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT)
+        self._sec_service = SEDGARFinancialService()
 
     @staticmethod
     def _clean_nan(obj):
@@ -123,11 +126,13 @@ class NasdaqIngestionService(DataService):
 
     async def initialize(self) -> None:
         self.logger.info("NasdaqIngestionService initialized")
+        await self._sec_service.initialize()
         # Pre-load symbols
         _ = self.DEFAULT_CONSTITUENTS
 
     async def shutdown(self) -> None:
         self.logger.info("NasdaqIngestionService shutdown")
+        await self._sec_service.shutdown()
 
     async def _ensure_asset(self, symbol: str, name: str, asset_class: str = "EQUITY",
                             market: str = "NASDAQ", sector: str = "", industry: str = "") -> Asset:
@@ -201,13 +206,18 @@ class NasdaqIngestionService(DataService):
                 await session.execute(stmt)
                 await session.commit()
                 inserted = len(rows)
-            except Exception as e:
+            except IntegrityError:
                 await session.rollback()
-                self.logger.error(f"Bulk candle upsert failed: {e}")
+                raise
+            except Exception as exc:
+                await session.rollback()
+                self.logger.error(f"Bulk candle upsert failed: {exc}")
+                raise IngestionException(f"Nasdaq candle upsert failed: {exc}") from exc
         return inserted
 
     async def ingest_price_history(self, symbol: str, period: str = "5y") -> int:
         """Fetch and store price history for a symbol."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -241,15 +251,24 @@ class NasdaqIngestionService(DataService):
                 )
                 candles.append(candle)
 
-                # Batch insert
+                # Batch insert every CANDLE_BATCH_SIZE candles
+                if len(candles) >= CANDLE_BATCH_SIZE:
+                    count = await self._bulk_upsert_candles(candles)
+                    candles = []
+
+            # Insert remaining candles
+            if candles:
                 count = await self._bulk_upsert_candles(candles)
-                return count
-        except Exception as e:
-            self.logger.error(f"Failed to ingest prices for {symbol}: {e}")
-            return 0
+            return count
+        except IngestionException:
+            raise
+        except Exception as exc:
+            self.logger.error(f"Failed to ingest prices for {symbol}: {exc}")
+            raise IngestionException(f"Nasdaq price ingestion failed for {symbol}: {exc}") from exc
 
     async def ingest_fundamentals(self, symbol: str) -> bool:
         """Fetch and store fundamental data for a symbol."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -262,6 +281,7 @@ class NasdaqIngestionService(DataService):
 
                 statements = []
                 ratios = []
+                seen_periods = set()
 
                 if not income_stmt.empty:
                     for period_end in income_stmt.columns:
@@ -269,8 +289,8 @@ class NasdaqIngestionService(DataService):
                         period_str = f"{period_end.year}Q{quarter}"
                         fiscal_year = period_end.year
                         as_of = period_end.date() if hasattr(period_end, "date") else None
+                        seen_periods.add(period_str)
 
-                        # Income statement
                         stmt = IRFinancialStatement(
                             asset_id=asset.id,
                             market="NASDAQ",
@@ -282,51 +302,50 @@ class NasdaqIngestionService(DataService):
                         )
                         statements.append(stmt)
 
-                        # Balance sheet
                         if not balance_sheet.empty and period_end in balance_sheet.columns:
-                            bs_stmt = IRFinancialStatement(
-                                asset_id=asset.id,
-                                market="NASDAQ",
-                                period=period_str,
-                                statement_type="BALANCE_SHEET",
-                                fiscal_year=fiscal_year,
-                                data=self._clean_nan(balance_sheet[period_end].to_dict()),
-                                as_of=as_of,
+                            statements.append(
+                                IRFinancialStatement(
+                                    asset_id=asset.id,
+                                    market="NASDAQ",
+                                    period=period_str,
+                                    statement_type="BALANCE_SHEET",
+                                    fiscal_year=fiscal_year,
+                                    data=self._clean_nan(balance_sheet[period_end].to_dict()),
+                                    as_of=as_of,
+                                )
                             )
-                            statements.append(bs_stmt)
 
-                        # Cash flow
                         if not cashflow.empty and period_end in cashflow.columns:
-                            cf_stmt = IRFinancialStatement(
+                            statements.append(
+                                IRFinancialStatement(
+                                    asset_id=asset.id,
+                                    market="NASDAQ",
+                                    period=period_str,
+                                    statement_type="CASH_FLOW",
+                                    fiscal_year=fiscal_year,
+                                    data=self._clean_nan(cashflow[period_end].to_dict()),
+                                    as_of=as_of,
+                                )
+                            )
+
+                        ratios.append(
+                            IRFundamentalRatio(
                                 asset_id=asset.id,
                                 market="NASDAQ",
                                 period=period_str,
-                                statement_type="CASH_FLOW",
-                                fiscal_year=fiscal_year,
-                                data=self._clean_nan(cashflow[period_end].to_dict()),
+                                eps=self._clean_nan(info.get("trailingEps")),
+                                pe=self._clean_nan(info.get("trailingPE")),
+                                pb=self._clean_nan(info.get("priceToBook")),
+                                dps=self._clean_nan(info.get("dividendRate")),
+                                roe=self._clean_nan(info.get("returnOnEquity")),
+                                profit_margin=self._clean_nan(info.get("profitMargins")),
+                                market_cap=self._clean_nan(info.get("marketCap")),
+                                book_value=self._clean_nan(info.get("bookValue")),
                                 as_of=as_of,
                             )
-                            statements.append(cf_stmt)
-
-                        # Ratios
-                        ratio = IRFundamentalRatio(
-                            asset_id=asset.id,
-                            market="NASDAQ",
-                            period=period_str,
-                            eps=self._clean_nan(info.get("trailingEps")),
-                            pe=self._clean_nan(info.get("trailingPE")),
-                            pb=self._clean_nan(info.get("priceToBook")),
-                            dps=self._clean_nan(info.get("dividendRate")),
-                            roe=self._clean_nan(info.get("returnOnEquity")),
-                            profit_margin=self._clean_nan(info.get("profitMargins")),
-                            market_cap=self._clean_nan(info.get("marketCap")),
-                            book_value=self._clean_nan(info.get("bookValue")),
-                            as_of=as_of,
                         )
-                        ratios.append(ratio)
 
                 async with async_session_maker() as session:
-                    # Batch upsert statements
                     for stmt in statements:
                         stmt_data = {
                             "asset_id": str(stmt.asset_id),
@@ -377,6 +396,11 @@ class NasdaqIngestionService(DataService):
                         await session.execute(upsert)
 
                     await session.commit()
+
+                if len(seen_periods) < 20:
+                    sec_results = await self._sec_service.ingest_sec_financials(symbol, str(asset.id))
+                    self.logger.debug(f"SEC EDGAR fallback for {symbol}: {sec_results}")
+
                 return True
         except Exception as e:
             self.logger.error(f"Failed to ingest fundamentals for {symbol}: {e}")
@@ -384,6 +408,7 @@ class NasdaqIngestionService(DataService):
 
     async def ingest_board_members(self, symbol: str) -> int:
         """Fetch board members and officers from yfinance."""
+        import yfinance as yf
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
@@ -425,61 +450,76 @@ class NasdaqIngestionService(DataService):
             return 0
 
     async def ingest_news_for_symbol(self, symbol: str, days: int = 7) -> int:
-        """Fetch recent news for a symbol from yfinance."""
+        """Fetch recent news for a symbol from yfinance with multi-source fallback."""
+        import yfinance as yf
+        news_items = []
+        asset = None
+
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
                 raw_news = ticker.news
-                if not raw_news:
-                    return 0
+                if raw_news:
+                    asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
+                    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
-                asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
-                
-                cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-                news_items = []
-                
-                for item in raw_news:
-                    published_str = item.get("published")
-                    published_dt = None
-                    if published_str:
-                        try:
-                            published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
-                        except (ValueError, TypeError):
-                            published_dt = datetime.now(timezone.utc)
-                    
-                    if published_dt and published_dt < cutoff:
-                        continue
+                    for item in raw_news:
+                        published_str = item.get("published")
+                        published_dt = None
+                        if published_str:
+                            try:
+                                published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
+                            except (ValueError, TypeError):
+                                published_dt = datetime.now(timezone.utc)
 
-                    news_item = News(
-                        source=item.get("publisher", "yfinance"),
-                        title=item.get("title", ""),
-                        body=item.get("summary", ""),
-                        url=item.get("link", ""),
-                        published_at=published_dt.replace(tzinfo=None) if published_dt else None,
-                        asset_id=asset.id,
-                        language="en",
-                    )
-                    news_items.append(news_item)
+                        if published_dt and published_dt < cutoff:
+                            continue
 
-                if news_items:
-                    async with async_session_maker() as session:
-                        # Batch upsert news (avoid duplicates by url)
-                        for item in news_items:
-                            if not item.url:
-                                continue
-                            existing = await session.execute(
-                                select(News).where(News.url == item.url, News.asset_id == item.asset_id)
-                            )
-                            if not existing.scalar_one_or_none():
-                                session.add(item)
-                        await session.commit()
-                return len(news_items)
+                        news_item = News(
+                            source=item.get("publisher", "yfinance"),
+                            title=item.get("title", ""),
+                            body=item.get("summary", ""),
+                            url=item.get("link", ""),
+                            published_at=published_dt.replace(tzinfo=None) if published_dt else None,
+                            asset_id=asset.id,
+                            language="en",
+                        )
+                        news_items.append(news_item)
         except Exception as e:
-            self.logger.error(f"Failed to ingest news for {symbol}: {e}")
-            return 0
+            self.logger.warning(f"yfinance news failed for {symbol}: {e}")
+
+        if not news_items:
+            try:
+                fetcher = MultiSourceNewsFetcher()
+                await fetcher.initialize()
+                asset = asset or await self._ensure_asset(symbol, symbol, "EQUITY")
+                news_items = await fetcher.fetch_news_for_symbol(
+                    symbol=symbol,
+                    days=days,
+                    asset_id=str(asset.id),
+                    language="en",
+                )
+                await fetcher.shutdown()
+            except Exception as e:
+                self.logger.error(f"Multi-source news fetch failed for {symbol}: {e}")
+
+        if news_items:
+            async with async_session_maker() as session:
+                for item in news_items:
+                    if not item.url:
+                        continue
+                    existing = await session.execute(
+                        select(News).where(News.url == item.url, News.asset_id == item.asset_id)
+                    )
+                    if not existing.scalar_one_or_none():
+                        session.add(item)
+                await session.commit()
+
+        return len(news_items)
 
     async def ingest_macro_indicators(self) -> bool:
         """Fetch macro indicators from yfinance macro tickers."""
+        import yfinance as yf
         try:
             macro_data = []
             for ticker_sym, (name, unit) in MACRO_TICKERS.items():

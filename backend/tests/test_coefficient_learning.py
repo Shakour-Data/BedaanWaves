@@ -346,7 +346,8 @@ class TestCoefficientLearningServiceIntegration:
         # Register the mock in the global container
         from app.services.core.dependency_container import get_global_container
         container = get_global_container()
-        container.register('coefficient_learning_service', lambda: mock_coeff_service)
+        container.remove("coefficient_learning_service")
+        container.register("coefficient_learning_service", lambda: mock_coeff_service)
         
         # Create and initialize ScoringService
         service = ScoringService()
@@ -371,7 +372,7 @@ class TestCoefficientLearningServiceIntegration:
         mock_coeff_service.get_coefficients.return_value = {
             'fundamental': 0.5,
             'technical': 0.5,
-            'sentiment': 0.5,  # Sum is now 1.5
+            'sentiment': 0.5,
             'risk': 0.0,
             'macro': 0.0,
             'ai': 0.0
@@ -380,7 +381,8 @@ class TestCoefficientLearningServiceIntegration:
         # Register the mock in the global container
         from app.services.core.dependency_container import get_global_container
         container = get_global_container()
-        container.register('coefficient_learning_service', lambda: mock_coeff_service)
+        container.remove("coefficient_learning_service")
+        container.register("coefficient_learning_service", lambda: mock_coeff_service)
         
         # Create and initialize ScoringService
         service = ScoringService()
