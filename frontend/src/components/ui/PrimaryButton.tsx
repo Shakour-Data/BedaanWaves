@@ -12,17 +12,15 @@ interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const sizeClasses: Record<string, string> = {
   sm: "px-3 py-1 text-xs rounded-md",
   md: "px-5 py-2 text-sm rounded-lg",
-  lg: "px-6 py-3 text-base rounded-xl",
-};
+  lg: "px-6 py-3 text-base rounded-xl" };
 
 const variantClasses: Record<string, string> = {
-  default: "bg-primary text-white hover:bg-red-700 shadow-sm hover:shadow-md",
-  destructive: "bg-error text-white hover:bg-red-700",
+  default: "bg-primary text-[var(--color-text-primary)] hover:bg-red-700 shadow-sm hover:shadow-md",
+  destructive: "bg-error text-[var(--color-text-primary)] hover:bg-red-700",
   outline: "bg-transparent text-primary border-2 border-primary hover:bg-primary/10",
-  secondary: "bg-secondary text-white hover:bg-secondary/90",
+  secondary: "bg-secondary text-[var(--color-text-primary)] hover:bg-secondary/90",
   ghost: "bg-transparent text-foreground hover:bg-neutral",
-  link: "bg-transparent text-primary hover:underline px-0 py-0",
-};
+  link: "bg-transparent text-primary hover:underline px-0 py-0" };
 
 export function PrimaryButton({
   children,
