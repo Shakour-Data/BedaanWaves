@@ -153,7 +153,7 @@ export default function ProfilePage() {
                   className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm hover:bg-muted/50 transition"
                   aria-label={showNewPassword ? "مخفی کردن رمز" : "نمایش رمز"}
                 >
-                  {showNewPassword ? "🙈" : "👁️"}
+                  {showNewPassword ? <FaEyeSlashIcon className="h-4 w-4" /> : <FaEyeIcon className="h-4 w-4" />}
                 </button>
               </div>
               <input
