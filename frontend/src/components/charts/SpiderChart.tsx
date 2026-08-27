@@ -18,8 +18,7 @@ export function SpiderChart({ labels, values, max = 100, height = 320 }: SpiderC
     const angle = i * angleStep - Math.PI / 2;
     return {
       x: center + radius * Math.cos(angle),
-      y: center + radius * Math.sin(angle),
-    };
+      y: center + radius * Math.sin(angle) };
   });
 
   const valuePoints = values.map((v, i) => {
@@ -27,8 +26,7 @@ export function SpiderChart({ labels, values, max = 100, height = 320 }: SpiderC
     const angle = i * angleStep - Math.PI / 2;
     return {
       x: center + r * Math.cos(angle),
-      y: center + r * Math.sin(angle),
-    };
+      y: center + r * Math.sin(angle) };
   });
 
   const polygonPoints = valuePoints.map((p) => `${p.x},${p.y}`).join(" ");
