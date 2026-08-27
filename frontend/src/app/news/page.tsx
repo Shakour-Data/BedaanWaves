@@ -15,7 +15,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import type { NewsItem, AssetRow } from "@/lib/dashboard-data";
 
 export default function NewsPage() {
-  const { currentLang } = useAuthStore();
+  
   const [newItems, setNewItems] = useState<NewsItem[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,8 +35,7 @@ export default function NewsPage() {
           const formattedNews: NewsItem[] = newsItems.map((item: any) => ({
             title: item.title,
             source: item.source || "Unknown",
-            time: formatTimeAgo(item.published_at || item.created_at),
-          }));
+            time: formatTimeAgo(item.published_at || item.created_at) }));
 
           setNewItems(formattedNews);
         }
@@ -56,10 +55,10 @@ export default function NewsPage() {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return t("app.alerts.time.now", currentLang);
-    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", currentLang)}`;
-    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", currentLang)}`;
-    return `${days} ${t("app.alerts.time.days_ago", currentLang)}`;
+    if (minutes < 1) return t("app.alerts.time.now", "en");
+    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", "en")}`;
+    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", "en")}`;
+    return `${days} ${t("app.alerts.time.days_ago", "en")}`;
   };
 
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
@@ -69,29 +68,29 @@ export default function NewsPage() {
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.news.title", currentLang)}>
+      <DashboardShell title={t("app.news.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.news.loading", currentLang)}
+          {t("app.news.loading", "en")}
         </div>
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.news.title", currentLang)}>
+    <DashboardShell title={t("app.news.title", "en")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="🔍" title={currentLang === "fa" ? "فیلترها" : "Filters"}>
+          <TarotCard icon="Search" title={false ? "فیلترها" : "Filters"}>
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedSource(null)}
                 className={cn(
                   "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
-                  selectedSource === null ? "bg-red-600 text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                  selectedSource === null ? "bg-red-600 text-[var(--color-text-primary)] shadow-md" : "hover:bg-muted/50 text-muted-foreground"
                 )}
               >
-                {currentLang === "fa" ? "همه اخبار" : "All News"}
+                {false ? "همه اخبار" : "All News"}
               </button>
               {sources.map((source) => (
                 <button
@@ -99,7 +98,7 @@ export default function NewsPage() {
                   onClick={() => setSelectedSource(source)}
                   className={cn(
                     "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
-                    selectedSource === source ? "bg-red-600 text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                    selectedSource === source ? "bg-red-600 text-[var(--color-text-primary)] shadow-md" : "hover:bg-muted/50 text-muted-foreground"
                   )}
                 >
                   {source}
@@ -109,17 +108,17 @@ export default function NewsPage() {
           </TarotCard>
 
           {/* Trending Topics */}
-          <TarotCard icon="🔥" title={currentLang === "fa" ? "موضوعات داغ" : "Trending Topics"}>
+          <TarotCard icon="🔥" title={false ? "موضوعات داغ" : "Trending Topics"}>
             <div className="space-y-2">
               {topTopics.map((topic, i) => (
                 <div key={i} className="flex items-center justify-between font-medium text-sm">
                   <span className="flex-1">{topic.topic}</span>
-                  <span className="text-xs text-muted-foreground">{topic.count} {currentLang === "fa" ? "خبر" : "news"}</span>
+                  <span className="text-xs text-muted-foreground">{topic.count} {false ? "خبر" : "news"}</span>
                 </div>
               ))}
               {topTopics.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  {currentLang === "fa" ? "موضوع داغی یافت نشد" : "No trending topics found"}
+                  {false ? "موضوع داغی یافت نشد" : "No trending topics found"}
                 </p>
               )}
             </div>
@@ -131,8 +130,8 @@ export default function NewsPage() {
           <TarotCard 
             icon="📰" 
             title={selectedSource 
-              ? (currentLang === "fa" ? `اخبار از ${selectedSource}` : `News from ${selectedSource}`) 
-              : (currentLang === "fa" ? "همه اخبار" : "All News")
+              ? (false ? `اخبار از ${selectedSource}` : `News from ${selectedSource}`) 
+              : (false ? "همه اخبار" : "All News")
             }
           >
             <NewsList items={filteredNews} />
