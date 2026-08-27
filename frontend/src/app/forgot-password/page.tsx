@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { TarotCard } from "@/components/ui/TarotCard";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { InputField } from "@/components/ui/InputField";
 import { useAuthStore } from "@/store/useAuthStore";
 import { t } from "@/lib/i18n";
 
@@ -11,7 +10,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const currentLang = useAuthStore((s) => s.currentLang);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,45 +21,51 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-3">
-      <TarotCard icon="" title={t("login.forgot_password")} className="w-full max-w-md">
+    <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
+      <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Reset Password</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">Enter your email to receive a reset link</p>
+        </div>
+        
         {sent ? (
-          <p className="text-sm text-muted-foreground">
-            {t("forgot_password.sent_message") || "اگر ایمیل معتبر باشد، لینک بازیابی ارسال شد."}
-          </p>
+          <div className="bg-[var(--color-success)]/10 border border-[var(--color-success)] text-[var(--color-success)] px-4 py-3 rounded-md text-center">
+            <p className="font-medium">Reset link sent!</p>
+            <p className="text-sm mt-1">If the email is valid, you will receive a reset link shortly.</p>
+            <Link href="/login" className="block mt-4 text-[var(--color-primary)] hover:underline font-bold text-sm">
+              Back to Sign in
+            </Link>
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              {t("forgot_password.instruction") || "ایمیل خود را وارد کنید تا لینک بازیابی ارسال شود."}
-            </p>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm text-muted-foreground">{t("auth.email")}</span>
-              <span className="relative">
-                <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground" aria-hidden="true">
-                  
-                </span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("login.email_placeholder") || t("login.email")}
-                  disabled={loading}
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 ps-10 text-sm outline-none transition duration-fast ease-focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
-                />
-              </span>
-            </label>
-            <PrimaryButton type="submit" disabled={loading} className="mt-1 w-full justify-center">
-              {loading ? t("auth.loading") : (t("forgot_password.submit") || "ارسال لینک بازیابی")}
-            </PrimaryButton>
-            <p className="text-center text-sm text-muted-foreground">
-              <Link href="/login" className="text-secondary hover:underline">
-                {t("login.back_to_login") || "بازگشت به ورود"}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="space-y-4">
+              <InputField
+                id="email"
+                type="email"
+                label="Email Address"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="example@email.com"
+                disabled={loading}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="h-10 px-4 mt-2 w-full bg-[var(--color-primary)] text-white font-medium rounded-md hover:bg-[var(--color-primary-hover)] transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Processing..." : "Send Reset Link"}
+            </button>
+            <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
+              <Link href="/login" className="text-[var(--color-primary)] hover:underline font-bold">
+                Back to Sign in
               </Link>
             </p>
           </form>
         )}
-      </TarotCard>
+      </div>
     </main>
   );
 }
