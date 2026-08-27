@@ -1,16 +1,20 @@
 import Link from "next/link";
+import { TarotCard } from "@/components/ui/TarotCard";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-      <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
-      <p className="text-lg text-muted-foreground">Page not found</p>
-      <Link
-        href="/"
-        className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-      >
-        Go back home
-      </Link>
-    </div>
+    <main className="flex min-h-[60vh] items-center justify-center p-3">
+      <TarotCard title="۴۰۴" className="w-full max-w-md text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-6xl">🔍</div>
+          <h1 className="text-4xl font-bold text-foreground">۴۰۴</h1>
+          <p className="text-lg text-muted-foreground">صفحه مورد نظر یافت نشد</p>
+          <Link href="/">
+            <PrimaryButton>بازگشت به خانه</PrimaryButton>
+          </Link>
+        </div>
+      </TarotCard>
+    </main>
   );
 }

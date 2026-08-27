@@ -28,10 +28,7 @@ from app.api.middleware import (
     RequestLoggingMiddleware,
 )
 
-from app.services.core.dependency_container import (
-    DependencyContainer,
-    set_global_container,
-)
+from app.services.user.auth_service import ensure_admin_user
 from app.services.core.config_service import ConfigService
 from app.services.core.logger_service import LoggerService
 from app.services.core.cache_service import CacheService
@@ -234,6 +231,13 @@ async def lifespan(app: FastAPI):
     if _needs_seeding():
         logger.info("Database empty, seeding real market data...")
         _run_seed()
+
+    # Step 5: Ensure admin user exists
+    try:
+        await ensure_admin_user()
+        logger.info("Admin user ensured")
+    except Exception as e:
+        logger.warning(f"Could not ensure admin user: {e}")
 
     try:
         # Step 5: Initialize dependency container

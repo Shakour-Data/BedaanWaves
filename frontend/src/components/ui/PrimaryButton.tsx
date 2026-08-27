@@ -2,7 +2,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { semanticColors, fontSizes, spacing, motion } from "@/styles/design-tokens";
+import { semanticColors, motion } from "@/styles/design-tokens";
 
 interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -11,9 +11,9 @@ interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const sizeClasses: Record<string, string> = {
-  sm: `px-${spacing[2]} py-${spacing[1]} text-${fontSizes.xs} rounded-md`,
-  md: `px-${spacing[3]} py-${spacing[2]} text-${fontSizes.sm} rounded-lg`,
-  lg: `px-${spacing[4]} py-${spacing[3]} text-${fontSizes.base} rounded-xl`,
+  sm: `px-2 py-1 text-xs rounded-md`,
+  md: `px-4 py-2 text-sm rounded-lg`,
+  lg: `px-6 py-3 text-base rounded-xl`,
 };
 
 const variantClasses: Record<string, { bg: string; text: string; border?: string; hoverBg?: string }> = {

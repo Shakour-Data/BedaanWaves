@@ -19,6 +19,8 @@ export default function PortfolioPage() {
   const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [performanceData, setPerformanceData] = useState<{ time: string; value: number }[]>([]);
+  const [allocationData, setAllocationData] = useState<{ labels: string[]; values: number[] }>({ labels: [], values: [] });
 
   useEffect(() => {
     let active = true;
@@ -27,13 +29,12 @@ export default function PortfolioPage() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch user's portfolios
         const portfoliosRes = await apiClient.get<any>("/portfolio/");
-        
+
         if (!active) return;
-        
+
         const portfolios = Array.isArray(portfoliosRes.data) ? portfoliosRes.data : [];
-        
+
         if (portfolios.length === 0) {
           setHoldings([]);
           setStats([
@@ -42,22 +43,23 @@ export default function PortfolioPage() {
             { label: "تعداد نمادها", value: "۰", changePct: 0 },
             { label: "بازگشت روزانه", value: "۰٪", changePct: 0 },
           ]);
+          setPerformanceData([]);
+          setAllocationData({ labels: [], values: [] });
           return;
         }
-        
-        // Get holdings from first portfolio
+
         const firstPortfolio = portfolios[0];
         const holdingsRes = await apiClient.get<any>(`/portfolio/${firstPortfolio.id}/holdings`);
         const holdingsData = Array.isArray(holdingsRes.data) ? holdingsRes.data : [];
-        
+
         if (holdingsData.length > 0) {
           const symbols = holdingsData.map((h: any) => h.asset?.symbol || h.symbol).filter(Boolean);
           const pricesRes = await apiClient.get<any>(
             `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
           );
-          
+
           const prices = pricesRes.data?.data || {};
-          
+
           const enrichedHoldings: AssetRow[] = holdingsData.map((h: any) => ({
             symbol: h.asset?.symbol || h.symbol,
             name: h.asset?.name || h.name || "",
@@ -65,23 +67,35 @@ export default function PortfolioPage() {
             price: prices[h.asset?.symbol || h.symbol]?.price ?? h.entry_price ?? 0,
             changePct: prices[h.asset?.symbol || h.symbol]?.change_pct ?? 0,
           }));
-          
+
           setHoldings(enrichedHoldings);
-          
-          const totalValue = enrichedHoldings.reduce((sum: number, h: AssetRow) => sum + (h.price * ((h as any).quantity ?? 1)), 0);
+
+          const totalValue = enrichedHoldings.reduce((sum: number, h: AssetRow) => sum + (h.price * (((h as any).quantity ?? 1))), 0);
           const totalPnL = enrichedHoldings.reduce((sum: number, h: AssetRow) => {
             const quantity = ((h as any).quantity ?? 1);
             const entryPrice = ((h as any).entry_price ?? h.price);
             return sum + ((h.price - entryPrice) * quantity);
           }, 0);
           const totalReturnPct = totalValue > 0 ? (totalPnL / (totalValue - totalPnL || 1)) * 100 : 0;
-          
+
           setStats([
             { label: "مجموع ارزش پورتفولیو", value: `${totalValue.toLocaleString("fa-IR")} $`, changePct: totalReturnPct },
             { label: "سود/زیان کلی", value: `${totalPnL.toLocaleString("fa-IR")} $`, changePct: totalReturnPct },
             { label: "تعداد نمادها", value: String(enrichedHoldings.length), changePct: 0 },
             { label: "بازگشت روزانه", value: `${(totalReturnPct / 30).toFixed(2)}٪`, changePct: totalReturnPct / 30 },
           ]);
+
+          // Performance data from holdings
+          const perfData = enrichedHoldings.map((h, i) => ({
+            time: h.symbol,
+            value: h.price,
+          }));
+          setPerformanceData(perfData.length > 0 ? perfData : []);
+
+          // Allocation data
+          const labels = enrichedHoldings.map((h) => h.symbol);
+          const values = enrichedHoldings.map((h) => h.price);
+          setAllocationData({ labels, values });
         } else {
           setHoldings([]);
           setStats([
@@ -90,6 +104,8 @@ export default function PortfolioPage() {
             { label: "تعداد نمادها", value: "۰", changePct: 0 },
             { label: "بازگشت روزانه", value: "۰٪", changePct: 0 },
           ]);
+          setPerformanceData([]);
+          setAllocationData({ labels: [], values: [] });
         }
       } catch (err) {
         if (active) setError("خطا در بارگذاری پورتفولیو. مطمئن شوید بک‌اند در دسترس است و لاگین کرده‌ید.");
@@ -121,7 +137,7 @@ export default function PortfolioPage() {
   if (error) {
     return (
       <DashboardShell title="پورتفولیو">
-        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
+        <TarotCard title="خطا" className="max-w-md mx-auto">
           <p className="text-sm text-muted-foreground">{error}</p>
         </TarotCard>
       </DashboardShell>
@@ -138,7 +154,7 @@ export default function PortfolioPage() {
               <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
               <span className="text-lg font-bold mt-1 block">{stat.value}</span>
               {stat.changePct !== undefined && (
-                <span className={`text-xs mt-1 block ${stat.changePct >= 0 ? "text-success" : "text-primary"}`}>
+                <span className={`text-xs mt-1 block ${stat.changePct >= 0 ? "text-success" : "text-error"}`}>
                   {stat.changePct >= 0 ? "▲" : "▼"} {Math.abs(stat.changePct).toFixed(2)}%
                 </span>
               )}
@@ -147,7 +163,7 @@ export default function PortfolioPage() {
         </section>
 
         {/* Holdings */}
-        <TarotCard icon="" title="دارایی‌های فعلی">
+        <TarotCard title="دارایی‌های فعلی">
           {holdings.length > 0 ? (
             <AssetTable rows={holdings} />
           ) : (
@@ -161,30 +177,30 @@ export default function PortfolioPage() {
         </TarotCard>
 
         {/* Performance Chart */}
-        <TarotCard icon="" title="عملکرد پورتفولیو">
-          <LineChart
-            data={[
-              { time: "2024-01", value: 10000 },
-              { time: "2024-02", value: 11200 },
-              { time: "2024-03", value: 10800 },
-              { time: "2024-04", value: 12500 },
-              { time: "2024-05", value: 13100 },
-              { time: "2024-06", value: 12800 },
-              { time: "2024-07", value: 14200 },
-              { time: "2024-08", value: 15500 },
-            ]}
-            height={320}
-          />
+        <TarotCard title="عملکرد پورتفولیو">
+          {performanceData.length > 0 ? (
+            <LineChart data={performanceData} height={320} />
+          ) : (
+            <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+              داده‌ای برای نمایش عملکرد موجود نیست
+            </div>
+          )}
         </TarotCard>
 
         {/* Asset Allocation */}
-        <TarotCard icon="" title="توزیع دارایی‌ها">
-          <SpiderChart
-            labels={["تکنولوژی", "سرمایه", "سلامت", "کالا", "املاک"]}
-            values={holdings.length > 0 ? [85, 70, 60, 45, 30] : [0, 0, 0, 0, 0]}
-            max={100}
-            height={320}
-          />
+        <TarotCard title="توزیع دارایی‌ها">
+          {allocationData.labels.length > 0 ? (
+            <SpiderChart
+              labels={allocationData.labels}
+              values={allocationData.values}
+              max={Math.max(...allocationData.values, 100)}
+              height={320}
+            />
+          ) : (
+            <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+              داده‌ای برای نمایش توزیع موجود نیست
+            </div>
+          )}
         </TarotCard>
       </div>
     </DashboardShell>

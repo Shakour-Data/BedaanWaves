@@ -16,8 +16,13 @@
   --color-success: #22C55E;
   --color-warning: #F59E0B;
   --color-error: #EF4444;
+  --color-accent: #6366F1;
+  --color-accent-foreground: #FFFFFF;
+  --color-neutral: #F1F5F9;
   --color-background: #F8FAFC;
   --color-surface: #FFFFFF;
+  --color-foreground: #0F172A;
+  --color-muted-foreground: #64748B;
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
   --color-border: #E2E8F0;
@@ -181,6 +186,12 @@
     height: 40px;
     padding: 0 var(--spacing-md);
     font-size: var(--text-sm);
+  }
+
+  .btn-sm {
+    height: 32px;
+    padding: 0 var(--spacing-sm);
+    font-size: var(--text-xs);
   }
 
   .btn-lg {
@@ -647,12 +658,12 @@
      --------------------------------------------------------------------------- */
   .alert {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
-    border: 1px solid;
+    border: 1px;
   }
 
   .alert-info {
@@ -699,7 +710,6 @@
     flex-shrink: 0;
     width: 20px;
     height: 20px;
-    margin-top: 1px;
   }
 
   .alert-close {
@@ -833,7 +843,7 @@
 
   .badge-sm {
     height: 20px;
-    font-size: 11px;
+    font-size: var(--text-xs);
     padding: 0 var(--spacing-xs);
   }
 

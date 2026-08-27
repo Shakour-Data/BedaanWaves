@@ -9,140 +9,142 @@ import { useState } from "react";
 const analysisMethods = [
   {
     id: "scoring",
-    title: "6D Scoring System",
+    title: "سیستم امتیازدهی ۶ بعدی",
     icon: "",
-    description: "Comprehensive multi-dimensional stock evaluation",
+    description: "ارزیابی جامع چند بعدی سهام",
     steps: [
-      "Collect data across six dimensions (fundamental, technical, sentiment, risk, macro, AI)",
-      "Calculate individual scores (0-100) for each dimension",
-      "Apply ML-optimized weights to dimension scores",
-      "Compute final weighted score and assign grade (A-E)"
+      "جمع‌آوری داده‌ها در شش بعد (بنیادی، تکنیکال، احساسات، ریسک، ماکرو، هوش مصنوعی)",
+      "محاسبه نمرات فردی (0-100) برای هر بعد",
+      "اعمال وزن‌های بهینه‌شده ML به نمرات ابعاد",
+      "محاسبه نمره نهایی وزنی و assign نمره (A-E)",
     ],
-    details: "Uses a 4-level hierarchy with 305 nodes to evaluate investments across six equally-weighted dimensions. Machine learning dynamically optimizes weights based on historical performance.",
+    details: "با استفاده از سلسله‌مراتب ۴ سطحی با ۳۰۵ گره برای ارزیابی سرمایه‌گذاری در شش بعد با وزن برابر استفاده می‌کند. یادگیری ماشین وزن‌ها را بر اساس عملکرد تاریخی به صورت پویا بهینه می‌کند.",
     apiEndpoints: [
       "/analysis/scoring",
-      "/analysis/scoring/rank"
-    ]
+      "/analysis/scoring/rank",
+    ],
   },
   {
     id: "ranking",
-    title: "Ranking System",
+    title: "سیستم رتبه‌بندی",
     icon: "",
-    description: "Stock ranking by performance metrics",
+    description: "رتبه‌بندی سهام بر اساس معیارهای عملکرد",
     steps: [
-      "Calculate 6D scores for all eligible securities",
-      "Sort by selected metric (overall score or specific dimension)",
-      "Return top N results (default: 10)"
+      "محاسبه نمرات ۶ بعدی برای تمام اوراق قابل قبول",
+      "مرتب‌سازی بر اساس معیار انتخاب شده (نمره کلی یا بعد خاص)",
+      "بازگشت N نتیجه برتر (پیش‌فرض: 10)",
     ],
-    details: "Users can rank by any of the six dimensions or the composite score. Results are cached for 5 minutes to reduce API load.",
+    details: "کاربران می‌توانند بر اساس هر یک از شش بعد یا نمره ترکیبی رتبه‌بندی شوند. نتایج به مدت ۵ دقیقه کشیده می‌شوند تا بار API کاهش یابد.",
     apiEndpoints: [
-      "/analysis/scoring/rank"
-    ]
+      "/analysis/scoring/rank",
+    ],
   },
   {
     id: "technical",
-    title: "Technical Analysis",
+    title: "تحلیل تکنیکال",
     icon: "",
-    description: "Price and volume-based indicators",
+    description: "شاخص‌های مبتنی بر قیمت و حجم",
     steps: [
-      "Fetch historical price/volume data (minimum 20 periods)",
-      "Calculate indicators (RSI, MACD, moving averages, Bollinger Bands)",
-      "Generate trading signals based on indicator crossovers and thresholds"
+      "دریافت داده‌های قیمت/حجم تاریخی (حداقل 20 دوره)",
+      "محاسبه شاخص‌ها (RSI، MACD، میانگین‌های متحرک، باندهای بولینگر)",
+      "تولید سیگنال‌های معاملاتی بر اساس تقاطع‌ها و آستانه‌های شاخص",
     ],
-    details: "Provides 50+ technical indicators including momentum oscillators, trend-following tools, and volatility measures.",
+    details: "بیش از ۵۰ شاخص تکنیکال از جمله نوسان‌سنج‌های مومنتوم، ابزارهای دنبال‌کننده روند و معیارهای نوسان ارائه می‌دهد.",
     apiEndpoints: [
-      "/analysis/technical/{symbol}"
-    ]
+      "/analysis/technical/{symbol}",
+    ],
   },
   {
     id: "fundamental",
-    title: "Fundamental Analysis",
+    title: "تحلیل بنیادی",
     icon: "",
-    description: "Financial statement analysis",
+    description: "تحلیل صورت‌های مالی",
     steps: [
-      "Retrieve latest financial statements from CODAL, Yahoo Finance, or Alpha Vantage",
-      "Calculate key ratios (P/E, P/B, ROE, Debt/Equity, etc.)",
-      "Assess earnings quality and growth sustainability"
+      "دریافت آخرین صورت‌های مالی از CODAL، Yahoo Finance یا Alpha Vantage",
+      "محاسبه نسبت‌های کلیدی (P/E، P/B، ROE، بدهی/حقوق، و غیره)",
+      "ارزیابی کیفیت سود و پایداری رشد",
     ],
-    details: "Analyzes income statements, balance sheets, and cash flow statements from multiple global data sources.",
+    details: "صورت‌های درآمدی، ترازنامه‌ها و جریان‌های نقدی را از چندین منبع داده جهانی تحلیل می‌کند.",
     apiEndpoints: [
-      "/analysis/fundamental/{symbol}"
-    ]
+      "/analysis/fundamental/{symbol}",
+    ],
   },
   {
     id: "momentum",
-    title: "Momentum Analysis",
+    title: "تحلیل مومنتوم",
     icon: "",
-    description: "Short-term price trend identification",
+    description: "شناسایی روند قیمت کوتاه‌مدت",
     steps: [
-      "Calculate price changes over multiple timeframes (1D, 1W, 1M, 3M)",
-      "Identify assets with strongest relative momentum",
-      "Filter for stocks showing consistent upward trends"
+      "محاسبه تغییرات قیمت در چند بازه زمانی (۱ روز، ۱ هفته، ۱ ماه، ۳ ماه)",
+      "شناسایی دارایی‌ها با قوی‌ترین مومنتوم نسبی",
+      "فیلتر کردن سهام با روند صعودی ثابت",
     ],
-    details: "Focuses on relative strength and trend persistence to identify potential outperformers.",
+    details: "بر قدرت نسبی و پایداری روند تمرکز می‌کند تا outperformers احتمالی را شناسایی کند.",
     apiEndpoints: [
-      "/analysis/momentum/{symbol}"
-    ]
+      "/analysis/momentum/{symbol}",
+    ],
   },
   {
     id: "risk",
-    title: "Risk Analysis",
+    title: "تحلیل ریسک",
     icon: "️",
-    description: "Volatility and downside risk assessment",
+    description: "ارزیابی ریسک نوسان و downside",
     steps: [
-      "Calculate daily returns from historical price data",
-      "Compute volatility (standard deviation of returns)",
-      "Calculate Value-at-Risk (VaR) and Conditional VaR",
-      "Determine Sharpe, Sortino, and Calmar ratios"
+      "محاسبه بازده روزانه از داده‌های قیمت تاریخی",
+      "محاسبه نوسان (انحراف معیار بازده‌ها)",
+      "محاسبه ارزش در معرض ریسک (VaR) و VaR شرطی",
+      "تعیین نسبت‌های شارپ، سورترینو و کالمر",
     ],
-    details: "Provides comprehensive risk metrics including maximum drawdown, beta, and tail risk measures.",
+    details: "معیارهای جامع ریسک از جمله بیشینه افت، بتا و معیارهای ریسک دم را ارائه می‌دهد.",
     apiEndpoints: [
       "/analysis/risk/{symbol}",
-      "/analysis/volatility/{symbol}"
-    ]
+      "/analysis/volatility/{symbol}",
+    ],
   },
   {
     id: "sentiment",
-    title: "Sentiment Analysis",
+    title: "تحلیل احساسات",
     icon: "️",
-    description: "Market sentiment from news and social media",
+    description: "احساسات بازار از اخبار و شبکه‌های اجتماعی",
     steps: [
-      "Collect financial news and social media mentions",
-      "Apply NLP models to extract sentiment scores",
-      "Aggregate sentiment by source and time period"
+      "جمع‌آوری اخبار مالی و memos شبکه‌های اجتماعی",
+      "اعمال مدل‌های NLP برای استخراج نمرات احساس",
+      "تجمع احساس بر اساس منبع و دوره زمانی",
     ],
-    details: "Uses transformer-based NLP models to analyze text sentiment from multiple sources in real-time.",
+    details: "از مدل‌های NLP مبتنی بر تبدیل‌گر برای تحلیل احساس متن از چندین منبع در زمان واقعی استفاده می‌کند.",
     apiEndpoints: [
-      "/analysis/sentiment/{symbol}"
-    ]
+      "/analysis/sentiment/{symbol}",
+    ],
   },
   {
     id: "ai",
-    title: "AI/ML Analysis",
+    title: "تحلیل هوش مصنوعی / ML",
     icon: "",
-    description: "Machine learning-based predictions",
+    description: "پیش‌بینی‌های مبتنی بر یادگیری ماشین",
     steps: [
-      "Train LSTM/Prophet models on historical price data",
-      "Generate price forecasts for multiple time horizons",
-      "Detect chart patterns and anomalies using computer vision"
+      "آموزش مدل‌های LSTM/Prophet بر روی داده‌های قیمت تاریخی",
+      "تولید پیش‌بینی قیمت برای چند افق زمانی",
+      "تشخیص الگوهای نموداری و ناهنجاری‌ها با بینایی کامپیوتر",
     ],
-    details: "Combines time series forecasting, pattern recognition, and anomaly detection for predictive insights.",
+    details: "پیش‌بینی سری زمانی، تشخیص الگو و تشخیص ناهنجاری را برای بینش‌های پیش‌بینانه ترکیب می‌کند.",
     apiEndpoints: [
-      "/analysis/prediction/{symbol}"
-    ]
-  }
+      "/analysis/prediction/{symbol}",
+    ],
+  },
 ];
 
 export default function MethodologyPage() {
   const [activeMethod, setActiveMethod] = useState("scoring");
 
   return (
-    <DashboardShell title="Analysis Methodology">
+    <DashboardShell title="روش‌شناسی تحلیل">
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard icon="" title="Methodology Overview">
+        <TarotCard title="نمای کلی روش‌شناسی">
           <p className="text-muted-foreground text-justify">
-            BedaanWaves employs a multi-faceted approach to financial analysis, combining traditional fundamental/technical analysis with cutting-edge machine learning techniques. Each analysis type serves a specific purpose in the investment decision-making process.
+            BedaanWaves از رویکرد چندوجهی به تحلیل مالی استفاده می‌کند و تحلیل بنیادی/تکنیکال سنتی
+            را با تکنیک‌های پیشرفته یادگیری ماشین ترکیب می‌کند. هر نوع تحلیل هدف مشخصی در فرآیند
+            تصمیم‌گیری سرمایه‌گذاری دارد.
           </p>
         </TarotCard>
 
@@ -173,7 +175,7 @@ export default function MethodologyPage() {
 
                 {/* Steps */}
                 <div>
-                  <h4 className="font-medium mb-2">Process Steps:</h4>
+                  <h4 className="font-medium mb-2">مراحل فرآیند:</h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
                     {method.steps.map((step, i) => (
                       <li key={i}>{step}</li>
@@ -183,15 +185,15 @@ export default function MethodologyPage() {
 
                 {/* Details */}
                 <div>
-                  <h4 className="font-medium mb-2">Technical Details:</h4>
+                  <h4 className="font-medium mb-2">جزئیات فنی:</h4>
                   <p className="text-sm text-muted-foreground">{method.details}</p>
                 </div>
 
                 {/* API Endpoints */}
                 {method.apiEndpoints && (
                   <div>
-                    <h4 className="font-medium mb-2">API Endpoints:</h4>
-                    <ul className="list-disc list-inset space-y-1 text-sm font-mono">
+                    <h4 className="font-medium mb-2">نقاط پایانی API:</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm font-mono">
                       {method.apiEndpoints.map((endpoint, i) => (
                         <li key={i}>{endpoint}</li>
                       ))}
@@ -206,37 +208,37 @@ export default function MethodologyPage() {
         {/* Secondary Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Capabilities */}
-          <TarotCard icon="" title="Key Capabilities">
+          <TarotCard title="قابلیت‌های کلیدی">
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>Coverage: Iran, Global, and Crypto Markets</span>
+                <span className="text-green-500">●</span>
+                <span>پوشش: ایران، جهانی و بازارهای کریپتو</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>Real-time data updates (24/7)</span>
+                <span className="text-green-500">●</span>
+                <span>به‌روزرسانی داده‌های لحظه‌ای (۲۴/۷)</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>ML-optimized weighting system</span>
+                <span className="text-green-500">●</span>
+                <span>سیستم وزن‌دهی بهینه‌شده ML</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-green-500"></span>
-                <span>Customizable user preferences</span>
+                <span className="text-green-500">●</span>
+                <span>ترجیحات قابل سفارشی‌سازی کاربر</span>
               </li>
             </ul>
           </TarotCard>
 
           {/* Disclaimers */}
-          <TarotCard icon="" title="Important Notes">
+          <TarotCard title="نکات مهم">
             <div className="space-y-3 text-sm">
               <div>
-                <h5 className="font-medium mb-1">Disclaimer:</h5>
-                <p className="text-muted-foreground">This is an analytical tool, not financial advice.</p>
+                <h5 className="font-medium mb-1">سلب مسئولیت:</h5>
+                <p className="text-muted-foreground">این یک ابزار تحلیلی است، نه مشاوره مالی.</p>
               </div>
               <div>
-                <h5 className="font-medium mb-1">Accuracy:</h5>
-                <p className="text-muted-foreground">Results based on historical data, not guaranteed future performance.</p>
+                <h5 className="font-medium mb-1">دقت:</h5>
+                <p className="text-muted-foreground">نتایج بر اساس داده‌های تاریخی هستند، عملکرد آینده تضمین شده نیست.</p>
               </div>
             </div>
           </TarotCard>
@@ -245,10 +247,10 @@ export default function MethodologyPage() {
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-3">
           <Link href="/scoring">
-            <PrimaryButton className="w-full cursor-pointer">Explore 6D Scoring</PrimaryButton>
+            <PrimaryButton className="w-full">کاوش امتیازدهی ۶ بعدی</PrimaryButton>
           </Link>
           <Link href="/analysis">
-            <PrimaryButton className="w-full cursor-pointer">Run Analysis</PrimaryButton>
+            <PrimaryButton className="w-full">اجرای تحلیل</PrimaryButton>
           </Link>
         </div>
       </div>

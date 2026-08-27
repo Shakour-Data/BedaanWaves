@@ -4,7 +4,8 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiClient } from "@/lib/api";
 
 const dimensionDetails = [
   {
@@ -18,7 +19,7 @@ const dimensionDetails = [
       { name: "ROE", desc: "بازده حقوق صاحبان سهام" },
       { name: "Book Value", desc: "ارزش دفتری در هر سهم" },
       { name: "Revenue Growth", desc: "رشد درآمدی سالانه" },
-      { name: "Debt-to-Equity", desc: "نسبت بدهی به حقوق صاحبان سهام" }
+      { name: "Debt-to-Equity", desc: "نسبت بدهی به حقوق صاحبان سهام" },
     ],
   },
   {
@@ -32,7 +33,7 @@ const dimensionDetails = [
       { name: "MACD", desc: "واگرایی و همگرایی میانگین متحرک" },
       { name: "Moving Averages", desc: "میانگین‌های متحرک 50 و 200 روزه" },
       { name: "Bollinger Bands", desc: "باندهای بولینگر" },
-      { name: "Volume Profile", desc: "پروفیل حجم معاملات" }
+      { name: "Volume Profile", desc: "پروفیل حجم معاملات" },
     ],
   },
   {
@@ -44,7 +45,7 @@ const dimensionDetails = [
     aspects: [
       { name: "News Sentiment", desc: "احساسات خبری" },
       { name: "Social Media", desc: "احساسات شبکه‌های اجتماعی" },
-      { name: "Analyst Ratings", desc: "امتیاز تحلیلگران" }
+      { name: "Analyst Ratings", desc: "امتیاز تحلیلگران" },
     ],
   },
   {
@@ -57,7 +58,7 @@ const dimensionDetails = [
       { name: "Volatility", desc: "نوسان قیمت" },
       { name: "VaR", desc: "ارزش در معرض ریسک" },
       { name: "Sharpe Ratio", desc: "ضریب شارپ" },
-      { name: "Max Drawdown", desc: "بیشترین افت قیمت" }
+      { name: "Max Drawdown", desc: "بیشترین افت قیمت" },
     ],
   },
   {
@@ -70,7 +71,7 @@ const dimensionDetails = [
       { name: "GDP Growth", desc: "رشد تولید ناخالص داخلی" },
       { name: "Inflation", desc: "نرخ تورم" },
       { name: "Interest Rates", desc: "نرخ بهره" },
-      { name: "FX Rates", desc: "نرخ ارز" }
+      { name: "FX Rates", desc: "نرخ ارز" },
     ],
   },
   {
@@ -82,7 +83,7 @@ const dimensionDetails = [
     aspects: [
       { name: "LSTM Forecast", desc: "پیش‌بینی قیمت با LSTM" },
       { name: "Pattern Detection", desc: "تشکیل الگوهای نموداری" },
-      { name: "Anomaly Detection", desc: "تشخیص ناهنجاری‌ها" }
+      { name: "Anomaly Detection", desc: "تشخیص ناهنجاری‌ها" },
     ],
   },
 ];
@@ -101,29 +102,90 @@ const mlCoefficients = [
   { label: "Sentiment", defaultWeight: 15, mlOptimized: true },
   { label: "Risk", defaultWeight: 20, mlOptimized: true },
   { label: "Macro", defaultWeight: 10, mlOptimized: true },
-  { label: "AI", defaultWeight: 10, mlOptimized: true }
+  { label: "AI", defaultWeight: 10, mlOptimized: true },
 ];
 
 export default function ScoringPage() {
-  const [expandedDim, setExpandedDim] = useState(null);
+  const [expandedDim, setExpandedDim] = useState<string | null>(null);
+  const [scoringData, setScoringData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [ticker, setTicker] = useState("AAPL");
+  const [market, setMarket] = useState("NASDAQ");
 
-return (
-    <DashboardShell title="6D Scoring Methodology">
+  useEffect(() => {
+    let active = true;
+    async function loadScoring() {
+      setLoading(true);
+      try {
+        const res = await apiClient.post<any>("/analysis/scoring", {
+          ticker,
+          market,
+        });
+        if (active && res.data?.status === "success") {
+          setScoringData(res.data.scoring);
+        }
+      } catch {
+        // keep fallback data
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadScoring();
+    return () => {
+      active = false;
+    };
+  }, [ticker, market]);
+
+  return (
+    <DashboardShell title="امتیازدهی ۶ بعدی">
       <div className="flex flex-col gap-6">
-        <TarotCard icon="" title="6D Scoring System">
-          <div className="space-y-6 padding">
+        <TarotCard title="Symbol Scoring">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-[#1E293B]">Ticker</label>
+              <input
+                type="text"
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                placeholder="AAPL"
+                className="w-40 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#005A9C] focus:ring-2 focus:ring-[#005A9C]/20"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-[#1E293B]">Market</label>
+              <select
+                value={market}
+                onChange={(e) => setMarket(e.target.value)}
+                className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#005A9C] focus:ring-2 focus:ring-[#005A9C]/20"
+              >
+                <option value="NASDAQ">NASDAQ</option>
+                <option value="NYSE">NYSE</option>
+                <option value="TSE">TSE</option>
+                <option value="BINANCE">Crypto</option>
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground"> scoring updates automatically when you change the ticker.</p>
+          </div>
+        </TarotCard>
+
+        <TarotCard title="سیستم امتیازدهی ۶ بعدی">
+          <div className="space-y-4">
             <p className="text-justify text-muted-foreground">
-              The 6D scoring system evaluates stocks across six dimensions: Fundamental, Technical, Sentiment, Risk, Macro, and AI factors. Each dimension is weighted 25%, 20%, 15%, 20%, 10%, and 10% respectively. The scoring algorithm uses 305 hierarchical nodes across four levels to calculate a final score between 0-100.
+              سیستم امتیازدهی ۶ بعدی سهام را در شش بعد ارزیابی می‌کند: بنیادی، تکنیکال، احساسات، ریسک، ماکرو و هوش مصنوعی. هر بعد به ترتیب با وزن‌های 25٪، 20٪، 15٪، 20٪، 10٪ و 10٪ محاسبه می‌شود. الگوریتم امتیازدهی از 305 گره سلسله‌مراتبی در چهار سطح برای محاسبه نمره نهایی بین 0 تا 100 استفاده می‌کند.
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {mlCoefficients.map((w, i) => (
                 <div key={i} className="border p-2 rounded bg-muted/30">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">{w.label}</span>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-1">
                       <span className="font-bold text-secondary">{w.defaultWeight}%</span>
-                      {w.mlOptimized && <span className="text-xs text-muted-foreground" title="Optimized by ML"></span>}
+                      {w.mlOptimized && (
+                        <span className="text-xs text-muted-foreground" title="بهینه‌شده توسط ML">
+                          ✨
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -132,23 +194,35 @@ return (
           </div>
         </TarotCard>
 
-        <TarotCard icon="" title="6 Dimensions">
-          {dimensionDetails.map((dim, i) => (
-            <div key={dim.id} className="cursor-pointer transition hover:shadow-md">
-              <div className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer">
-                <span className="text-2xl">{dim.icon}</span>
-                <div className="flex-1">
-                  <div className="flex items-center">
-                    <h4 className="font-semibold">{dim.title}</h4>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${dim.color}`}>Weight: {dim.weight}%</span>
+        <TarotCard title="۶ بعد تحلیل">
+          <div className="space-y-2">
+            {dimensionDetails.map((dim) => (
+              <div
+                key={dim.id}
+                className="rounded-lg border p-3 transition hover:shadow-md"
+              >
+                <div
+                  className="flex cursor-pointer items-center justify-between gap-3"
+                  onClick={() => setExpandedDim(expandedDim === dim.id ? null : dim.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{dim.icon}</span>
+                    <div>
+                      <h4 className="font-semibold">{dim.title}</h4>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${dim.color}`}>
+                        وزن: {dim.weight}٪
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-xl">{expandedDim === dim.id ? "▼" : "▶"}</span>
+                  <span className="text-xl text-muted-foreground">
+                    {expandedDim === dim.id ? "▼" : "▶"}
+                  </span>
                 </div>
 
                 {expandedDim === dim.id && (
-                  <div className="mt-2 ml-8 border-l-2 border-border/50 pl-4">
+                  <div className="mt-3 mr-8 border-r-2 border-border/50 pr-4 space-y-2">
                     {dim.aspects.map((a, j) => (
-                      <div key={j} className="space-y-2">
+                      <div key={j} className="space-y-1">
                         <div className="font-medium text-sm">{a.name}</div>
                         <div className="text-xs text-muted-foreground">{a.desc}</div>
                       </div>
@@ -156,73 +230,97 @@ return (
                   </div>
                 )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </TarotCard>
 
-        <TarotCard icon="" title="Grading Scale">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <TarotCard title="میزان نمره‌دهی">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {grades.map((g, i) => (
-              <div key={i} className={`text-center p-3 rounded ${g.bg} border ${g.color}`}>
+              <div key={i} className={`text-center p-3 rounded border ${g.bg} ${g.color}`}>
                 <div className={`font-bold text-lg ${g.color}`}>{g.label}</div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  {i === 0 ? "≥ 85" : `From ${g.min} to ${grades[i-1]?.min ? grades[i-1].min - 1 : "--"}`}
+                  {i === 0 ? "≥ 85" : `از ${g.min} تا ${grades[i - 1]?.min ? grades[i - 1].min - 1 : "--"}`}
                 </div>
               </div>
             ))}
           </div>
         </TarotCard>
 
-        <TarotCard icon="" title="Machine Learning Optimization">
+        <TarotCard title="بهینه‌سازی یادگیری ماشین">
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Static weights serve as fallback values. The ML service dynamically optimizes these weights by:
+              وزن‌های ثابت به عنوان مقادیر جایگزین عمل می‌کنند. سرویس ML این وزن‌ها را به صورت پویا با استفاده از داده‌های تاریخی بهینه می‌کند:
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {dimensionDetails.map((dim, i) => (
-                <div key={i} className="border p-2 rounded bg-muted/30">
+                <div key={i} className="border p-3 rounded bg-muted/30">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">{dim.title}</span>
-                    <span className="text-sm text-right mr-2">Weight: {dim.weight}%</span>
+                    <span className="text-sm font-medium">{dim.weight}%</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Optimized weekly based on historical performance data.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    بهینه‌سازی هفتگی بر اساس عملکرد تاریخی
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </TarotCard>
 
-        <TarotCard icon="" title="305-Node Hierarchy">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-3 bg-secondary/10 rounded">
-              <div className="text-2xl font-bold">6</div>
-              <div className="text-xs">Dimensions</div>
+        <TarotCard title="سلسله‌مراتب ۳۰۵ گره">
+          {loading ? (
+            <div className="flex min-h-[120px] items-center justify-center text-muted-foreground">
+              در حال بارگذاری...
             </div>
-
-            <div className="p-3 bg-secondary/10 rounded">
-              <div className="text-2xl font-bold">40</div>
-              <div className="text-xs">Sub-Dimensions</div>
+          ) : scoringData ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">6</div>
+                <div className="text-xs text-muted-foreground">بعد</div>
+              </div>
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">40</div>
+                <div className="text-xs text-muted-foreground">زیربعد</div>
+              </div>
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">80</div>
+                <div className="text-xs text-muted-foreground">جوانب</div>
+              </div>
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">173</div>
+                <div className="text-xs text-muted-foreground">زیرجوانب</div>
+              </div>
             </div>
-
-            <div className="p-3 bg-secondary/10 rounded">
-              <div className="text-2xl font-bold">80</div>
-              <div className="text-xs">Aspects</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">6</div>
+                <div className="text-xs text-muted-foreground">بعد</div>
+              </div>
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">40</div>
+                <div className="text-xs text-muted-foreground">زیربعد</div>
+              </div>
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">80</div>
+                <div className="text-xs text-muted-foreground">جوانب</div>
+              </div>
+              <div className="p-4 bg-secondary/10 rounded text-center">
+                <div className="text-3xl font-bold">173</div>
+                <div className="text-xs text-muted-foreground">زیرجوانب</div>
+              </div>
             </div>
-
-            <div className="p-3 bg-secondary/10 rounded">
-              <div className="text-2xl font-bold">173</div>
-              <div className="text-xs">Sub-Aspects</div>
-            </div>
-          </div>
+          )}
         </TarotCard>
 
         <div className="flex flex-col md:flex-row gap-3">
           <Link href="/analysis">
-            <PrimaryButton className="w-full cursor-pointer">View Current Analysis</PrimaryButton>
+            <PrimaryButton className="w-full">مشاهده تحلیل‌های فعلی</PrimaryButton>
           </Link>
           <Link href="/stocks">
-            <PrimaryButton className="w-full cursor-pointer">Browse Stocks</PrimaryButton>
+            <PrimaryButton className="w-full">مرور سهام</PrimaryButton>
           </Link>
         </div>
       </div>

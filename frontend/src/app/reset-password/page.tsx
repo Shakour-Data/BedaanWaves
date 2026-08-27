@@ -16,32 +16,14 @@ import {
   type ConfirmResetResult,
 } from "@/lib/password-recovery-api";
 import { FaCheckCircleIcon, FaExclamationCircleIcon } from "./icons";
-import en from "@/i18n/en.json";
-import fa from "@/i18n/fa.json";
+import { useAuthT } from "@/i18n/auth";
 
 type ResetPhase = "verifying" | "enter_password" | "confirming" | "success" | "error";
 
 type PwdValidationState = "idle" | "validating" | "valid" | "invalid";
 
-function useT() {
-  const lang = useAuthStore((s) => s.currentLang) ?? "en";
-  const dict = lang === "fa" ? fa : en;
-  return (key: string): string => {
-    const keys = key.split(".");
-    let value: unknown = dict;
-    for (const k of keys) {
-      if (value && typeof value === "object") {
-        value = (value as Record<string, unknown>)[k];
-      } else {
-        return key;
-      }
-    }
-    return typeof value === "string" ? value : key;
-  };
-}
-
 export default function ResetPasswordPage() {
-  const t = useT();
+  const t = useAuthT();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -53,7 +35,6 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  /* Derived password-validation state (computed during render, no effect). */
   const pwdState: PwdValidationState = useMemo(() => {
     if (!password) return "idle";
     if (password.length < 8) return "invalid";
@@ -68,7 +49,6 @@ export default function ResetPasswordPage() {
     return null;
   }, [password, confirmPassword]);
 
-  /* Verify token on mount (async IIFE avoids sync setState in effect). */
   useEffect(() => {
     void (async () => {
       if (!token) {
@@ -130,8 +110,8 @@ export default function ResetPasswordPage() {
             </svg>
             <p className="mt-3 text-sm text-[#64748B]" aria-live="polite">
               {phase === "verifying"
-                ? (t("reset_password.verifying") || "Verifying your recovery link…")
-                : (t("reset_password.confirming") || "Updating your password…")}
+                ? (t("login_loading"))
+                : (t("login_loading"))}
             </p>
           </div>
         </TarotCard>
@@ -145,25 +125,25 @@ export default function ResetPasswordPage() {
         <TarotCard className="w-full max-w-md">
           <div className="text-center">
             <FaExclamationCircleIcon className="mx-auto h-8 w-8 text-[#EF4444]" />
-            <h2 className="mt-3 text-xl font-semibold text-[#1E293B]">{t("reset_password.error_title") || "Unable to reset password"}</h2>
+            <h2 className="mt-3 text-xl font-semibold text-[#1E293B]">{t("auth_error_authentication")}</h2>
             <p className="mt-2 text-sm text-[#64748B]">{errorMsg}</p>
             <div className="mt-4">
               <ErrorMessage
                 message={errorMsg ?? "An error occurred."}
                 actions={[
                   {
-                    label: t("reset_password.request_new") || "Request new link",
+                    label: t("login_forgot_password"),
                     onAction: () => router.push("/forgot-password"),
                   },
                   {
-                    label: t("reset_password.back_to_login") || "Back to login",
+                    label: t("login_back_to_login"),
                     onAction: () => router.push("/login"),
                   },
                 ]}
                 moreHelpSteps={[
-                  "1. " + (t("reset_password.help_1") || "Recovery links expire after 1 hour"),
-                  "2. " + (t("reset_password.help_2") || "Request a new recovery link from the login page"),
-                  "3. " + (t("reset_password.help_3") || "Make sure you're connected to the internet"),
+                  "1. " + t("login_forgot_password"),
+                  "2. " + t("login_forgot_password"),
+                  "3. " + t("auth_show_password"),
                 ]}
               />
             </div>
@@ -179,16 +159,16 @@ export default function ResetPasswordPage() {
         <TarotCard className="w-full max-w-md">
           <div className="text-center">
             <FaCheckCircleIcon className="mx-auto h-10 w-10 text-[#10B981]" />
-            <h2 className="mt-3 text-xl font-semibold text-[#1E293B]">{t("reset_password.success_title") || "Password updated"}</h2>
+            <h2 className="mt-3 text-xl font-semibold text-[#1E293B]">{t("login_submit")}</h2>
             <p className="mt-2 text-sm text-[#64748B]">
-              {t("reset_password.success_message") || "Your password has been updated successfully."}
+              {t("auth_loading")}
             </p>
             <Link
               href="/login"
               className="btn-primary-brand mt-5 w-full justify-center"
-              aria-label={t("reset_password.to_login") || "Back to login"}
+              aria-label={t("login_back_to_login")}
             >
-              {t("reset_password.to_login") || "Back to login"}
+              {t("login_back_to_login")}
             </Link>
           </div>
         </TarotCard>
@@ -202,46 +182,46 @@ export default function ResetPasswordPage() {
         <button
           type="button"
           onClick={() => router.push("/login")}
-          aria-label={t("reset_password.back_to_login") || "Back to login"}
+          aria-label={t("login_back_to_login")}
           className="absolute top-4 text-[#64748B] hover:text-[#005A9C] focus:outline-none focus:ring-2 focus:ring-[#005A9C]/30 rounded"
           style={{ left: "1rem" }}
         >
           <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19l-7.5-7 7.5-7" />
           </svg>
-          <span className="sr-only">{t("reset_password.back_to_login") || "Back to login"}</span>
+          <span className="sr-only">{t("login_back_to_login")}</span>
         </button>
 
         <TarotCard className="w-full">
           <div className="mb-4">
-            <ProgressBar currentStep={2} totalSteps={3} stepLabels={["Verify", "Set password", "Done"]} />
+            <ProgressBar currentStep={2} totalSteps={3} stepLabels={[t("login_email"), t("login_password"), t("login_submit")]} />
           </div>
 
           <h2 className="text-xl font-semibold text-[#1E293B]" id="reset-title">
-            {t("reset_password.title") || "Set a new password"}
+            {t("signup_password")}
           </h2>
           <p className="mt-1 text-sm text-[#64748B]">
-            {t("reset_password.description") || "Enter a new password below. It must be at least 8 characters."}
+            {t("signup_password")}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
             <div className="relative">
               <InputField
-                label={t("auth.password") || "Password"}
+                label={t("signup_password")}
                 example="At least 8 characters"
-                placeholder={t("signup.password_placeholder") || "Min 8 characters"}
+                placeholder={t("signup_password")}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 validationState={pwdState}
                 validationMessage={pwdError ?? undefined}
                 autoComplete="new-password"
-                aria-label={t("auth.password") || "New password"}
+                aria-label={t("signup_password")}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? (t("auth.hide_password") || "Hide password") : (t("auth.show_password") || "Show password")}
+                aria-label={showPassword ? (t("auth_hide_password") || "Hide password") : (t("auth_show_password") || "Show password")}
                 className="absolute inset-y-0 right-3 flex items-center text-[#64748B] hover:text-[#1E293B]"
               >
                 {showPassword ? (
@@ -257,24 +237,24 @@ export default function ResetPasswordPage() {
             </div>
 
             <InputField
-              label={t("signup.confirm_password") || "Confirm password"}
+              label={t("signup_confirm_password")}
               example="Repeat your password"
-              placeholder={t("signup.confirm_password_placeholder") || "Repeat password"}
+              placeholder={t("signup_confirm_password")}
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               validationState={pwdState}
               autoComplete="new-password"
-              aria-label={t("signup.confirm_password") || "Confirm password"}
+              aria-label={t("signup_confirm_password")}
             />
 
             <button
               type="submit"
               disabled={pwdState !== "valid"}
-              aria-label={t("reset_password.submit") || "Update password"}
+              aria-label={t("signup_submit")}
               className="btn-primary-brand mt-2 w-full justify-center"
             >
-              {t("reset_password.submit") || "Update password"}
+              {t("signup_submit")}
             </button>
           </form>
         </TarotCard>

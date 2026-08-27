@@ -30,7 +30,7 @@ const MARKET_LABEL: Record<Market, string> = {
 type MarketFilter = "ALL" | "NASDAQ";
 
 const FILTERS: { key: MarketFilter; label: string }[] = [
-  { key: "ALL", label: "All" },
+  { key: "ALL", label: "همه" },
   { key: "NASDAQ", label: "Nasdaq" },
 ];
 
@@ -89,24 +89,24 @@ export default function StocksPage() {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-        Loading symbols...
+        در حال بارگذاری نمادها...
       </div>
     );
   }
 
   if (error || !assets) {
     return (
-      <TarotCard icon="️" title="Backend Connection Error">
+      <TarotCard title="خطا در اتصال به بک‌اند">
         <p className="text-sm text-muted-foreground">
-          Could not fetch symbol list. Make sure the backend service is running.
+          نمی‌توان فهرست نمادها را دریافت کرد. مطمئن شوید سرویس بک‌اند در حال اجراست.
         </p>
-        {error ? <p className="mt-2 text-xs text-primary">{error}</p> : null}
+        {error ? <p className="mt-2 text-xs text-error">{error}</p> : null}
       </TarotCard>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <main className="flex flex-col gap-4">
       {/* Filters + Search */}
       <section className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1">
@@ -116,7 +116,7 @@ export default function StocksPage() {
               type="button"
               onClick={() => setFilter(f.key)}
               className={
-                "rounded-full px-3 py-1.5 text-sm transition duration-fast ease-flow " +
+                "rounded-full px-3 py-1.5 text-sm transition " +
                 (filter === f.key
                   ? "bg-secondary/10 font-semibold text-secondary"
                   : "text-muted-foreground hover:bg-black/5")
@@ -127,28 +127,28 @@ export default function StocksPage() {
           ))}
         </div>
         <label className="ms-auto flex items-center gap-2 rounded-xl bg-neutral/60 px-3 py-2 text-sm text-muted-foreground">
-          <span aria-hidden="true"></span>
+          <span aria-hidden="true">🔍</span>
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search symbol or name..."
+            placeholder="جستجوی نماد یا نام..."
             className="bg-transparent text-foreground outline-none placeholder:text-muted-foreground/70"
           />
         </label>
       </section>
 
-      <TarotCard icon="" title={`Symbols (${filtered.length.toLocaleString()})`}>
+      <TarotCard title={`نمادها (${filtered.length.toLocaleString()})`}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="px-2 py-2 text-right font-medium">Symbol</th>
-                <th className="px-2 py-2 text-right font-medium">Name</th>
-                <th className="px-2 py-2 text-center font-medium">Market</th>
-                <th className="px-2 py-2 text-right font-medium">Sector</th>
-                <th className="px-2 py-2 text-left font-medium">Price</th>
-                <th className="px-2 py-2 text-left font-medium">Change</th>
+                <th className="px-2 py-2 text-right font-medium">نماد</th>
+                <th className="px-2 py-2 text-right font-medium">نام</th>
+                <th className="px-2 py-2 text-center font-medium">بازار</th>
+                <th className="px-2 py-2 text-right font-medium">صنعت</th>
+                <th className="px-2 py-2 text-left font-medium">قیمت</th>
+                <th className="px-2 py-2 text-left font-medium">تغییر</th>
               </tr>
             </thead>
             <tbody>
@@ -157,7 +157,7 @@ export default function StocksPage() {
                 return (
                   <tr
                     key={a.id}
-                    className="border-b border-border/60 transition duration-fast ease-flow hover:bg-black/5"
+                    className="border-b border-border/60 transition hover:bg-black/5"
                   >
                     <td className="px-2 py-2 font-semibold">
                       <Link
@@ -186,7 +186,7 @@ export default function StocksPage() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-2 py-6 text-center text-muted-foreground">
-                    No symbols found.
+                    نمادی یافت نشد.
                   </td>
                 </tr>
               ) : null}
@@ -194,7 +194,6 @@ export default function StocksPage() {
           </table>
         </div>
       </TarotCard>
-    </div>
+    </main>
   );
 }
-
