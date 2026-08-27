@@ -5,23 +5,16 @@ import { apiClient } from '../lib/api';
 type Role = "user" | "admin";
 
 interface AuthState {
-  user: { name: string; email: string; role: Role; created_at?: string } | null;
+  user: { name: string; email: string; role: Role; created_at?: string; isActive?: boolean } | null;
   isAuthenticated: boolean;
   token: string | null;
   refreshToken: string | null;
   loading: boolean;
-  currentLang: "en" | "fa";
-  setLanguage: (lang: "en" | "fa") => void;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
-
-const getInitialLang = () => {
-  if (typeof window === 'undefined') return 'en';
-  const saved = localStorage.getItem('lang');
-  return (saved === 'fa' || saved === 'en') ? saved : 'en';
-};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -31,20 +24,17 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       loading: false,
-      currentLang: getInitialLang(),
-      setLanguage: (lang) => set({ currentLang: lang }),
+      isLoading: false,
       login: async (email, password) => {
         set({ loading: true });
         try {
-          const currentLang = localStorage.getItem('lang') as "en" | "fa" || 'en';
-          const response = await apiClient.post(`/auth/login?lang=${currentLang}`, { email, password });
+          const response = await apiClient.post(`/auth/login`, { email, password });
           const { user, token, refreshToken } = response.data;
           set({
             user,
             isAuthenticated: true,
             token,
-            refreshToken,
-          });
+            refreshToken });
         } catch (error) {
           throw error;
         } finally {
@@ -54,15 +44,13 @@ export const useAuthStore = create<AuthState>()(
       register: async (name, email, password) => {
         set({ loading: true });
         try {
-          const currentLang = localStorage.getItem('lang') as "en" | "fa" || 'en';
-          const response = await apiClient.post(`/auth/register?lang=${currentLang}`, { name, email, password });
+          const response = await apiClient.post(`/auth/register`, { name, email, password });
           const { user, token, refreshToken } = response.data;
           set({
             user,
             isAuthenticated: true,
             token,
-            refreshToken,
-          });
+            refreshToken });
         } catch (error) {
           throw error;
         } finally {
@@ -74,23 +62,18 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           token: null,
-          refreshToken: null,
-        });
+          refreshToken: null });
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           window.location.href = '/login';
         }
-      },
-    }),
+      } }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         token: state.token,
-        refreshToken: state.refreshToken,
-        currentLang: state.currentLang,
-      }),
-    }
+        refreshToken: state.refreshToken }) }
   )
 );

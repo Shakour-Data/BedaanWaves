@@ -15,8 +15,7 @@ export const colors = {
   // Light Grey - Background, cards
   neutral: "#F8FAFC",
   // Amber - Warnings, highlights
-  accent: "#FBBF24",
-} as const;
+  accent: "#FBBF24" } as const;
 
 export const semanticColors = {
   background: colors.neutral,
@@ -34,8 +33,7 @@ export const semanticColors = {
   success: "#10B981",
   error: "#EF4444",
   warning: "#F59E0B",
-  info: "#3B82F6",
-} as const;
+  info: "#3B82F6" } as const;
 
 export const fontSizes = {
   xs: "12px",
@@ -45,8 +43,7 @@ export const fontSizes = {
   xl: "20px",
   "2xl": "24px",
   "3xl": "30px",
-  "4xl": "36px",
-} as const;
+  "4xl": "36px" } as const;
 
 export const spacing = {
   1: "4px",
@@ -56,20 +53,17 @@ export const spacing = {
   5: "24px",
   6: "32px",
   8: "48px",
-  10: "64px",
-} as const;
+  10: "64px" } as const;
 
 export const grid = {
   columns: 12,
-  gutter: "16px",
-} as const;
+  gutter: "16px" } as const;
 
 export const motion = {
   durationFast: "150ms",
   durationMedium: "300ms",
   durationSlow: "500ms",
-  easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-} as const;
+  easing: "cubic-bezier(0.4, 0, 0.2, 1)" } as const;
 
 export const designTokens = {
   colors,
@@ -77,7 +71,6 @@ export const designTokens = {
   fontSizes,
   spacing,
   grid,
-  motion,
-} as const;
+  motion } as const;
 
 export type DesignTokens = typeof designTokens;

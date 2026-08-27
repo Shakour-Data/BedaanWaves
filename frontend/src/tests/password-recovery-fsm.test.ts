@@ -4,18 +4,15 @@ import * as api from '@/lib/password-recovery-api';
 
 vi.mock('@/store/useAuthStore', () => ({
   useAuthStore: () => ({
-    currentLang: 'en',
-    setLanguage: vi.fn(),
-  }),
-}));
+    "en": 'en',
+    setLanguage: vi.fn() }) }));
 
 vi.mock('@/lib/password-recovery-api', async (importOriginal) => {
   const actual = await importOriginal<typeof api>();
   return {
     ...actual,
     requestPasswordReset: vi.fn(),
-    isValidEmail: actual.isValidEmail,
-  };
+    isValidEmail: actual.isValidEmail };
 });
 
 describe('usePasswordRecoveryFSM', () => {
@@ -70,8 +67,7 @@ describe('usePasswordRecoveryFSM', () => {
   it('transitions Confirmation → Processing → Result on successful confirm', async () => {
     vi.mocked(api.requestPasswordReset).mockResolvedValue({
       success: true,
-      message: 'Recovery link sent to your email',
-    });
+      message: 'Recovery link sent to your email' });
 
     const { result } = renderHook(() => usePasswordRecoveryFSM('en'));
     act(() => result.current.start());
@@ -95,9 +91,7 @@ describe('usePasswordRecoveryFSM', () => {
   it('transitions Processing → Error_Recovery on failed confirm', async () => {
     vi.mocked(api.requestPasswordReset).mockResolvedValue({
       success: false,
-      message: 'Network error',
-      error: { message: 'Network error', code: 'network' },
-    });
+      message: 'Network error' });
 
     const { result } = renderHook(() => usePasswordRecoveryFSM('en'));
     act(() => result.current.start());
@@ -141,8 +135,7 @@ describe('usePasswordRecoveryFSM', () => {
   it('transitions Result → Welcome via reset()', async () => {
     vi.mocked(api.requestPasswordReset).mockResolvedValue({
       success: true,
-      message: 'Sent',
-    });
+      message: 'Sent' });
 
     const { result } = renderHook(() => usePasswordRecoveryFSM('en'));
     act(() => result.current.start());

@@ -12,11 +12,10 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  theme: "light",
+  theme: "dark",
   sidebarOpen: false,
   setTheme: (theme) => set({ theme }),
   toggleTheme: () =>
     set((state) => ({ theme: state.theme === "light" ? "dark" : "light" })),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-}));
+  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })) }));

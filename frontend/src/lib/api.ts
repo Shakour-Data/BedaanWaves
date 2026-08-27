@@ -8,9 +8,7 @@ export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-  },
-});
+    'Content-Type': 'application/json' } });
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
@@ -88,8 +86,7 @@ apiClient.interceptors.response.use(
 
         useAuthStore.setState({
           token,
-          refreshToken: useAuthStore.getState().refreshToken,
-        });
+          refreshToken: useAuthStore.getState().refreshToken });
 
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         processQueue(null, token);
