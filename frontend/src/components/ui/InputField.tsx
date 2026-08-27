@@ -31,47 +31,45 @@ export function InputField({
   const describedById = helpText ? `${inputId}-help` : undefined;
 
   const stateClasses = {
-    idle: "border-[#E2E8F0] focus:border-[#005A9C] focus:ring-[#005A9C]/20",
-    validating: "border-[#F59E0B] focus:border-[#F59E0B] focus:ring-[#F59E0B]/20",
-    valid: "border-[#10B981] focus:border-[#10B981] focus:ring-[#10B981]/20",
-    invalid: "border-[#EF4444] focus:border-[#EF4444] focus:ring-[#EF4444]/20",
-  }[validationState];
+    idle: "border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]/20",
+    validating: "border-[var(--color-warning)] focus:border-[var(--color-warning)] focus:ring-[var(--color-warning)]/20",
+    valid: "border-[var(--color-success)] focus:border-[var(--color-success)] focus:ring-[var(--color-success)]/20",
+    invalid: "border-[var(--color-error)] focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/20" }[validationState];
 
   const statusIcon: Record<ValidationState, ReactNode> = {
     idle: null,
     validating: (
-      <svg className="animate-spin h-4 w-4 text-[#F59E0B]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <svg className="animate-spin h-4 w-4 text-[var(--color-warning)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
     ),
     valid: (
-      <svg className="h-4 w-4 text-[#10B981]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="h-4 w-4 text-[var(--color-success)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
     ),
     invalid: (
-      <svg className="h-4 w-4 text-[#EF4444]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="h-4 w-4 text-[var(--color-error)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
       </svg>
-    ),
-  };
+    ) };
 
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={inputId} className="text-sm font-medium text-[#1E293B]">
+      <label htmlFor={inputId} className="text-sm font-medium text-[var(--color-text-primary)]">
         {label}
       </label>
 
       {helpText ? (
-        <p id={helpText ? `${inputId}-help` : undefined} className="text-xs text-[#64748B]">
+        <p id={helpText ? `${inputId}-help` : undefined} className="text-xs text-[var(--color-text-secondary)]">
           {helpText}
         </p>
       ) : null}
 
       <div className="relative">
         {icon ? (
-          <span className="absolute inset-y-0 left-3 flex items-center text-[#64748B]" aria-hidden="true">
+          <span className="absolute inset-y-0 left-3 flex items-center text-[var(--color-text-secondary)]" aria-hidden="true">
             {icon}
           </span>
         ) : null}
@@ -79,7 +77,7 @@ export function InputField({
           id={inputId}
           type={type}
           className={cn(
-            "peer w-full rounded-xl border bg-[#FFFFFF] px-3 py-2 text-sm text-[#1E293B]",
+            "peer w-full rounded-md border bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)]",
             "outline-none transition-colors duration-150",
             "focus:ring-2 focus:ring-offset-0",
             icon ? "ps-10" : "ps-3",
@@ -98,7 +96,7 @@ export function InputField({
       </div>
 
       {example ? (
-        <p className="text-xs text-[#94A3B8]">e.g. {example}</p>
+        <p className="text-xs text-[var(--color-text-secondary)]">e.g. {example}</p>
       ) : null}
 
       {validationMessage ? (
@@ -106,7 +104,7 @@ export function InputField({
           id={messageId}
           className={cn(
             "text-xs",
-            validationState === "valid" ? "text-[#10B981]" : "text-[#EF4444]",
+            validationState === "valid" ? "text-[var(--color-success)]" : "text-[var(--color-error)]",
           )}
           role={validationState === "invalid" ? "alert" : "status"}
           aria-live={validationState === "invalid" ? "polite" : "off"}
