@@ -30,8 +30,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   requestPasswordReset,
   isValidEmail,
-  type RequestResetResult,
-} from "@/lib/password-recovery-api";
+  type PasswordRecoveryResponse } from "@/lib/password-recovery-api";
 
 export type RecoveryState =
   | "Welcome"
@@ -81,8 +80,7 @@ const TRANSITIONS: Record<RecoveryState, Record<string, RecoveryState>> = {
   Confirmation: { Confirm: "Processing", Edit: "Data_Entry" },
   Processing: { Success: "Result", Fail: "Error_Recovery" },
   Error_Recovery: { Retry: "Data_Entry", Cancel: "Welcome" },
-  Result: {},
-};
+  Result: {} };
 
 function computeStep(state: RecoveryState): number {
   switch (state) {
@@ -151,8 +149,7 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
         solutions: [
           "Type your email in the field above",
           "Click 'Back' to return to the welcome screen",
-        ],
-      });
+        ] });
       _transition("Invalid_Input");
       return;
     }
@@ -164,8 +161,7 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
         solutions: [
           "Check the format — it should look like name@example.com",
           "Click 'Back' to return to the welcome screen",
-        ],
-      });
+        ] });
       _transition("Invalid_Input");
       return;
     }
@@ -186,8 +182,8 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
       setErrorMessage(null);
 
       try {
-        const result: RequestResetResult = await requestPasswordReset(
-          data.email,
+        const result: PasswordRecoveryResponse = await requestPasswordReset(
+          { email: data.email },
           data.lang,
         );
 
@@ -198,12 +194,11 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
           _transition("Success");
         } else {
           setErrorMessage({
-            message: result.error?.message ?? "Something went wrong while sending the link.",
+            message: result.message ?? "Something went wrong while sending the link.",
             solutions: [
               "Check your internet connection and try again",
               "Click 'Back' to return to the welcome screen",
-            ],
-          });
+            ] });
           _transition("Fail");
         }
       } catch {
@@ -212,8 +207,7 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
           solutions: [
             "Check your connection and click 'Retry'",
             "Click 'Cancel' to return to the welcome screen",
-          ],
-        });
+          ] });
         _transition("Fail");
       } finally {
         setIsProcessing(false);
@@ -272,6 +266,5 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
     retry,
     cancel,
     back,
-    reset,
-  };
+    reset };
 }
