@@ -20,21 +20,10 @@ function getCspHeader(nonce: string): string {
   ].join('; ');
 }
 
-const SUPPORTED_LOCALES = ['en', 'fa'];
+const SUPPORTED_LOCALES = ['en'];
 const DEFAULT_LOCALE = 'en';
 
 function getLocaleFromRequest(request: NextRequest): string {
-  const cookieLocale = request.cookies.get('locale')?.value;
-  if (cookieLocale && SUPPORTED_LOCALES.includes(cookieLocale)) {
-    return cookieLocale;
-  }
-  const acceptLanguage = request.headers.get('accept-language');
-  if (acceptLanguage) {
-    const headerLocale = acceptLanguage.split(',')[0]?.split('-')[0];
-    if (headerLocale && SUPPORTED_LOCALES.includes(headerLocale)) {
-      return headerLocale;
-    }
-  }
   return DEFAULT_LOCALE;
 }
 
@@ -54,17 +43,7 @@ export function middleware(request: NextRequest) {
   const nonce = generateNonce();
   const locale = getLocaleFromRequest(request);
 
-  const hasLocalePrefix = SUPPORTED_LOCALES.some(
-    (loc) => pathname === `/${loc}` || pathname.startsWith(`/${loc}/`)
-  );
-
-  let response: NextResponse;
-  if (!hasLocalePrefix) {
-    url.pathname = `/${locale}${pathname}`;
-    response = NextResponse.redirect(url);
-  } else {
-    response = NextResponse.next();
-  }
+  const response = NextResponse.next();
 
   response.headers.set('Content-Security-Policy', getCspHeader(nonce));
   response.cookies.set('__csp_nonce', nonce, {
