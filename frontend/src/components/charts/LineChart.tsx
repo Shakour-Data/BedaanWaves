@@ -8,8 +8,7 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type LineData,
-} from "lightweight-charts";
+  type LineData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 
 interface LineChartProps {
@@ -22,15 +21,13 @@ const LIGHT = {
   background: "#ffffff",
   text: "#5c5c5c",
   grid: "#eeeeee",
-  border: "#e0e0e0",
-};
+  border: "#e0e0e0" };
 
 const DARK = {
   background: "#1e1e1e",
   text: "#a8a8a8",
   grid: "#2a2a2a",
-  border: "#333333",
-};
+  border: "#333333" };
 
 export function LineChart({ data, height = 320, color = "#2563EB" }: LineChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -42,8 +39,7 @@ export function LineChart({ data, height = 320, color = "#2563EB" }: LineChartPr
     () =>
       data.map((d) => ({
         time: d.time as LineData["time"],
-        value: d.value,
-      })),
+        value: d.value })),
     [data]
   );
 
@@ -56,27 +52,22 @@ export function LineChart({ data, height = 320, color = "#2563EB" }: LineChartPr
       layout: {
         background: { type: ColorType.Solid, color: colors.background },
         textColor: colors.text,
-        fontFamily: "inherit",
-      },
+        fontFamily: "inherit" },
       grid: {
         vertLines: { color: colors.grid },
-        horzLines: { color: colors.grid },
-      },
+        horzLines: { color: colors.grid } },
       rightPriceScale: { borderColor: colors.border },
       timeScale: { borderColor: colors.border },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }),
-      },
-      autoSize: false,
-    });
+        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) },
+      autoSize: false });
     chartRef.current = chart;
 
     const series = chart.addSeries(LineSeries, {
       color,
-      lineWidth: 2,
-    });
+      lineWidth: 2 });
     series.setData(chartData);
 
     chart.timeScale().fitContent();
