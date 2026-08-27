@@ -54,8 +54,8 @@ class DatabaseService(BaseService):
     
     async def initialize(self) -> None:
         """Initialize database service with retry logic."""
-        max_retries = 5
-        retry_delay = 5
+        max_retries = 1
+        retry_delay = 1
         
         for attempt in range(max_retries):
             try:
@@ -74,7 +74,7 @@ class DatabaseService(BaseService):
                         pool_pre_ping=True,
                         pool_recycle=3600,
                         connect_args={
-                            "command_timeout": 60
+                            "command_timeout": 5
                         }
                     )
                     self.session_factory = async_sessionmaker(
