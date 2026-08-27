@@ -83,3 +83,20 @@ async def authenticate_user(username: str, password: str) -> Optional[User]:
     if not verify_password(password, user.hashed_password):
         return None
     return user
+
+
+async def ensure_admin_user() -> None:
+    if await get_user_by_username("admin"):
+        return
+    await create_user(
+        username="admin",
+        email="admin@bedaanwaves.local",
+        hashed_password=hash_password("admin123"),
+        full_name="Admin User",
+    )
+    async with async_session_maker() as session:
+        from sqlalchemy import update
+        await session.execute(
+            update(User).where(User.username == "admin").values(is_admin=True)
+        )
+        await session.commit()

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { apiClient } from "@/lib/api";
 
@@ -20,17 +21,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      // Sync with backend if needed
+      setFullName(user.name || "");
     }
   }, [user]);
-
-  const handleToggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const handleToggleShowNewPassword = () => {
-    setShowNewPassword(!showNewPassword);
-  };
 
   const validatePasswords = (): boolean => {
     if (newPassword && confirmPassword && newPassword !== confirmPassword) {
@@ -71,10 +64,10 @@ export default function ProfilePage() {
     <DashboardShell title="پروفایل کاربری">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* User Profile */}
-        <TarotCard icon="" title="پروفایل کاربر" className="lg:col-span-3">
+        <TarotCard title="پروفایل کاربر" className="lg:col-span-3">
           <div className="flex items-start gap-4">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-2xl">
-              
+              {user?.name?.charAt(0) || "U"}
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold">{fullName || user?.name || "کاربر نمایشی"}</h3>
@@ -89,7 +82,7 @@ export default function ProfilePage() {
         </TarotCard>
 
         {/* Account Info */}
-        <TarotCard icon="" title="اطلاعات حساب" className="lg:col-span-2">
+        <TarotCard title="اطلاعات حساب" className="lg:col-span-2">
           <div className="space-y-4">
             <div>
               <div className="text-sm font-medium mb-2">ایمیل</div>
@@ -116,31 +109,29 @@ export default function ProfilePage() {
         </TarotCard>
 
         {/* Security Settings */}
-        <TarotCard icon="" title="تنظیمات امنیتی" className="lg:col-span-2">
-          <div className="space-y-4">
-            <div className="border-b border-border pb-2 mb-4">
+        <TarotCard title="تنظیمات امنیتی" className="lg:col-span-2">
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="border-b border-border pb-4 mb-4">
               <div className="font-medium mb-2">تغییر رمز عبور</div>
               <div className="flex items-center gap-2">
-                <span className="cursor-pointer mr-3">
-                  <span className="text-xl">{showPassword ? "" : "️"}</span>
-                </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
+                  placeholder="رمز عبور فعلی"
+                  className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#005A9C] focus:ring-2 focus:ring-[#005A9C]/20 disabled:opacity-60"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                  className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm hover:bg-muted/50 transition"
+                  aria-label={showPassword ? "مخفی کردن رمز" : "نمایش رمز"}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleToggleShowPassword}
-                disabled={loading}
-                className="ml-2 px-3 py-2 rounded-xl bg-secondary text-sm text-secondary hover:bg-primary/10 transition duration-fast ease-flow"
-                aria-label={showPassword ? "مخفی کردن رمز" : "نمایش رمز"}
-              >
-                {showPassword ? "" : "️"}
-              </button>
             </div>
 
             <div>
@@ -151,17 +142,17 @@ export default function ProfilePage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   disabled={loading}
-                  className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
                   placeholder="حداقل ۸ کاراکتر"
+                  className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#005A9C] focus:ring-2 focus:ring-[#005A9C]/20 disabled:opacity-60"
                 />
                 <button
                   type="button"
-                  onClick={handleToggleShowNewPassword}
+                  onClick={() => setShowNewPassword(!showNewPassword)}
                   disabled={loading}
-                  className="px-3 py-2 rounded-xl bg-secondary text-sm text-secondary hover:bg-primary/10 transition duration-fast ease-flow"
+                  className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm hover:bg-muted/50 transition"
                   aria-label={showNewPassword ? "مخفی کردن رمز" : "نمایش رمز"}
                 >
-                  {showNewPassword ? "" : "️"}
+                  {showNewPassword ? "🙈" : "👁️"}
                 </button>
               </div>
               <input
@@ -169,29 +160,25 @@ export default function ProfilePage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
-                className="flex-1 rounded-xl px-3 py-2 border border-border bg-surface px-3 py-2 outline-none transition duration-fast ease-flow focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60"
                 placeholder="تکرار رمز جدید"
+                className="mt-2 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#005A9C] focus:ring-2 focus:ring-[#005A9C]/20 disabled:opacity-60"
               />
               {confirmPasswordError && (
-                <p className="text-sm mt-1 text-primary flex items-center">
-                  <span className="text-xl">️</span>
-                  {confirmPasswordError}
-                </p>
+                <p className="text-sm mt-1 text-error">{confirmPasswordError}</p>
               )}
               {saveError && (
-                <p className="text-sm mt-1 text-primary">{saveError}</p>
+                <p className="text-sm mt-1 text-error">{saveError}</p>
               )}
             </div>
 
             <button
               type="submit"
-              onClick={handleSave}
               disabled={loading}
-              className="mt-4 w-full justify-center px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/20 transition duration-fast ease-flow"
+              className="mt-4 w-full justify-center px-4 py-2 bg-secondary text-secondary-foreground rounded-xl hover:bg-secondary/20 transition"
             >
               {loading ? "در حال ذخیره..." : "ذخیره تغییرات"}
             </button>
-          </div>
+          </form>
         </TarotCard>
       </div>
     </DashboardShell>

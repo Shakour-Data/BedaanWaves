@@ -80,6 +80,7 @@ backend/test_out.txt
 
 # Backend logs
 backend/logs/
+backend/*.log
 
 # Temporary utility scripts
 remove_emojis.py

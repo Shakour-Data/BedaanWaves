@@ -10,7 +10,7 @@ function getCspHeader(nonce: string): string {
   return [
     "default-src 'self'",
     "script-src 'self' 'nonce-" + nonce + "'",
-    "style-src 'self' 'nonce-" + nonce + "'",
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
     "connect-src 'self' http://localhost:3000 https:",
@@ -21,7 +21,7 @@ function getCspHeader(nonce: string): string {
 }
 
 const SUPPORTED_LOCALES = ['en', 'fa'];
-const DEFAULT_LOCALE = 'fa';
+const DEFAULT_LOCALE = 'en';
 
 function getLocaleFromRequest(request: NextRequest): string {
   const cookieLocale = request.cookies.get('locale')?.value;

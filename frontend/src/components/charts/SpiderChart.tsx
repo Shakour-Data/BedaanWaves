@@ -89,7 +89,6 @@ export function SpiderChart({ labels, values, max = 100, height = 320 }: SpiderC
             textAnchor="middle"
             dominantBaseline="middle"
             className="fill-current text-xs text-gray-600 dark:text-gray-300"
-            style={{ fontSize: size < 300 ? 9 : 11 }}
           >
             {label}
           </text>

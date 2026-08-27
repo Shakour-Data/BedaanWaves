@@ -20,9 +20,8 @@ export default function NewsPage() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch market news
         const newsRes = await apiClient.get<any>("/news/market?limit=20");
-        
+
         if (active) {
           const newsItems: NewsItem[] = (newsRes.data || {}).data || [];
           const formattedNews: NewsItem[] = newsItems.map((item: any) => ({
@@ -57,7 +56,6 @@ export default function NewsPage() {
 
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
   const filteredNews = selectedSource ? newItems.filter((item) => item.source === selectedSource) : newItems;
-  const trendingTopics = getTrendingTopics(newItems);
   const topTopics = getTopTopics(newItems);
 
   if (loading) {
@@ -73,7 +71,7 @@ export default function NewsPage() {
   if (error) {
     return (
       <DashboardShell title="اخبار">
-        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
+        <TarotCard title="خطا" className="max-w-md mx-auto">
           <p className="text-sm text-muted-foreground">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -91,7 +89,7 @@ export default function NewsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="" title="فیلترها">
+          <TarotCard title="فیلترها">
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedSource(null)}
@@ -112,7 +110,7 @@ export default function NewsPage() {
           </TarotCard>
 
           {/* Trending Topics */}
-          <TarotCard icon="" title="موضوعات داغ">
+          <TarotCard title="موضوعات داغ">
             <div className="space-y-2">
               {topTopics.map((topic, i) => (
                 <div key={i} className="flex items-center justify-between font-medium text-sm">
@@ -129,7 +127,7 @@ export default function NewsPage() {
 
         {/* News List */}
         <div className="lg:col-span-3">
-          <TarotCard icon="" title={selectedSource ? `اخبار از ${selectedSource}` : "همه اخبار"}>
+          <TarotCard title={selectedSource ? `اخبار از ${selectedSource}` : "همه اخبار"}>
             <NewsList items={filteredNews} />
           </TarotCard>
         </div>
@@ -153,8 +151,4 @@ function getTopTopics(newsItems: NewsItem[]): { topic: string; count: number }[]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([topic, count]) => ({ topic, count }));
-}
-
-function getTrendingTopics(newsItems: NewsItem[]): { topic: string; count: number }[] {
-  return getTopTopics(newsItems);
 }

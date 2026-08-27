@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { SignalList } from "@/components/dashboard/SignalList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { apiClient } from "@/lib/api";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
 
@@ -15,6 +16,7 @@ export default function AlertsPage() {
   const [alertHistory, setAlertHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [alertStats, setAlertStats] = useState({ active: 0, buy: 0, sell: 0, hold: 0 });
 
   useEffect(() => {
     let active = true;
@@ -27,16 +29,11 @@ export default function AlertsPage() {
       setAlertHistory([]);
 
       try {
-        // Fetch all active signals as alerts
-        const summaryRes = await apiClient.get<{
-          status: string;
-          data: any;
-          summary: Record<string, number>;
-          average_confidence: Record<string, number>;
-        }>("/analysis/signals-summary?min_confidence=0.7");
-
-        const watchlistsRes = await apiClient.get<any[]>("/watchlists");
-        const notificationsRes = await apiClient.get<any[]>("/notifications?limit=20");
+        const [summaryRes, watchlistsRes, notificationsRes] = await Promise.all([
+          apiClient.get<{ status: string; data: any; summary: Record<string, number>; average_confidence: Record<string, number> }>("/analysis/signals-summary?min_confidence=0.7").catch(() => ({ data: { status: "error" } })),
+          apiClient.get<any[]>("/watchlists").catch(() => ({ data: [] })),
+          apiClient.get<any[]>("/notifications?limit=20").catch(() => ({ data: [] })),
+        ]);
 
         if (!active) return;
 
@@ -94,9 +91,20 @@ export default function AlertsPage() {
             time: formatTimeAgo(n.created_at),
             alert: n.title,
             type: n.extra?.signal_type || "INFO",
-            status: n.read ? "executed" : "active",
+            status: n.read ? "اجرا شده" : "فعال",
           }));
         setAlertHistory(history);
+
+        // Calculate stats
+        const buyCount = alerts.filter(a => a.type === "BUY").length;
+        const sellCount = alerts.filter(a => a.type === "SELL").length;
+        const holdCount = alerts.filter(a => a.type === "HOLD").length;
+        setAlertStats({
+          active: alerts.length,
+          buy: buyCount,
+          sell: sellCount,
+          hold: holdCount,
+        });
 
       } catch (error) {
         if (active) setError("خطا در بارگذاری هشدارها. لطفاً دوباره تلاش کنید.");
@@ -137,7 +145,7 @@ export default function AlertsPage() {
   if (error) {
     return (
       <DashboardShell title="هشدارها">
-        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
+        <TarotCard title="خطا" className="max-w-md mx-auto">
           <p className="text-sm text-muted-foreground">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -155,7 +163,7 @@ export default function AlertsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="" title="فیلتر هشدارها">
+          <TarotCard title="فیلتر هشدارها">
             <div className="space-y-2">
               {[
                 { id: "all", label: "همه" },
@@ -174,13 +182,13 @@ export default function AlertsPage() {
             </div>
           </TarotCard>
 
-          <TarotCard icon="" title="آمار هشدارها">
+          <TarotCard title="آمار هشدارها">
             <div className="space-y-3">
               {[
-                { label: "هشدارهای فعال", value: filteredAlerts.length },
-                { label: "هشدار خرید", value: activeAlerts.filter(a => a.type === "BUY").length },
-                { label: "هشدار فروش", value: activeAlerts.filter(a => a.type === "SELL").length },
-                { label: "هشدار نگهداری", value: activeAlerts.filter(a => a.type === "HOLD").length },
+                { label: "هشدارهای فعال", value: alertStats.active },
+                { label: "هشدار خرید", value: alertStats.buy },
+                { label: "هشدار فروش", value: alertStats.sell },
+                { label: "هشدار نگهداری", value: alertStats.hold },
               ].map((stat, i) => (
                 <div key={i} className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">{stat.label}</span>
@@ -193,7 +201,7 @@ export default function AlertsPage() {
 
         {/* Active Alerts */}
         <div className="lg:col-span-3 space-y-4">
-          <TarotCard icon="" title={`هشدارهای فعال (${filteredAlerts.length})`}>
+          <TarotCard title={`هشدارهای فعال (${filteredAlerts.length})`}>
             {filteredAlerts.length > 0 ? (
               <SignalList signals={filteredAlerts} />
             ) : (
@@ -201,7 +209,7 @@ export default function AlertsPage() {
             )}
           </TarotCard>
 
-          <TarotCard icon="️" title="نمادهای واچ‌لیست">
+          <TarotCard title="نمادهای واچ‌لیست">
             {watchlistAlerts.length > 0 ? (
               <AssetTable rows={watchlistAlerts} />
             ) : (
@@ -209,7 +217,7 @@ export default function AlertsPage() {
             )}
           </TarotCard>
 
-          <TarotCard icon="" title="تاریخچه هشدارها">
+          <TarotCard title="تاریخچه هشدارها">
             {alertHistory.length > 0 ? (
               <div className="space-y-3">
                 {alertHistory.map((alert, i) => (
@@ -221,7 +229,7 @@ export default function AlertsPage() {
                       </span>
                       <span className="font-medium">{alert.alert}</span>
                     </div>
-                    <span className={`text-xs ${alert.status === "executed" ? "text-success" : "text-secondary"}`}>
+                    <span className={`text-xs ${alert.status === "اجرا شده" ? "text-success" : "text-secondary"}`}>
                       {alert.status}
                     </span>
                   </div>

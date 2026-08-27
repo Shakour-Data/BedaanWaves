@@ -60,9 +60,9 @@ export function DashboardShell({ title, children }: DashboardShellProps) {
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col min-h-screen">
         <Topbar title={title} />
-        <main className={cn("mx-auto w-full max-w-6xl flex-1 p-3")}>{children}</main>
+        <main className={cn("mx-auto w-full max-w-6xl flex-1 p-3 min-h-0")}>{children}</main>
       </div>
     </div>
   );

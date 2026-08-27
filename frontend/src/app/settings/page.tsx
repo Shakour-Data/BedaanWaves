@@ -10,87 +10,104 @@ const countries = [
   { id: "ir", name: "Iran", flag: "🇮🇷", region: "Middle East" },
   { id: "us", name: "USA", flag: "🇺🇸", region: "North America" },
   { id: "eu", name: "Europe", flag: "🇪🇺", region: "Europe" },
-  { id: "as", name: "Asia", flag: "", region: "Asia Pacific" },
-  { id: "crypto", name: "Cryptocurrency", flag: "₿", region: "Digital" }
+  { id: "as", name: "Asia", flag: "🌏", region: "Asia Pacific" },
+  { id: "crypto", name: "Cryptocurrency", flag: "₿", region: "Digital" },
 ];
 
 const marketData = {
   ir: {
     indices: [
-      { id: "tepix", name: "TEPIX", desc: "Tehran Stock Exchange Index" },
-      { id: "tedpix", name: "TEDPIX", desc: "The Dow Iran" }
+      { id: "tepix", name: "TEPIX", desc: "شاخص کل بورس تهران" },
+      { id: "tedpix", name: "TEDPIX", desc: "شاخص کل proportion دارایی‌ها" },
     ],
     stocks: [
       { id: "mav", name: "Mave", symbol: "MVE" },
-      { id: "dkd", name: "Dekhoon Kala Dar", symbol: "DKD" }
+      { id: "dkd", name: "Dekhoon Kala Dar", symbol: "DKD" },
     ],
     industries: [
-      { id: "energy", name: "Energy", change: "+2.5%" },
-      { id: "tech", name: "Technology", change: "+3.1%" }
+      { id: "energy", name: "انرژی", change: "+2.5%" },
+      { id: "tech", name: "تکنولوژی", change: "+3.1%" },
     ],
     crypto: [
       { id: "btc", name: "Bitcoin", symbol: "BTC", price: "$45,000", change: "+2%" },
-      { id: "eth", name: "Ethereum", symbol: "ETH", price: "$2,800", change: "+1.5%" }
-    ]
+      { id: "eth", name: "Ethereum", symbol: "ETH", price: "$2,800", change: "+1.5%" },
+    ],
   },
   us: {
     indices: [
-      { id: "spx", name: "S&P 500", desc: "Standard & Poor's 500" },
-      { id: "nas", name: "NASDAQ", desc: "NASDAQ Composite" }
+      { id: "spx", name: "S&P 500", desc: "شاخص استاندارد و پور 500" },
+      { id: "nas", name: "NASDAQ", desc: "شاخص ترکیبی ناسداک" },
     ],
     stocks: [
       { id: "aapl", name: "Apple", symbol: "AAPL" },
-      { id: "msft", name: "Microsoft", symbol: "MSFT" }
+      { id: "msft", name: "Microsoft", symbol: "MSFT" },
     ],
     industries: [
-      { id: "tech", name: "Technology", change: "+4.2%" },
-      { id: "health", name: "Healthcare", change: "+1.8%" }
+      { id: "tech", name: "تکنولوژی", change: "+4.2%" },
+      { id: "health", name: "سلامت", change: "+1.8%" },
     ],
     crypto: [
       { id: "btc", name: "Bitcoin", symbol: "BTC", price: "$45,000", change: "+2%" },
-      { id: "eth", name: "Ethereum", symbol: "ETH", price: "$2,800", change: "+2.1%" }
-    ]
+      { id: "eth", name: "Ethereum", symbol: "ETH", price: "$2,800", change: "+2.1%" },
+    ],
   },
   eu: {
     indices: [
-      { id: "ftse", name: "FTSE 100", desc: "Financial Times Stock Exchange 100" },
-      { id: "dax", name: "DAX", desc: "Germany's DAX Index" }
+      { id: "ftse", name: "FTSE 100", desc: "شاخص Financil Times 100" },
+      { id: "dax", name: "DAX", desc: "شاخص DAX آلمان" },
     ],
     stocks: [
       { id: "sap", name: "SAP", symbol: "SAP" },
-      { id: "vow", name: "Volkswagen", symbol: "VOW" }
+      { id: "vow", name: "Volkswagen", symbol: "VOW" },
     ],
     industries: [
-      { id: "auto", name: "Automotive", change: "+1.9%" },
-      { id: "finance", name: "Financial", change: "+0.8%" }
+      { id: "auto", name: "خودروسازی", change: "+1.9%" },
+      { id: "finance", name: "مالی", change: "+0.8%" },
     ],
     crypto: [
-      { id: "btc", name: "Bitcoin", symbol: "BTC", price: "$45,000", change: "+2%" }
-    ]
+      { id: "btc", name: "Bitcoin", symbol: "BTC", price: "$45,000", change: "+2%" },
+    ],
   },
   crypto: {
     indices: [
-      { id: "crypto10", name: "Crypto Top 10", desc: "Top 10 Cryptocurrencies" },
-      { id: "defi", name: "DeFi Index", desc: "Decentralized Finance Track" }
+      { id: "crypto10", name: "Top 10 Crypto", desc: "۱۰ رمزنگار برتر" },
+      { id: "defi", name: "DeFi Index", desc: "ردیابی مالی غیرمتمرکز" },
     ],
     stocks: [],
     industries: [
-      { id: "defi", name: "DeFi Protocol", change: "+8.5%" },
-      { id: "layer1", name: "Layer 1 Blockchain", change: "+10.2%" }
+      { id: "defi", name: "پروتکل DeFi", change: "+8.5%" },
+      { id: "layer1", name: "بلاکچین لایه ۱", change: "+10.2%" },
     ],
     crypto: [
       { id: "sol", name: "Solana", symbol: "SOL", price: "$125", change: "+5.3%" },
       { id: "ada", name: "Cardano", symbol: "ADA", price: "$0.45", change: "+3.4%" },
-      { id: "avax", name: "Avalanche", symbol: "AVAX", price: "$75", change: "+6.1%" }
-    ]
-  }
+      { id: "avax", name: "Avalanche", symbol: "AVAX", price: "$75", change: "+6.1%" },
+    ],
+  },
+  as: {
+    indices: [
+      { id: "nikkei", name: "Nikkei 225", desc: "شاخص نیکkei 225 ژاپن" },
+      { id: "shcomp", name: "SSE Composite", desc: "شاخص ترکیبی شانگهای" },
+    ],
+    stocks: [
+      { id: "tsm", name: "TSMC", symbol: "TSM" },
+      { id: "baba", name: "Alibaba", symbol: "BABA" },
+    ],
+    industries: [
+      { id: "semiconductor", name: "نیمه‌هادی", change: "+3.5%" },
+      { id: "ecommerce", name: "تجارت الکترونیک", change: "+2.1%" },
+    ],
+    crypto: [
+      { id: "btc", name: "Bitcoin", symbol: "BTC", price: "$45,000", change: "+2%" },
+    ],
+  },
 };
 
 const notificationTypes = [
-  { id: "email", label: "Email Notifications", icon: "" },
-  { id: "push", label: "Push Notifications", icon: "" },
-  { id: "sms", label: "SMS Alerts", icon: "" },
-  { id: "telegram", label: "Telegram Bot", icon: "" }
+  { id: "email", label: "اعلان‌های ایمیل", icon: "📧" },
+  { id: "push", label: "اعلان‌های Push", icon: "🔔" },
+  { id: "sms", label: "هشدارهای SMS", icon: "📱" },
+  { id: "telegram", label: "ربات تلگرام", icon: "✈️" },
 ];
 
 export default function SettingsPage() {
@@ -104,10 +121,11 @@ export default function SettingsPage() {
     email: true,
     push: true,
     sms: false,
-    telegram: false
+    telegram: false,
   });
   const [apiSettingsData, setApiSettingsData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -155,6 +173,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setLoading(true);
+    setSaved(false);
     try {
       await apiClient.post("/users/preferences", {
         country: selectedCountry,
@@ -165,17 +184,19 @@ export default function SettingsPage() {
         currencies: selectedCurrencies,
         notifications
       });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (error) {
-      // Handle error (e.g., show toast)
+      // Handle error
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <DashboardShell title="تنظیمات بازار">
+    <DashboardShell title="تنظیمات">
       <div className="flex flex-col gap-6">
-        <TarotCard icon="️" title="پیکربندی تنظیمات بازار">
+        <TarotCard title="پیکربندی تنظیمات بازار">
           <p className="text-muted-foreground text-justify">
             تنظیمات تحلیل بازار شخصی‌سازی شده خود را پیکربندی کنید. کشورها، شاخص‌ها، سهام، صنایع و ارزهای دیجیتال را انتخاب کنید.
           </p>
@@ -184,7 +205,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Country Selection - Left Sidebar */}
           <div className="lg:col-span-3">
-            <TarotCard icon="" title="Country Selection">
+            <TarotCard title="انتخاب کشور">
               <div className="space-y-2">
                 {countries.map((country) => {
                   const isSelected = selectedCountry === country.id;
@@ -192,12 +213,12 @@ export default function SettingsPage() {
                     <button
                       key={country.id}
                       onClick={() => setSelectedCountry(country.id)}
-                      className={`w-full p-3 rounded-lg border transition-all flex items-center gap-2
-                        ${isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 hover:border-gray-300"}
+                      className={`w-full p-3 rounded-lg border transition-all flex items-center gap-2 text-right
+                        ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
                       `}
                     >
                       <span className="text-2xl">{country.flag}</span>
-                      <div className="text-left">
+                      <div>
                         <div className="font-medium text-sm">{country.name}</div>
                         <div className="text-xs text-muted-foreground">{country.region}</div>
                       </div>
@@ -210,20 +231,20 @@ export default function SettingsPage() {
 
           {/* Main Content */}
           <div className="lg:col-span-9">
-            <TarotCard 
-              icon={countryInfo?.flag} 
-              title={`${countryInfo?.name} Market Configuration`}
+            <TarotCard
+              icon={countryInfo?.flag}
+              title={`پیکربندی بازار ${countryInfo?.name}`}
             >
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Indices Section */}
                 <div>
-                  <h4 className="font-medium mb-3 text-sm">Indices</h4>
+                  <h4 className="font-medium mb-3 text-sm">شاخص‌ها</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {data?.indices?.map((index: any) => (
                       <label
                         key={index.id}
                         className={`flex items-center gap-2 p-3 rounded border cursor-pointer transition-all
-                          ${selectedIndex === index.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 hover:border-gray-300"}
+                          ${selectedIndex === index.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
                         `}
                       >
                         <input
@@ -245,13 +266,13 @@ export default function SettingsPage() {
                 {/* Stocks Section */}
                 {data?.stocks?.length > 0 && (
                   <div>
-                    <h4 className="font-medium mb-3 text-sm">Stocks</h4>
+                    <h4 className="font-medium mb-3 text-sm">سهام</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
                       {data.stocks.map((stock: any) => (
                         <label
                           key={stock.id}
                           className={`flex items-center gap-2 p-3 rounded border cursor-pointer transition-all
-                            ${selectedStock === stock.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 hover:border-gray-300"}
+                            ${selectedStock === stock.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
                           `}
                         >
                           <input
@@ -273,13 +294,13 @@ export default function SettingsPage() {
 
                 {/* Industries Section */}
                 <div>
-                  <h4 className="font-medium mb-3 text-sm">Industries</h4>
+                  <h4 className="font-medium mb-3 text-sm">صنایع</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {data?.industries?.map((industry: any) => (
                       <label
                         key={industry.id}
                         className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
-                          ${selectedIndustry === industry.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 hover:border-gray-300"}
+                          ${selectedIndustry === industry.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
                         `}
                       >
                         <div className="flex items-center gap-2">
@@ -293,7 +314,7 @@ export default function SettingsPage() {
                           <span className="font-medium text-sm">{industry.name}</span>
                         </div>
                         <span className={`text-xs font-medium ${
-                          industry.change.startsWith("+") ? "text-green-600" : "text-red-600"
+                          industry.change.startsWith("+") ? "text-success" : "text-error"
                         }`}>
                           {industry.change}
                         </span>
@@ -303,49 +324,50 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Cryptocurrency Section */}
-                <div>
-                  <h4 className="font-medium mb-3 text-sm">Cryptocurrencies</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {data?.crypto?.map((coin: any) => (
-                      <label
-                        key={coin.id}
-                        className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
-                          ${selectedCrypto === coin.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 hover:border-gray-300"}
-                        `}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="crypto"
-                            checked={selectedCrypto === coin.id}
-                            onChange={() => setSelectedCrypto(coin.id)}
-                            className="text-blue-500 focus:ring-blue-500"
-                          />
-                          <div>
-                            <div className="font-medium text-sm">{coin.name}</div>
-                            <div className="text-xs text-muted-foreground">{coin.symbol} | ${coin.price}</div>
+                {data?.crypto?.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3 text-sm">رمززنگاری</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                      {data.crypto.map((coin: any) => (
+                        <label
+                          key={coin.id}
+                          className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all
+                            ${selectedCrypto === coin.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
+                          `}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="crypto"
+                              checked={selectedCrypto === coin.id}
+                              onChange={() => setSelectedCrypto(coin.id)}
+                              className="text-blue-500 focus:ring-blue-500"
+                            />
+                            <div>
+                              <div className="font-medium text-sm">{coin.name}</div>
+                              <div className="text-xs text-muted-foreground">{coin.symbol} | ${coin.price}</div>
+                            </div>
                           </div>
-                        </div>
-                        <span className={`text-xs font-medium ${
-                          coin.change.startsWith("+") ? "text-green-600" : "text-red-600"
-                        }`}>
-                          {coin.change}
-                        </span>
-                      </label>
-                    ))}
+                          <span className={`text-xs font-medium ${
+                            coin.change.startsWith("+") ? "text-success" : "text-error"
+                          }`}>
+                            {coin.change}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Currencies Section */}
                 <div>
-                  <h4 className="font-medium mb-3 text-sm">Trading Currencies</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  <h4 className="font-medium mb-3 text-sm">ارزهای معاملاتی</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {["USD", "EUR", "GBP", "JPY", "CNY", "CHF", "CAD", "AUD"].map((currency) => (
                       <label
                         key={currency}
                         className="flex items-center justify-center gap-2 p-2 rounded border cursor-pointer transition-all
-                          hover:bg-muted/50
-                        "
+                          hover:bg-muted/50"
                       >
                         <input
                           type="checkbox"
@@ -360,12 +382,12 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Notification Settings */}
-                <TarotCard icon="" title="Notification Preferences">
+                <TarotCard title="ترجیحات اعلان">
                   <div className="space-y-2">
                     {notificationTypes.map((type) => (
-                      <label
+                      <div
                         key={type.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/30 cursor-pointer"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-xl">{type.icon}</span>
@@ -380,15 +402,15 @@ export default function SettingsPage() {
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
-                      </label>
+                      </div>
                     ))}
                   </div>
                 </TarotCard>
 
                 {/* Save Button */}
                 <div className="flex justify-end gap-3 pt-4">
-                  <PrimaryButton onClick={handleSave}>
-                    Save Settings
+                  <PrimaryButton onClick={handleSave} disabled={loading}>
+                    {saved ? "ذخیره شد!" : loading ? "در حال ذخیره..." : "ذخیره تنظیمات"}
                   </PrimaryButton>
                 </div>
               </div>

@@ -7,6 +7,7 @@ import { AssetTable } from "@/components/dashboard/AssetTable";
 import { AreaChart } from "@/components/charts/AreaChart";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { BarChart } from "@/components/charts/BarChart";
+import { StatCard } from "@/components/dashboard/StatCard";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
 import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
@@ -27,6 +28,7 @@ export default function AnalysisPage() {
   const [fundamentalData, setFundamentalData] = useState<Record<string, number> | null>(null);
   const [scoringData, setScoringData] = useState<any>(null);
   const [sentimentData, setSentimentData] = useState<{ news: number; social: number; crypto: number } | null>(null);
+  const [marketStats, setMarketStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
 
   useEffect(() => {
     let active = true;
@@ -38,43 +40,28 @@ export default function AnalysisPage() {
       setTopMovers([]);
 
       try {
-        // Fetch signal summary
-        const summaryRes = await apiClient.get<{ status: string; data: any; summary: Record<string, number> }>(
-          "/analysis/signals-summary?min_confidence=0.6"
-        );
-
-        // Fetch top performers
-        const performersRes = await apiClient.get<{ status: string; data: any[] }>(
-          "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ"
-        );
-
-        // Fetch symbols to map performer data
-        const symbolsRes = await apiClient.get<{ symbol: string; name: string; market: string }[]>(
-          "/market/symbols?market=NASDAQ&limit=50"
-        );
+        const [summaryRes, performersRes, symbolsRes, statsRes] = await Promise.all([
+          apiClient.get<{ status: string; data: any; summary: Record<string, number> }>("/analysis/signals-summary?min_confidence=0.6").catch(() => ({ data: { status: "error" } })),
+          apiClient.get<{ status: string; data: any[] }>("/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ").catch(() => ({ data: { status: "error", data: [] } })),
+          apiClient.get<{ symbol: string; name: string; market: string }[]>("/market/symbols?market=NASDAQ&limit=50").catch(() => ({ data: [] })),
+          apiClient.get<any>("/market/market-overview?market=NASDAQ").catch(() => ({ data: null })),
+        ]);
 
         if (!active) return;
 
-        // Build signal list from summary
-        if (summaryRes.data.status === "success") {
-          const signalTypes = Object.entries(summaryRes.data.data?.summary ?? {})
-            .filter(([, count]) => Number(count) > 0)
-            .sort(([, a], [, b]) => Number(b) - Number(a))
-            .slice(0, 5);
-
-          const signals: SignalRow[] = [];
-
-          // Get signals for top performers instead of per-type
+        // Build signal list from top performers
+        if (performersRes.data?.status === "success") {
           const topPerformerSymbols = (performersRes.data.data ?? [])
             .sort((a: any, b: any) => Math.abs(b.change_percent) - Math.abs(a.change_percent))
             .slice(0, 5);
 
+          const signals: SignalRow[] = [];
           for (const performer of topPerformerSymbols) {
             try {
               const signalRes = await apiClient.get<{ status: string; data: any }>(
                 `/analysis/signals/${encodeURIComponent(performer.symbol)}`
               );
-              if (signalRes.data.status === "success") {
+              if (signalRes.data?.status === "success") {
                 signals.push({
                   symbol: performer.symbol,
                   type: signalRes.data.data.signal_type || "HOLD",
@@ -84,12 +71,11 @@ export default function AnalysisPage() {
               }
             } catch {}
           }
-
           setTopSignals(signals);
         }
 
-        // Build top movers from performers data and symbols
-        if (performersRes.data.status === "success" && symbolsRes.data.length > 0) {
+        // Build top movers
+        if (performersRes.data?.status === "success" && symbolsRes.data.length > 0) {
           const symbolMap = new Map(symbolsRes.data.map((s) => [s.symbol, s.name]));
           const movers: AssetRow[] = (performersRes.data.data ?? [])
             .map((p: any) => ({
@@ -103,28 +89,28 @@ export default function AnalysisPage() {
             .sort((a: AssetRow, b: AssetRow) => Math.abs(b.changePct) - Math.abs(a.changePct));
 
           setTopMovers(movers.slice(0, 5));
-        }
 
-        // Fetch fundamental data for top mover
-        if (topMovers.length > 0) {
+          // Fetch fundamental data for top mover
+          if (movers.length > 0) {
+            try {
+              const fundamentalRes = await apiClient.get<any>(`/analysis/fundamental/${encodeURIComponent(movers[0].symbol)}`);
+              if (fundamentalRes.data?.status === "success") {
+                setFundamentalData(fundamentalRes.data.fundamental?.metrics || null);
+              }
+            } catch {}
+          }
+
+          // Fetch scoring data
           try {
-            const fundamentalRes = await apiClient.get<any>(`/analysis/fundamental/${encodeURIComponent(topMovers[0].symbol)}`);
-            if (fundamentalRes.data?.status === "success") {
-              setFundamentalData(fundamentalRes.data.fundamental?.metrics || null);
+            const scoringRes = await apiClient.post<any>("/analysis/scoring", {
+              ticker: movers[0]?.symbol || "AAPL",
+              market: "NASDAQ"
+            });
+            if (scoringRes.data?.status === "success") {
+              setScoringData(scoringRes.data.scoring);
             }
           } catch {}
         }
-
-        // Fetch scoring data
-        try {
-          const scoringRes = await apiClient.post<any>("/analysis/scoring", {
-            ticker: topMovers[0]?.symbol || "AAPL",
-            market: "NASDAQ"
-          });
-          if (scoringRes.data?.status === "success") {
-            setScoringData(scoringRes.data.scoring);
-          }
-        } catch {}
 
         // Fetch sentiment data from news
         try {
@@ -144,6 +130,19 @@ export default function AnalysisPage() {
             });
           }
         } catch {}
+
+        // Market stats
+        if (statsRes.data) {
+          const stats: Array<{ label: string; value: string; changePct?: number }> = [];
+          if (statsRes.data.total_assets) {
+            stats.push({ label: "نمادهای فعال", value: statsRes.data.total_assets.toLocaleString("fa-IR"), changePct: 0 });
+          }
+          if (statsRes.data.sectors && Object.keys(statsRes.data.sectors).length > 0) {
+            const topSector = Object.entries(statsRes.data.sectors).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+            stats.push({ label: "بازده برتر صنعت", value: topSector ? topSector[0] : "—", changePct: topSector ? Number(topSector[1]) : 0 });
+          }
+          setMarketStats(stats.length > 0 ? stats : [{ label: "نمادهای فعال", value: "—", changePct: 0 }]);
+        }
       } catch (error) {
         if (active) setError("خطا در بارگذاری داده‌های تحلیل. لطفاً دوباره تلاش کنید.");
       } finally {
@@ -157,9 +156,9 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <DashboardShell title="Analysis">
+      <DashboardShell title="تحلیل">
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          Loading analysis...
+          در حال بارگذاری تحلیل...
         </div>
       </DashboardShell>
     );
@@ -167,8 +166,8 @@ export default function AnalysisPage() {
 
   if (error) {
     return (
-      <DashboardShell title="Analysis">
-        <TarotCard icon="️" title="خطا" className="max-w-md mx-auto">
+      <DashboardShell title="تحلیل">
+        <TarotCard title="خطا" className="max-w-md mx-auto">
           <p className="text-sm text-muted-foreground">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -182,10 +181,19 @@ export default function AnalysisPage() {
   }
 
   return (
-    <DashboardShell title="Analysis">
+    <DashboardShell title="تحلیل">
       <div className="flex flex-col gap-6">
+        {/* Market Stats */}
+        {marketStats.length > 0 && (
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {marketStats.map((s, i) => (
+              <StatCard key={i} stat={s} />
+            ))}
+          </section>
+        )}
+
         {/* Analysis Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2">
           {analysisTabs.map((tab) => (
             <button
               key={tab.id}
@@ -203,112 +211,97 @@ export default function AnalysisPage() {
         </div>
 
         {/* Signal Analysis */}
-        <TarotCard icon="" title="Ranked Signals">
+        <TarotCard title="سیگنال‌های برتر">
           {topSignals.length > 0 ? (
             <SignalList signals={topSignals} />
           ) : (
-            <p className="text-muted-foreground py-4">No signals available</p>
+            <p className="text-muted-foreground py-4">سیگنالی در دسترس نیست</p>
           )}
         </TarotCard>
 
         {/* Top Movers */}
-        <TarotCard icon="" title="Top Movers">
+        <TarotCard title="نمادهای پرتغول">
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
-            <p className="text-muted-foreground py-4">No data available</p>
+            <p className="text-muted-foreground py-4">داده‌ای در دسترس نیست</p>
           )}
         </TarotCard>
 
         {/* Active Analysis Tab Content */}
-        <TarotCard icon="" title={analysisTabs.find((t) => t.id === activeTab)?.label}>
-          <AreaChart
-            data={[
-              { time: "2024-01", value: 120 },
-              { time: "2024-02", value: 135 },
-              { time: "2024-03", value: 128 },
-              { time: "2024-04", value: 142 },
-              { time: "2024-05", value: 138 },
-              { time: "2024-06", value: 155 },
-              { time: "2024-07", value: 148 },
-              { time: "2024-08", value: 160 },
-            ]}
-            height={280}
-          />
-        </TarotCard>
+        <TarotCard title={analysisTabs.find((t) => t.id === activeTab)?.label || "تحلیل"}>
+          {activeTab === "technical" && (
+            <div className="space-y-4">
+              <AreaChart
+                data={topMovers.length > 0 ? topMovers.slice(0, 5).map((mover, i) => ({
+                  time: mover.symbol,
+                  value: mover.price,
+                })) : [
+                  { time: "1", value: 120 },
+                  { time: "2", value: 135 },
+                  { time: "3", value: 128 },
+                  { time: "4", value: 142 },
+                  { time: "5", value: 138 },
+                ]}
+                height={280}
+              />
+            </div>
+          )}
 
-        {/* Technical Analysis Panel */}
-        {activeTab === "technical" && (
-          <TarotCard icon="" title="نمودارهای تکنیکال">
-            <AreaChart
-              data={topMovers.slice(0, 3).map((mover, i) => ({
-                time: String(i + 1),
-                value: mover.price,
-              }))}
-              height={280}
-            />
-          </TarotCard>
-        )}
-
-        {/* Fundamental Analysis Panel */}
-        {activeTab === "fundamental" && (
-          <TarotCard icon="" title="شاخص‌های بنیادی کلیدی">
-            {fundamentalData ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Object.entries(fundamentalData).slice(0, 8).map(([key, value]) => {
-                  const displayValue = typeof value === 'number' ? (value as number).toFixed(2) : String(value);
-                  return (
-                    <div key={key} className="text-center p-3 rounded-lg bg-muted/50">
-                      <div className="text-xs text-muted-foreground">{key}</div>
-                      <div className="text-sm font-bold mt-1">{displayValue}</div>
+          {activeTab === "fundamental" && (
+            <div>
+              {fundamentalData ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Object.entries(fundamentalData).slice(0, 8).map(([key, value]) => {
+                    const displayValue = typeof value === 'number' ? (value as number).toFixed(2) : String(value);
+                    return (
+                      <div key={key} className="text-center p-3 rounded-lg bg-muted/50">
+                        <div className="text-xs text-muted-foreground">{key}</div>
+                        <div className="text-sm font-bold mt-1">{displayValue}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {["P/E", "P/B", "ROE", "Debt/Eq", "EPS", "Dividend Yield", "Market Cap", "Revenue Growth"].map((metric, i) => (
+                    <div key={i} className="text-center p-3 rounded-lg bg-muted/50">
+                      <div className="text-xs text-muted-foreground">{metric}</div>
+                      <div className="text-sm font-bold mt-1">—</div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {["P/E", "P/B", "ROE", "Debt/Eq", "EPS", "Dividend Yield", "Market Cap", "Revenue Growth"].map((metric, i) => (
-                  <div key={i} className="text-center p-3 rounded-lg bg-muted/50">
-                    <div className="text-xs text-muted-foreground">{metric}</div>
-                    <div className="text-sm font-bold mt-1">—</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TarotCard>
-        )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* 6D Scoring Panel */}
-        {activeTab === "scoring" && (
-          <TarotCard icon="" title="بررسی ۶ بعدی">
-            {scoringData ? (
-              <div className="space-y-4">
+          {activeTab === "scoring" && (
+            <div className="space-y-4">
+              {scoringData ? (
                 <div className="text-center">
                   <div className="text-3xl font-bold">{scoringData.overall_score?.toFixed(1) || "—"}</div>
                   <div className="text-sm text-muted-foreground">امتیاز کلی</div>
                 </div>
-                <SpiderChart
-                  labels={["بنیادی", "تکنیکال", "احساسات", "ریسک", "ماکرو", "هوش مصنوعی"]}
-                  values={
-                    scoringData.dimensions
-                      ? Object.values(scoringData.dimensions).map((v: any) => Number(v) * 10)
-                      : [65, 75, 50, 80, 60, 70]
-                  }
-                  max={100}
-                  height={320}
-                />
-              </div>
-            ) : (
-              <div className="p-4 text-muted-foreground">
-                سامانه ۶ بعدی تحلیل سرمایه‌گذاری در حال بارگذاری است...
-              </div>
-            )}
-          </TarotCard>
-        )}
+              ) : (
+                <div className="text-center">
+                  <div className="text-3xl font-bold">—</div>
+                  <div className="text-sm text-muted-foreground">امتیاز کلی</div>
+                </div>
+              )}
+              <SpiderChart
+                labels={["بنیادی", "تکنیکال", "احساسات", "ریسک", "ماکرو", "هوش مصنوعی"]}
+                values={
+                  scoringData?.dimensions
+                    ? Object.values(scoringData.dimensions).map((v: any) => Number(v) * 10)
+                    : [65, 75, 50, 80, 60, 70]
+                }
+                max={100}
+                height={320}
+              />
+            </div>
+          )}
 
-        {/* Sentiment Panel */}
-        {activeTab === "sentiment" && (
-          <TarotCard icon="️" title="احساس و ذهنیت بازار">
+          {activeTab === "sentiment" && (
             <BarChart
               data={[
                 { time: "1", value: sentimentData ? sentimentData.news : 50, color: "#22C55E" },
@@ -317,8 +310,8 @@ export default function AnalysisPage() {
               ]}
               height={280}
             />
-          </TarotCard>
-        )}
+          )}
+        </TarotCard>
       </div>
     </DashboardShell>
   );

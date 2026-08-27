@@ -142,12 +142,12 @@ export default function StockDetailPage() {
 
   if (error) {
     return (
-      <TarotCard icon="️" title="خطا در دریافت داده">
+      <TarotCard title="خطا در دریافت داده">
         <p className="text-sm text-muted-foreground">
           دریافت داده‌ی نماد «{symbol}» ممکن نشد. مطمئن شوید سرویس بک‌اند در حال اجراست و نماد وجود
           دارد.
         </p>
-        <p className="mt-2 text-xs text-primary">{error}</p>
+        <p className="mt-2 text-xs text-error">{error}</p>
         <Link href="/stocks" className="mt-3 inline-block text-sm text-secondary hover:underline">
           ← بازگشت به فهرست سهام
         </Link>

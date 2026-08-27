@@ -1,5 +1,9 @@
 "use client";
 
+import { TarotCard } from "@/components/ui/TarotCard";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import Link from "next/link";
+
 export default function Error({
   error,
   reset,
@@ -8,15 +12,27 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-      <h2 className="text-2xl font-bold">Something went wrong!</h2>
-      <p className="text-muted-foreground">{error.message}</p>
-      <button
-        onClick={reset}
-        className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-      >
-        Try again
-      </button>
-    </div>
+    <main className="flex min-h-[60vh] items-center justify-center p-3">
+      <TarotCard title="خطا" className="w-full max-w-md text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-6xl">⚠️</div>
+          <h2 className="text-2xl font-bold text-foreground">Something went wrong!</h2>
+          <p className="text-muted-foreground">{error.message}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={reset}
+              className="btn btn-primary btn-md"
+            >
+              Try again
+            </button>
+            <Link href="/">
+              <button className="btn btn-secondary btn-md">
+                Go back home
+              </button>
+            </Link>
+          </div>
+        </div>
+      </TarotCard>
+    </main>
   );
 }

@@ -2,11 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+
+const SUPPORTED_LOCALES = ["en", "fa"] as const;
+
+function stripLocale(pathname: string): string {
+  for (const loc of SUPPORTED_LOCALES) {
+    if (pathname === `/${loc}` || pathname.startsWith(`/${loc}/`)) {
+      return pathname.slice(loc.length + 1) || "/";
+    }
+  }
+  return pathname;
+}
 
 export function LanguageSwitcher() {
   const currentLang = useAuthStore((s) => s.currentLang);
   const setLanguage = useAuthStore((s => s.setLanguage || (() => {})));
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [open, setOpen] = useState(false);
 
@@ -16,15 +30,13 @@ export function LanguageSwitcher() {
   ];
 
   const handleLanguageChange = (code: "en" | "fa") => {
+    const cleanPath = stripLocale(pathname);
+    const target = `/${code}${cleanPath === "/" ? "" : cleanPath}`;
     localStorage.setItem("lang", code);
     if (setLanguage) setLanguage(code);
-    document.documentElement.lang = code;
-    document.documentElement.dir = code === "fa" ? "rtl" : "ltr";
-    // Reload to apply translations
-    window.location.reload();
+    router.replace(target);
   };
 
-  // Initialize HTML direction on mount
   useEffect(() => {
     document.documentElement.lang = currentLang;
     document.documentElement.dir = currentLang === "fa" ? "rtl" : "ltr";
