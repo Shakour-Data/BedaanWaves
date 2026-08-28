@@ -1720,3 +1720,31 @@ class SymbolMarketSettings(Base):
         Index('idx_symbol_market_settings_user', 'user_id'),
         Index('idx_symbol_market_settings_symbol', 'symbol_id'),
     )
+
+
+# ===========================================================================
+# 32. Score History - Daily snapshots of scoring results for trend analysis
+# ===========================================================================
+class ScoreHistory(Base):
+    """Daily snapshot of dimension scores for an asset, used for trend display."""
+
+    __tablename__ = "score_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+
+    date = Column(Date, nullable=False, index=True)
+
+    dimension_scores = Column(JSONB, nullable=False, default={})
+    overall_score = Column(Numeric(8, 4), nullable=False)
+    grade = Column(String(20), nullable=False)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    asset = relationship("Asset")
+
+    __table_args__ = (
+        UniqueConstraint('asset_id', 'date', name='uix_score_history_asset_date'),
+        Index('idx_score_history_asset_date', 'asset_id', 'date'),
+        Index('idx_score_history_date', 'date'),
+    )
