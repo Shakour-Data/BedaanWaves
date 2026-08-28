@@ -29,17 +29,6 @@ import {
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 
-// Simple StatBox component
-function StatBox({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-3">
-      <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
-      <p className="text-lg font-semibold text-[var(--color-text-primary)]">{value}</p>
-      {hint && <p className="text-xs text-[var(--color-text-secondary)]">{hint}</p>}
-    </div>
-  );
-}
-
 export default function StockDetailPage() {
   
   const params = useParams<{ symbol: string }>();

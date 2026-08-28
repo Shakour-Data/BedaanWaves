@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { AuthGate } from "@/components/layout/AuthGate";
-import { t } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     description: "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals." } };
 
 async function PublicNav() {
-  const locale = await getServerLanguage();
+  const locale = (await getServerLanguage()) as Lang;
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2">
       <a href="/" className="text-lg font-bold text-foreground">
@@ -39,7 +39,7 @@ async function PublicNav() {
 
 export default async function RootLayout({
   children }: Readonly<{ children: React.ReactNode }>) {
-  const locale = await getServerLanguage();
+  const locale = (await getServerLanguage()) as Lang;
 
   return (
     <html lang={locale} dir="ltr" data-scroll-behavior="smooth">

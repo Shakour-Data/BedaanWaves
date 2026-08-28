@@ -71,7 +71,7 @@ apiClient.interceptors.response.use(
 
       refreshPromise = Promise.race([
         axios.post(`${API_BASE_URL}/auth/refresh?token=${encodeURIComponent(refreshToken)}`).then(
-          (response) => response.data.token
+          (response) => response.data.access_token
         ),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Refresh token timeout')), 10000)
@@ -86,7 +86,8 @@ apiClient.interceptors.response.use(
 
         useAuthStore.setState({
           token,
-          refreshToken: useAuthStore.getState().refreshToken });
+          refreshToken: useAuthStore.getState().refreshToken,
+        });
 
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         processQueue(null, token);

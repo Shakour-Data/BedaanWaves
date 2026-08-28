@@ -59,31 +59,27 @@ export default function RegisterPage() {
           ) : null}
 
           <div className="space-y-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-foreground px-1">{t("signup.username")}</span>
-              <Input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={t("signup.username_placeholder") || t("signup.username")}
-                disabled={loading}
-                className="ps-10"
-              />
-            </div>
+            <InputField
+              id="username"
+              type="text"
+              label={t("signup.username")}
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={t("signup.username_placeholder") || t("signup.username")}
+              disabled={loading}
+            />
 
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-foreground px-1">{t("signup.name")}</span>
-              <Input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("signup.name_placeholder") || t("signup.name")}
-                disabled={loading}
-                className="ps-10"
-              />
-            </div>
+            <InputField
+              id="name"
+              type="text"
+              label={t("signup.name")}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("signup.name_placeholder") || t("signup.name")}
+              disabled={loading}
+            />
 
             <InputField
               id="email"

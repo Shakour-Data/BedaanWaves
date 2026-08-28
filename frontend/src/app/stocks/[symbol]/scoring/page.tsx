@@ -86,18 +86,18 @@ export default function StockScoringPage() {
     };
   }, [symbol]);
 
-  useEffect(() => {
-    if (itemsForLevel.length > 0 && !itemsForLevel.find((i) => i.key === trendFilter)) {
-      setTrendFilter(itemsForLevel[0].key);
-    }
-  }, [itemsForLevel, trendFilter]);
-
   const itemsForLevel = useMemo(() => {
     if (!hierarchy) return [];
     if (drill.level === 1) return hierarchy.level1;
     if (drill.level === 2) return hierarchy.level2;
     return hierarchy.level3;
   }, [hierarchy, drill.level]);
+
+  useEffect(() => {
+    if (itemsForLevel.length > 0 && !itemsForLevel.find((i) => i.key === trendFilter)) {
+      setTrendFilter(itemsForLevel[0].key);
+    }
+  }, [itemsForLevel, trendFilter]);
 
   const currentCoefficients = useMemo(() => {
     if (!coefficients) return [];
@@ -121,8 +121,7 @@ export default function StockScoringPage() {
     ];
   }, [history, trendFilter, itemsForLevel]);
 
-  const spiderLabels = useMemo(() => itemsForLevel.map((i) => i.label), [itemsForLevel]);
-  const spiderValues = useMemo(() => itemsForLevel.map((i) => i.score), [itemsForLevel]);
+  const spiderData = useMemo(() => itemsForLevel.map((i) => ({ label: i.label, value: i.score })), [itemsForLevel]);
 
   const handleDrillDown = (item: { key: string; label: string }) => {
     setDrill({
@@ -215,7 +214,7 @@ export default function StockScoringPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <TarotCard title={LEVEL_LABELS[drill.level]}>
             {itemsForLevel.length > 0 ? (
-              <SpiderChart labels={spiderLabels} values={spiderValues} height={320} />
+              <SpiderChart data={spiderData} size={320} />
             ) : (
               <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
                 {t("app.analysis.no_data", "en")}
