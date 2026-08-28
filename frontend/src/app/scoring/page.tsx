@@ -167,7 +167,7 @@ export default function ScoringPage() {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [scoringData, setScoringData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<Asset[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
 
   const dimensionDetails = [
     {

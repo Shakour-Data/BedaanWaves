@@ -52,7 +52,7 @@ const DARK = {
 export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRefs = useRef<ReturnType<typeof LineSeries>[]>([]);
+  const seriesRefs = useRef<ReturnType<typeof chart.addSeries<LineSeries>>[]>([]);
   const { theme } = useAppStore();
   const colors = theme === "dark" ? DARK : LIGHT;
 

@@ -30,7 +30,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   requestPasswordReset,
   isValidEmail,
-  type PasswordRecoveryResponse } from "@/lib/password-recovery-api";
+  type RequestResetResult } from "@/lib/password-recovery-api";
 
 export type RecoveryState =
   | "Welcome"
@@ -182,8 +182,8 @@ export function usePasswordRecoveryFSM(initialLang: "en" | "fa" = "en"): Passwor
       setErrorMessage(null);
 
       try {
-        const result: PasswordRecoveryResponse = await requestPasswordReset(
-          { email: data.email },
+        const result = await requestPasswordReset(
+          data.email,
           data.lang,
         );
 

@@ -99,7 +99,7 @@ describe('password-recovery-api utilities', () => {
       expect(result.success).toBe(true);
       expect(result.message).toBe('Recovery link sent to your email');
       expect(apiClient.post).toHaveBeenCalledWith(
-        '/auth/password-reset/request',
+        'auth/password-reset/request',
         { email: 'user@example.com' },
       );
     });

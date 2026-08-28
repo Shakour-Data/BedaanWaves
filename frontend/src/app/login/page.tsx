@@ -49,18 +49,16 @@ export default function LoginPage() {
           ) : null}
 
           <div className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-foreground px-1">{t("login.username")}</span>
-              <Input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={t("login.username_placeholder") || t("login.username")}
-                disabled={loading}
-                className="ps-10"
-              />
-            </div>
+            <InputField
+              id="username"
+              type="text"
+              label={t("login.username")}
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={t("login.username_placeholder") || t("login.username")}
+              disabled={loading}
+            />
 
             <InputField
               id="password"

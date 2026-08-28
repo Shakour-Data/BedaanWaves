@@ -19,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
   refreshToken: string | null;
+  loading: boolean;
   currentLang: "en" | "fa";
   setLanguage: (lang: "en" | "fa") => void;
   login: (username: string, password: string) => Promise<void>;
@@ -48,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       token: null,
       refreshToken: null,
-      currentLang: "en",
+      loading: false,
       currentLang: getInitialLang(),
       setLanguage: (lang) => set({ currentLang: lang }),
       login: async (username, password) => {
@@ -100,12 +101,14 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           token: null,
-          refreshToken: null });
+          refreshToken: null,
+        });
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           window.location.href = '/login';
         }
-      } }),
+      },
+    }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
@@ -113,6 +116,8 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         token: state.token,
         refreshToken: state.refreshToken,
-        currentLang: state.currentLang }) }
+        currentLang: state.currentLang,
+      }),
+    }
   )
 );

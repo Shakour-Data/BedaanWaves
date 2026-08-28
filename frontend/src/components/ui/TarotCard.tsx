@@ -5,18 +5,22 @@ export function TarotCard({
   children,
   icon,
   title,
-  className }: {
+  className,
+  onClick }: {
   children: ReactNode;
   icon?: ReactNode;
   title?: string;
   className?: string;
+  onClick?: () => void;
 }) {
   return (
     <div
       className={cn(
         "bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md p-6 shadow-md transition-shadow duration-150 ease-out",
+        onClick && "cursor-pointer",
         className
       )}
+      onClick={onClick}
     >
       {title && (
         <div className="mb-4">

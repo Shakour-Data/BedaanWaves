@@ -76,7 +76,7 @@ function ResetPasswordForm() {
     setPhase("confirming");
 
     try {
-      const result = await confirmResetPassword({ token, newPassword: password });
+      const result = await confirmResetPassword(token, password);
 
       if (result.success) {
         setPhase("success");
