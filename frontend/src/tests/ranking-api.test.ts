@@ -12,11 +12,10 @@ describe('fetchNasdaqRankings', () => {
   });
 
   it('should call the correct endpoint with query params', async () => {
-    const mockGet = apiClient.get as unknown as {
-  mockImplementation: (fn: (url: string) => unknown) => void;
-  mockResolvedValue: (value: unknown) => void;
-  mockRejectedValue: (error: unknown) => void;
-};.mockResolvedValue({
+    const mock = apiClient.get as unknown as {
+      mockResolvedValue: (value: unknown) => void;
+    };
+    mock.mockResolvedValue({
       data: { status: 'success', total: 2, data: [] } });
 
     await fetchNasdaqRankings({ limit: 10, offset: 20, sort_by: 'technical', order: 'asc' });
@@ -25,11 +24,10 @@ describe('fetchNasdaqRankings', () => {
   });
 
   it('should normalize envelope with data array', async () => {
-    const mockGet = apiClient.get as unknown as {
-  mockImplementation: (fn: (url: string) => unknown) => void;
-  mockResolvedValue: (value: unknown) => void;
-  mockRejectedValue: (error: unknown) => void;
-};.mockResolvedValue({
+    const mock = apiClient.get as unknown as {
+      mockResolvedValue: (value: unknown) => void;
+    };
+    mock.mockResolvedValue({
       data: {
         status: 'success',
         total: 2,
@@ -50,11 +48,10 @@ describe('fetchNasdaqRankings', () => {
   });
 
   it('should normalize envelope with items array fallback', async () => {
-    const mockGet = apiClient.get as unknown as {
-  mockImplementation: (fn: (url: string) => unknown) => void;
-  mockResolvedValue: (value: unknown) => void;
-  mockRejectedValue: (error: unknown) => void;
-};.mockResolvedValue({
+    const mock = apiClient.get as unknown as {
+      mockResolvedValue: (value: unknown) => void;
+    };
+    mock.mockResolvedValue({
       data: {
         status: 'success',
         total: 1,
@@ -71,11 +68,10 @@ describe('fetchNasdaqRankings', () => {
   });
 
   it('should normalize plain array response', async () => {
-    const mockGet = apiClient.get as unknown as {
-  mockImplementation: (fn: (url: string) => unknown) => void;
-  mockResolvedValue: (value: unknown) => void;
-  mockRejectedValue: (error: unknown) => void;
-};.mockResolvedValue({
+    const mock = apiClient.get as unknown as {
+      mockResolvedValue: (value: unknown) => void;
+    };
+    mock.mockResolvedValue({
       data: [
         { symbol: 'TSLA', rank: 3, overall_score: 60, grade: 'D_SELL' }
       ] });
@@ -88,11 +84,10 @@ describe('fetchNasdaqRankings', () => {
   });
 
   it('should default missing numeric fields to 0 and grade to C_HOLD', async () => {
-    const mockGet = apiClient.get as unknown as {
-  mockImplementation: (fn: (url: string) => unknown) => void;
-  mockResolvedValue: (value: unknown) => void;
-  mockRejectedValue: (error: unknown) => void;
-};.mockResolvedValue({
+    const mock = apiClient.get as unknown as {
+      mockResolvedValue: (value: unknown) => void;
+    };
+    mock.mockResolvedValue({
       data: {
         total: 1,
         data: [

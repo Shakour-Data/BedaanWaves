@@ -10,6 +10,7 @@ from . import (
     auth,
     ml,
     live,
+    live_sse,
     users,
     watchlists,
     notifications,
@@ -21,6 +22,7 @@ from . import (
     intl,
     settings,
     ranking,
+    password_reset,
 )
 
 # Export routers with explicit names for main.py compatibility
@@ -41,23 +43,25 @@ crypto_router = crypto.router
 symbols_router = symbols.router
 intl_router = intl.router
 live_router = live.router
+live_sse_router = live_sse.router
 health_router = health.router
 settings_router = settings.router
 ranking_router = ranking.router
+password_reset_router = password_reset.router
 
 __all__ = [
     "market", "analysis", "stocks", "portfolios", "history", "news",
-    "auth", "ml", "live", "users", "watchlists", "notifications",
-    "system", "crypto", "specialized", "health", "symbols", "intl", "settings", "ranking",
+    "auth", "ml", "live", "live_sse", "users", "watchlists", "notifications",
+    "system", "crypto", "specialized", "health", "symbols", "intl", "settings", "ranking", "password_reset",
     "auth_router", "stocks_router", "market_router", "analysis_router",
     "portfolio_router", "history_router", "news_router", "ml_router",
     "users_router", "watchlists_router", "notifications_router",
     "specialized_router", "system_router", "crypto_router",
-    "symbols_router", "intl_router", "live_router", "health_router",
-    "settings_router", "ranking_router",
+    "symbols_router", "intl_router", "live_router", "live_sse_router", "health_router",
+    "settings_router", "ranking_router", "password_reset_router",
     # Module references
     "market", "analysis", "stocks", "portfolios", "history", "news",
-    "auth", "ml", "live", "users", "watchlists", "notifications",
+    "auth", "ml", "live", "live_sse", "users", "watchlists", "notifications",
     "system", "crypto", "specialized", "health", "symbols", "intl",
-    "ranking",
+    "ranking", "password_reset",
 ]

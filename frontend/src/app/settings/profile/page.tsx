@@ -10,8 +10,8 @@ import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
-  const [fullName, setFullName] = useState(user?.name || "");
+  const { user, currentLang } = useAuthStore();
+  const [fullName, setFullName] = useState(user?.full_name || "");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,22 +44,23 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!validatePasswords()) return;
         
-        setLoading(true);
-        try {
-          const response = await apiClient.patch("/users/me", {
-            full_name: fullName });
-          
-          if (response.status === 200) {
-            window.location.reload();
-          } else {
-            throw new Error(t("app.settings.profile.error_save", "en"));
-          }
-          } catch (error) {
-            // Handle error
-          } finally {
-          setLoading(false);
-        }
-      };
+    setLoading(true);
+    try {
+      const response = await apiClient.patch("users/me", {
+        full_name: fullName,
+      });
+      
+      if (response.status === 200) {
+        window.location.reload();
+      } else {
+        throw new Error(t("app.settings.profile.error_save", "en"));
+      }
+      } catch (error) {
+        // Handle error
+      } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <DashboardShell title={t("app.settings.profile.title", "en")}>
@@ -101,7 +102,7 @@ export default function ProfilePage() {
                 "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold",
                 user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
               )}>
-                {user?.is_active ? t("app.settings.profile.active", "en") : t("app.settings.profile.inactive", "en")}
+                {user?.is_active ? t("app.settings.profile.active", currentLang) : t("app.settings.profile.inactive", currentLang)}
               </span>
             </div>
 

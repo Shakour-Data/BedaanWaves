@@ -42,7 +42,7 @@ class AnomalyDetectionService(MLService):
         returns = data.get("returns", [])
         values = returns or [prices[i] - prices[i-1] for i in range(1, len(prices))]
         if not self.model or not self.model.get("trained"):
-            raise ValueError("model not trained or method called before training")
+            raise ValueError("Model not trained or method called before training")
         mean = self.model["mean"]
         std = self.model["std"]
         

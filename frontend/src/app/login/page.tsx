@@ -10,15 +10,13 @@ import { t } from "@/lib/i18n";
 
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const loginStore = useAuthStore((s) => s.login);
   
-  
-
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +24,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await loginStore(email, password);
+      await loginStore(username, password);
     } catch (err: any) {
       const message = err.response?.data?.detail || t("auth.error_authentication");
       setError(message);
@@ -51,16 +49,18 @@ export default function LoginPage() {
           ) : null}
 
           <div className="space-y-4">
-            <InputField
-              id="email"
-              type="email"
-              label="Email Address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@email.com"
-              disabled={loading}
-            />
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("login.username")}</span>
+              <Input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t("login.username_placeholder") || t("login.username")}
+                disabled={loading}
+                className="ps-10"
+              />
+            </div>
 
             <InputField
               id="password"
@@ -95,13 +95,14 @@ export default function LoginPage() {
           <div className="flex items-center gap-2 px-1 hidden">
           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="h-10 px-4 mt-2 w-full bg-[var(--color-primary)] text-white font-medium rounded-md hover:bg-[var(--color-primary-hover)] transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          <PrimaryButton
+            type="submit"
+            disabled={loading}
+            className="mt-2 w-full justify-center h-11"
+            size="lg"
           >
             {loading ? "Processing..." : "Sign in"}
-          </button>
+          </PrimaryButton>
 
           <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
             Don't have an account?{" "}

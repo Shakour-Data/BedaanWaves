@@ -13,12 +13,9 @@ import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
-import dynamic from "next/dynamic";
-
-const CandlestickChart = dynamic(
-  () => import("@/components/charts/CandlestickChart").then((mod) => mod.CandlestickChart),
-  { ssr: false, loading: () => <div className="h-[400px] w-full animate-pulse bg-[var(--color-surface)] rounded-md"></div> }
-);
+import { StatBox } from "@/components/dashboard/StatBox";
+import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { DashboardShell } from "@/components/layout/DashboardShell";
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -31,7 +28,6 @@ import {
 
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
-import { DashboardShell } from "@/components/layout/DashboardShell";
 
 // Simple StatBox component
 function StatBox({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -332,4 +328,3 @@ export default function StockDetailPage() {
     </DashboardShell>
   );
 }
-

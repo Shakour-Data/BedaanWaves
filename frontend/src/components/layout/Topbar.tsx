@@ -32,7 +32,7 @@ export function Topbar({ title }: TopbarProps) {
 
         <div className="flex items-center gap-2 rounded-xl bg-secondary/10 px-3 py-2 text-sm text-secondary">
           <span aria-hidden="true"></span>
-          <span className="hidden sm:inline">{user?.name || "کاربر نمایشی"}</span>
+          <span className="hidden sm:inline">{user?.full_name || user?.username || "کاربر نمایشی"}</span>
         </div>
 
         <button
@@ -47,4 +47,3 @@ export function Topbar({ title }: TopbarProps) {
     </header>
   );
 }
-
