@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { InputField } from "@/components/ui/InputField";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { t } from "@/lib/i18n";
 
 
 export default function RegisterPage() {
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +19,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const registerStore = useAuthStore((s) => s.register);
   
-  
-
 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -34,7 +34,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await registerStore(name, email, password);
+      await registerStore(username, email, password, name);
     } catch (err: any) {
       const message = err.response?.data?.detail || t("auth.error_authentication");
       setError(message);
@@ -58,17 +58,32 @@ export default function RegisterPage() {
             </div>
           ) : null}
 
-          <div className="space-y-4">
-            <InputField
-              id="name"
-              type="text"
-              label="Full Name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              disabled={loading}
-            />
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("signup.username")}</span>
+              <Input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t("signup.username_placeholder") || t("signup.username")}
+                disabled={loading}
+                className="ps-10"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground px-1">{t("signup.name")}</span>
+              <Input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("signup.name_placeholder") || t("signup.name")}
+                disabled={loading}
+                className="ps-10"
+              />
+            </div>
 
             <InputField
               id="email"
@@ -115,13 +130,14 @@ export default function RegisterPage() {
           <div className="flex items-center gap-2 px-1 hidden">
           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="h-10 px-4 mt-2 w-full bg-[var(--color-primary)] text-white font-medium rounded-md hover:bg-[var(--color-primary-hover)] transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          <PrimaryButton
+            type="submit"
+            disabled={loading}
+            className="mt-2 w-full justify-center h-11"
+            size="lg"
           >
             {loading ? "Processing..." : "Sign Up"}
-          </button>
+          </PrimaryButton>
 
           <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
             Already have an account?{" "}

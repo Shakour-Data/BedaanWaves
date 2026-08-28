@@ -76,8 +76,8 @@ function formatTimeAgo(dateStr: string): string {
 async function fetchMarketStats(): Promise<MarketStat[]> {
   try {
     const [marketOverviewRes, tseDashboardRes] = await Promise.all([
-      apiClient.get<MarketOverviewResponse>("/market/market-overview?market=NASDAQ").catch(() => null),
-      apiClient.get<TseDashboardResponse>("/market/tse-dashboard").catch(() => null),
+      apiClient.get<MarketOverviewResponse>("market/market-overview?market=NASDAQ").catch(() => null),
+      apiClient.get<TseDashboardResponse>("market/tse-dashboard").catch(() => null),
     ]);
 
     const marketOverview = marketOverviewRes?.data;
@@ -112,7 +112,7 @@ async function fetchMarketStats(): Promise<MarketStat[]> {
 
 async function fetchTopMovers(): Promise<AssetRow[]> {
   try {
-    const res = await apiClient.get<TseDashboardResponse>("/market/tse-dashboard");
+    const res = await apiClient.get<TseDashboardResponse>("market/tse-dashboard");
     const data = res.data;
     if (data.status !== "success") return [];
 
@@ -130,14 +130,14 @@ async function fetchTopMovers(): Promise<AssetRow[]> {
 
 async function fetchWatchlist(): Promise<AssetRow[]> {
   try {
-    const watchlistsRes = await apiClient.get<WatchlistResponse[]>("/watchlists");
+    const watchlistsRes = await apiClient.get<WatchlistResponse[]>("watchlists");
     const watchlists = watchlistsRes.data;
     const defaultWatchlist = watchlists.find((w) => w.is_default);
     if (!defaultWatchlist?.items?.length) return [];
 
     const symbols = defaultWatchlist.items.map((item) => item.asset.symbol);
     const pricesRes = await apiClient.get<LatestPricesResponse>(
-      `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+      `market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
     );
     const pricesData = pricesRes.data?.data ?? {};
 
@@ -156,7 +156,7 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
 
 async function fetchSignals(): Promise<SignalRow[]> {
   try {
-    const res = await apiClient.get<SignalsSummaryResponse>("/analysis/signals-summary?min_confidence=0.6");
+    const res = await apiClient.get<SignalsSummaryResponse>("analysis/signals-summary?min_confidence=0.6");
     const data = res.data;
     if (data.status !== "success") return [];
 
@@ -169,7 +169,7 @@ async function fetchSignals(): Promise<SignalRow[]> {
     const allSignals: SignalRow[] = [];
     for (const type of signalTypes) {
       try {
-        const typeRes = await apiClient.get<SignalsSummaryResponse>(`/analysis/signals-summary?min_confidence=0.6`);
+        const typeRes = await apiClient.get<SignalsSummaryResponse>("analysis/signals-summary?min_confidence=0.6");
         const typeData = typeRes.data;
         if (typeData?.status === "success") {
           const summary = typeData.summary;
@@ -190,7 +190,7 @@ async function fetchSignals(): Promise<SignalRow[]> {
 
 async function fetchNews(): Promise<NewsItem[]> {
   try {
-    const res = await apiClient.get<NewsResponse>("/news/market?limit=10");
+    const res = await apiClient.get<NewsResponse>("news/market?limit=10");
     const data = res.data;
     if (data.status !== "success") return [];
 

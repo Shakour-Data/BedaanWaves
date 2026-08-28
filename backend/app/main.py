@@ -41,6 +41,7 @@ from app.services.system.scheduler_service import SchedulerService
 from app.services.system.metrics_service import MetricsService
 from app.services.system.backup_service import BackupService
 from app.services.system.data_integrity_service import DataIntegrityService
+from app.services.system.queue_service import QueueService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
@@ -66,10 +67,12 @@ from app.api.routes import (
     crypto_router,
     intl_router,
     live_router,
+    live_sse_router,
     health_router,
     symbols_router,
     settings_router,
     ranking_router,
+    password_reset_router,
 )
 
 logging.basicConfig(
@@ -299,6 +302,10 @@ async def lifespan(app: FastAPI):
         backup_svc = BackupService()
         container.register_instance("backup_service", backup_svc)
 
+        queue_svc = QueueService()
+        container.register_instance("queue_service", queue_svc)
+        container.register_instance("queue", queue_svc)
+
         # Scheduler with all real services injected
         scheduler_svc = SchedulerService(
             scoring_service=scoring_svc,
@@ -334,6 +341,7 @@ async def lifespan(app: FastAPI):
 
         # Register all routers
         app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+        app.include_router(password_reset_router, prefix="/api/v1/auth", tags=["auth"])
         app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
         app.include_router(market_router, prefix="/api/v1/market", tags=["market"])
         app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["analysis"])
@@ -349,6 +357,7 @@ async def lifespan(app: FastAPI):
         app.include_router(crypto_router, prefix="/api/v1/crypto", tags=["crypto"])
         app.include_router(intl_router, prefix="/api/v1/intl", tags=["intl"])
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
+        app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
         app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
         app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
@@ -428,7 +437,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health_check():
     checks = _preflight_checks()
-    status = "healthy" if all(v == "ok" for v in checks.values() if "database" in str(checks.values())) else "degraded"
+    status = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
     return {
         "status": status,
         "service": settings.APP_NAME,

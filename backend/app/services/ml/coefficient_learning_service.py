@@ -284,6 +284,7 @@ class CoefficientLearningService(MLService):
                         RawPerformanceScore.aspect_scores,
                         RawPerformanceScore.sub_aspect_scores,
                         RawPerformanceScore.target_return,
+                        RawPerformanceScore.target_volatility,
                         RawPerformanceScore.target_price_change,
                     )
                     .where(RawPerformanceScore.is_processed == True)
@@ -359,7 +360,7 @@ class CoefficientLearningService(MLService):
                 ("sub_aspects", "sub_aspect_scores", [f"sub_aspect_{i}" for i in range(173)])
             ]
             
-            for level_name, score_key, feature_names in levels_config:
+            for level_name, score_key, target_names in levels_config:
                 if score_key not in df.columns:
                     self.logger.warning(f"Missing {score_key} in performance data")
                     continue
@@ -380,7 +381,7 @@ class CoefficientLearningService(MLService):
                     # For each item in this level, create a target proportional to its score
                     item_targets = {}
                     total_score = sum(abs(v) for v in scores.values()) or 1.0
-                    for item_name in feature_names:
+                    for item_name in target_names:
                         score = abs(scores.get(item_name, 0.0))
                         # Normalize contribution: higher score -> higher target weight
                         item_targets[item_name] = (score / total_score) * target if target != 0 else 0.0
@@ -391,13 +392,15 @@ class CoefficientLearningService(MLService):
                     X = np.array(features_list)
                     y = np.array(targets_list)
                     
-                    # Store feature names
-                    self.feature_names[level_name] = feature_names
+                    # Use generic feature names matching the contextual feature vector size
+                    input_feature_count = X.shape[1] if X.ndim > 1 else len(features_list[0])
+                    input_feature_names = [f"ctx_feature_{i}" for i in range(input_feature_count)]
+                    self.feature_names[level_name] = input_feature_names
                     
                     training_data[level_name] = {
                         "X": X,
                         "y": y,
-                        "feature_names": feature_names
+                        "feature_names": input_feature_names
                     }
                     
                     self.logger.debug(

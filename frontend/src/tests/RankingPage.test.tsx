@@ -6,47 +6,46 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 vi.mock('@/lib/api/ranking', () => ({
   fetchNasdaqRankings: vi.fn(),
-  // Grade type is not needed in tests
 }));
 
 vi.mock('@/store/useAuthStore', () => ({
-  useAuthStore: vi.fn()
+  useAuthStore: vi.fn(),
 }));
 
 vi.mock('@/components/layout/DashboardShell', () => ({
-  DashboardShell: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-shell">{children}</div>
+  DashboardShell: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-shell">{children}</div>,
 }));
 
 vi.mock('@/components/ui/TarotCard', () => ({
-  TarotCard: ({ children }: { children: React.ReactNode }) => <div data-testid="tarot-card">{children}</div>
+  TarotCard: ({ children }: { children: React.ReactNode }) => <div data-testid="tarot-card">{children}</div>,
 }));
 
 vi.mock('@/components/ui/PrimaryButton', () => ({
-  PrimaryButton: (props: any) => <button data-testid="primary-button" {...props}>{props.children}</button>
+  PrimaryButton: (props: Record<string, unknown>) => <button data-testid="primary-button" {...props}>{props.children as string}</button>,
 }));
 
 vi.mock('@/components/ui/PageLoading', () => ({
-  PageLoading: () => <div data-testid="page-loading">Loading</div>
+  PageLoading: () => <div data-testid="page-loading">Loading</div>,
 }));
 
 vi.mock('@/components/ui/ErrorMessage', () => ({
-  ErrorMessage: (props: any) => <div data-testid="error-message">{props.message}</div>
+  ErrorMessage: (props: Record<string, unknown>) => <div data-testid="error-message">{props.message as string}</div>,
 }));
 
 describe('RankingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as any).mockReturnValue({ currentLang: 'en' });
+    (useAuthStore as unknown as { mockReturnValue: (val: { currentLang: string }) => void }).mockReturnValue({ currentLang: 'en' });
   });
 
   it('should show loading state initially', () => {
-    (fetchNasdaqRankings as any).mockImplementation(() => new Promise(() => {}));
+    (fetchNasdaqRankings as unknown as { mockImplementation: (fn: () => Promise<never>) => void }).mockImplementation(() => new Promise(() => {}));
     render(<RankingPage />);
     expect(screen.getByTestId('page-loading')).toBeInTheDocument();
   });
 
   it('should render rankings when data loads', async () => {
-    (fetchNasdaqRankings as any).mockResolvedValue({
+    (fetchNasdaqRankings as unknown as { mockResolvedValue: (value: { items: Array<{ symbol: string; name: string; rank: number; overall_score: number; grade: string; fundamental: number; technical: number; sentiment: number; risk: number; macro: number; ai: number }>; total: number }) => void }).mockResolvedValue({
       items: [
         { symbol: 'AAPL', name: 'Apple Inc.', rank: 1, overall_score: 95, grade: 'A_STRONG_BUY', fundamental: 90, technical: 95, sentiment: 92, risk: 88, macro: 80, ai: 94 },
         { symbol: 'MSFT', name: 'Microsoft Corp.', rank: 2, overall_score: 88, grade: 'B_BUY', fundamental: 85, technical: 87, sentiment: 86, risk: 82, macro: 78, ai: 90 }
@@ -63,7 +62,7 @@ describe('RankingPage', () => {
   });
 
   it('should show error message on fetch failure', async () => {
-    (fetchNasdaqRankings as any).mockRejectedValue(new Error('API Error'));
+    (fetchNasdaqRankings as unknown as { mockRejectedValue: (error: Error) => void }).mockRejectedValue(new Error('API Error'));
 
     render(<RankingPage />);
 
@@ -72,7 +71,7 @@ describe('RankingPage', () => {
   });
 
   it('should show no results message when items are empty', async () => {
-    (fetchNasdaqRankings as any).mockResolvedValue({ items: [], total: 0 });
+    (fetchNasdaqRankings as unknown as { mockResolvedValue: (value: { items: []; total: number }) => void }).mockResolvedValue({ items: [], total: 0 });
 
     render(<RankingPage />);
 
@@ -80,7 +79,7 @@ describe('RankingPage', () => {
   });
 
   it('should change page when next button is clicked', async () => {
-    (fetchNasdaqRankings as any).mockResolvedValue({
+    (fetchNasdaqRankings as unknown as { mockResolvedValue: (value: { items: Array<{ symbol: string; name: string; rank: number; overall_score: number; grade: string; fundamental: number; technical: number; sentiment: number; risk: number; macro: number; ai: number }>; total: number }) => void }).mockResolvedValue({
       items: Array.from({ length: 20 }).map((_, i) => ({
         symbol: `SYM${i}`, name: `Symbol ${i}`, rank: i + 1, overall_score: 50, grade: 'C_HOLD', fundamental: 50, technical: 50, sentiment: 50, risk: 50, macro: 50, ai: 50
       })),

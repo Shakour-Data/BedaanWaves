@@ -4,17 +4,41 @@ import { apiClient } from '../lib/api';
 
 type Role = "user" | "admin";
 
+interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
 interface AuthState {
-  user: { name: string; email: string; role: Role; created_at?: string; isActive?: boolean } | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   token: string | null;
   refreshToken: string | null;
   currentLang: "en" | "fa";
-  loading: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  setLanguage: (lang: "en" | "fa") => void;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string, full_name: string) => Promise<void>;
   logout: () => void;
+}
+
+const getInitialLang = () => {
+  if (typeof window === 'undefined') return 'en';
+  const saved = localStorage.getItem('lang');
+  return (saved === 'fa' || saved === 'en') ? saved : 'en';
+};
+
+async function fetchUserProfile(): Promise<UserProfile | null> {
+  try {
+    const response = await apiClient.get<UserProfile>('users/me');
+    return response.data;
+  } catch {
+    return null;
+  }
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,34 +49,46 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       currentLang: "en",
-      loading: false,
-      isLoading: false,
-      login: async (email, password) => {
+      currentLang: getInitialLang(),
+      setLanguage: (lang) => set({ currentLang: lang }),
+      login: async (username, password) => {
         set({ loading: true });
         try {
-          const response = await apiClient.post(`/auth/login`, { email, password });
-          const { user, token, refreshToken } = response.data;
+          const currentLang = localStorage.getItem('lang') as "en" | "fa" || 'en';
+          const response = await apiClient.post(`auth/login?lang=${currentLang}`, { username, password });
+          const token = response.data.access_token;
+          const refreshToken = response.data.refresh_token;
           set({
-            user,
-            isAuthenticated: true,
             token,
-            refreshToken });
+            refreshToken,
+            isAuthenticated: true,
+          });
+          const profile = await fetchUserProfile();
+          if (profile) {
+            set({ user: profile });
+          }
         } catch (error) {
           throw error;
         } finally {
           set({ loading: false });
         }
       },
-      register: async (name, email, password) => {
+      register: async (username, email, password, full_name) => {
         set({ loading: true });
         try {
-          const response = await apiClient.post(`/auth/register`, { name, email, password });
-          const { user, token, refreshToken } = response.data;
+          const currentLang = localStorage.getItem('lang') as "en" | "fa" || 'en';
+          const response = await apiClient.post(`auth/register?lang=${currentLang}`, { username, email, password, full_name });
+          const token = response.data.access_token;
+          const refreshToken = response.data.refresh_token;
           set({
-            user,
-            isAuthenticated: true,
             token,
-            refreshToken });
+            refreshToken,
+            isAuthenticated: true,
+          });
+          const profile = await fetchUserProfile();
+          if (profile) {
+            set({ user: profile });
+          }
         } catch (error) {
           throw error;
         } finally {

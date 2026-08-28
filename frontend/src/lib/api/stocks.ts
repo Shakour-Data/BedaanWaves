@@ -109,7 +109,7 @@ export async function fetchSymbols(params: FetchSymbolsParams = {}): Promise<Ass
   if (params.sector) qs.set("sector", params.sector);
   if (params.industry) qs.set("industry", params.industry);
   qs.set("limit", String(params.limit ?? 500));
-  const res = await apiClient.get<Asset[]>(`/market/symbols?${qs.toString()}`);
+  const res = await apiClient.get<Asset[]>(`market/symbols?${qs.toString()}`);
   return res.data;
 }
 
@@ -138,8 +138,9 @@ export async function fetchPriceHistory({
   const qs = new URLSearchParams({
     symbol,
     timeframe,
-    limit: String(limit) });
-  const res = await apiClient.get<RawCandle[]>(`/market/price-history?${qs.toString()}`);
+    limit: String(limit),
+  });
+  const res = await apiClient.get<RawCandle[]>(`market/price-history?${qs.toString()}`);
   return res.data.map((c) => ({
     timestamp: c.timestamp,
     timeframe: c.timeframe,
@@ -156,7 +157,7 @@ export async function fetchPriceHistory({
 export async function fetchLatestPrices(symbols: string[]): Promise<Record<string, LatestPrice>> {
   if (symbols.length === 0) return {};
   const qs = symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&");
-  const res = await apiClient.get<RawLatestPricesResponse>(`/market/latest-prices?${qs}`);
+  const res = await apiClient.get<RawLatestPricesResponse>(`market/latest-prices?${qs}`);
 
   const out: Record<string, LatestPrice> = {};
   for (const [symbol, v] of Object.entries(res.data.data ?? {})) {
@@ -184,7 +185,7 @@ export async function fetchLatestPrice(symbol: string): Promise<LatestPrice | nu
 /** امتیازدهی ۶ بعدی یک نماد. */
 export async function fetchScoring(symbol: string): Promise<any | null> {
   try {
-    const res = await apiClient.get<any>(`/analysis/scoring/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<any>(`analysis/scoring/${encodeURIComponent(symbol)}`);
     return res.data?.scoring ?? null;
   } catch {
     return null;
@@ -194,7 +195,7 @@ export async function fetchScoring(symbol: string): Promise<any | null> {
 /** تحلیل بنیادی یک نماد. */
 export async function fetchFundamental(symbol: string): Promise<any | null> {
   try {
-    const res = await apiClient.get<any>(`/analysis/fundamental/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<any>(`analysis/fundamental/${encodeURIComponent(symbol)}`);
     return res.data?.fundamental ?? null;
   } catch {
     return null;
@@ -204,7 +205,7 @@ export async function fetchFundamental(symbol: string): Promise<any | null> {
 /** تحلیل تکنیکال یک نماد. */
 export async function fetchTechnical(symbol: string): Promise<any | null> {
   try {
-    const res = await apiClient.get<any>(`/analysis/technical/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<any>(`analysis/technical/${encodeURIComponent(symbol)}`);
     return res.data?.indicators ?? null;
   } catch {
     return null;
@@ -214,7 +215,7 @@ export async function fetchTechnical(symbol: string): Promise<any | null> {
 /** تحلیل ریسک یک نماد. */
 export async function fetchRisk(symbol: string): Promise<any | null> {
   try {
-    const res = await apiClient.get<any>(`/analysis/risk/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<any>(`analysis/risk/${encodeURIComponent(symbol)}`);
     return res.data?.risk ?? null;
   } catch {
     return null;
@@ -224,7 +225,7 @@ export async function fetchRisk(symbol: string): Promise<any | null> {
 /** تحلیل احساسات یک نماد. */
 export async function fetchSentiment(symbol: string): Promise<any | null> {
   try {
-    const res = await apiClient.get<any>(`/analysis/sentiment/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<any>(`analysis/sentiment/${encodeURIComponent(symbol)}`);
     return res.data?.sentiment ?? null;
   } catch {
     return null;

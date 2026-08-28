@@ -108,8 +108,8 @@ export function Sidebar() {
         {isAuthenticated && user ? (
           <div className="rounded-xl bg-neutral/60 p-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <UserIcon className="h-4 w-4" />
-              <span className="flex-1 truncate">{user.name}</span>
+              <span aria-hidden="true">👤</span>
+              <span className="flex-1 truncate">{user.full_name || user.username}</span>
             </div>
             <button
               type="button"
@@ -127,4 +127,3 @@ export function Sidebar() {
     </aside>
   );
 }
-

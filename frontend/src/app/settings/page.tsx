@@ -33,8 +33,8 @@ export default function SettingsPage() {
       setLoading(true);
       try {
         const [prefsRes, countriesRes] = await Promise.all([
-          apiClient.get("/settings/market-preferences"),
-          apiClient.get("/settings/countries")
+          apiClient.get("settings/market-preferences"),
+          apiClient.get("settings/countries")
         ]);
         
         if (active) {
@@ -72,7 +72,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await apiClient.post("/settings/market-preferences", {
+      await apiClient.post("settings/market-preferences", {
         ...marketData,
         [selectedCountry]: {
           ...data,

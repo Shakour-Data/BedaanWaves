@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
+import { useAuthStore } from "@/store/useAuthStore";
+import { fetchSymbols, fetchScoring } from "@/lib/api/stocks";
 
 // Types
 interface ScoredStock {
@@ -148,62 +151,151 @@ function getRecommendationColor(rec: string) {
   }
 }
 
-function ScoreRing({ score }: { score: number }) {
-  const getColor = (s: number) => {
-    if (s >= 90) return "#10b981";
-    if (s >= 75) return "#00d4ff";
-    if (s >= 60) return "#f59e0b";
-    return "#ef4444";
-  };
-
-  return (
-    <div className="relative h-16 w-16">
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
-        <path
-          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-          fill="none"
-          stroke="#1e293b"
-          strokeWidth="3"
-        />
-        <path
-          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-          fill="none"
-          stroke={getColor(score)}
-          strokeWidth="3"
-          strokeDasharray={`${score}, 100`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg font-bold text-[var(--color-text-primary)]">{score}</span>
-      </div>
-    </div>
-  );
-}
-
-function MetricBar({ label, value }: { label: string; value: number }) {
-  const getColor = (v: number) => {
-    if (v >= 90) return "bg-[var(--color-success)]";
-    if (v >= 75) return "bg-[var(--color-primary)]";
-    if (v >= 60) return "bg-[var(--color-warning)]";
-    return "bg-[var(--color-error)]";
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-[var(--color-text-secondary)]">{label}</span>
-        <span className="font-medium text-[var(--color-text-primary)]">{value}</span>
-      </div>
-      <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--color-border)]">
-        <div className={cn("h-full rounded-full transition-all", getColor(value))} style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  );
-}
+const mlCoefficients = [
+  { label: "Fundamental", defaultWeight: 25, mlOptimized: true },
+  { label: "Technical", defaultWeight: 20, mlOptimized: true },
+  { label: "Sentiment", defaultWeight: 15, mlOptimized: true },
+  { label: "Risk", defaultWeight: 20, mlOptimized: true },
+  { label: "Macro", defaultWeight: 10, mlOptimized: true },
+  { label: "AI", defaultWeight: 10, mlOptimized: true }
+];
 
 export default function ScoringPage() {
+  const { currentLang } = useAuthStore();
+  const [expandedDim, setExpandedDim] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [scoringData, setScoringData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<Asset[]>([]);
+
+  const dimensionDetails = [
+    {
+      id: "fundamental",
+      title: `${t("app.scoring.dimensions.fundamental", currentLang)} (25٪)`,
+      weight: 25,
+      color: "bg-blue-500/20 border-blue-400",
+      icon: "🏦",
+      aspects: [
+        { name: "P/E Ratio", desc: currentLang === "fa" ? "نسبت قیمت به سود" : "Price-to-Earnings Ratio" },
+        { name: "ROE", desc: currentLang === "fa" ? "بازده حقوق صاحبان سهام" : "Return on Equity" },
+        { name: "Book Value", desc: currentLang === "fa" ? "ارزش دفتری در هر سهم" : "Book Value per Share" },
+        { name: "Revenue Growth", desc: currentLang === "fa" ? "رشد درآمدی سالانه" : "Annual Revenue Growth" },
+        { name: "Debt-to-Equity", desc: currentLang === "fa" ? "نسبت بدهی به حقوق صاحبان سهام" : "Debt-to-Equity Ratio" }
+      ],
+    },
+    {
+      id: "technical",
+      title: `${t("app.scoring.dimensions.technical", currentLang)} (20٪)`,
+      weight: 20,
+      color: "bg-green-500/20 border-green-400",
+      icon: "📈",
+      aspects: [
+        { name: "RSI", desc: currentLang === "fa" ? "شاخص قدرت نسبی" : "Relative Strength Index" },
+        { name: "MACD", desc: currentLang === "fa" ? "واگرایی و همگرایی میانگین متحرک" : "Moving Average Convergence Divergence" },
+        { name: "Moving Averages", desc: currentLang === "fa" ? "میانگین‌های متحرک 50 و 200 روزه" : "50 and 200-day Moving Averages" },
+        { name: "Bollinger Bands", desc: currentLang === "fa" ? "باندهای بولینگر" : "Bollinger Bands" },
+        { name: "Volume Profile", desc: currentLang === "fa" ? "پروفیل حجم معاملات" : "Volume Profile" }
+      ],
+    },
+    {
+      id: "sentiment",
+      title: `${t("app.scoring.dimensions.sentiment", currentLang)} (15٪)`,
+      weight: 15,
+      color: "bg-purple-500/20 border-purple-400",
+      icon: "🎭",
+      aspects: [
+        { name: "News Sentiment", desc: currentLang === "fa" ? "احساسات خبری" : "News Sentiment" },
+        { name: "Social Media", desc: currentLang === "fa" ? "احساسات شبکه‌های اجتماعی" : "Social Media Sentiment" },
+        { name: "Analyst Ratings", desc: currentLang === "fa" ? "امتیاز تحلیلگران" : "Analyst Ratings" }
+      ],
+    },
+    {
+      id: "risk",
+      title: `${t("app.scoring.dimensions.risk", currentLang)} (20٪)`,
+      weight: 20,
+      color: "bg-red-500/20 border-red-400",
+      icon: "🛡️",
+      aspects: [
+        { name: "Volatility", desc: currentLang === "fa" ? "نوسان قیمت" : "Price Volatility" },
+        { name: "VaR", desc: currentLang === "fa" ? "ارزش در معرض ریسک" : "Value at Risk" },
+        { name: "Sharpe Ratio", desc: currentLang === "fa" ? "ضریب شارپ" : "Sharpe Ratio" },
+        { name: "Max Drawdown", desc: currentLang === "fa" ? "بیشترین افت قیمت" : "Maximum Drawdown" }
+      ],
+    },
+    {
+      id: "macro",
+      title: `${t("app.scoring.dimensions.macro", currentLang)} (10٪)`,
+      weight: 10,
+      color: "bg-orange-500/20 border-orange-400",
+      icon: "🌍",
+      aspects: [
+        { name: "GDP Growth", desc: currentLang === "fa" ? "رشد تولید ناخالص داخلی" : "GDP Growth" },
+        { name: "Inflation", desc: currentLang === "fa" ? "نرخ تورم" : "Inflation Rate" },
+        { name: "Interest Rates", desc: currentLang === "fa" ? "نرخ بهره" : "Interest Rates" },
+        { name: "FX Rates", desc: currentLang === "fa" ? "نرخ ارز" : "Foreign Exchange Rates" }
+      ],
+    },
+    {
+      id: "ai",
+      title: `${t("app.scoring.dimensions.ai", currentLang)} (10٪)`,
+      weight: 10,
+      color: "bg-cyan-500/20 border-cyan-400",
+      icon: "🤖",
+      aspects: [
+        { name: "LSTM Forecast", desc: currentLang === "fa" ? "پیش‌بینی قیمت با LSTM" : "Price Forecasting with LSTM" },
+        { name: "Pattern Detection", desc: currentLang === "fa" ? "تشکیل الگوهای نموداری" : "Chart Pattern Detection" },
+        { name: "Anomaly Detection", desc: currentLang === "fa" ? "تشخیص ناهنجاری‌ها" : "Anomaly Detection" }
+      ],
+    },
+  ];
+
+  const grades = [
+    { label: currentLang === "fa" ? "A (خرید قوی)" : "A (Strong Buy)", min: 85, color: "text-green-600", bg: "bg-green-500/20" },
+    { label: currentLang === "fa" ? "B (خرید)" : "B (Buy)", min: 70, color: "text-emerald-600", bg: "bg-emerald-500/20" },
+    { label: currentLang === "fa" ? "C (نگهداری)" : "C (Hold)", min: 55, color: "text-yellow-600", bg: "bg-yellow-500/20" },
+    { label: currentLang === "fa" ? "D (فروش)" : "D (Sell)", min: 40, color: "text-orange-600", bg: "bg-orange-500/20" },
+    { label: currentLang === "fa" ? "E (فروش قوی)" : "E (Strong Sell)", min: 0, color: "text-red-600", bg: "bg-red-500/20" },
+  ];
+
+  const mlCoefficients = [
+    { label: t("app.scoring.dimensions.fundamental", currentLang), defaultWeight: 25, mlOptimized: true },
+    { label: t("app.scoring.dimensions.technical", currentLang), defaultWeight: 20, mlOptimized: true },
+    { label: t("app.scoring.dimensions.sentiment", currentLang), defaultWeight: 15, mlOptimized: true },
+    { label: t("app.scoring.dimensions.risk", currentLang), defaultWeight: 20, mlOptimized: true },
+    { label: t("app.scoring.dimensions.macro", currentLang), defaultWeight: 10, mlOptimized: true },
+    { label: t("app.scoring.dimensions.ai", currentLang), defaultWeight: 10, mlOptimized: true }
+  ];
+
+  useEffect(() => {
+    if (search.length > 1) {
+      fetchSymbols({ limit: 5 }).then(assets => {
+        setSuggestions(assets.filter(a => 
+          a.symbol.toLowerCase().includes(search.toLowerCase()) || 
+          a.name.toLowerCase().includes(search.toLowerCase())
+        ));
+      });
+    } else {
+      setSuggestions([]);
+    }
+  }, [search]);
+
+  const handleSelect = async (symbol: string) => {
+    setSearch(symbol);
+    setSuggestions([]);
+    setSelectedSymbol(symbol);
+    setLoading(true);
+    try {
+      const data = await fetchScoring(symbol);
+      setScoringData(data);
+    } catch (error) {
+      console.error("Error fetching scoring:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [stocks, setStocks] = useState<ScoredStock[]>(mockScoredStocks);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRec, setFilterRec] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"score" | "symbol" | "change">("score");
@@ -372,6 +464,59 @@ export default function ScoringPage() {
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Try adjusting your filters</p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ScoreRing({ score }: { score: number }) {
+  const getColor = (s: number) => {
+    if (s >= 90) return "#10b981";
+    if (s >= 75) return "#00d4ff";
+    if (s >= 60) return "#f59e0b";
+    return "#ef4444";
+  };
+
+  return (
+    <div className="relative h-16 w-16">
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+        <path
+          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+          fill="none"
+          stroke="#1e293b"
+          strokeWidth="3"
+        />
+        <path
+          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+          fill="none"
+          stroke={getColor(score)}
+          strokeWidth="3"
+          strokeDasharray={`${score}, 100`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-bold text-[var(--color-text-primary)]">{score}</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricBar({ label, value }: { label: string; value: number }) {
+  const getColor = (v: number) => {
+    if (v >= 90) return "bg-[var(--color-success)]";
+    if (v >= 75) return "bg-[var(--color-primary)]";
+    if (v >= 60) return "bg-[var(--color-warning)]";
+    return "bg-[var(--color-error)]";
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-[var(--color-text-secondary)]">{label}</span>
+        <span className="font-medium text-[var(--color-text-primary)]">{value}</span>
+      </div>
+      <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--color-border)]">
+        <div className={cn("h-full rounded-full transition-all", getColor(value))} style={{ width: `${value}%` }} />
       </div>
     </div>
   );

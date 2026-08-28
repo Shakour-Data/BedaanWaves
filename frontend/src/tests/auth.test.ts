@@ -27,7 +27,7 @@ describe('Authentication Store', () => {
 
   it('should logout and clear state', () => {
     useAuthStore.setState({
-      user: { name: 'Test', email: 'test@example.com', role: 'user' },
+      user: { id: '1', username: 'testuser', email: 'test@example.com', full_name: 'Test User', is_active: true, is_admin: false, created_at: '2024-01-01' },
       isAuthenticated: true,
       token: 'mock-token',
       refreshToken: 'mock-refresh' });

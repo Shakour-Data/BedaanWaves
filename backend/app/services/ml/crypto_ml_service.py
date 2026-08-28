@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from ..core.base_service import MLService
 from ..core.config import get_settings
 import logging
-from ..models.models import (
+from app.models.models import (
     Asset,
     MarketDataSnapshot,
     CryptoMLSignal,

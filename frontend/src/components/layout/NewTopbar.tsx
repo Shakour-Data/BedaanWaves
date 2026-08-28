@@ -175,10 +175,10 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
                 className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 transition-colors hover:border-[var(--color-primary)]"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--color-primary)]/10 text-sm font-semibold text-[var(--color-primary)]">
-                  {user?.name?.[0] || "U"}
+                  {user?.full_name?.[0] || user?.username?.[0] || "U"}
                 </div>
                 <div className="hidden flex-col items-start px-1 md:flex">
-                  <span className="text-xs font-medium text-[var(--color-text-primary)] leading-tight">{user?.name || "User"}</span>
+                  <span className="text-xs font-medium text-[var(--color-text-primary)] leading-tight">{user?.full_name || user?.username || "User"}</span>
                 </div>
               </button>
 
@@ -191,7 +191,7 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
                   />
                   <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl">
                     <div className="border-b border-[var(--color-border)] p-4">
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">{user?.name || "John Doe"}</p>
+                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">{user?.full_name || user?.username || "John Doe"}</p>
                       <p className="text-xs text-[var(--color-text-secondary)]">{user?.email || "john@example.com"}</p>
                     </div>
                     <div className="p-2">
