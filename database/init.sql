@@ -38,11 +38,13 @@ CREATE INDEX IF NOT EXISTS idx_assets_active_market ON assets(active, market);
 CREATE INDEX IF NOT EXISTS idx_assets_sector ON assets(sector);
 
 -- ===============================================
--- 3. کندل‌های قیمت — سه جدول مجزا بر اساس بازار
+-- 3. Price Candles — market-specific tables
+-- Separate tables because International (NASDAQ/NYSE) and Crypto markets
+-- have different trading calendars, hours, and timeframe granularity.
 -- ===============================================
 
--- 3.1 بازار ایران (TSE/فرابورس): 1h, 1d, 1w, 1M
-CREATE TABLE IF NOT EXISTS ir_price_candles (
+-- 3.1 International markets (NASDAQ/NYSE/LSE/etc): 15m, 1h, 4h, 1d, 1w, 1M
+CREATE TABLE IF NOT EXISTS intl_price_candles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL REFERENCES assets(id),
     timestamp TIMESTAMP NOT NULL,
@@ -60,92 +62,41 @@ CREATE TABLE IF NOT EXISTS ir_price_candles (
     data_quality VARCHAR(10) DEFAULT 'CONFIRMED',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(asset_id, timestamp, timeframe),
-    CONSTRAINT chk_ir_high_values CHECK (high >= open AND high >= close),
-    CONSTRAINT chk_ir_low_values CHECK (low <= open AND low <= close)
+    CONSTRAINT chk_intl_high_values CHECK (high >= open AND high >= close),
+    CONSTRAINT chk_intl_low_values CHECK (low <= open AND low <= close),
+    CONSTRAINT chk_intl_volume CHECK (volume >= 0)
 );
-CREATE INDEX IF NOT EXISTS idx_ir_candle_asset ON ir_price_candles(asset_id);
-CREATE INDEX IF NOT EXISTS idx_ir_candle_timestamp ON ir_price_candles(timestamp);
-CREATE INDEX IF NOT EXISTS idx_ir_candle_asset_time ON ir_price_candles(asset_id, timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_ir_candle_tf_ts ON ir_price_candles(timeframe, timestamp);
+CREATE INDEX IF NOT EXISTS idx_intl_candle_asset ON intl_price_candles(asset_id);
+CREATE INDEX IF NOT EXISTS idx_intl_candle_timestamp ON intl_price_candles(timestamp);
+CREATE INDEX IF NOT EXISTS idx_intl_candle_asset_time ON intl_price_candles(asset_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_intl_candle_tf_ts ON intl_price_candles(timeframe, timestamp);
+CREATE INDEX IF NOT EXISTS idx_intl_candle_asset_tftp ON intl_price_candles(asset_id, timeframe, timestamp);
 
--- 3.2 بورس‌های خارج از ایران: 15m, 1h, 4h, 1d, 1w, 1M
-CREATE TABLE IF NOT EXISTS intl_price_candles (
-    LIKE ir_price_candles INCLUDING ALL
-);
-
--- 3.3 رمزارز (۲۴/۷): 5m, 15m, 1h, 4h, 1d, 1w, 1M
+-- 3.2 Crypto (24/7): 5m, 15m, 1h, 4h, 1d, 1w, 1M
 CREATE TABLE IF NOT EXISTS crypto_price_candles (
-    LIKE ir_price_candles INCLUDING ALL
+    LIKE intl_price_candles INCLUDING ALL
 );
+CREATE INDEX IF NOT EXISTS idx_crypto_candle_asset ON crypto_price_candles(asset_id);
+CREATE INDEX IF NOT EXISTS idx_crypto_candle_timestamp ON crypto_price_candles(timestamp);
+CREATE INDEX IF NOT EXISTS idx_crypto_candle_tf_ts ON crypto_price_candles(timeframe, timestamp);
 
--- ===============================================
--- 4. عمق بازار / مظنه برتر — هر ۱۵ دقیقه، ۵ مظنه برتر
--- ===============================================
-CREATE TABLE IF NOT EXISTS ir_order_book (
+-- 3.3 Market Depth — 5 best levels (intl & crypto only)
+CREATE TABLE IF NOT EXISTS intl_order_book (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL REFERENCES assets(id),
     snapshot_time TIMESTAMP NOT NULL,
-    rank INTEGER NOT NULL,
+    rank INTEGER NOT NULL, -- 1..5 (best level)
     bid_price NUMERIC(20, 8),
     bid_volume BIGINT,
     ask_price NUMERIC(20, 8),
     ask_volume BIGINT,
-    source VARCHAR(20) DEFAULT 'BRS',
+    source VARCHAR(20) DEFAULT 'BINANCE',
     UNIQUE(asset_id, snapshot_time, rank)
 );
-CREATE INDEX IF NOT EXISTS idx_ir_orderbook_asset ON ir_order_book(asset_id);
-CREATE INDEX IF NOT EXISTS idx_ir_orderbook_asset_snap ON ir_order_book(asset_id, snapshot_time);
+CREATE INDEX IF NOT EXISTS idx_intl_orderbook_asset ON intl_order_book(asset_id);
+CREATE INDEX IF NOT EXISTS idx_intl_orderbook_asset_snap ON intl_order_book(asset_id, snapshot_time);
 
-CREATE TABLE IF NOT EXISTS intl_order_book ( LIKE ir_order_book INCLUDING ALL );
-CREATE TABLE IF NOT EXISTS crypto_order_book ( LIKE ir_order_book INCLUDING ALL );
-
--- ===============================================
--- 5. جداول اختصاصی بازار ایران
--- ===============================================
-
--- 5.1 سهامداران عمده
-CREATE TABLE IF NOT EXISTS ir_major_shareholders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    asset_id UUID NOT NULL REFERENCES assets(id),
-    shareholder_name VARCHAR(255) NOT NULL,
-    shareholder_type VARCHAR(10) NOT NULL,
-    rank INTEGER,
-    share_count BIGINT,
-    share_pct NUMERIC(8, 4),
-    change_count BIGINT DEFAULT 0,
-    change_pct NUMERIC(8, 4) DEFAULT 0,
-    report_date DATE NOT NULL,
-    source VARCHAR(20) DEFAULT 'BRS',
-    UNIQUE(asset_id, shareholder_name, report_date)
-);
-CREATE INDEX IF NOT EXISTS idx_ir_shareholder_asset ON ir_major_shareholders(asset_id);
-
--- 5.2 سهام شناور آزاد
-CREATE TABLE IF NOT EXISTS ir_free_float (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    asset_id UUID NOT NULL REFERENCES assets(id),
-    free_float_pct NUMERIC(8, 4),
-    base_volume BIGINT,
-    as_of_date DATE NOT NULL,
-    source VARCHAR(20) DEFAULT 'BRS',
-    UNIQUE(asset_id, as_of_date)
-);
-CREATE INDEX IF NOT EXISTS idx_ir_free_float_asset ON ir_free_float(asset_id);
-
--- 5.3 جریان حقیقی/حقوقی (هر ۱۵ دقیقه)
-CREATE TABLE IF NOT EXISTS ir_retail_institutional (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    asset_id UUID NOT NULL REFERENCES assets(id),
-    snapshot_time TIMESTAMP NOT NULL,
-    retail_buy_volume BIGINT DEFAULT 0,
-    retail_sell_volume BIGINT DEFAULT 0,
-    institutional_buy_volume BIGINT DEFAULT 0,
-    institutional_sell_volume BIGINT DEFAULT 0,
-    net_flow NUMERIC(25, 2) DEFAULT 0,
-    source VARCHAR(20) DEFAULT 'BRS',
-    UNIQUE(asset_id, snapshot_time)
-);
-CREATE INDEX IF NOT EXISTS idx_ir_retail_inst_asset ON ir_retail_institutional(asset_id);
+CREATE TABLE IF NOT EXISTS crypto_order_book (LIKE intl_order_book INCLUDING ALL);
 
 -- ===============================================
 -- 6. سیگنال‌های ML
@@ -553,7 +504,7 @@ SELECT DISTINCT ON (asset_id)
     close AS current_price,
     (close - open) AS day_change,
     ((close - open) / open * 100) AS day_change_pct
-FROM ir_price_candles
+FROM intl_price_candles
 WHERE timeframe = '1d'
 ORDER BY asset_id, timestamp DESC;
 
@@ -1105,18 +1056,7 @@ CREATE INDEX IF NOT EXISTS idx_symbol_market_settings_user ON symbol_market_sett
 CREATE INDEX IF NOT EXISTS idx_symbol_market_settings_symbol ON symbol_market_settings(symbol_id);
 
 -- ===============================================
--- 19. اطلاعات اولیه (Sample Data)
--- ===============================================
-INSERT INTO assets (symbol, name, asset_class, market, sector) VALUES
-('FSPD', 'فولاد', 'EQUITY', 'TSE', 'معادن'),
-('MAPNA', 'مپنا', 'EQUITY', 'TSE', 'ماشین‌آلات'),
-('SHTEL', 'شتل', 'EQUITY', 'TSE', 'مخابرات'),
-('SAIPA', 'سایپا', 'EQUITY', 'TSE', 'خودروساز'),
-('PETR', 'نفت', 'EQUITY', 'TSE', 'انرژی')
-ON CONFLICT (symbol) DO NOTHING;
-
--- ===============================================
--- 19. Key Nasdaq Symbols (Full list in insert_nasdaq_symbols.sql)
+-- 19. نمادهای کلیدی ناسداک (Full list in insert_nasdaq_symbols.sql)
 -- ===============================================
 INSERT INTO assets (symbol, name, asset_class, market, sector, country_code, currency, active) VALUES
 ('^IXIC', 'Nasdaq Composite', 'INDEX', 'NASDAQ', 'Technology', 'US', 'USD', TRUE),
@@ -1146,7 +1086,7 @@ INSERT INTO assets (symbol, name, asset_class, market, sector, country_code, cur
 ('SBUX', 'Starbucks Corporation', 'EQUITY', 'NASDAQ', 'Consumer Discretionary', 'US', 'USD', TRUE)
 ON CONFLICT (symbol) DO NOTHING;
 
--- Load all 5569 Nasdaq symbols from database/insert_nasdaq_symbols.sql
+-- Load all NASDAQ symbols from database/insert_nasdaq_symbols.sql
 -- Run: psql -U postgres -d bedaanwaves_db -f database/insert_nasdaq_symbols.sql
 
 -- ===============================================

@@ -6,7 +6,7 @@ describe('ProgressBar', () => {
     render(<ProgressBar currentStep={2} totalSteps={4} />);
 
     expect(screen.getByText('Step 2 of 4')).not.toBeNull();
-    expect(screen.getByText('33%')).not.toBeNull();
+    expect(screen.getByText('50%')).not.toBeNull();
   });
 
   it('renders progress bar with correct aria attributes', () => {

@@ -16,10 +16,10 @@ export interface DashboardData {
   live: boolean;
 }
 
-interface TseDashboardResponse {
+interface NasdaqDashboardResponse {
   status: string;
   market: string;
-  total_symbols: number;
+  total_assets: number;
   average_change_pct: number;
   top_gainers: { symbol: string; name: string; last_close: number; change_pct: number }[];
   top_losers: { symbol: string; name: string; last_close: number; change_pct: number }[];
@@ -67,57 +67,57 @@ function formatTimeAgo(dateStr: string): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return "همین الان";
-  if (minutes < 60) return `${minutes} دقیقه پیش`;
-  if (hours < 24) return `${hours} ساعت پیش`;
-  return `${days} روز پیش`;
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
+  if (hours < 24) return `${hours} hours ago`;
+  return `${days} days ago`;
 }
 
 async function fetchMarketStats(): Promise<MarketStat[]> {
   try {
-    const [marketOverviewRes, tseDashboardRes] = await Promise.all([
+    const [marketOverviewRes, nasdaqDashboardRes] = await Promise.all([
       apiClient.get<MarketOverviewResponse>("market/market-overview?market=NASDAQ").catch(() => null),
-      apiClient.get<TseDashboardResponse>("market/tse-dashboard").catch(() => null),
+      apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard").catch(() => null),
     ]);
 
     const marketOverview = marketOverviewRes?.data;
-    const tseDashboard = tseDashboardRes?.data;
+    const nasdaqDashboard = nasdaqDashboardRes?.data;
 
     const stats: MarketStat[] = [];
 
-    if (tseDashboard?.status === "success") {
+    if (nasdaqDashboard?.status === "success") {
       stats.push(
-        { label: "شاخص کل بورس", value: tseDashboard.total_symbols.toLocaleString("fa-IR"), changePct: tseDashboard.average_change_pct },
-        { label: "بهترین کسب‌کننده", value: tseDashboard.top_gainers[0]?.change_pct.toFixed(2) + "٪", changePct: tseDashboard.top_gainers[0]?.change_pct ?? 0 },
+        { label: "Nasdaq Composite", value: nasdaqDashboard.total_assets.toLocaleString("en-US"), changePct: nasdaqDashboard.average_change_pct },
+        { label: "Top Gainer", value: nasdaqDashboard.top_gainers[0]?.symbol + " " + nasdaqDashboard.top_gainers[0]?.change_pct.toFixed(2) + "%", changePct: nasdaqDashboard.top_gainers[0]?.change_pct ?? 0 },
       );
     }
 
     if (marketOverview?.status === "success") {
       stats.push(
-        { label: "نمادهای فعال بورس", value: marketOverview.total_assets.toLocaleString("fa-IR"), changePct: 0 },
+        { label: "Active Symbols", value: marketOverview.total_assets.toLocaleString("en-US"), changePct: 0 },
       );
     }
 
     return stats.length ? stats : [
-      { label: "شاخص کل بورس", value: "—", changePct: 0 },
-      { label: "نمادهای فعال", value: "—", changePct: 0 },
+      { label: "Nasdaq Composite", value: "—", changePct: 0 },
+      { label: "Active Symbols", value: "—", changePct: 0 },
     ];
   } catch {
     return [
-      { label: "شاخص کل بورس", value: "—", changePct: 0 },
-      { label: "نمادهای فعال", value: "—", changePct: 0 },
+      { label: "Nasdaq Composite", value: "—", changePct: 0 },
+      { label: "Active Symbols", value: "—", changePct: 0 },
     ];
   }
 }
 
 async function fetchTopMovers(): Promise<AssetRow[]> {
   try {
-    const res = await apiClient.get<TseDashboardResponse>("market/tse-dashboard");
+    const res = await apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard");
     const data = res.data;
     if (data.status !== "success") return [];
 
-    const map = (r: TseDashboardResponse["top_gainers"][number]): AssetRow => ({
-      symbol: r.symbol, name: r.name, market: "TSE",
+    const map = (r: NasdaqDashboardResponse["top_gainers"][number]): AssetRow => ({
+      symbol: r.symbol, name: r.name, market: "NASDAQ",
       price: r.last_close, changePct: r.change_pct });
 
     const gainers = (data.top_gainers ?? []).map(map);

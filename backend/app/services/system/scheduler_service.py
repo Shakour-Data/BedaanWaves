@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from ..core import BaseService
 from app.core.config import get_settings
 from sqlalchemy import select, func
-from app.models.models import Asset, IntlPriceCandle, IRPriceCandle, CryptoPriceCandle, News
+from app.models.models import Asset, IntlPriceCandle, CryptoPriceCandle, News
 
 
 @dataclass
@@ -304,16 +304,6 @@ class SchedulerService(BaseService):
 
         # === DATA BACKFILL JOBS ===
 
-        async def ir_candle_backfill_job():
-            """Backfill ir_price_candles to cover 2021-08-27 → present."""
-            return await self._backfill_candles("IR", years=5)
-
-        self.register_job(
-            name="IrCandleBackfill",
-            coroutine_func=ir_candle_backfill_job,
-            interval_seconds=86400 * 7,  # Weekly
-        )
-
         async def crypto_candle_backfill_job():
             """Backfill crypto_price_candles to cover 2021-08-27 → present."""
             return await self._backfill_candles("CRYPTO", years=5)
@@ -341,17 +331,17 @@ class SchedulerService(BaseService):
     # ------------------------------------------------------------------ #
 
     async def _backfill_candles(self, market_type: str, years: int = 5) -> Dict[str, Any]:
-        """Backfill price candles for a market segment (IR or CRYPTO).
+        """Backfill price candles for a market segment.
 
         Args:
-            market_type: ``"IR"`` for Iranian stocks, ``"CRYPTO"`` for cryptocurrencies.
+            market_type: ``"CRYPTO"`` for cryptocurrencies.
             years: Number of years of history to fetch.
 
         Returns:
             Summary dictionary with counts.
         """
         from app.db.base import async_session_maker
-        from app.models.models import Asset as _Asset, IRPriceCandle, CryptoPriceCandle, IntlPriceCandle
+        from app.models.models import Asset as _Asset, CryptoPriceCandle, IntlPriceCandle
 
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=years * 365)
@@ -362,10 +352,7 @@ class SchedulerService(BaseService):
 
         try:
             async with async_session_maker() as session:
-                if market_type == "IR":
-                    model = IRPriceCandle
-                    query = select(_Asset).where(_Asset.market.in_(("TSE", "OTC")))
-                elif market_type == "CRYPTO":
+                if market_type == "CRYPTO":
                     model = CryptoPriceCandle
                     query = select(_Asset).where(_Asset.asset_class == "CRYPTO")
                 else:

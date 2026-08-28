@@ -11,8 +11,8 @@ import { apiClient } from "@/lib/api";
 
 /* ------------------------------ Types ------------------------------------ */
 
-export type AssetClass = "EQUITY" | "ETF" | "CRYPTO" | "COMMODITY" | "BOND" | "INDEX";
-export type Market = "TSE" | "OTC" | "BINANCE" | "KRAKEN" | "COINBASE" | "NYSE" | "NASDAQ";
+export type AssetClass = "EQUITY" | "ETF";
+export type Market = "NASDAQ";
 export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w" | "1M";
 
 /** پاسخِ `GET /market/symbols` */

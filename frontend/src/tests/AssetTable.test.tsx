@@ -5,17 +5,17 @@ import type { AssetRow } from '@/lib/dashboard-data'
 describe('AssetTable', () => {
   const mockAssets: AssetRow[] = [
     {
-      symbol: 'TEST1',
-      name: 'Test Asset 1',
-      market: 'TSE',
-      price: 1000,
+      symbol: 'AAPL',
+      name: 'Apple Inc.',
+      market: 'NASDAQ',
+      price: 150,
       changePct: 2.5
     },
     {
-      symbol: 'TEST2',
-      name: 'Test Asset 2',
-      market: 'BINANCE',
-      price: 50000,
+      symbol: 'MSFT',
+      name: 'Microsoft',
+      market: 'NASDAQ',
+      price: 380,
       changePct: -1.2
     }
   ]
@@ -31,22 +31,20 @@ describe('AssetTable', () => {
     expect(screen.getByText('تغییر')).not.toBeNull()
 
     // Check asset data is rendered
-    expect(screen.getByText('TEST1')).not.toBeNull()
-    expect(screen.getByText('Test Asset 1')).not.toBeNull()
-    expect(screen.getByText('بورس')).not.toBeNull()
-    
-    // Updated for Persian number formatting
-    const priceElement = screen.getByText(/۱٬۰۰۰/)
+    expect(screen.getByText('AAPL')).not.toBeNull()
+    expect(screen.getByText('Apple Inc.')).not.toBeNull()
+    expect(screen.getAllByText('NASDAQ')).toHaveLength(2)
+
+    const priceElement = screen.getByText(/۱۵۰/)
     expect(priceElement).not.toBeNull()
 
     const changeElement = screen.getByText(/2\.50٪/)
     expect(changeElement).not.toBeNull()
 
-    expect(screen.getByText('TEST2')).not.toBeNull()
-    expect(screen.getByText('Test Asset 2')).not.toBeNull()
-    expect(screen.getByText('بازار')).not.toBeNull()
+    expect(screen.getByText('MSFT')).not.toBeNull()
+    expect(screen.getByText('Microsoft')).not.toBeNull()
 
-    const priceElement2 = screen.getByText(/۵۰٬۰۰۰/)
+    const priceElement2 = screen.getByText(/۳۸۰/)
     expect(priceElement2).not.toBeNull()
 
     const changeElement2 = screen.getByText(/1\.20٪/)

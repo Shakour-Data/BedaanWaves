@@ -43,7 +43,7 @@ describe('fetchNasdaqRankings', () => {
     expect(result.items[0].name).toBe('Apple');
     expect(result.items[0].overall_score).toBe(90);
     expect(result.items[0].grade).toBe('A_STRONG_BUY');
-    expect(result.items[1].name).toBe('MSFT');
+    expect(result.items[1].name).toBe('Microsoft');
     expect(result.total).toBe(2);
   });
 

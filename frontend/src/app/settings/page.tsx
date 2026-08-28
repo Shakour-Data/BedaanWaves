@@ -15,8 +15,6 @@ export default function SettingsPage() {
   const [selectedIndex, setSelectedIndex] = useState("tepix");
   const [selectedStock, setSelectedStock] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("");
-  const [selectedCrypto, setSelectedCrypto] = useState("");
-  const [selectedCurrencies, setSelectedCurrencies] = useState(["IRR", "USD"]);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -54,14 +52,6 @@ export default function SettingsPage() {
   const data = marketData ? marketData[selectedCountry] : null;
   const countryInfo = countries.find(c => c.id === selectedCountry);
 
-  const toggleCurrency = (currency: string) => {
-    if (selectedCurrencies.includes(currency)) {
-      setSelectedCurrencies(selectedCurrencies.filter(c => c !== currency));
-    } else {
-      setSelectedCurrencies([...selectedCurrencies, currency]);
-    }
-  };
-
   const toggleNotification = (type: keyof typeof notifications) => {
     setNotifications(prev => ({
       ...prev,
@@ -78,10 +68,8 @@ export default function SettingsPage() {
           ...data,
           index: selectedIndex,
           stock: selectedStock,
-          industry: selectedIndustry,
-          crypto: selectedCrypto },
+          industry: selectedIndustry },
         notifications,
-        currencies: selectedCurrencies
       });
     } catch (error) {
       // Handle error (e.g., show toast)
@@ -258,71 +246,6 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* Cryptocurrency Section */}
-                  {data.crypto?.length > 0 && (
-                    <div>
-                      <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>₿</span> {t("app.settings.cryptocurrencies", "en")}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        {data.crypto.map((coin: any) => (
-                          <label
-                            key={coin.id}
-                            className={cn(
-                              "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
-                              selectedCrypto === coin.id 
-                                ? "border-red-500 bg-red-50 dark:bg-red-900/20" 
-                                : "border-gray-200 hover:border-gray-300"
-                            )}
-                          >
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="crypto"
-                                checked={selectedCrypto === coin.id}
-                                onChange={() => setSelectedCrypto(coin.id)}
-                                className="text-red-600 focus:ring-red-500"
-                              />
-                              <div className={false ? "text-right" : "text-left"}>
-                                <div className="font-medium text-sm">{coin.name}</div>
-                                <div className="text-xs text-muted-foreground">{coin.symbol} | ${coin.price}</div>
-                              </div>
-                            </div>
-                            <span className={cn(
-                              "text-xs font-bold",
-                              coin.change?.startsWith("+") ? "text-green-600" : "text-red-600"
-                            )}>
-                              {coin.change}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Currencies Section */}
-                  <div>
-                    <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                      <span>💱</span> {t("app.settings.trading_currencies", "en")}
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {["IRR", "USD", "EUR", "GBP", "JPY", "CNY", "BTC", "ETH"].map((currency) => (
-                        <label
-                          key={currency}
-                          className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all hover:bg-muted/50"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedCurrencies.includes(currency)}
-                            onChange={() => toggleCurrency(currency)}
-                            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                          />
-                          <span className="font-mono text-sm">{currency}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
 
                   {/* Notification Settings */}
                   <div className="pt-4 border-t border-border/60">

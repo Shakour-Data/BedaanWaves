@@ -95,11 +95,11 @@ describe('password-recovery-api utilities', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: { status: 'success', message: 'Recovery link sent to your email' } });
 
-      const result = await requestPasswordReset({ email: 'user@example.com' });
+      const result = await requestPasswordReset('user@example.com');
       expect(result.success).toBe(true);
       expect(result.message).toBe('Recovery link sent to your email');
       expect(apiClient.post).toHaveBeenCalledWith(
-        'auth/password-reset/request',
+        'auth/password-reset/request?lang=en',
         { email: 'user@example.com' },
       );
     });
@@ -107,7 +107,7 @@ describe('password-recovery-api utilities', () => {
     it('returns failure on network error', async () => {
       vi.mocked(apiClient.post).mockRejectedValue(new Error('Network error'));
 
-      const result = await requestPasswordReset({ email: 'user@example.com' });
+      const result = await requestPasswordReset('user@example.com');
       expect(result.success).toBe(false);
     });
   });
@@ -122,14 +122,14 @@ describe('password-recovery-api utilities', () => {
         data: { valid: true, email_hint: null } });
 
       const result = await verifyResetToken('token-abc');
-      expect(result).toBe(true);
+      expect(result.valid).toBe(true);
     });
 
     it('returns valid=false on 400 response', async () => {
       vi.mocked(apiClient.post).mockRejectedValue({
         response: { data: { detail: 'Invalid token' } } });
 
-      const result = await verifyResetToken('bad-token', 'en');
+      const result = await verifyResetToken('bad-token');
       expect(result.valid).toBe(false);
     });
   });
@@ -143,7 +143,7 @@ describe('password-recovery-api utilities', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: { status: 'success', message: 'Password updated' } });
 
-      const result = await confirmResetPassword({ token: 'token-abc', newPassword: 'newpassword123' });
+      const result = await confirmResetPassword('token-abc', 'newpassword123');
       expect(result.success).toBe(true);
       expect(result.message).toBe('Password updated');
     });
@@ -152,7 +152,7 @@ describe('password-recovery-api utilities', () => {
       vi.mocked(apiClient.post).mockRejectedValue({
         response: { data: { detail: 'Token expired' } } });
 
-      const result = await confirmResetPassword({ token: 'expired', newPassword: 'newpassword123' });
+      const result = await confirmResetPassword('expired', 'newpassword123');
       expect(result.success).toBe(false);
       expect(result.message).toBe('Token expired');
     });

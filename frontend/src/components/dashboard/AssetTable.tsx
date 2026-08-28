@@ -3,9 +3,7 @@ import type { AssetRow } from "@/lib/dashboard-data";
 import { ChangeBadge } from "./StatCard";
 
 const MARKET_LABEL: Record<string, string> = {
-  TSE: "بورس",
-  OTC: "فرابورس",
-  BINANCE: "کریپتو" };
+  NASDAQ: "NASDAQ" };
 
 export function AssetTable({ rows }: { rows: AssetRow[] }) {
   return (

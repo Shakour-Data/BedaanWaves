@@ -37,12 +37,6 @@ export default function StockDetailPage() {
   );
 
   const MARKET_LABEL: Record<Market, string> = {
-    TSE: t("app.stocks.markets.tse", "en"),
-    OTC: t("app.stocks.markets.otc", "en"),
-    BINANCE: t("app.stocks.markets.binance", "en"),
-    KRAKEN: t("app.stocks.markets.kraken", "en"),
-    COINBASE: t("app.stocks.markets.coinbase", "en"),
-    NYSE: t("app.stocks.markets.nyse", "en"),
     NASDAQ: t("app.stocks.markets.nasdaq", "en") };
 
   const RANGES = useMemo(() => [
@@ -129,9 +123,7 @@ export default function StockDetailPage() {
 
   const price = latest?.price ?? derived?.price ?? 0;
   const changePct = latest?.change_pct ?? derived?.changePct ?? 0;
-  const currency = asset?.currency === "USD" 
-    ? t("app.stocks.detail.currency_usd", "en") 
-    : t("app.stocks.detail.currency_irr", "en");
+  const currency = t("app.stocks.detail.currency_usd", "en");
 
   if (loading) {
     return (

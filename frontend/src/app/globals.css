@@ -2,36 +2,63 @@
 
 @layer base {
   :root {
-    /* Color Palette - Light Mode */
-    --color-primary: #2563EB;
-    --color-primary-hover: #1D4ED8;
+    --color-primary: #005A9C;
+    --color-primary-hover: #004578;
+    --color-primary-light: #E6F0FA;
     --color-secondary: #64748B;
     --color-success: #22C55E;
     --color-warning: #F59E0B;
     --color-error: #EF4444;
     --color-background: #F8FAFC;
     --color-surface: #FFFFFF;
+    --color-surface-elevated: #FFFFFF;
     --color-text-primary: #0F172A;
     --color-text-secondary: #475569;
+    --color-text-muted: #94A3B8;
     --color-border: #E2E8F0;
+    --color-border-light: #F1F5F9;
     
-    /* Typography */
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    
+    --max-width: 80rem;
+    --sidebar-width: 16rem;
+    --header-height: 4rem;
+    --footer-height: auto;
   }
 
   .dark {
-    /* Color Palette - Dark Mode */
     --color-primary: #3B82F6;
     --color-primary-hover: #60A5FA;
+    --color-primary-light: #1E3A5F;
     --color-secondary: #94A3B8;
     --color-success: #4ADE80;
     --color-warning: #FBBF24;
     --color-error: #F87171;
     --color-background: #0F172A;
     --color-surface: #1E293B;
+    --color-surface-elevated: #334155;
     --color-text-primary: #F8FAFC;
     --color-text-secondary: #94A3B8;
+    --color-text-muted: #64748B;
     --color-border: #334155;
+    --color-border-light: #1E293B;
+    
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.2);
   }
 
   body {
@@ -72,4 +99,94 @@ html {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-secondary);
+}
+
+/* Unified Grid System */
+.container-grid {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-grid {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-grid {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Page Transition Animations */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pageSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+.page-transition-enter {
+  animation: pageFadeIn 0.3s ease-out forwards;
+}
+
+.page-transition-exit {
+  animation: pageFadeOut 0.2s ease-in forwards;
+}
+
+.page-transition-slide-enter {
+  animation: pageSlideIn 0.35s ease-out forwards;
+}
+
+.page-transition-slide-exit {
+  animation: pageSlideOut 0.25s ease-in forwards;
+}
+
+/* Sidebar transition */
+.sidebar-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
