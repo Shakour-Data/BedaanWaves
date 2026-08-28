@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
   refreshToken: string | null;
+  currentLang: "en" | "fa";
   loading: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -23,6 +24,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       token: null,
       refreshToken: null,
+      currentLang: "en",
       loading: false,
       isLoading: false,
       login: async (email, password) => {
@@ -74,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         token: state.token,
-        refreshToken: state.refreshToken }) }
+        refreshToken: state.refreshToken,
+        currentLang: state.currentLang }) }
   )
 );

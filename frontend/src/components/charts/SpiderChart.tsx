@@ -1,97 +1,147 @@
 "use client";
 
+import { useEffect, useMemo, useRef } from "react";
+import { useAppStore } from "@/store/useAppStore";
+
 interface SpiderChartProps {
-  labels: string[];
-  values: number[];
-  max?: number;
-  height?: number;
+  data: { label: string; value: number }[];
+  size?: number;
+  color?: string;
 }
 
-export function SpiderChart({ labels, values, max = 100, height = 320 }: SpiderChartProps) {
-  const size = Math.min(height, 400);
-  const center = size / 2;
-  const radius = size * 0.38;
+const LIGHT = {
+  grid: "#E2E8F0",
+  axis: "#94A3B8",
+  text: "#475569",
+  bg: "#FFFFFF" };
+
+const DARK = {
+  grid: "#334155",
+  axis: "#64748B",
+  text: "#CBD5E1",
+  bg: "#1E293B" };
+
+const DIMENSION_COLORS = [
+  "#2563EB",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#06B6D4",
+  "#EC4899",
+  "#84CC16" ];
+
+export function SpiderChart({ data, size = 360, color = "#2563EB" }: SpiderChartProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { theme } = useAppStore();
+  const colors = theme === "dark" ? DARK : LIGHT;
+
   const levels = 5;
-  const angleStep = (2 * Math.PI) / labels.length;
+  const max = 100;
 
-  const points = labels.map((_, i) => {
-    const angle = i * angleStep - Math.PI / 2;
-    return {
-      x: center + radius * Math.cos(angle),
-      y: center + radius * Math.sin(angle) };
-  });
+  const angleStep = useMemo(() => data.length > 0 ? (2 * Math.PI) / data.length : 0, [data.length]);
 
-  const valuePoints = values.map((v, i) => {
-    const r = radius * (Math.min(v, max) / max);
-    const angle = i * angleStep - Math.PI / 2;
-    return {
-      x: center + r * Math.cos(angle),
-      y: center + r * Math.sin(angle) };
-  });
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || data.length === 0) return;
 
-  const polygonPoints = valuePoints.map((p) => `${p.x},${p.y}`).join(" ");
+    const dpr = window.devicePixelRatio || 1;
+    const width = size;
+    const height = size;
 
-  const gridLevels = Array.from({ length: levels }, (_, i) => (i + 1) / levels);
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    const center = width / 2;
+    const radius = Math.min(width, height) * 0.38;
+
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 0.5;
+
+    for (let level = 1; level <= levels; level++) {
+      const levelRadius = radius * (level / levels);
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        const x = center + levelRadius * Math.cos(angle);
+        const y = center + levelRadius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = colors.axis;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < data.length; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const x = center + radius * Math.cos(angle);
+      const y = center + radius * Math.sin(angle);
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const value = Math.min(data[i].value, max);
+      const r = radius * (value / max);
+      const angle = i * angleStep - Math.PI / 2;
+      const x = center + r * Math.cos(angle);
+      const y = center + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color ? `${color}26` : "#2563EB26";
+    ctx.fill();
+    ctx.strokeStyle = color || "#2563EB";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    for (let i = 0; i < data.length; i++) {
+      const value = Math.min(data[i].value, max);
+      const r = radius * (value / max);
+      const angle = i * angleStep - Math.PI / 2;
+      const x = center + r * Math.cos(angle);
+      const y = center + r * Math.sin(angle);
+
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = color || "#2563EB";
+      ctx.fill();
+    }
+
+    ctx.fillStyle = colors.text;
+    ctx.font = "12px inherit";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (let i = 0; i < data.length; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const labelRadius = radius + 22;
+      const x = center + labelRadius * Math.cos(angle);
+      const y = center + labelRadius * Math.sin(angle);
+
+      ctx.fillText(data[i].label, x, y);
+    }
+  }, [data, size, color, colors, angleStep]);
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full" style={{ height: size }}>
-      {gridLevels.map((level) => {
-        const levelPoints = points
-          .map((p) => {
-            const dx = p.x - center;
-            const dy = p.y - center;
-            return `${center + dx * level},${center + dy * level}`;
-          })
-          .join(" ");
-        return (
-          <polygon
-            key={level}
-            points={levelPoints}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.5"
-            className="text-gray-300 dark:text-gray-600"
-          />
-        );
-      })}
-
-      {points.map((p, i) => (
-        <line
-          key={i}
-          x1={center}
-          y1={center}
-          x2={p.x}
-          y2={p.y}
-          stroke="currentColor"
-          strokeWidth="0.5"
-          className="text-gray-300 dark:text-gray-600"
-        />
-      ))}
-
-      <polygon points={polygonPoints} fill="rgba(37,99,235,0.15)" stroke="#2563EB" strokeWidth="2" />
-
-      {valuePoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2563EB" />
-      ))}
-
-      {labels.map((label, i) => {
-        const angle = i * angleStep - Math.PI / 2;
-        const labelRadius = radius + 18;
-        const x = center + labelRadius * Math.cos(angle);
-        const y = center + labelRadius * Math.sin(angle);
-        return (
-          <text
-            key={i}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-current text-xs text-gray-600 dark:text-gray-300"
-          >
-            {label}
-          </text>
-        );
-      })}
-    </svg>
+    <div className="relative inline-flex items-center justify-center">
+      <canvas ref={canvasRef} className="block" />
+    </div>
   );
 }
+
+export { DIMENSION_COLORS };
