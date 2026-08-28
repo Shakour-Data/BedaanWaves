@@ -69,6 +69,7 @@ from app.api.routes import (
     health_router,
     symbols_router,
     settings_router,
+    ranking_router,
 )
 
 logging.basicConfig(
@@ -351,6 +352,7 @@ async def lifespan(app: FastAPI):
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
         app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
         app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
+        app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
 
         logger.info("Registered all API routes")
         logger.info("BedaanWaves application ready")
