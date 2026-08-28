@@ -101,7 +101,7 @@ describe('Stocks API Service', () => {
       const result = await fetchPriceHistory({ symbol: 'AAPL', timeframe: '1d', limit: 100 })
       
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/market/market/price-history?symbol=AAPL&timeframe=1d&limit=100'
+        'market/price-history?symbol=AAPL&timeframe=1d&limit=100'
       )
       
       expect(result).toHaveLength(1)

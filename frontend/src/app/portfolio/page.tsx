@@ -56,7 +56,7 @@ export default function PortfolioPage() {
               return {
                 symbol: asset?.symbol || "Unknown",
                 name: asset?.name || "Unknown",
-                market: asset?.market || "TSE",
+                market: asset?.market || "NASDAQ",
                 price: prices[asset?.symbol]?.price ?? h.entry_price ?? 0,
                 changePct: prices[asset?.symbol]?.change_pct ?? 0,
                 quantity: Number(h.quantity),
@@ -72,16 +72,16 @@ export default function PortfolioPage() {
             const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
             
             if (active) setStats([
-              { label: t("app.portfolio.total_value", "en"), value: `${totalValue.toLocaleString(false ? "fa-IR" : "en-US")} ${false ? "ریال" : "IRR"}`, changePct: totalReturnPct },
-              { label: t("app.portfolio.total_pnl", "en"), value: `${totalPnL.toLocaleString(false ? "fa-IR" : "en-US")} ${false ? "ریال" : "IRR"}`, changePct: totalReturnPct },
+              { label: t("app.portfolio.total_value", "en"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+              { label: t("app.portfolio.total_pnl", "en"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
               { label: t("app.portfolio.symbols_count", "en"), value: String(enrichedHoldings.length), changePct: 0 },
-              { label: t("app.portfolio.daily_return", "en"), value: `${(totalReturnPct / 30).toFixed(2)}٪`, changePct: totalReturnPct / 30 },
+              { label: t("app.portfolio.daily_return", "en"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
             ]);
           } else {
             if (active) setHoldings([]);
             if (active) setStats([
-              { label: t("app.portfolio.total_value", "en"), value: false ? "۰ ریال" : "0 IRR", changePct: 0 },
-              { label: t("app.portfolio.total_pnl", "en"), value: false ? "۰ ریال" : "0 IRR", changePct: 0 },
+              { label: t("app.portfolio.total_value", "en"), value: "$0", changePct: 0 },
+              { label: t("app.portfolio.total_pnl", "en"), value: "$0", changePct: 0 },
               { label: t("app.portfolio.symbols_count", "en"), value: "0", changePct: 0 },
               { label: t("app.portfolio.daily_return", "en"), value: "0%", changePct: 0 },
             ]);

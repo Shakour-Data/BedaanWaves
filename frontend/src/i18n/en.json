@@ -5,14 +5,13 @@
     "settings": {
       "title": "Market Settings",
       "overview_title": "Configure Market Settings",
-      "overview_desc": "Configure your personalized market analysis settings. Select countries, indices, stocks, industries, and cryptocurrencies.",
+      "overview_desc": "Configure your personalized market analysis settings. Select stocks, industries, and indices.",
       "country_selection": "Country Selection",
       "market_config": "{country} Market Configuration",
       "indices": "Indices",
       "stocks": "Stocks",
       "industries": "Industries",
-      "cryptocurrencies": "Cryptocurrencies",
-      "trading_currencies": "Trading Currencies",
+      "trading_currencies": "Trading Currency",
       "notification_prefs": "Notification Preferences",
       "save_settings": "Save Settings",
       "loading": "Loading settings...",
@@ -123,7 +122,7 @@
       "technical_details": "Technical Details:",
       "api_endpoints": "API Endpoints:",
       "key_capabilities": "Key Capabilities",
-      "coverage": "Coverage: Iran, Global, and Crypto Markets",
+      "coverage": "Nasdaq Market Coverage",
       "realtime": "Real-time data updates (24/7)",
       "ml_optimized": "ML-optimized weighting system",
       "customizable": "Customizable user preferences",
@@ -275,14 +274,7 @@
       "error_desc": "Unable to fetch symbol list. Please ensure the server is connected.",
       "list_title": "Symbol List",
       "markets": {
-        "tse": "TSE",
-        "otc": "OTC",
-        "binance": "Crypto (Binance)",
-        "kraken": "Crypto (Kraken)",
-        "coinbase": "Crypto (Coinbase)",
-        "nyse": "NYSE",
-        "nasdaq": "NASDAQ",
-        "crypto": "Crypto"
+        "nasdaq": "NASDAQ"
       },
       "detail": {
         "loading": "Loading symbol {symbol}...",
@@ -299,7 +291,6 @@
         "analysis_6d": "6D Analysis",
         "overall_score": "Overall Score:",
         "currency_usd": "USD",
-        "currency_irr": "IRR",
         "ranges": {
           "1m": "1 Month",
           "3m": "3 Months",

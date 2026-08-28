@@ -232,8 +232,7 @@ export default function ScoringPage() {
       aspects: [
         { name: "GDP Growth", desc: currentLang === "fa" ? "رشد تولید ناخالص داخلی" : "GDP Growth" },
         { name: "Inflation", desc: currentLang === "fa" ? "نرخ تورم" : "Inflation Rate" },
-        { name: "Interest Rates", desc: currentLang === "fa" ? "نرخ بهره" : "Interest Rates" },
-        { name: "FX Rates", desc: currentLang === "fa" ? "نرخ ارز" : "Foreign Exchange Rates" }
+        { name: "Interest Rates", desc: currentLang === "fa" ? "نرخ بهره" : "Interest Rates" }
       ],
     },
     {

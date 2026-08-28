@@ -54,7 +54,7 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
           "flex-1 p-4 lg:p-6",
           "min-h-[calc(100vh-4rem)]"
         )}>
-          <div className="mx-auto max-w-7xl">
+          <div className="container-grid">
             {children}
           </div>
         </main>

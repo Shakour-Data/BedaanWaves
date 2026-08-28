@@ -78,7 +78,7 @@ export default function AlertsPage() {
               .map((item: any) => ({
                 symbol: item.asset.symbol,
                 name: item.asset.name,
-                market: item.asset.market as "TSE" | "OTC" | "BINANCE",
+                market: item.asset.market as "NASDAQ",
                 price: prices[item.asset.symbol].price,
                 changePct: prices[item.asset.symbol].change_pct }));
             setWatchlistAlerts(watchAssets);

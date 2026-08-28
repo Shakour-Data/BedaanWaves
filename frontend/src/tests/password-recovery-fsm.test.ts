@@ -173,12 +173,12 @@ describe('usePasswordRecoveryFSM', () => {
     expect(result.current.stepPct).toBe(0);
 
     act(() => result.current.start());
-    // Data_Entry → step 1 → 25%
-    expect(result.current.stepPct).toBe(25);
+    // Data_Entry → step 1 → 20% (STEP_COUNT=4, formula: step/(STEP_COUNT+1)*100)
+    expect(result.current.stepPct).toBe(20);
 
     act(() => result.current.setEmail('user@example.com'));
     act(() => result.current.validateAndProceed());
-    // Confirmation → step 2 → 50%
-    expect(result.current.stepPct).toBe(50);
+    // Confirmation → step 2 → 40%
+    expect(result.current.stepPct).toBe(40);
   });
 });

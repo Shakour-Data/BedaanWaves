@@ -23,14 +23,14 @@ from app.db.base import Base
 
 
 # ---------------------------------------------------------------------------
-# دسته‌بندی بازارها (برای انتخاب جدول صحیح کندل / عمق بازار)
+# Market categorization (for selecting correct candle/orderbook table)
 # ---------------------------------------------------------------------------
 CRYPTO_MARKETS = {"BINANCE", "KRAKEN", "COINBASE"}
 INTL_MARKETS = {"NYSE", "NASDAQ", "LSE", "XETRA", "FWB", "HKEX"}
 
 
 # ===========================================================================
-# 1. دارایی‌ها (Assets)
+# 1. Assets
 # ===========================================================================
 class Asset(Base):
     """Asset/Symbol Information"""
@@ -129,11 +129,6 @@ class CandleMixin:
         )
 
 
-class IRPriceCandle(CandleMixin, Base):
-    """کندل‌های بازار ایران (TSE/فرابورس): 1h, 1d, 1w, 1M"""
-    __tablename__ = "ir_price_candles"
-
-
 class IntlPriceCandle(CandleMixin, Base):
     """کندل‌های بورس‌های خارج از ایران: 15m, 1h, 4h, 1d, 1w, 1M"""
     __tablename__ = "intl_price_candles"
@@ -148,13 +143,11 @@ def candle_model_for_market(market: str):
     """بازگرداندن مدل کندل مناسب بر اساس بازار."""
     if market in CRYPTO_MARKETS:
         return CryptoPriceCandle
-    if market in INTL_MARKETS:
-        return IntlPriceCandle
-    return IRPriceCandle  # پیش‌فرض: بازار ایران (TSE/OTC)
+    return IntlPriceCandle  # پیش‌فرض: بازارهای بین‌المللی (NASDAQ, NYSE, LSE, etc.)
 
 
 # ===========================================================================
-# 3. عمق بازار / مظنه برتر — هر ۱۵ دقیقه، ۵ مظنه برتر
+# 3. Market Depth — 5 best levels (intl & crypto only)
 # ===========================================================================
 class OrderBookMixin:
     """ستون‌های مشترک عمق بازار (۵ سطح برتر)."""
@@ -184,11 +177,6 @@ class OrderBookMixin:
         )
 
 
-class IROrderBook(OrderBookMixin, Base):
-    """عمق بازار بازار ایران (هر ۱۵ دقیقه، ۵ مظنه برتر)"""
-    __tablename__ = "ir_order_book"
-
-
 class IntlOrderBook(OrderBookMixin, Base):
     """عمق بازار بورس‌های خارجی (هر ۱۵ دقیقه، ۵ مظنه برتر)"""
     __tablename__ = "intl_order_book"
@@ -203,81 +191,11 @@ def order_book_model_for_market(market: str):
     """بازگرداندن مدل عمق بازار مناسب بر اساس بازار."""
     if market in CRYPTO_MARKETS:
         return CryptoOrderBook
-    if market in INTL_MARKETS:
-        return IntlOrderBook
-    return IROrderBook
+    return IntlOrderBook
 
 
 # ===========================================================================
-# 4. جداول اختصاصی بازار ایران
-# ===========================================================================
-class IRMajorShareholder(Base):
-    """سهامداران عمده بازار ایران"""
-    __tablename__ = "ir_major_shareholders"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-
-    shareholder_name = Column(String(255), nullable=False)
-    shareholder_type = Column(String(10), nullable=False)  # REAL / LEGAL
-    rank = Column(Integer)
-
-    share_count = Column(BigInteger)
-    share_pct = Column(Numeric(8, 4))
-    change_count = Column(BigInteger, default=0)
-    change_pct = Column(Numeric(8, 4), default=0)
-
-    report_date = Column(Date, nullable=False)
-    source = Column(String(20), default="BRS")
-
-    __table_args__ = (
-        UniqueConstraint('asset_id', 'shareholder_name', 'report_date', name='uix_ir_shareholder'),
-        Index('idx_ir_shareholder_asset', 'asset_id'),
-    )
-
-
-class IRFreeFloat(Base):
-    """سهام شناور آزاد بازار ایران"""
-    __tablename__ = "ir_free_float"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-
-    free_float_pct = Column(Numeric(8, 4))
-    base_volume = Column(BigInteger)
-    as_of_date = Column(Date, nullable=False)
-    source = Column(String(20), default="BRS")
-
-    __table_args__ = (
-        UniqueConstraint('asset_id', 'as_of_date', name='uix_ir_free_float'),
-        Index('idx_ir_free_float_asset', 'asset_id'),
-    )
-
-
-class IRRetailInstitutional(Base):
-    """جریان حقیقی/حقوقی بازار ایران (هر ۱۵ دقیقه)"""
-    __tablename__ = "ir_retail_institutional"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-    snapshot_time = Column(DateTime, nullable=False, index=True)
-
-    retail_buy_volume = Column(BigInteger, default=0)
-    retail_sell_volume = Column(BigInteger, default=0)
-    institutional_buy_volume = Column(BigInteger, default=0)
-    institutional_sell_volume = Column(BigInteger, default=0)
-
-    net_flow = Column(Numeric(25, 2), default=0)  # (حقیقی خرید-فروش) - (حقوقی خرید-فروش)
-    source = Column(String(20), default="BRS")
-
-    __table_args__ = (
-        UniqueConstraint('asset_id', 'snapshot_time', name='uix_ir_retail_inst'),
-        Index('idx_ir_retail_inst_asset', 'asset_id'),
-    )
-
-
-# ===========================================================================
-# 5. سیگنال‌های ML
+# 5. ML Signals
 # ===========================================================================
 class MLSignal(Base):
     """ML-Generated Trading Signals"""
