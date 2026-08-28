@@ -71,7 +71,7 @@ export default function ProfilePage() {
               Profile
             </div>
             <div className="flex-1">
-              <h3 className="text-2xl font-black">{fullName || user?.name || (false ? "کاربر" : "User")}</h3>
+              <h3 className="text-2xl font-black">{fullName || user?.full_name || user?.username || (currentLang === "fa" ? "کاربر" : "User")}</h3>
               <p className="text-muted-foreground font-mono">{user?.email || "user@example.com"}</p>
               <div className="mt-3 flex gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600/10 text-red-600 border border-red-600/20">
@@ -99,9 +99,9 @@ export default function ProfilePage() {
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.login_status", "en")}</div>
               <span className={cn(
                 "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold",
-                user?.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
               )}>
-                {user?.isActive ? t("app.settings.profile.active", "en") : t("app.settings.profile.inactive", "en")}
+                {user?.is_active ? t("app.settings.profile.active", "en") : t("app.settings.profile.inactive", "en")}
               </span>
             </div>
 

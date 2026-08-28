@@ -121,6 +121,7 @@ export default function RankingPage() {
     };
   }, [offset, sortBy, order, currentLang]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => load(), [load]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
