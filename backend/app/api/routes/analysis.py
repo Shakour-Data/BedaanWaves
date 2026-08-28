@@ -17,6 +17,7 @@ from app.services.analysis.momentum_service import MomentumService
 from app.services.analysis.volatility_service import VolatilityService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
+from app.services.analysis.ranking_service import RankingService
 from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
 from app.services.data.news_service import NewsService
 from app.services.data.financial_data_ingest_service import (
@@ -916,3 +917,74 @@ async def fundamental_analysis_health() -> dict:
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/scoring/history/{symbol}", response_model=dict)
+async def get_scoring_history(
+    symbol: str,
+    days: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Get 30-day score history for all dimensions of a symbol.
+
+    Args:
+        symbol: Asset symbol
+        days: Number of days of history to return (default 30)
+
+    Returns:
+        Historical dimension scores with overall score and grade
+    """
+    service = RankingService()
+    await service.initialize()
+    try:
+        result = await service.get_score_history(symbol=symbol, days=days, db=db)
+        return result
+    finally:
+        await service.shutdown()
+
+
+@router.get("/scoring/hierarchy/{symbol}", response_model=dict)
+async def get_scoring_hierarchy(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Return full hierarchy with scores for each node for a symbol.
+
+    Args:
+        symbol: Asset symbol
+
+    Returns:
+        Full 4-level hierarchy with scores
+    """
+    service = RankingService()
+    await service.initialize()
+    try:
+        result = await service.get_hierarchy_scores(symbol=symbol, db=db)
+        return result
+    finally:
+        await service.shutdown()
+
+
+@router.get("/scoring/coefficients/{symbol}", response_model=dict)
+async def get_scoring_coefficients(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Return current coefficients/weights for each dimension/sub-dimension.
+
+    Args:
+        symbol: Asset symbol
+
+    Returns:
+        Current coefficients for all hierarchy levels
+    """
+    service = RankingService()
+    await service.initialize()
+    try:
+        result = await service.get_coefficients(symbol=symbol, db=db)
+        return result
+    finally:
+        await service.shutdown()
