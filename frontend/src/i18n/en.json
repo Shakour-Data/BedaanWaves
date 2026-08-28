@@ -504,6 +504,37 @@
       "help_1": "Recovery links expire after 1 hour",
       "help_2": "Request a new recovery link from the login page",
       "help_3": "Make sure you're connected to the internet"
+    },
+    "ranking": {
+      "title": "Nasdaq Ranking",
+      "subtitle": "Nasdaq stocks ranked by AI score and six dimensions",
+      "rank": "Rank",
+      "symbol": "Symbol",
+      "name": "Name",
+      "overall_score": "Overall Score",
+      "grade": "Grade",
+      "fundamental": "Fundamental",
+      "technical": "Technical",
+      "sentiment": "Sentiment",
+      "risk": "Risk",
+      "macro": "Macro",
+      "ai": "AI",
+      "loading": "Loading rankings...",
+      "error_title": "Unable to load rankings",
+      "error_desc": "Could not fetch Nasdaq rankings. Ensure the backend is running and reachable.",
+      "retry": "Retry",
+      "no_results": "No stocks found",
+      "previous": "Previous",
+      "next": "Next",
+      "showing": "Showing {from}–{to} of {total}",
+      "page": "Page {page} of {pages}",
+      "grades": {
+        "A_STRONG_BUY": "Strong Buy",
+        "B_BUY": "Buy",
+        "C_HOLD": "Hold",
+        "D_SELL": "Sell",
+        "E_STRONG_SELL": "Strong Sell"
+      }
     }
   }
 }
