@@ -1,132 +1,105 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import {
+  createChart,
+  BarSeries,
+  ColorType,
+  CrosshairMode,
+  type IChartApi,
+  type UTCTimestamp,
+  type BarData,
+} from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 
 interface CoefficientChartProps {
-  data: { name: string; coefficient: number; color?: string }[];
+  data: { key: string; label: string; weight: number }[];
   height?: number;
 }
 
 const LIGHT = {
   background: "#ffffff",
-  text: "#475569",
-  grid: "#E2E8F0",
-  barBg: "#F1F5F9" };
+  text: "#5c5c5c",
+  grid: "#eeeeee",
+  border: "#e0e0e0",
+};
 
 const DARK = {
-  background: "#1E293B",
-  text: "#CBD5E1",
-  grid: "#334155",
-  barBg: "#334155" };
+  background: "#1e1e1e",
+  text: "#a8a8a8",
+  grid: "#2a2a2a",
+  border: "#333333",
+};
 
-export function CoefficientChart({ data, height = 320 }: CoefficientChartProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+export function CoefficientChart({ data, height = 360 }: CoefficientChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
   const { theme } = useAppStore();
   const colors = theme === "dark" ? DARK : LIGHT;
 
-  const maxValue = useMemo(() => Math.max(...data.map((d) => Math.abs(d.coefficient)), 1), [data]);
+  const chartData = useMemo(
+    () =>
+      data.map((d, i) => ({
+        time: (i + 1) as UTCTimestamp,
+        value: d.weight,
+        color: d.weight >= 0.2 ? "#2563EB" : d.weight >= 0.1 ? "#10b981" : "#94a3b8",
+      })),
+    [data]
+  );
 
   useEffect(() => {
     const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) return;
+    if (!container) return;
 
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const width = container.clientWidth;
-      const canvasHeight = height;
+    const chart = createChart(container, {
+      height,
+      layout: {
+        background: { type: ColorType.Solid, color: colors.background },
+        textColor: colors.text,
+        fontFamily: "inherit",
+      },
+      grid: {
+        vertLines: { color: colors.grid },
+        horzLines: { color: colors.grid },
+      },
+      rightPriceScale: {
+        borderColor: colors.border,
+      },
+      timeScale: {
+        borderColor: colors.border,
+        tickMarkFormatter: (time: UTCTimestamp) => {
+          const idx = Number(time) - 1;
+          const item = data[idx];
+          return item ? item.label.slice(0, 14) : "";
+        },
+      },
+      crosshair: { mode: CrosshairMode.Normal },
+      localization: {
+        locale: "fa-IR",
+        priceFormatter: (p: number) => `${(p * 100).toFixed(1)}%`,
+      },
+      autoSize: false,
+    });
+    chartRef.current = chart;
 
-      canvas.width = width * dpr;
-      canvas.height = canvasHeight * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${canvasHeight}px`;
+    const series = chart.addSeries(BarSeries, {
+      priceFormat: { type: "volume" },
+    });
+    series.setData(chartData);
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+    chart.timeScale().fitContent();
 
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, canvasHeight);
-
-      const padding = { top: 30, right: 40, bottom: 60, left: 50 };
-      const chartWidth = width - padding.left - padding.right;
-      const chartHeight = canvasHeight - padding.top - padding.bottom;
-
-      if (data.length === 0 || chartWidth <= 0 || chartHeight <= 0) return;
-
-      const barGap = 16;
-      const barWidth = Math.max(20, (chartWidth - barGap * (data.length + 1)) / data.length);
-
-      ctx.strokeStyle = colors.grid;
-      ctx.lineWidth = 0.5;
-
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + chartHeight * (1 - i / 4);
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(padding.left + chartWidth, y);
-        ctx.stroke();
-
-        ctx.fillStyle = colors.text;
-        ctx.font = "11px inherit";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "middle";
-        const val = (maxValue * i) / 4;
-        ctx.fillText(val.toFixed(2), padding.left - 8, y);
-      }
-
-      ctx.strokeStyle = colors.grid;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(padding.left, padding.top);
-      ctx.lineTo(padding.left, padding.top + chartHeight);
-      ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
-      ctx.stroke();
-
-      const totalBarWidth = data.length * barWidth + (data.length - 1) * barGap;
-      const startX = padding.left + (chartWidth - totalBarWidth) / 2;
-
-      data.forEach((item, i) => {
-        const barHeight = (Math.abs(item.coefficient) / maxValue) * chartHeight;
-        const x = startX + i * (barWidth + barGap);
-        const y = padding.top + chartHeight - barHeight;
-        const barColor = item.color || "#2563EB";
-
-        ctx.fillStyle = colors.barBg;
-        ctx.fillRect(x, padding.top, barWidth, chartHeight);
-
-        ctx.fillStyle = barColor;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        ctx.fillStyle = colors.text;
-        ctx.font = "bold 11px inherit";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(item.coefficient.toFixed(2), x + barWidth / 2, y - 6);
-
-        ctx.textBaseline = "top";
-        ctx.font = "11px inherit";
-
-        const words = item.name.split(" ");
-        if (words.length > 2) {
-          const mid = Math.ceil(words.length / 2);
-          ctx.fillText(words.slice(0, mid).join(" "), x + barWidth / 2, padding.top + chartHeight + 6);
-          ctx.fillText(words.slice(mid).join(" "), x + barWidth / 2, padding.top + chartHeight + 20);
-        } else {
-          ctx.fillText(item.name, x + barWidth / 2, padding.top + chartHeight + 8);
-        }
-      });
-    };
-
+    const resize = () => chart.applyOptions({ width: container.clientWidth });
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(container);
 
     return () => {
       observer.disconnect();
+      chart.remove();
+      chartRef.current = null;
     };
-  }, [data, maxValue, colors, height]);
+  }, [chartData, colors, height, data]);
 
-  return <div ref={containerRef} className="w-full"><canvas ref={canvasRef} className="block" /></div>;
+  return <div ref={containerRef} className="w-full" style={{ height }} />;
 }
