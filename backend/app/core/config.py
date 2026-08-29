@@ -72,7 +72,12 @@ class Settings(BaseSettings):
     # ============================================================
     # CORS CONFIGURATION
     # ============================================================
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3005",
+        "http://127.0.0.1:3005",
+    ]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
     CORS_ALLOW_HEADERS: List[str] = ["*"]
@@ -80,9 +85,9 @@ class Settings(BaseSettings):
     # ============================================================
     # SECURITY & AUTHENTICATION
     # ============================================================
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    JWT_SECRET: str = "your-jwt-secret"
+    JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -365,16 +370,27 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_security(self):
-        if self.ENVIRONMENT == "production" and not self.REQUIRE_AUTH:
-            raise ValueError(
-                "REQUIRE_AUTH must be True when ENVIRONMENT is 'production'. "
-                "Refusing to start with authentication disabled in production."
-            )
-        if self.ENVIRONMENT == "production" and self.DEBUG:
-            raise ValueError(
-                "DEBUG must be False when ENVIRONMENT is 'production'. "
-                "Refusing to start with debug mode enabled in production."
-            )
+        if self.ENVIRONMENT == "production":
+            if not self.REQUIRE_AUTH:
+                raise ValueError(
+                    "REQUIRE_AUTH must be True when ENVIRONMENT is 'production'. "
+                    "Refusing to start with authentication disabled in production."
+                )
+            if self.DEBUG:
+                raise ValueError(
+                    "DEBUG must be False when ENVIRONMENT is 'production'. "
+                    "Refusing to start with debug mode enabled in production."
+                )
+            if len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "SECRET_KEY must be at least 32 characters in production. "
+                    "Refusing to start with a weak secret key."
+                )
+            if len(self.JWT_SECRET) < 32:
+                raise ValueError(
+                    "JWT_SECRET must be at least 32 characters in production. "
+                    "Refusing to start with a weak JWT secret."
+                )
         return self
 
     class Config:

@@ -170,14 +170,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Dashboard</h1>
-          <p className="mt-1 text-[var(--color-text-secondary)]">Overview of NASDAQ market performance</p>
-        </div>
+    <div className="space-y-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Dashboard</h1>
+        <p className="mt-1 text-[var(--color-text-secondary)]">Overview of NASDAQ market performance</p>
+      </div>
 
-        {/* Market Indices */}
+      {/* Market Indices */}
         <div className="mb-8 grid gap-6 md:grid-cols-3">
           {indices.map((index) => (
             <MarketIndexCard key={index.symbol} index={index} />
@@ -206,7 +205,6 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      </div>
     </div>
   );
 }

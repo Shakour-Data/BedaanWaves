@@ -44,10 +44,8 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   
-  const { sidebarOpen, setSidebarOpen } = useAppStore((state) => ({ 
-    sidebarOpen: state.sidebarOpen, 
-    setSidebarOpen: state.setSidebarOpen 
-  }));
+  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
   const { user, logout } = useAuthStore();
   const router = useRouter();
 

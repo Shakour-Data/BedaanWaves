@@ -97,7 +97,6 @@ function StockRow({ stock, index }: { stock: Stock; index: number }) {
 export default function StocksPage() {
   const [stocks, setStocks] = useState<Stock[]>(mockStocks);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"symbol" | "price" | "change" | "score">("symbol");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
@@ -111,21 +110,7 @@ export default function StocksPage() {
   }, []);
 
   const filteredStocks = useMemo(() => {
-    let filtered = stocks;
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (stock) =>
-          stock.symbol.toLowerCase().includes(query) ||
-          stock.name.toLowerCase().includes(query) ||
-          stock.sector.toLowerCase().includes(query)
-      );
-    }
-
-    // Sort
-    return [...filtered].sort((a, b) => {
+    return [...stocks].sort((a, b) => {
       switch (sortBy) {
         case "symbol":
           return a.symbol.localeCompare(b.symbol);
@@ -139,7 +124,7 @@ export default function StocksPage() {
           return 0;
       }
     });
-  }, [stocks, searchQuery, sortBy]);
+  }, [stocks, sortBy]);
 
   if (loading) {
     return (
@@ -170,18 +155,6 @@ export default function StocksPage() {
 
       {/* Filters */}
       <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 lg:flex-row lg:items-center">
-        {/* Search */}
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">Search</span>
-          <input
-            type="text"
-            placeholder="Search by symbol, name, or sector..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] pl-10 pr-4 text-sm text-[var(--color-text-primary)] placeholder-[#64748b] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
-          />
-        </div>
-
         {/* Sort */}
         <div className="flex items-center gap-2">
           <span className="text-[var(--color-text-secondary)]">Settings</span>
@@ -226,14 +199,6 @@ export default function StocksPage() {
           Showing <span className="font-medium text-[var(--color-text-primary)]">{filteredStocks.length}</span> of{" "}
           <span className="font-medium text-[var(--color-text-primary)]">{stocks.length}</span> stocks
         </p>
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="text-sm text-[var(--color-primary)] hover:underline"
-          >
-            Clear filters
-          </button>
-        )}
       </div>
 
       {/* Stocks List */}

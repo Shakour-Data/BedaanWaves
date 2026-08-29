@@ -227,6 +227,6 @@ class TestBRSClientContract:
             "type": "refresh",
             "exp": datetime.now(timezone.utc) - timedelta(hours=1),
         }
-        expired_token = jwt.encode(expired_payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        expired_token = jwt.encode(expired_payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
         assert expired_token is not None

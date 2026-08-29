@@ -391,6 +391,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
+app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
+app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -398,11 +403,6 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
-
-app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
-app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
-app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
 
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import Request

@@ -13,7 +13,8 @@ interface NewDashboardShellProps {
 }
 
 export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
-  const { isAuthenticated, loading: isLoading } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.loading);
   const router = useRouter();
 
   useEffect(() => {

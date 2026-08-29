@@ -18,6 +18,7 @@ import asyncio
 import logging
 import re
 import xml.etree.ElementTree as ET
+from defusedxml.ElementTree import fromstring as safe_fromstring
 from datetime import timezone, datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote_plus, urlencode
@@ -388,7 +389,7 @@ class MultiSourceNewsFetcher(DataService):
             text = await self._get_text(url)
             if not text:
                 return items
-            root = ET.fromstring(text)
+            root = safe_fromstring(text)
             for item_elem in root.iter("item"):
                 title = self._elem_text(item_elem, "title")
                 link = self._elem_text(item_elem, "link")

@@ -21,6 +21,8 @@ env/
 .env
 **/.env
 *.env
+.env.local
+.env.*.local
 
 # Node.js
 node_modules/
@@ -83,10 +85,12 @@ backend/gen_*.py
 backend/complete_*.py
 backend/populate_*.py
 backend/validate_*.py
+backend/create_*.py
 
 # Temporary backend output files
 backend/ls_out.txt
 backend/test_out.txt
+backend/debug_token.txt
 
 # Backend logs
 backend/logs/

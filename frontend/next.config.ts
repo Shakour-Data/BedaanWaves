@@ -4,13 +4,21 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // eslint: {
   //   ignoreDuringBuilds: true,
   // },
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3000/api/:path*',
+      },
+    ];
   },
   async headers() {
     return [

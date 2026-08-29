@@ -24,6 +24,7 @@ class MarketEnum(str, Enum):
     COINBASE = "COINBASE"
     NYSE = "NYSE"
     NASDAQ = "NASDAQ"
+    TSE = "TSE"
 
 
 class SignalTypeEnum(str, Enum):

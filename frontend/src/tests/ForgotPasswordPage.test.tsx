@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import ForgotPasswordPage from '@/app/forgot-password/page';
+import ForgotPasswordPage from '@/app/(auth)/forgot-password/page';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
