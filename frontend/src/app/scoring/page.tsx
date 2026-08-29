@@ -295,7 +295,6 @@ export default function ScoringPage() {
   };
 
   const [stocks, setStocks] = useState<ScoredStock[]>(mockScoredStocks);
-  const [searchQuery, setSearchQuery] = useState("");
   const [filterRec, setFilterRec] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"score" | "symbol" | "change">("score");
 
@@ -306,16 +305,6 @@ export default function ScoringPage() {
 
   const filteredStocks = useMemo(() => {
     let filtered = stocks;
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (s) =>
-          s.symbol.toLowerCase().includes(query) ||
-          s.name.toLowerCase().includes(query) ||
-          s.sector.toLowerCase().includes(query)
-      );
-    }
 
     if (filterRec !== "all") {
       filtered = filtered.filter((s) => s.recommendation === filterRec);
@@ -333,7 +322,7 @@ export default function ScoringPage() {
           return 0;
       }
     });
-  }, [stocks, searchQuery, filterRec, sortBy]);
+  }, [stocks, filterRec, sortBy]);
 
   const recommendations = ["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"];
   const avgScore = Math.round(stocks.reduce((acc, s) => acc + s.score, 0) / stocks.length);
@@ -411,17 +400,6 @@ export default function ScoringPage() {
 
       {/* Filters */}
       <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">Search</span>
-          <input
-            type="text"
-            placeholder="Search stocks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] pl-10 pr-4 text-sm text-[var(--color-text-primary)] placeholder-[#64748b] focus:border-[var(--color-primary)] focus:outline-none"
-          />
-        </div>
-
         <div className="flex items-center gap-2">
           <span className="text-[var(--color-text-secondary)]">Filter</span>
           <select

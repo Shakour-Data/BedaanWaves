@@ -28,7 +28,7 @@ jobs:
       - name: Check formatting with black
         run: |
           cd backend
-          black --check --diff app/ scripts/ || true
+          black --check --diff app/ scripts/
 
       - name: Lint with flake8
         run: |
@@ -38,7 +38,7 @@ jobs:
       - name: Type check with mypy
         run: |
           cd backend
-          mypy app/ --ignore-missing-imports --no-strict-optional || true
+          mypy app/ --ignore-missing-imports --no-strict-optional
 
   test:
     runs-on: ubuntu-latest

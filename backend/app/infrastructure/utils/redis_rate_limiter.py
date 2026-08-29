@@ -46,7 +46,14 @@ class RedisRateLimiter:
         pipeline.zremrangebyscore(hour_key, 0, now - 3600)
         pipeline.zcard(hour_key)
 
-        results = await pipeline.execute()
+        try:
+            results = await pipeline.execute()
+        except Exception as exc:
+            logger.warning(f"Redis rate limiter operation failed: {exc}")
+            self._client = None
+            self._connected = False
+            return True, {"redis_available": False}
+
         minute_count = results[2]
         hour_count = results[5]
 

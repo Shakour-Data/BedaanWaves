@@ -23,6 +23,13 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL") or "postgresql" not in os.environ.get("DATABASE_URL", ""),
+    reason="Real-data tests require a PostgreSQL database connection",
+)
+
 from app.db.base import get_async_session
 from sqlalchemy import select, func, desc
 from app.models.models import (

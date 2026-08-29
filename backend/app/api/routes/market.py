@@ -96,9 +96,14 @@ async def get_price_history(
     
     # Set default dates
     if not end_date:
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(timezone.utc).replace(tzinfo=None)
     if not start_date:
         start_date = end_date - timedelta(days=252)
+    
+    if getattr(end_date, 'tzinfo', None) is not None:
+        end_date = end_date.replace(tzinfo=None)
+    if getattr(start_date, 'tzinfo', None) is not None:
+        start_date = start_date.replace(tzinfo=None)
     
     # Get price data
     Candle = candle_model_for_market(asset.market)
@@ -166,31 +171,20 @@ async def get_latest_prices(
     # Extract market from symbol or use default - for now assuming NASDAQ as this is NASDAQ-focused endpoint
     Candle = candle_model_for_market("NASDAQ")  # Default to NASDAQ for this endpoint
     
-    # Subquery to get the latest candle for each asset
-    latest_candle_subquery = (
-        select(
-            Candle.asset_id,
-            Candle,
-            func.row_number()
-            .over(
-                partition_by=Candle.asset_id,
-                order_by=Candle.timestamp.desc()
-            )
-            .label("rn")
-        )
-        .where(Candle.timeframe == "1d")
-        .subquery()
-    )
-    
-    # Get latest candle for each asset in single query
     latest_candles_query = (
-        select(latest_candle_subquery.c.asset_id, latest_candle_subquery.c)
-        .where(latest_candle_subquery.c.rn == 1)
-        .where(latest_candle_subquery.c.asset_id.in_(asset_ids))
+        select(Candle)
+        .where(Candle.timeframe == "1d")
+        .where(Candle.asset_id.in_(asset_ids))
+        .order_by(Candle.asset_id, Candle.timestamp.desc())
     )
     
     candle_result = await db.execute(latest_candles_query)
-    latest_candles = {row.asset_id: row.c for row in candle_result}
+    candles = candle_result.scalars().all()
+    
+    latest_candles = {}
+    for candle in candles:
+        if candle.asset_id not in latest_candles:
+            latest_candles[candle.asset_id] = candle
     
     # Build response using fetched data
     result = {}

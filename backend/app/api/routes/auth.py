@@ -1,12 +1,12 @@
 """Authentication Routes"""
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from jose import jwt
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
-from app.models.models import User
+from app.models.models import User, RefreshToken
 from app.schemas.schemas import Token, LoginRequest, RegisterRequest
 from app.services.user.auth_service import (
     hash_password,
@@ -18,6 +18,7 @@ from app.services.user.auth_service import (
     create_user,
     authenticate_user,
 )
+from sqlalchemy import select, update
 
 settings = get_settings()
 router = APIRouter(tags=["auth"])
@@ -91,7 +92,7 @@ async def refresh_token(
     lang: str = Query("en", pattern="^(en|fa)$")
 ) -> Token:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except Exception:
         raise HTTPException(status_code=401, detail=get_message(lang, "invalid_refresh"))
     username: str = payload.get("sub")
@@ -102,6 +103,24 @@ async def refresh_token(
     user = await get_user_by_username(username)
     if not user:
         raise HTTPException(status_code=401, detail=get_message(lang, "user_not_found"))
+
+    async with async_session_maker() as session:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        result = await session.execute(
+            select(RefreshToken).where(
+                RefreshToken.user_id == user.id,
+                RefreshToken.revoked.is_(False),
+                RefreshToken.expires_at > now,
+            )
+        )
+        stored = result.scalars().first()
+        if stored is None:
+            raise HTTPException(status_code=401, detail=get_message(lang, "invalid_refresh"))
+
+        await session.execute(
+            update(RefreshToken).where(RefreshToken.id == stored.id).values(revoked=True)
+        )
+        await session.commit()
 
     access = create_access_token({"sub": user.username, "user_id": str(user.id)})
     refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})

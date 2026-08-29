@@ -96,10 +96,11 @@ async def get_valid_reset_token(raw_token: str, session=None) -> Optional[Passwo
     if owns:
         session = async_session_maker()
     try:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         result = await session.execute(
             select(PasswordResetToken).where(
                 PasswordResetToken.consumed.is_(False),
-                PasswordResetToken.expires_at > datetime.now(timezone.utc),
+                PasswordResetToken.expires_at > now,
             )
         )
         for row in result.scalars().all():
