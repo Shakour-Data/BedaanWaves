@@ -42,7 +42,7 @@ class Asset(Base):
 
     # Classification
     asset_class = Column(String(20), nullable=False, index=True)  # EQUITY, ETF, CRYPTO, etc.
-    market = Column(String(20), nullable=False, index=True)  # TSE, OTC, BINANCE, etc.
+    market = Column(String(20), nullable=False, index=True)  # NASDAQ, NYSE, BINANCE, etc.
 
     # Hierarchy
     sector = Column(String(100))
@@ -588,20 +588,19 @@ class MacroIndicator(Base):
 
 
 # ===========================================================================
-# 10. داده‌های بنیادی بازار ایران
+# 10. Financial Statements & Fundamental Ratios (NASDAQ + Crypto)
 # ===========================================================================
-class IRFinancialStatement(Base):
-    """صورت‌های مالی (ترازنامه/سودزیان/جریان وجوه نقد) — قابل استفاده برای همه بازارها"""
-    __tablename__ = "ir_financial_statements"
+class FinancialStatement(Base):
+    """Financial statements (balance sheet / income / cash flow) for all markets."""
+    __tablename__ = "financial_statements"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-
-    market = Column(String(20), nullable=False, default="TSE", index=True)
-    period = Column(String(20), nullable=False)  # 1402Q1 / 2024Q1
-    statement_type = Column(String(20), nullable=False)  # BALANCE / INCOME / CASHFLOW
+    market = Column(String(20), nullable=False, default="NASDAQ", index=True)
+    period = Column(String(20), nullable=False)
+    statement_type = Column(String(20), nullable=False)
     fiscal_year = Column(Integer)
-    data = Column(JSONB, default={})  # سرفصل‌ها و مقادیر
+    data = Column(JSONB, default={})
     as_of = Column(Date)
 
     __table_args__ = (
@@ -609,14 +608,13 @@ class IRFinancialStatement(Base):
     )
 
 
-class IRFundamentalRatio(Base):
-    """نسبت‌های بنیادی (EPS, P/E, P/B, DPS, ROE و ...) — قابل استفاده برای همه بازارها"""
-    __tablename__ = "ir_fundamental_ratios"
+class FundamentalRatio(Base):
+    """Fundamental ratios (EPS, P/E, P/B, DPS, ROE, etc.) for all markets."""
+    __tablename__ = "fundamental_ratios"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-
-    market = Column(String(20), nullable=False, default="TSE", index=True)
+    market = Column(String(20), nullable=False, default="NASDAQ", index=True)
     period = Column(String(20), nullable=False)
     eps = Column(Numeric(20, 4))
     pe = Column(Numeric(12, 2))
@@ -821,7 +819,7 @@ class RawMarketData(Base):
         Index('idx_raw_market_type', 'market', 'data_type'),
         Index('idx_raw_ingested', 'ingested_at'),
         CheckConstraint("data_quality IN ('RAW', 'VALIDATED')", name='chk_raw_data_quality'),
-        CheckConstraint("market IN ('CRYPTO', 'INTL', 'TSE')", name='chk_raw_market_type'),
+        CheckConstraint("market IN ('CRYPTO', 'INTL')", name='chk_raw_market_type'),
         CheckConstraint('volume >= 0', name='chk_raw_volume_non_negative'),
     )
 
@@ -952,10 +950,10 @@ class RawPerformanceScore(Base):
     # Asset reference
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
     
-    # Market classification (TSE, INTL, CRYPTO)
+    # Market classification (NASDAQ, NYSE, CRYPTO, etc.)
     market = Column(String(20), nullable=False, index=True)
     
-    # Exchange identifier (TEHRAN_STOCK, NASDAQ, BINANCE, etc.)
+    # Exchange identifier (NASDAQ, NYSE, BINANCE, etc.)
     exchange = Column(String(50), nullable=False, index=True)
     
     # Performance context/metadata

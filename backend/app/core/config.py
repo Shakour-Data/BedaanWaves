@@ -147,30 +147,19 @@ class Settings(BaseSettings):
     # ============================================================
     # EXTERNAL APIs (BedaanWaves Integration)
     # ============================================================
-    # Tehran Stock Exchange (BrsApi.ir)
-    BRS_API_BASE_URL: str = "https://Api.BrsApi.ir"
-    BRS_API_KEY: Optional[str] = None
-    BRS_API_TIMEOUT: int = 30
-    BRS_REFRESH_INTERVAL_MINUTES: int = 5
-    BRS_RATE_LIMIT_MAX_DAILY: int = 50000
-    BRS_RATE_LIMIT_MAX_WINDOW: int = 300
-    BRS_RATE_LIMIT_WINDOW_SECONDS: int = 300
-    
-    # Financial Disclosures (Codal)
-    CODAL_API_BASE_URL: str = "https://api.codal.ir"
-    CODAL_API_KEY: Optional[str] = None
-    CODAL_REFRESH_INTERVAL_HOURS: int = 24
+    # Yahoo Finance (primary data source for NASDAQ + Crypto)
+    YFINANCE_ENABLED: bool = True
     
     # External Financial APIs
     ALPHA_VANTAGE_API_KEY: Optional[str] = None
     ALPHA_VANTAGE_BASE_URL: str = "https://www.alphavantage.co/query"
     
     # News APIs
-    NEWS_SOURCES: List[str] = ["tehran-news", "financial-news", "market-news"]
+    NEWS_SOURCES: List[str] = ["financial-news", "market-news"]
     NEWS_API_URL: str = "https://newsapi.org"
     NEWS_API_KEY: Optional[str] = None
     NEWS_REFRESH_INTERVAL_MINUTES: int = 30
-    NLP_MODEL: str = "persian-bert"
+    NLP_MODEL: str = "bert-base-uncased"
     
     # Cryptocurrency APIs
     CRYPTO_ENABLED: bool = True

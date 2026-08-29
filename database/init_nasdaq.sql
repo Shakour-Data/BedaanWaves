@@ -1,34 +1,34 @@
 -- Nasdaq-only launch: additional tables and Nasdaq assets
 -- Run: psql -U postgres -d bedaanwaves_db -f database/init_nasdaq.sql
 
--- ===============================================
--- 1. Generalize fundamentals for all markets
--- ===============================================
+-- ================================================================
+-- 1. Financial Statements & Fundamental Ratios (market-aware)
+-- ===============================================================
+-- These tables are created generically in init.sql with market-aware
+-- unique constraints. This file ensures they exist and are properly
+-- constrained for multi-market use.
 
--- Add market column to existing Iran-only tables if missing
+-- Ensure market column exists on financial_statements
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ir_financial_statements' AND column_name='market') THEN
-        ALTER TABLE ir_financial_statements ADD COLUMN market VARCHAR(20) DEFAULT 'TSE';
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='financial_statements' AND column_name='market') THEN
+        ALTER TABLE financial_statements ADD COLUMN market VARCHAR(20) DEFAULT 'NASDAQ';
     END IF;
 END $$;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ir_fundamental_ratios' AND column_name='market') THEN
-        ALTER TABLE ir_fundamental_ratios ADD COLUMN market VARCHAR(20) DEFAULT 'TSE';
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='fundamental_ratios' AND column_name='market') THEN
+        ALTER TABLE fundamental_ratios ADD COLUMN market VARCHAR(20) DEFAULT 'NASDAQ';
     END IF;
 END $$;
 
--- Drop old Iran-only unique constraints and add market-aware ones
-DROP INDEX IF EXISTS uix_ir_fin_stmt;
-DROP INDEX IF EXISTS uix_ir_fund_ratio;
+-- Drop old constraints and add market-aware unique constraints
+ALTER TABLE financial_statements DROP CONSTRAINT IF EXISTS uix_fin_stmt;
+ALTER TABLE fundamental_ratios DROP CONSTRAINT IF EXISTS uix_fund_ratio;
 
-ALTER TABLE ir_financial_statements DROP CONSTRAINT IF EXISTS uix_ir_fin_stmt;
-ALTER TABLE ir_fundamental_ratios DROP CONSTRAINT IF EXISTS uix_ir_fund_ratio;
-
-ALTER TABLE ir_financial_statements ADD CONSTRAINT uix_fin_stmt UNIQUE (asset_id, period, statement_type, market);
-ALTER TABLE ir_fundamental_ratios ADD CONSTRAINT uix_fund_ratio UNIQUE (asset_id, period, market);
+ALTER TABLE financial_statements ADD CONSTRAINT uix_fin_stmt UNIQUE (asset_id, period, statement_type, market);
+ALTER TABLE fundamental_ratios ADD CONSTRAINT uix_fund_ratio UNIQUE (asset_id, period, market);
 
 -- ===============================================
 -- 2. Board / company leadership table

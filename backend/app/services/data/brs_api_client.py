@@ -135,11 +135,10 @@ class BrsApiClient(ExternalAPIService):
         )
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
-        settings = get_settings()
         self.rate_limiter = rate_limiter or RateLimiter(
-            max_daily_requests=settings.BRS_RATE_LIMIT_MAX_DAILY,
-            max_window_requests=settings.BRS_RATE_LIMIT_MAX_WINDOW,
-            window_seconds=settings.BRS_RATE_LIMIT_WINDOW_SECONDS,
+            max_daily_requests=50000,
+            max_window_requests=300,
+            window_seconds=300,
         )
 
     async def initialize(self) -> None:

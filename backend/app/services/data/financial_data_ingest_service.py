@@ -33,12 +33,9 @@ class MarketType(Enum):
     AMEX = "AMEX"
     LSE = "LSE"
     XETRA = "XETRA"
-    TSE = "TSE"
-    OTC = "OTC"
     TSX = "TSX"
     HKEX = "HKEX"
     CRYPTO = "CRYPTO"
-    IRAN = "IRAN"
     US = "US"
     INTERNATIONAL = "INTERNATIONAL"
 

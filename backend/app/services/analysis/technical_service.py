@@ -56,7 +56,7 @@ class TechnicalAnalysisService(AnalysisService):
         indicators = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "ticker": data.get("ticker", "UNKNOWN"),
-            "market": data.get("market", "TSE"),
+            "market": data.get("market", "NASDAQ"),
             "current_price": current_price,
             "indicators": {},
         }

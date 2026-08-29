@@ -289,7 +289,7 @@ cp .env.example .env
 # - DATABASE_URL: PostgreSQL connection
 # - REDIS_URL: Redis connection
 # - SECRET_KEY: JWT secret (generate: openssl rand -hex 32)
-# - BRS_API_KEY: Tehran Stock Exchange API key (optional for demo)
+#   SECRET_KEY=jwt_secret_here
 ```
 
 #### 4. Initialize Database

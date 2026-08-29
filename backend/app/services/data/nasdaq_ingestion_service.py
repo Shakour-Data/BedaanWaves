@@ -34,8 +34,8 @@ from app.core.config import get_settings
 from app.models.models import (
     Asset,
     IntlPriceCandle,
-    IRFinancialStatement,
-    IRFundamentalRatio,
+    FinancialStatement,
+    FundamentalRatio,
     CompanyLeadership,
     News,
     MacroIndicator,
@@ -291,7 +291,7 @@ class NasdaqIngestionService(DataService):
                         as_of = period_end.date() if hasattr(period_end, "date") else None
                         seen_periods.add(period_str)
 
-                        stmt = IRFinancialStatement(
+                        stmt = FinancialStatement(
                             asset_id=asset.id,
                             market="NASDAQ",
                             period=period_str,
@@ -304,7 +304,7 @@ class NasdaqIngestionService(DataService):
 
                         if not balance_sheet.empty and period_end in balance_sheet.columns:
                             statements.append(
-                                IRFinancialStatement(
+                                FinancialStatement(
                                     asset_id=asset.id,
                                     market="NASDAQ",
                                     period=period_str,
@@ -317,7 +317,7 @@ class NasdaqIngestionService(DataService):
 
                         if not cashflow.empty and period_end in cashflow.columns:
                             statements.append(
-                                IRFinancialStatement(
+                                FinancialStatement(
                                     asset_id=asset.id,
                                     market="NASDAQ",
                                     period=period_str,
@@ -329,7 +329,7 @@ class NasdaqIngestionService(DataService):
                             )
 
                         ratios.append(
-                            IRFundamentalRatio(
+                            FundamentalRatio(
                                 asset_id=asset.id,
                                 market="NASDAQ",
                                 period=period_str,
@@ -356,7 +356,7 @@ class NasdaqIngestionService(DataService):
                             "data": stmt.data,
                             "as_of": stmt.as_of,
                         }
-                        upsert = pg_insert(IRFinancialStatement).values(stmt_data)
+                        upsert = pg_insert(FinancialStatement).values(stmt_data)
                         upsert = upsert.on_conflict_do_update(
                             index_elements=["asset_id", "period", "statement_type", "market"],
                             set_={"data": upsert.excluded.data, "as_of": upsert.excluded.as_of},
@@ -378,7 +378,7 @@ class NasdaqIngestionService(DataService):
                             "book_value": ratio.book_value,
                             "as_of": ratio.as_of,
                         }
-                        upsert = pg_insert(IRFundamentalRatio).values(ratio_data)
+                        upsert = pg_insert(FundamentalRatio).values(ratio_data)
                         upsert = upsert.on_conflict_do_update(
                             index_elements=["asset_id", "period", "market"],
                             set_={

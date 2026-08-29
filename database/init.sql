@@ -359,12 +359,12 @@ CREATE INDEX IF NOT EXISTS idx_macro_code ON macro_indicators(indicator_code);
 CREATE INDEX IF NOT EXISTS idx_macro_as_of ON macro_indicators(as_of);
 
 -- ===============================================
--- 11. داده‌های بنیادی بازار ایران
+-- 11. Financial Statements & Fundamental Ratios (NASDAQ + Crypto)
 -- ===============================================
-CREATE TABLE IF NOT EXISTS ir_financial_statements (
+CREATE TABLE IF NOT EXISTS financial_statements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL REFERENCES assets(id),
-    market VARCHAR(20) NOT NULL DEFAULT 'TSE',
+    market VARCHAR(20) NOT NULL DEFAULT 'NASDAQ',
     period VARCHAR(20) NOT NULL,
     statement_type VARCHAR(20) NOT NULL,
     fiscal_year INTEGER,
@@ -372,13 +372,13 @@ CREATE TABLE IF NOT EXISTS ir_financial_statements (
     as_of DATE,
     UNIQUE(asset_id, period, statement_type, market)
 );
-CREATE INDEX IF NOT EXISTS idx_ir_fin_stmt_asset ON ir_financial_statements(asset_id);
-CREATE INDEX IF NOT EXISTS idx_ir_fin_stmt_market ON ir_financial_statements(market);
+CREATE INDEX IF NOT EXISTS idx_fin_stmt_asset ON financial_statements(asset_id);
+CREATE INDEX IF NOT EXISTS idx_fin_stmt_market ON financial_statements(market);
 
-CREATE TABLE IF NOT EXISTS ir_fundamental_ratios (
+CREATE TABLE IF NOT EXISTS fundamental_ratios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL REFERENCES assets(id),
-    market VARCHAR(20) NOT NULL DEFAULT 'TSE',
+    market VARCHAR(20) NOT NULL DEFAULT 'NASDAQ',
     period VARCHAR(20) NOT NULL,
     eps NUMERIC(20, 4),
     pe NUMERIC(12, 2),
@@ -391,7 +391,7 @@ CREATE TABLE IF NOT EXISTS ir_fundamental_ratios (
     as_of DATE,
     UNIQUE(asset_id, period, market)
 );
-CREATE INDEX IF NOT EXISTS idx_ir_fund_ratio_asset ON ir_fundamental_ratios(asset_id);
+CREATE INDEX IF NOT EXISTS idx_fund_ratio_asset ON fundamental_ratios(asset_id);
 
 -- ===============================================
 -- 12. خبر و NLP

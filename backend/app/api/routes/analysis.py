@@ -162,7 +162,7 @@ async def get_top_performers(
         List of top performers with performance metrics
     """
     # Get latest candles for all assets
-    Candle = candle_model_for_market(market or "TSE")
+    Candle = candle_model_for_market(market or "NASDAQ")
     query = select(Asset, Candle).where(
         and_(
             Asset.active == True,
@@ -304,14 +304,14 @@ async def technical_analysis(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
-    TSE-specific technical analysis for a stored symbol.
+    Technical analysis for a stored symbol.
 
-    Loads daily candles from the database (market='TSE') and runs the
-    TechnicalAnalysisService (moving averages, momentum, volatility, volume).
-    Crypto / international feeds are intentionally NOT mixed in here.
+    Loads daily candles from the database (market='NASDAQ') and runs the
+    full TA-Lib indicator suite (EMA, MACD, RSI, Bollinger Bands),
+    returning normalized scores per dimension.
 
     Args:
-        symbol: TSE symbol (e.g. فملی، خودرو)
+        symbol: Stock symbol (e.g. AAPL, MSFT)
 
     Returns:
         Computed technical indicators for the symbol
@@ -363,14 +363,14 @@ async def risk_analysis(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
-    TSE-specific risk analysis for a stored symbol.
+    Risk analysis for a stored symbol.
 
-    Computes daily returns from the stored daily candles (market='TSE') and runs
+    Computes daily returns from the stored daily candles (market='NASDAQ') and runs
     the RiskAnalysisService (volatility, VaR 95/99, CVaR, Sharpe, Sortino,
     max drawdown). Crypto / international feeds are intentionally excluded.
 
     Args:
-        symbol: TSE symbol (e.g. فملی، خودرو)
+        symbol: Stock symbol (e.g. AAPL, MSFT)
 
     Returns:
         Risk metrics for the symbol

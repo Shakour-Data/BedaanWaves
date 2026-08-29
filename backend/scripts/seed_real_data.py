@@ -74,11 +74,10 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.models.models import (  # noqa: E402
     Asset,
-    IRPriceCandle,
     IntlPriceCandle,
     CryptoPriceCandle,
-    IRFinancialStatement,
-    IRFundamentalRatio,
+    FinancialStatement,
+    FundamentalRatio,
     CompanyLeadership,
     News,
     MacroIndicator,
@@ -118,23 +117,6 @@ NASDAQ_CSV_PATH = os.path.join(BACKEND_ROOT, "nasdaq_symbols.csv")
 YFINANCE_DELAY = 0.3
 BATCH_SIZE = 500
 MAX_STOCKS = 500
-
-# === Iranian Market Ticker Symbols (yfinance-compatible) ===
-IR_INDEX_TICKERS = {
-    "^IRX": ("TSE Overall Index", "INDEX", "TEHRAN"),
-    "IRO1BOKH100H0": ("Bourse Index (BOKH)", "INDEX", "TEHRAN"),
-    "IRO1FKST100H0": ("Kosar Index (FKST)", "INDEX", "TEHRAN"),
-    "IRO1FACTEX100H0": ("Factor Investing Index", "INDEX", "TEHRAN"),
-}
-
-# Iranian company tickers (yfinance supports some via .TO suffix)
-IR_COMPANY_TICKERS = {
-    "FMLI.TO": ("National Iranian Steel", "EQUITY", "TEHRAN", "IR", "IRR"),
-    "KHCX.TO": ("Khodro", "EQUITY", "TEHRAN", "IR", "IRR"),
-    "MASN.TO": ("Iranian Copper Mines", "EQUITY", "TEHRAN", "IR", "IRR"),
-    "FAZR.TO": ("Farda Construction", "EQUITY", "TEHRAN", "IR", "IRR"),
-    "KALF.TO": ("Iran Khodro Pottery", "EQUITY", "TEHRAN", "IR", "IRR"),
-}
 
 # === Crypto Ticker Symbols (yfinance-compatible) ===
 CRYPTO_TICKERS = {
@@ -196,10 +178,9 @@ def clear_existing_data(session) -> None:
     session.execute(delete(MLSignal).where(MLSignal.ml_model_version.like("seed_%")))
     session.execute(delete(News).where(News.source.in_(["yfinance", "YahooFinance", "CNBC", "Reuters", "MarketWatch", "Benzinga"])))
     session.execute(delete(CompanyLeadership).where(CompanyLeadership.source == "yfinance"))
-    session.execute(delete(IRFundamentalRatio).where(IRFundamentalRatio.market == "NASDAQ"))
-    session.execute(delete(IRFinancialStatement).where(IRFinancialStatement.market == "NASDAQ"))
+    session.execute(delete(FundamentalRatio).where(FundamentalRatio.market == "NASDAQ"))
+    session.execute(delete(FinancialStatement).where(FinancialStatement.market == "NASDAQ"))
     session.execute(delete(IntlPriceCandle).where(IntlPriceCandle.source == "yfinance"))
-    session.execute(delete(IRPriceCandle).where(IRPriceCandle.source == "yfinance"))
     session.execute(delete(CryptoPriceCandle).where(CryptoPriceCandle.source == "yfinance"))
     session.execute(delete(MacroIndicator).where(MacroIndicator.source == "yfinance"))
     session.commit()
@@ -306,14 +287,14 @@ def seed_fundamentals(session, symbol: str, asset_id: str) -> bool:
                 fiscal_year = period_end.year
                 as_of = period_end.date() if hasattr(period_end, "date") else None
 
-                existing = session.query(IRFinancialStatement).filter(
-                    IRFinancialStatement.asset_id == asset_id,
-                    IRFinancialStatement.period == period_str,
-                    IRFinancialStatement.statement_type == "INCOME",
-                    IRFinancialStatement.market == "NASDAQ",
+                existing = session.query(FinancialStatement).filter(
+                    FinancialStatement.asset_id == asset_id,
+                    FinancialStatement.period == period_str,
+                    FinancialStatement.statement_type == "INCOME",
+                    FinancialStatement.market == "NASDAQ",
                 ).first()
                 if not existing:
-                    statements.append(IRFinancialStatement(
+                    statements.append(FinancialStatement(
                         asset_id=asset_id,
                         market="NASDAQ",
                         period=period_str,
@@ -324,14 +305,14 @@ def seed_fundamentals(session, symbol: str, asset_id: str) -> bool:
                     ))
 
                 if balance_sheet is not None and not balance_sheet.empty and period_end in balance_sheet.columns:
-                    existing = session.query(IRFinancialStatement).filter(
-                        IRFinancialStatement.asset_id == asset_id,
-                        IRFinancialStatement.period == period_str,
-                        IRFinancialStatement.statement_type == "BALANCE_SHEET",
-                        IRFinancialStatement.market == "NASDAQ",
+                    existing = session.query(FinancialStatement).filter(
+                        FinancialStatement.asset_id == asset_id,
+                        FinancialStatement.period == period_str,
+                        FinancialStatement.statement_type == "BALANCE_SHEET",
+                        FinancialStatement.market == "NASDAQ",
                     ).first()
                     if not existing:
-                        statements.append(IRFinancialStatement(
+                        statements.append(FinancialStatement(
                             asset_id=asset_id,
                             market="NASDAQ",
                             period=period_str,
@@ -342,14 +323,14 @@ def seed_fundamentals(session, symbol: str, asset_id: str) -> bool:
                         ))
 
                 if cashflow is not None and not cashflow.empty and period_end in cashflow.columns:
-                    existing = session.query(IRFinancialStatement).filter(
-                        IRFinancialStatement.asset_id == asset_id,
-                        IRFinancialStatement.period == period_str,
-                        IRFinancialStatement.statement_type == "CASH_FLOW",
-                        IRFinancialStatement.market == "NASDAQ",
+                    existing = session.query(FinancialStatement).filter(
+                        FinancialStatement.asset_id == asset_id,
+                        FinancialStatement.period == period_str,
+                        FinancialStatement.statement_type == "CASH_FLOW",
+                        FinancialStatement.market == "NASDAQ",
                     ).first()
                     if not existing:
-                        statements.append(IRFinancialStatement(
+                        statements.append(FinancialStatement(
                             asset_id=asset_id,
                             market="NASDAQ",
                             period=period_str,
@@ -374,13 +355,13 @@ def seed_fundamentals(session, symbol: str, asset_id: str) -> bool:
 
         if any(v is not None for v in [trailing_eps, trailing_pe, price_to_book, roe, market_cap]):
             period_str = f"{datetime.now().year}Q{(datetime.now().month - 1) // 3 + 1}"
-            existing = session.query(IRFundamentalRatio).filter(
-                IRFundamentalRatio.asset_id == asset_id,
-                IRFundamentalRatio.period == period_str,
-                IRFundamentalRatio.market == "NASDAQ",
+            existing = session.query(FundamentalRatio).filter(
+                FundamentalRatio.asset_id == asset_id,
+                FundamentalRatio.period == period_str,
+                FundamentalRatio.market == "NASDAQ",
             ).first()
             if not existing:
-                ratios.append(IRFundamentalRatio(
+                ratios.append(FundamentalRatio(
                     asset_id=asset_id,
                     market="NASDAQ",
                     period=period_str,
@@ -739,72 +720,6 @@ def seed_stocks(session) -> dict:
     }
 
 
-# === Iranian Market Candle Backfill ===
-
-
-def seed_ir_assets(session) -> dict[str, str]:
-    """Create Asset records for Iranian market tickers."""
-    asset_ids: dict[str, str] = {}
-
-    for symbol, (name, asset_class, market) in IR_INDEX_TICKERS.items():
-        existing = session.query(Asset).filter(Asset.symbol == symbol).first()
-        if not existing:
-            asset = Asset(
-                symbol=symbol,
-                name=name,
-                asset_class=asset_class,
-                market=market,
-                sector="Index",
-                country_code="IR",
-                currency="IRR",
-                active=True,
-                meta={"source": "yfinance", "type": "ir_index"},
-            )
-            session.add(asset)
-            session.flush()
-            asset_ids[symbol] = str(asset.id)
-        else:
-            asset_ids[symbol] = str(existing.id)
-            existing.meta = {**(existing.meta or {}), "source": "yfinance", "type": "ir_index"}
-
-    for symbol, (name, asset_class, market, country, currency) in IR_COMPANY_TICKERS.items():
-        existing = session.query(Asset).filter(Asset.symbol == symbol).first()
-        if not existing:
-            asset = Asset(
-                symbol=symbol,
-                name=name,
-                asset_class=asset_class,
-                market=market,
-                sector="Company",
-                country_code=country,
-                currency=currency,
-                active=True,
-                meta={"source": "yfinance", "type": "ir_company"},
-            )
-            session.add(asset)
-            session.flush()
-            asset_ids[symbol] = str(asset.id)
-        else:
-            asset_ids[symbol] = str(existing.id)
-
-    logger.info("Seeded %d IR market assets", len(asset_ids))
-    return asset_ids
-
-
-def seed_ir_candles(session, asset_ids: dict[str, str]) -> int:
-    """Fetch and store IR market price candles (5 years)."""
-    total = 0
-    for symbol, asset_id in asset_ids.items():
-        count = fetch_and_store_candles_generic(
-            session, asset_id, symbol, START_DATE, END_DATE, IRPriceCandle, "yfinance"
-        )
-        total += count
-        session.commit()
-        time.sleep(YFINANCE_DELAY)
-    logger.info("IR candles stored: %d", total)
-    return total
-
-
 # === Crypto Market Candle Backfill ===
 
 
@@ -1077,15 +992,7 @@ def main() -> None:
         session.commit()
 
         logger.info("=" * 60)
-        logger.info("PHASE 4: Seeding Iranian Market Data (IR Candles)")
-        logger.info("=" * 60)
-        ir_ids = seed_ir_assets(session)
-        session.commit()
-        ir_candles = seed_ir_candles(session, ir_ids)
-        session.commit()
-
-        logger.info("=" * 60)
-        logger.info("PHASE 5: Seeding Crypto Market Data (Crypto Candles)")
+        logger.info("PHASE 4: Seeding Crypto Market Data (Crypto Candles)")
         logger.info("=" * 60)
         crypto_ids = seed_crypto_assets(session)
         session.commit()
@@ -1093,9 +1000,9 @@ def main() -> None:
         session.commit()
 
         logger.info("=" * 60)
-        logger.info("PHASE 6: Backfilling 5-Year News (2021-08-27 → present)")
+        logger.info("PHASE 5: Backfilling 5-Year News (2021-08-27 → present)")
         logger.info("=" * 60)
-        all_news_assets = {**index_ids, **ir_ids, **crypto_ids}
+        all_news_assets = {**index_ids, **crypto_ids}
         news_count = seed_news_5year(session, all_news_assets)
         session.commit()
 
@@ -1103,10 +1010,9 @@ def main() -> None:
         counts = {
             "assets": session.query(Asset).count(),
             "intl_price_candles": session.query(IntlPriceCandle).count(),
-            "ir_price_candles": session.query(IRPriceCandle).count(),
             "crypto_price_candles": session.query(CryptoPriceCandle).count(),
-            "financial_statements": session.query(IRFinancialStatement).filter(IRFinancialStatement.market == "NASDAQ").count(),
-            "fundamental_ratios": session.query(IRFundamentalRatio).filter(IRFundamentalRatio.market == "NASDAQ").count(),
+            "financial_statements": session.query(FinancialStatement).filter(FinancialStatement.market == "NASDAQ").count(),
+            "fundamental_ratios": session.query(FundamentalRatio).filter(FundamentalRatio.market == "NASDAQ").count(),
             "company_leadership": session.query(CompanyLeadership).filter(CompanyLeadership.source == "yfinance").count(),
             "news": session.query(News).count(),
             "macro_indicators": session.query(MacroIndicator).filter(MacroIndicator.source == "yfinance").count(),
@@ -1124,8 +1030,7 @@ def main() -> None:
     print("  DATA COUNTS:")
     print(f"    Assets (stocks + indices):    {counts['assets']}")
     print(f"    Intl price candles (OHLCV):   {counts['intl_price_candles']}")
-    print(f"    IR price candles (OHLCV):      {counts['ir_price_candles']}")
-    print(f"    Crypto price candles (OHLCV):  {counts['crypto_price_candles']}")
+    print(f"    Crypto price candles (OHLCV): {counts['crypto_price_candles']}")
     print(f"    Financial statements:          {counts['financial_statements']}")
     print(f"    Fundamental ratios:            {counts['fundamental_ratios']}")
     print(f"    Company leadership records:    {counts['company_leadership']}")

@@ -19,8 +19,6 @@ class AssetClassEnum(str, Enum):
 
 
 class MarketEnum(str, Enum):
-    TSE = "TSE"
-    OTC = "OTC"
     BINANCE = "BINANCE"
     KRAKEN = "KRAKEN"
     COINBASE = "COINBASE"
