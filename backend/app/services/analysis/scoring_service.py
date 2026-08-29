@@ -255,7 +255,7 @@ class ScoringService(AnalysisService):
                 Expected format:
                 {
                     "ticker": "AAPL",
-                    "market": "TSE",
+                    "market": "NASDAQ",
                     "fundamental": {"pe_ratio": 12.5, "roe": 0.15, ...},
                     "technical": {"rsi": 55, "macd": 0.5, ...},
                     ...
@@ -265,7 +265,7 @@ class ScoringService(AnalysisService):
             Dictionary containing scores, overall score, grade, and signals
         """
         ticker = data.get("ticker", "UNKNOWN")
-        market = data.get("market", "TSE")
+        market = data.get("market", "NASDAQ")
         
         scores = {
             "ticker": ticker,
@@ -325,7 +325,7 @@ class ScoringService(AnalysisService):
         self,
         dimension: str,
         data: Dict[str, Any],
-        market: str = "TSE"
+        market: str = "NASDAQ"
     ) -> float:
         """Score a 6D dimension using market-aware logic."""
         if not data:
@@ -351,21 +351,17 @@ class ScoringService(AnalysisService):
         """Normalize raw metric to 0-100 score with market-specific thresholds."""
         
         # Market-specific thresholds
-        if market in ("TSE", "OTC"):
+        if market in ("NYSE", "NASDAQ", "AMEX"):
             if dimension == "technical":
                 if "rsi" in key:
-                    return self._score_rsi_tse(value)
+                    return self._score_rsi_global(value)
                 if "macd" in key:
-                    return self._score_macd_tse(value)
-                if "volume" in key:
-                    return self._score_volume_tse(value)
+                    return self._score_macd_global(value)
             if dimension == "fundamental":
                 if "pe_ratio" in key:
-                    return self._score_pe_tse(value)
+                    return self._score_pe_global(value)
                 if "roe" in key:
-                    return self._score_roe_tse(value)
-        
-        elif market in ("NYSE", "NASDAQ", "AMEX"):
+                    return self._score_roe_global(value)
             if dimension == "technical":
                 if "rsi" in key:
                     return self._score_rsi_global(value)

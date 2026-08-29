@@ -24,9 +24,8 @@ from app.models.models import (
     MarketDataSnapshot,
     CryptoPriceCandle,
     IntlPriceCandle,
-    IRPriceCandle,
+    FinancialStatement,
     News,
-    IRFinancialStatement,
     Portfolio,
     Position,
     Alert,
@@ -55,11 +54,10 @@ async def populate_database():
                 await session.execute(text("DELETE FROM raw_market_data"))
                 await session.execute(text("DELETE FROM market_data_snapshots"))
                 await session.execute(text("DELETE FROM news"))
-                await session.execute(text("DELETE FROM ir_financial_statements"))
+                await session.execute(text("DELETE FROM financial_statements"))
                 await session.execute(text("DELETE FROM ml_signals"))
                 await session.execute(text("DELETE FROM crypto_price_candles"))
                 await session.execute(text("DELETE FROM intl_price_candles"))
-                await session.execute(text("DELETE FROM ir_price_candles"))
                 await session.execute(text("DELETE FROM price_candles"))
                 print("Cleared existing data tables")
 
@@ -118,16 +116,6 @@ async def populate_database():
 
 async def create_sample_assets(session):
     """Creates sample assets if none exist."""
-    tse_symbols = [
-        ("TEHRAN1", "TEHRAN1", "EQUITY", "TSE"),
-        ("KHC1", "KHC", "EQUITY", "TSE"),
-        ("FAZF1", "FAZF1", "EQUITY", "TSE"),
-        ("KHOD1", "KHOD1", "EQUITY", "TSE"),
-        ("SHAH1", "SHAH1", "EQUITY", "TSE"),
-        ("MELL1", "MELL1", "EQUITY", "TSE"),
-        ("KESH1", "KESH1", "EQUITY", "TSE"),
-    ]
-
     crypto_symbols = [
         ("BTCUSD", "Bitcoin", "CRYPTO", "BINANCE"),
         ("ETHUSD", "Ethereum", "CRYPTO", "BINANCE"),
@@ -145,7 +133,7 @@ async def create_sample_assets(session):
         ("JPM", "JPMorgan Chase", "EQUITY", "NYSE"),
     ]
 
-    all_symbols = tse_symbols + crypto_symbols + intl_symbols
+    all_symbols = crypto_symbols + intl_symbols
 
     for symbol, name, asset_class, market in all_symbols:
         asset = Asset(
@@ -153,8 +141,8 @@ async def create_sample_assets(session):
             name=name,
             asset_class=asset_class,
             market=market,
-            country_code="IR" if market == "TSE" else "US" if market == "NASDAQ" else "GLOBAL",
-            currency="IRT" if market == "TSE" else "USD",
+            country_code="US" if market in ("NASDAQ", "NYSE") else "GLOBAL",
+            currency="USD" if market in ("NASDAQ", "NYSE") else "USD",
             active=True,
             metadata={},
             created_at=datetime.now(timezone.utc),
@@ -174,10 +162,7 @@ async def populate_price_candles(session, assets, start_date, end_date):
 
     for asset in assets:
         market = asset.market
-        if market in ("TSE", "OTC"):
-            CandleModel = IRPriceCandle
-            main_table = "ir_price_candles"
-        elif market in ("NASDAQ", "NYSE"):
+        if market in ("NASDAQ", "NYSE"):
             CandleModel = IntlPriceCandle
             main_table = "intl_price_candles"
         elif market in ("BINANCE", "KRAKEN", "COINBASE"):
@@ -356,14 +341,14 @@ async def populate_financial_statements(session, assets):
     for asset in assets:
         for i in range(3):
             year = datetime.now().year - i
-            quarter = 4
 
-            balance_sheet = IRFinancialStatement(
+            balance_sheet = FinancialStatement(
                 asset_id=asset.id,
+                market=asset.market,
                 statement_type="balance_sheet",
                 period=f"{year}-annual",
-                quarter=quarter,
-                report_date=date(year, 12, 31),
+                fiscal_year=year,
+                as_of=date(year, 12, 31),
                 data={
                     "revenue": str(round(random.uniform(50000000, 5000000000), 2)),
                     "net_income": str(round(random.uniform(1000000, 1000000000), 2)),
@@ -373,18 +358,17 @@ async def populate_financial_statements(session, assets):
                     "cash": str(round(random.uniform(1000000, 1000000000), 2)),
                     "debt": str(round(random.uniform(1000000, 2000000000), 2)),
                 },
-                currency="USD" if asset.market not in ("TSE", "OTC") else "IRT",
-                source="synthetic",
             )
             session.add(balance_sheet)
             total_records += 1
 
-            income_statement = IRFinancialStatement(
+            income_statement = FinancialStatement(
                 asset_id=asset.id,
+                market=asset.market,
                 statement_type="income_statement",
                 period=f"{year}-annual",
-                quarter=quarter,
-                report_date=date(year, 12, 31),
+                fiscal_year=year,
+                as_of=date(year, 12, 31),
                 data={
                     "revenue": str(round(random.uniform(50000000, 5000000000), 2)),
                     "gross_profit": str(round(random.uniform(20000000, 2000000000), 2)),
@@ -394,26 +378,23 @@ async def populate_financial_statements(session, assets):
                     "eps_basic": str(round(random.uniform(0.10, 10.00), 2)),
                     "eps_diluted": str(round(random.uniform(0.10, 9.50), 2)),
                 },
-                currency="USD" if asset.market not in ("TSE", "OTC") else "IRT",
-                source="synthetic",
             )
             session.add(income_statement)
             total_records += 1
 
-            cash_flow = IRFinancialStatement(
+            cash_flow = FinancialStatement(
                 asset_id=asset.id,
+                market=asset.market,
                 statement_type="cash_flow_statement",
                 period=f"{year}-annual",
-                quarter=quarter,
-                report_date=date(year, 12, 31),
+                fiscal_year=year,
+                as_of=date(year, 12, 31),
                 data={
                     "operating_cash_flow": str(round(random.uniform(5000000, 2000000000), 2)),
                     "investing_cash_flow": str(round(random.uniform(-1000000000, 500000000), 2)),
                     "financing_cash_flow": str(round(random.uniform(-500000000, 1000000000), 2)),
                     "free_cash_flow": str(round(random.uniform(1000000, 1000000000), 2)),
                 },
-                currency="USD" if asset.market not in ("TSE", "OTC") else "IRT",
-                source="synthetic",
             )
             session.add(cash_flow)
             total_records += 1
@@ -585,13 +566,12 @@ async def print_final_counts(session):
 
     tables_to_check = [
         ("assets", Asset),
-        ("ir_price_candles", IRPriceCandle),
         ("intl_price_candles", IntlPriceCandle),
         ("crypto_price_candles", CryptoPriceCandle),
         ("raw_market_data", RawMarketData),
         ("market_data_snapshots", MarketDataSnapshot),
         ("news", News),
-        ("financial_statements", IRFinancialStatement),
+        ("financial_statements", FinancialStatement),
         ("ml_signals", MLSignal),
         ("alerts", Alert),
         ("portfolios", Portfolio),

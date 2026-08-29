@@ -12,7 +12,7 @@ down_revision = '20260729_01'
 create_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
 
 # Use triple double quotes with single quotes inside
-migration_content = '''"""Create missing partitioned tables for IR, Intl, and Crypto price candles
+migration_content = '''"""Create missing partitioned tables for Intl and Crypto price candles
 
 Revision ID: {revision_id}
 Revises: {down_revision}
@@ -45,10 +45,9 @@ def upgrade() -> None:
     import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
     
-    from app.models.models import IRPriceCandle, IntlPriceCandle, CryptoPriceCandle
+    from app.models.models import IntlPriceCandle, CryptoPriceCandle
 
     tables = [
-        (IRPriceCandle, "ir_price_candles"),
         (IntlPriceCandle, "intl_price_candles"),
         (CryptoPriceCandle, "crypto_price_candles"),
     ]
@@ -69,9 +68,7 @@ def upgrade() -> None:
                 sa.Column("volume", sa.Numeric(20, 8), nullable=False),
                 sa.Column("turnover", sa.Numeric(20, 8), nullable=True),
                 sa.Column("transactions", sa.Integer, nullable=True),
-                # Add foreign key relationships properly
                 sa.Column("asset_id", sa.Integer, sa.ForeignKey("assets.id"), nullable=False),
-                # Add process_time for crypto prices and other time-based data
             )
         else:
             print(f"Table {table_name} already exists, skipping")
@@ -83,10 +80,9 @@ def downgrade() -> None:
     import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
     
-    from app.models.models import IRPriceCandle, IntlPriceCandle, CryptoPriceCandle
+    from app.models.models import IntlPriceCandle, CryptoPriceCandle
 
     tables = [
-        (IRPriceCandle, "ir_price_candles"),
         (IntlPriceCandle, "intl_price_candles"),
         (CryptoPriceCandle, "crypto_price_candles"),
     ]

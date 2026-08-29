@@ -24,7 +24,7 @@ async def get_symbols(
     asset_class: AssetClassEnum = Query(None),
     market: MarketEnum = Query(None),
     sector: str = Query(None),
-    industry: str = Query(None, description="TSE industry group filter (e.g. فلزات اساسی)"),
+    industry: str = Query(None, description="NASDAQ industry group filter"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_session),
@@ -34,9 +34,9 @@ async def get_symbols(
 
     Args:
         asset_class: Filter by asset class (EQUITY, CRYPTO, ETF)
-        market: Filter by market (TSE, BINANCE, etc.)
+        market: Filter by market (NASDAQ, BINANCE, etc.)
         sector: Filter by sector
-        industry: Filter by TSE industry group
+        industry: Filter by industry group
         skip: Pagination skip
         limit: Pagination limit
 
@@ -161,10 +161,10 @@ async def get_latest_prices(
     asset_ids = [asset.id for asset in assets_by_symbol.values()]
     
     # Use first symbol's market to determine candle model (all should be from same market for this endpoint)
-    # In a real implementation, we might need to handle multiple markets, but for TSE focus:
+    # In a real implementation, we might need to handle multiple markets, but for NASDAQ focus:
     sample_symbol = symbols[0]
-    # Extract market from symbol or use default - for now assuming TSE as this is TSE-focused endpoint
-    Candle = candle_model_for_market("TSE")  # Default to TSE for this endpoint
+    # Extract market from symbol or use default - for now assuming NASDAQ as this is NASDAQ-focused endpoint
+    Candle = candle_model_for_market("NASDAQ")  # Default to NASDAQ for this endpoint
     
     # Subquery to get the latest candle for each asset
     latest_candle_subquery = (
@@ -219,7 +219,7 @@ async def get_latest_prices(
 
 @router.get("/market-overview", response_model=dict)
 async def get_market_overview(
-    market: MarketEnum = Query("TSE"),
+    market: MarketEnum = Query("NASDAQ"),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
@@ -257,21 +257,21 @@ async def get_market_overview(
     }
 
 
-@router.get("/tse-dashboard", response_model=dict)
-async def tse_dashboard(
+@router.get("/nasdaq-dashboard", response_model=dict)
+async def nasdaq_dashboard(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
-    TSE market dashboard summary (Tehran Stock Exchange only).
+    NASDAQ market dashboard summary.
 
     Returns total symbols, average daily change, and top 5 gainers / losers
     from the latest stored daily candles using a single window-function query.
-    Crypto / international markets are excluded by the market='TSE' filter.
+    Crypto / other markets are excluded by the market='NASDAQ' filter.
 
     Returns:
-        TSE market overview snapshot
+        NASDAQ market overview snapshot
     """
-    Candle = candle_model_for_market("TSE")
+    Candle = candle_model_for_market("NASDAQ")
 
     # Single query that retrieves assets and their latest candles in one statement
     query = (
@@ -288,7 +288,7 @@ async def tse_dashboard(
         .join(Candle, Asset.id == Candle.asset_id)
         .where(
             and_(
-                Asset.market == "TSE",
+                Asset.market == "NASDAQ",
                 Asset.active == True,
                 Candle.timeframe == "1d"
             )
@@ -308,7 +308,7 @@ async def tse_dashboard(
     if not rows:
         return {
             "status": "success",
-            "market": "TSE",
+            "market": "NASDAQ",
             "total_symbols": 0,
             "average_change_pct": 0.0,
             "top_gainers": [],
@@ -334,7 +334,7 @@ async def tse_dashboard(
 
     return {
         "status": "success",
-        "market": "TSE",
+        "market": "NASDAQ",
         "total_symbols": len(result_rows),
         "average_change_pct": round(avg_change, 2),
         "top_gainers": ranked_change[:5],
@@ -348,16 +348,16 @@ async def industry_ranking(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
-    TSE industry ranking (رتبه‌بندی صنایع).
+    NASDAQ industry ranking.
 
-    Ranks Tehran Stock Exchange industries by the average daily change of their
+    Ranks NASDAQ industries by the average daily change of their
     constituent symbols using a single window-function query over daily candles.
-    Only market='TSE' symbols are considered; crypto / international are excluded.
+    Only market='NASDAQ' symbols are considered; crypto / other markets are excluded.
 
     Returns:
         Industries ranked by average change %, each with member count
     """
-    Candle = candle_model_for_market("TSE")
+    Candle = candle_model_for_market("NASDAQ")
 
     # Single optimized query: join assets with candles, compute latest and previous close
     query = (
@@ -376,7 +376,7 @@ async def industry_ranking(
         .join(Candle, Asset.id == Candle.asset_id)
         .where(
             and_(
-                Asset.market == "TSE",
+                Asset.market == "NASDAQ",
                 Asset.active == True,
                 Asset.industry.isnot(None),
                 Candle.timeframe == "1d",
@@ -390,7 +390,7 @@ async def industry_ranking(
     if not rows:
         return {
             "status": "success",
-            "market": "TSE",
+            "market": "NASDAQ",
             "ranked_industries": 0,
             "ranking": [],
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -445,7 +445,7 @@ async def industry_ranking(
 
     return {
         "status": "success",
-        "market": "TSE",
+        "market": "NASDAQ",
         "ranked_industries": len(ranking),
         "ranking": ranking,
         "timestamp": datetime.now(timezone.utc).isoformat(),

@@ -14,7 +14,7 @@ async def main():
     
     tables_to_check = [
         'assets', 'price_candles',
-        'ir_price_candles', 'intl_price_candles', 'crypto_price_candles',
+        'intl_price_candles', 'crypto_price_candles',
         'raw_market_data', 'market_data_snapshots', 'ml_signals'
     ]
     

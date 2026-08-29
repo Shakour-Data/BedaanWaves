@@ -164,7 +164,7 @@ class UserMarketSettingsService(BaseService):
                 "Latin America", "Africa"
             ],
             "exchanges": [
-                "TSE", "NYSE", "NASDAQ", "LSE", "XETRA", "Euronext",
+                "NASDAQ", "NYSE", "LSE", "XETRA", "Euronext",
                 "HKEX", "SSE", "SZSE", "KRX", "BSE", "NSE", "TSX", "ASX"
             ],
             "currencies": ["IRR", "USD", "EUR", "GBP", "JPY", "CNY", "KRW", 

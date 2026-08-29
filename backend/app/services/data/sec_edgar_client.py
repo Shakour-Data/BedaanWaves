@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
-from app.models.models import Asset, IRFinancialStatement, IRFundamentalRatio
+from app.models.models import Asset, FinancialStatement, FundamentalRatio
 from app.services.core.base_service import DataService
 
 logger = logging.getLogger(__name__)
@@ -152,8 +152,8 @@ class SEDGARFinancialService(DataService):
         if not us_gaap:
             return {"statements": 0, "ratios": 0, "errors": 0}
 
-        statements: List[IRFinancialStatement] = []
-        ratios: List[IRFundamentalRatio] = []
+        statements: List[FinancialStatement] = []
+        ratios: List[FundamentalRatio] = []
 
         income_keys = [
             "Revenues",
@@ -219,7 +219,7 @@ class SEDGARFinancialService(DataService):
                 except Exception:
                     as_of = None
                 statements.append(
-                    IRFinancialStatement(
+                    FinancialStatement(
                         asset_id=asset_uuid,
                         market="NASDAQ",
                         period=period,
@@ -236,7 +236,7 @@ class SEDGARFinancialService(DataService):
                 except Exception:
                     as_of = None
                 statements.append(
-                    IRFinancialStatement(
+                    FinancialStatement(
                         asset_id=asset_uuid,
                         market="NASDAQ",
                         period=period,
@@ -255,7 +255,7 @@ class SEDGARFinancialService(DataService):
                 except Exception:
                     as_of = None
                 statements.append(
-                    IRFinancialStatement(
+                    FinancialStatement(
                         asset_id=asset_uuid,
                         market="NASDAQ",
                         period=period,
@@ -272,7 +272,7 @@ class SEDGARFinancialService(DataService):
                 except Exception:
                     as_of = None
                 statements.append(
-                    IRFinancialStatement(
+                    FinancialStatement(
                         asset_id=asset_uuid,
                         market="NASDAQ",
                         period=period,
@@ -291,7 +291,7 @@ class SEDGARFinancialService(DataService):
                 except Exception:
                     as_of = None
                 statements.append(
-                    IRFinancialStatement(
+                    FinancialStatement(
                         asset_id=asset_uuid,
                         market="NASDAQ",
                         period=period,
@@ -308,7 +308,7 @@ class SEDGARFinancialService(DataService):
                 except Exception:
                     as_of = None
                 statements.append(
-                    IRFinancialStatement(
+                    FinancialStatement(
                         asset_id=asset_uuid,
                         market="NASDAQ",
                         period=period,
@@ -331,7 +331,7 @@ class SEDGARFinancialService(DataService):
                         "data": stmt.data,
                         "as_of": stmt.as_of,
                     }
-                    upsert = pg_insert(IRFinancialStatement).values(stmt_data)
+                    upsert = pg_insert(FinancialStatement).values(stmt_data)
                     upsert = upsert.on_conflict_do_update(
                         index_elements=["asset_id", "period", "statement_type", "market"],
                         set_={"data": upsert.excluded.data, "as_of": upsert.excluded.as_of},
@@ -347,7 +347,7 @@ class SEDGARFinancialService(DataService):
             except Exception:
                 as_of = None
             ratios.append(
-                IRFundamentalRatio(
+                FundamentalRatio(
                     asset_id=asset_uuid,
                     market="NASDAQ",
                     period=period,
@@ -366,7 +366,7 @@ class SEDGARFinancialService(DataService):
                         "eps": ratio.eps,
                         "as_of": ratio.as_of,
                     }
-                    upsert = pg_insert(IRFundamentalRatio).values(ratio_data)
+                    upsert = pg_insert(FundamentalRatio).values(ratio_data)
                     upsert = upsert.on_conflict_do_update(
                         index_elements=["asset_id", "period", "market"],
                         set_={"eps": upsert.excluded.eps, "as_of": upsert.excluded.as_of},

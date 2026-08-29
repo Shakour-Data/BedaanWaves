@@ -28,7 +28,7 @@ async def _build_universe(
     db: AsyncSession, market: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Build a stock universe from stored assets, latest candle, and latest signal."""
-    Candle = candle_model_for_market(market or "TSE")
+    Candle = candle_model_for_market(market or "NASDAQ")
     latest_ts = (
         select(
             Candle.asset_id,

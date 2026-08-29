@@ -24,35 +24,6 @@ CREATE TABLE IF NOT EXISTS assets (
 ;
 
 
-CREATE TABLE IF NOT EXISTS ir_price_candles (
-	id UUID NOT NULL, 
-	asset_id UUID NOT NULL, 
-	timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
-	timeframe VARCHAR(10) NOT NULL, 
-	open NUMERIC(20, 8) NOT NULL, 
-	high NUMERIC(20, 8) NOT NULL, 
-	low NUMERIC(20, 8) NOT NULL, 
-	close NUMERIC(20, 8) NOT NULL, 
-	volume BIGINT NOT NULL, 
-	turnover NUMERIC(25, 2), 
-	transactions INTEGER, 
-	adjusted_close NUMERIC(20, 8), 
-	split_ratio NUMERIC(10, 4), 
-	source VARCHAR(20) NOT NULL, 
-	data_quality VARCHAR(10), 
-	created_at TIMESTAMP WITHOUT TIME ZONE, 
-	PRIMARY KEY (id), 
-	CONSTRAINT uix_ir_price_candles_asset_ts_tf UNIQUE (asset_id, timestamp, timeframe), 
-	CONSTRAINT chk_ir_price_candles_high CHECK (high >= open AND high >= close AND high >= low), 
-	CONSTRAINT chk_ir_price_candles_low CHECK (low <= open AND low <= close AND low <= high), 
-	CONSTRAINT chk_ir_price_candles_volume_non_negative CHECK (volume >= 0), 
-	CONSTRAINT chk_ir_price_candles_price_non_negative CHECK (open >= 0 AND close >= 0), 
-	FOREIGN KEY(asset_id) REFERENCES assets (id)
-)
-
-;
-
-
 CREATE TABLE IF NOT EXISTS intl_price_candles (
 	id UUID NOT NULL, 
 	asset_id UUID NOT NULL, 
@@ -111,24 +82,6 @@ CREATE TABLE IF NOT EXISTS crypto_price_candles (
 ;
 
 
-CREATE TABLE IF NOT EXISTS ir_order_book (
-	id UUID NOT NULL, 
-	asset_id UUID NOT NULL, 
-	snapshot_time TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
-	rank INTEGER NOT NULL, 
-	bid_price NUMERIC(20, 8), 
-	bid_volume BIGINT, 
-	ask_price NUMERIC(20, 8), 
-	ask_volume BIGINT, 
-	source VARCHAR(20), 
-	PRIMARY KEY (id), 
-	CONSTRAINT uix_ir_order_book_snap_rank UNIQUE (asset_id, snapshot_time, rank), 
-	FOREIGN KEY(asset_id) REFERENCES assets (id)
-)
-
-;
-
-
 CREATE TABLE IF NOT EXISTS intl_order_book (
 	id UUID NOT NULL, 
 	asset_id UUID NOT NULL, 
@@ -159,59 +112,6 @@ CREATE TABLE IF NOT EXISTS crypto_order_book (
 	source VARCHAR(20), 
 	PRIMARY KEY (id), 
 	CONSTRAINT uix_crypto_order_book_snap_rank UNIQUE (asset_id, snapshot_time, rank), 
-	FOREIGN KEY(asset_id) REFERENCES assets (id)
-)
-
-;
-
-
-CREATE TABLE IF NOT EXISTS ir_major_shareholders (
-	id UUID NOT NULL, 
-	asset_id UUID NOT NULL, 
-	shareholder_name VARCHAR(255) NOT NULL, 
-	shareholder_type VARCHAR(10) NOT NULL, 
-	rank INTEGER, 
-	share_count BIGINT, 
-	share_pct NUMERIC(8, 4), 
-	change_count BIGINT, 
-	change_pct NUMERIC(8, 4), 
-	report_date DATE NOT NULL, 
-	source VARCHAR(20), 
-	PRIMARY KEY (id), 
-	CONSTRAINT uix_ir_shareholder UNIQUE (asset_id, shareholder_name, report_date), 
-	FOREIGN KEY(asset_id) REFERENCES assets (id)
-)
-
-;
-
-
-CREATE TABLE IF NOT EXISTS ir_free_float (
-	id UUID NOT NULL, 
-	asset_id UUID NOT NULL, 
-	free_float_pct NUMERIC(8, 4), 
-	base_volume BIGINT, 
-	as_of_date DATE NOT NULL, 
-	source VARCHAR(20), 
-	PRIMARY KEY (id), 
-	CONSTRAINT uix_ir_free_float UNIQUE (asset_id, as_of_date), 
-	FOREIGN KEY(asset_id) REFERENCES assets (id)
-)
-
-;
-
-
-CREATE TABLE IF NOT EXISTS ir_retail_institutional (
-	id UUID NOT NULL, 
-	asset_id UUID NOT NULL, 
-	snapshot_time TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
-	retail_buy_volume BIGINT, 
-	retail_sell_volume BIGINT, 
-	institutional_buy_volume BIGINT, 
-	institutional_sell_volume BIGINT, 
-	net_flow NUMERIC(25, 2), 
-	source VARCHAR(20), 
-	PRIMARY KEY (id), 
-	CONSTRAINT uix_ir_retail_inst UNIQUE (asset_id, snapshot_time), 
 	FOREIGN KEY(asset_id) REFERENCES assets (id)
 )
 
@@ -514,7 +414,7 @@ CREATE TABLE IF NOT EXISTS macro_indicators (
 ;
 
 
-CREATE TABLE IF NOT EXISTS ir_financial_statements (
+CREATE TABLE IF NOT EXISTS financial_statements (
 	id UUID NOT NULL, 
 	asset_id UUID NOT NULL, 
 	market VARCHAR(20) NOT NULL, 
@@ -531,7 +431,7 @@ CREATE TABLE IF NOT EXISTS ir_financial_statements (
 ;
 
 
-CREATE TABLE IF NOT EXISTS ir_fundamental_ratios (
+CREATE TABLE IF NOT EXISTS fundamental_ratios (
 	id UUID NOT NULL, 
 	asset_id UUID NOT NULL, 
 	market VARCHAR(20) NOT NULL, 

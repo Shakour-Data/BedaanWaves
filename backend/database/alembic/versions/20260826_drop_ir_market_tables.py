@@ -152,3 +152,8 @@ def downgrade() -> None:
         sa.ForeignKeyConstraint(['asset_id'], ['assets.id']),
         sa.UniqueConstraint('asset_id', 'snapshot_time', name='uix_ir_retail_inst_asset_snap'),
     )
+
+    # Rename general-purpose tables back to IR-prefixed names
+    for old_name, new_name in IR_RENAME_MAP.items():
+        if _table_exists(new_name):
+            op.rename_table(new_name, old_name)
