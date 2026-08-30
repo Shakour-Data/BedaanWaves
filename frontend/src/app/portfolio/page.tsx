@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
@@ -20,92 +20,84 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadPortfolio() {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch user's portfolios
-        const portfoliosRes = await apiClient.get<any[]>("/portfolio/");
-        const portfolios = portfoliosRes.data;
+  const loadPortfolio = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const portfoliosRes = await apiClient.get<any[]>("/portfolio/");
+      const portfolios = portfoliosRes.data;
+      
+      if (portfolios && portfolios.length > 0) {
+        const portfolioId = portfolios[0].id;
         
-        if (portfolios && portfolios.length > 0) {
-          const portfolioId = portfolios[0].id;
+        const holdingsRes = await apiClient.get<any[]>(`/portfolio/${portfolioId}/holdings`);
+        const holdingsData = holdingsRes.data;
+        
+        const symbolsRes = await apiClient.get<any[]>("/market/symbols");
+        const allAssets = symbolsRes.data;
+        const assetMap = new Map(allAssets.map((a: any) => [a.id, a]));
+        
+        if (holdingsData.length > 0) {
+          const symbols = holdingsData.map((h: any) => assetMap.get(h.asset_id)?.symbol).filter(Boolean);
+          const pricesRes = await apiClient.get<any>(
+            `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+          );
           
-          // Fetch holdings for the first portfolio
-          const holdingsRes = await apiClient.get<any[]>(`/portfolio/${portfolioId}/holdings`);
-          const holdingsData = holdingsRes.data;
+          const prices = pricesRes.data?.data || {};
           
-          // Fetch symbols for mapping (since Position doesn't have symbol directly)
-          const symbolsRes = await apiClient.get<any[]>("/market/symbols");
-          const allAssets = symbolsRes.data;
-          const assetMap = new Map(allAssets.map((a: any) => [a.id, a]));
+          const enrichedHoldings: AssetRow[] = holdingsData.map((h: any) => {
+            const asset = assetMap.get(h.asset_id);
+            return {
+              symbol: asset?.symbol || "Unknown",
+              name: asset?.name || "Unknown",
+              market: asset?.market || "NASDAQ",
+              price: prices[asset?.symbol]?.price ?? h.entry_price ?? 0,
+              changePct: prices[asset?.symbol]?.change_pct ?? 0,
+              quantity: Number(h.quantity),
+              avg_price: Number(h.entry_price) };
+          });
           
-          if (holdingsData.length > 0) {
-            const symbols = holdingsData.map((h: any) => assetMap.get(h.asset_id)?.symbol).filter(Boolean);
-            const pricesRes = await apiClient.get<any>(
-              `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
-            );
-            
-            const prices = pricesRes.data?.data || {};
-            
-            const enrichedHoldings: AssetRow[] = holdingsData.map((h: any) => {
-              const asset = assetMap.get(h.asset_id);
-              return {
-                symbol: asset?.symbol || "Unknown",
-                name: asset?.name || "Unknown",
-                market: asset?.market || "NASDAQ",
-                price: prices[asset?.symbol]?.price ?? h.entry_price ?? 0,
-                changePct: prices[asset?.symbol]?.change_pct ?? 0,
-                quantity: Number(h.quantity),
-                avg_price: Number(h.entry_price) };
-            });
-            
-            if (active) setHoldings(enrichedHoldings);
-            
-            // Calculate portfolio stats
-            const totalValue = enrichedHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
-            const totalCost = enrichedHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
-            const totalPnL = totalValue - totalCost;
-            const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-            
-            if (active) setStats([
-              { label: t("app.portfolio.total_value", "en"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
-              { label: t("app.portfolio.total_pnl", "en"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
-              { label: t("app.portfolio.symbols_count", "en"), value: String(enrichedHoldings.length), changePct: 0 },
-              { label: t("app.portfolio.daily_return", "en"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
-            ]);
-          } else {
-            if (active) setHoldings([]);
-            if (active) setStats([
-              { label: t("app.portfolio.total_value", "en"), value: "$0", changePct: 0 },
-              { label: t("app.portfolio.total_pnl", "en"), value: "$0", changePct: 0 },
-              { label: t("app.portfolio.symbols_count", "en"), value: "0", changePct: 0 },
-              { label: t("app.portfolio.daily_return", "en"), value: "0%", changePct: 0 },
-            ]);
-          }
+          setHoldings(enrichedHoldings);
+          
+          const totalValue = enrichedHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
+          const totalCost = enrichedHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
+          const totalPnL = totalValue - totalCost;
+          const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
+          
+          setStats([
+            { label: t("app.portfolio.total_value", "en"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+            { label: t("app.portfolio.total_pnl", "en"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
+            { label: t("app.portfolio.symbols_count", "en"), value: String(enrichedHoldings.length), changePct: 0 },
+            { label: t("app.portfolio.daily_return", "en"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
+          ]);
         } else {
-          if (active) setHoldings([]);
-          if (active) setStats([]);
+          setHoldings([]);
+          setStats([
+            { label: t("app.portfolio.total_value", "en"), value: "$0", changePct: 0 },
+            { label: t("app.portfolio.total_pnl", "en"), value: "$0", changePct: 0 },
+            { label: t("app.portfolio.symbols_count", "en"), value: "0", changePct: 0 },
+            { label: t("app.portfolio.daily_return", "en"), value: "0%", changePct: 0 },
+          ]);
         }
-      } catch (err) {
-        if (active) setError(t("app.portfolio.error_loading", "en"));
-      } finally {
-        if (active) setLoading(false);
+      } else {
+        setHoldings([]);
+        setStats([]);
       }
+    } catch (err) {
+      setError(t("app.portfolio.error_loading", "en"));
+    } finally {
+      setLoading(false);
     }
+  }, [user]);
 
+  useEffect(() => {
     if (user) {
       loadPortfolio();
     } else {
       setLoading(false);
       setError(t("app.portfolio.login_required", "en"));
     }
-
-    return () => { active = false; };
-  }, [user, "en"]);
+  }, [user, loadPortfolio]);
 
   if (loading) {
     return (
@@ -121,7 +113,7 @@ export default function PortfolioPage() {
         <TarotCard icon="⚠️" title={t("app.portfolio.error_loading", "en")} className="max-w-md mx-auto border-error/20 bg-error/5">
           <div className="py-4 text-center">
             <p className="text-sm text-error font-medium mb-4">{error}</p>
-            <PrimaryButton onClick={() => window.location.reload()} variant="outline" size="sm">
+            <PrimaryButton onClick={() => { setError(null); loadPortfolio(); }} variant="outline" size="sm">
               {t("app.auth.submit", "en")}
             </PrimaryButton>
           </div>

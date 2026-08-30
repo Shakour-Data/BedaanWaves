@@ -13,6 +13,8 @@ import { StockSearchBar } from "@/components/search/StockSearchBar";
 interface NewTopbarProps {
   title?: string;
 }
+
+export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

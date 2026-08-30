@@ -5,12 +5,15 @@ import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useUXStore } from "@/store/useUXStore";
 import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
+import type { UserProfile } from "@/store/useAuthStore";
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
+  const addToast = useUXStore((state) => state.addToast);
   const [fullName, setFullName] = useState(user?.full_name || user?.username || "");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -22,7 +25,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      // Sync with backend if needed
+      setFullName(user.full_name || user.username || "");
     }
   }, [user]);
 
@@ -44,22 +47,25 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!validatePasswords()) return;
         
-        setLoading(true);
-        try {
-          const response = await apiClient.patch("users/me", {
-            full_name: fullName });
-          
-          if (response.status === 200) {
-            window.location.reload();
-          } else {
-            throw new Error(t("app.settings.profile.error_save", "en"));
-          }
-          } catch (error) {
-            // Handle error
-          } finally {
-          setLoading(false);
+    setLoading(true);
+    try {
+      const response = await apiClient.patch("users/me", {
+        full_name: fullName });
+      
+      if (response.status === 200) {
+        const profile = await apiClient.get<UserProfile>('users/me');
+        if (profile.data) {
+          useAuthStore.setState({ user: profile.data });
         }
-      };
+      } else {
+        throw new Error(t("app.settings.profile.error_save", "en"));
+      }
+    } catch (error) {
+      addToast({ type: "error", message: error instanceof Error ? error.message : "Failed to save profile" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <NewDashboardShell title={t("app.settings.profile.title", "en")}>

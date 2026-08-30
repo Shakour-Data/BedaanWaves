@@ -127,6 +127,8 @@ export default function ScoringPage() {
     loadScoring();
     return () => { active = false; };
   }, []);
+
+  const dimensionDetails = [
     {
       id: "fundamental",
       title: `${t("app.scoring.dimensions.fundamental", currentLang)} (25٪)`,
