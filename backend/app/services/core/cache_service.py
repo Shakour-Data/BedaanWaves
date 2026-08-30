@@ -140,8 +140,14 @@ class CacheService(BaseService):
         if backend_type.lower() == 'memory':
             return MemoryCacheBackend()
         elif backend_type.lower() == 'redis':
-            self.logger.warning("Redis backend not yet implemented, using memory backend")
-            return MemoryCacheBackend()
+            try:
+                from app.core.config import get_settings
+                settings = get_settings()
+                from app.infrastructure.cache.redis_cache_backend import RedisCacheBackend
+                return RedisCacheBackend(redis_url=settings.REDIS_URL)
+            except Exception as exc:
+                self.logger.warning(f"Redis backend initialization failed ({exc}), using memory backend")
+                return MemoryCacheBackend()
         else:
             raise ValueError(f"Unknown cache backend: {backend_type}")
     

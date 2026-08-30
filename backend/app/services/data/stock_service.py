@@ -1,22 +1,30 @@
 """
 Stock Service - Tier 2 Data Service
 
-Manages stock data and operations.
+Manages stock data and operations using live external APIs (yfinance).
+No hardcoded data. No fallback to static arrays.
 """
 
 from typing import Any, Dict, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
+
+from app.core.config import get_settings
+from app.core.exceptions import DataProviderException
 from ..core import CachedService
+
+settings = get_settings()
+_EXECUTOR = ThreadPoolExecutor(max_workers=8)
 
 
 class StockService(CachedService):
     """
-    Stock data management service.
+    Stock data management service using yfinance.
     
     Provides:
     - Stock information retrieval
     - Price data management
-    - Stock search
+    - Stock search via yfinance suggestions
     - Batch stock operations
     """
     
@@ -26,36 +34,94 @@ class StockService(CachedService):
         brs_client=None,
         cache_ttl_seconds: int = 3600,
     ):
-        """
-        Initialize stock service.
-        
-        Args:
-            service_name: Service identifier
-            brs_client: BRS API client instance
-            cache_ttl_seconds: Cache TTL
-        """
         super().__init__(service_name, cache_ttl_seconds=cache_ttl_seconds)
         self.brs_client = brs_client
     
     async def initialize(self) -> None:
         """Initialize stock service"""
-        self.logger.info("StockService initialized")
+        self.logger.info("StockService initialized (yfinance provider)")
     
     async def shutdown(self) -> None:
         """Shutdown stock service"""
         self.cache_clear()
         self.logger.info("StockService shutdown")
     
+    async def _run_blocking(self, func, *args, **kwargs):
+        loop = __import__("asyncio").get_event_loop()
+        return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
+
+    def _fetch_yfinance_search(self, query: str) -> List[Dict[str, Any]]:
+        """Blocking call to yfinance for symbol suggestions."""
+        import yfinance as yf
+        try:
+            tickers = yf.Ticker(query).symbols if hasattr(yf.Ticker(query), "symbols") else []
+        except Exception:
+            tickers = []
+
+        if not tickers:
+            try:
+                import requests
+                url = "https://query1.finance.yahoo.com/v1/finance/search"
+                params = {"q": query, "quotesCount": 10, "newsCount": 0}
+                headers = {"User-Agent": "Mozilla/5.0"}
+                resp = requests.get(url, params=params, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    tickers = [q.get("symbol") for q in data.get("quotes", []) if q.get("symbol")]
+            except Exception:
+                tickers = []
+
+        results = []
+        for symbol in tickers[:20]:
+            try:
+                info = yf.Ticker(symbol).info or {}
+                name = info.get("shortName") or info.get("longName") or symbol
+                exchange = info.get("exchange") or ""
+                results.append({
+                    "symbol": symbol,
+                    "name": name,
+                    "exchange": exchange,
+                    "type": "EQUITY",
+                    "active": True,
+                })
+            except Exception:
+                results.append({
+                    "symbol": symbol,
+                    "name": symbol,
+                    "exchange": "",
+                    "type": "EQUITY",
+                    "active": True,
+                })
+        return results
+
+    async def search(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Search stocks using yfinance live suggestions.
+        
+        Args:
+            query: Search query
+            
+        Returns:
+            Search results from live API
+        """
+        cache_key = f"search:{query}"
+        cached = self.get_cached(cache_key)
+        if cached:
+            return cached
+        
+        results = await self._run_blocking(self._fetch_yfinance_search, query)
+        self.set_cached(cache_key, results, ttl_seconds=300)
+        return results
+    
     async def get_stock(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
         """
-        Get stock information.
+        Get stock information from yfinance.
         
         Args:
             ticker: Stock ticker
-            use_cache: Use cached data if available
             
         Returns:
-            Stock information
+            Stock information from live API
         """
         cache_key = f"stock:{ticker}"
         
@@ -64,28 +130,56 @@ class StockService(CachedService):
             if cached:
                 return cached
         
-        if not self.brs_client:
-            raise RuntimeError("BRS client not initialized")
+        def fetch():
+            import yfinance as yf
+            t = yf.Ticker(ticker)
+            info = t.info or {}
+            if not info:
+                raise DataProviderException(f"No data returned for {ticker}", details={"provider": "yfinance"})
+            return {
+                "symbol": ticker.upper(),
+                "name": info.get("shortName") or info.get("longName") or ticker,
+                "sector": info.get("sector") or "",
+                "industry": info.get("industry") or "",
+                "exchange": info.get("exchange") or "",
+                "currency": info.get("currency") or "USD",
+                "market_cap": info.get("marketCap"),
+                "pe_ratio": info.get("trailingPE"),
+                "price": info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose"),
+                "volume": info.get("volume") or info.get("regularMarketVolume"),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
         
-        stock_data = await self.brs_client.get_stock_info(ticker)
-        self.set_cached(cache_key, stock_data)
-        
+        stock_data = await self._run_blocking(fetch)
+        self.set_cached(cache_key, stock_data, ttl_seconds=30)
         return stock_data
     
     async def get_price(self, ticker: str) -> Dict[str, float]:
         """
-        Get current stock price.
+        Get current stock price from yfinance.
         
         Args:
             ticker: Stock ticker
             
         Returns:
-            Price data {open, high, low, close, last}
+            Price data from live API
         """
-        if not self.brs_client:
-            raise RuntimeError("BRS client not initialized")
+        def fetch():
+            import yfinance as yf
+            t = yf.Ticker(ticker)
+            info = t.info or {}
+            current = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
+            if current is None:
+                raise DataProviderException(f"No price for {ticker}", details={"provider": "yfinance"})
+            return {
+                "open": info.get("open") or info.get("regularMarketOpen") or current,
+                "high": info.get("dayHigh") or info.get("regularMarketDayHigh") or current,
+                "low": info.get("dayLow") or info.get("regularMarketDayLow") or current,
+                "close": current,
+                "last": current,
+            }
         
-        return await self.brs_client.get_stock_price(ticker)
+        return await self._run_blocking(fetch)
     
     async def get_history(
         self,
@@ -95,7 +189,7 @@ class StockService(CachedService):
         interval: str = "daily",
     ) -> List[Dict[str, Any]]:
         """
-        Get historical stock data.
+        Get historical stock data from yfinance.
         
         Args:
             ticker: Stock ticker
@@ -104,58 +198,47 @@ class StockService(CachedService):
             interval: Data interval
             
         Returns:
-            Historical data
+            Historical data from live API
         """
-        if not self.brs_client:
-            raise RuntimeError("BRS client not initialized")
-        
         cache_key = f"history:{ticker}:{start_date}:{end_date}:{interval}"
         cached = self.get_cached(cache_key)
         if cached:
             return cached
         
-        history = await self.brs_client.get_stock_history(
-            ticker,
-            start_date,
-            end_date,
-            interval
-        )
-        self.set_cached(cache_key, history)
+        def fetch():
+            import yfinance as yf
+            t = yf.Ticker(ticker)
+            end = end_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            start = start_date or (datetime.now(timezone.utc) - __import__("datetime").timedelta(days=365)).strftime("%Y-%m-%d")
+            hist = t.history(start=start, end=end, interval=interval, auto_adjust=False)
+            if hist.empty:
+                raise DataProviderException(f"No history for {ticker}", details={"provider": "yfinance"})
+            records = []
+            for ts, row in hist.iterrows():
+                records.append({
+                    "timestamp": ts.isoformat(),
+                    "open": float(row["Open"]),
+                    "high": float(row["High"]),
+                    "low": float(row["Low"]),
+                    "close": float(row["Close"]),
+                    "adjusted_close": float(row.get("Adj Close", row["Close"])),
+                    "volume": int(row["Volume"]),
+                })
+            return records
         
+        history = await self._run_blocking(fetch)
+        self.set_cached(cache_key, history, ttl_seconds=3600)
         return history
-    
-    async def search(self, query: str) -> List[Dict[str, Any]]:
-        """
-        Search stocks.
-        
-        Args:
-            query: Search query
-            
-        Returns:
-            Search results
-        """
-        if not self.brs_client:
-            raise RuntimeError("BRS client not initialized")
-        
-        cache_key = f"search:{query}"
-        cached = self.get_cached(cache_key)
-        if cached:
-            return cached
-        
-        results = await self.brs_client.search_stocks(query)
-        self.set_cached(cache_key, results)
-        
-        return results
     
     async def get_multiple(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
         """
-        Get multiple stocks.
+        Get multiple stocks from yfinance.
         
         Args:
             tickers: List of stock tickers
             
         Returns:
-            Dictionary of {ticker: stock_data}
+            Dictionary of {ticker: stock_data} from live API
         """
         results = {}
         for ticker in tickers:

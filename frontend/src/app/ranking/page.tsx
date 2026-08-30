@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { DashboardShell } from "@/components/layout/DashboardShell";
-import { TarotCard } from "@/components/ui/TarotCard";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { PageLoading } from "@/components/ui/PageLoading";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Spinner } from "@/components/ui/Spinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -20,44 +21,28 @@ import {
 
 const PAGE_SIZE = 20;
 
-const DIMENSIONS: { key: RankingSortField; labelKey: string }[] = [
-  { key: "fundamental", labelKey: "app.ranking.fundamental" },
-  { key: "technical", labelKey: "app.ranking.technical" },
-  { key: "sentiment", labelKey: "app.ranking.sentiment" },
-  { key: "risk", labelKey: "app.ranking.risk" },
-  { key: "macro", labelKey: "app.ranking.macro" },
-  { key: "ai", labelKey: "app.ranking.ai" }
-];
-
-const GRADE_STYLES: Record<Grade, string> = {
-  A_STRONG_BUY: "bg-emerald-600/15 text-emerald-500 border border-emerald-600/30",
-  B_BUY: "bg-lime-600/15 text-lime-500 border border-lime-600/30",
-  C_HOLD: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
-  D_SELL: "bg-orange-600/15 text-orange-500 border border-orange-600/30",
-  E_STRONG_SELL: "bg-red-600/15 text-red-500 border border-red-600/30"
+const GRADE_STYLES: Record<Grade, "success" | "warning" | "error" | "default"> = {
+  A_STRONG_BUY: "success",
+  B_BUY: "success",
+  C_HOLD: "warning",
+  D_SELL: "error",
+  E_STRONG_SELL: "error",
 };
 
-function scoreBarClass(score: number): string {
-  if (score >= 70) return "bg-emerald-600";
-  if (score >= 55) return "bg-lime-500";
-  if (score >= 40) return "bg-amber-500";
-  return "bg-red-600";
-}
-
-function scoreTextClass(score: number): string {
-  if (score >= 70) return "text-emerald-500";
-  if (score >= 55) return "text-lime-500";
-  if (score >= 40) return "text-amber-400";
-  return "text-red-500";
+function scoreBarVariant(score: number): "success" | "warning" | "error" {
+  if (score >= 70) return "success";
+  if (score >= 40) return "warning";
+  return "error";
 }
 
 function ScoreBar({ score }: { score: number }) {
+  const variant = scoreBarVariant(score);
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-border)]">
-        <div className={cn("h-full rounded-full", scoreBarClass(score))} style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
+        <div className={cn("h-full rounded-full", variant === "success" ? "bg-success" : variant === "warning" ? "bg-warning" : "bg-error")} style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
       </div>
-      <span className={cn("w-8 text-right text-sm font-semibold", scoreTextClass(score))}>{score}</span>
+      <span className={cn("w-8 text-right text-sm font-semibold", variant === "success" ? "text-success" : variant === "warning" ? "text-warning" : "text-error")}>{score}</span>
     </div>
   );
 }
@@ -65,21 +50,19 @@ function ScoreBar({ score }: { score: number }) {
 function GradeBadge({ grade }: { grade: Grade }) {
   const label = t(`app.ranking.grades.${grade}`, "en");
   return (
-    <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-bold", GRADE_STYLES[grade])}>
-      {label}
-    </span>
+    <Badge variant={GRADE_STYLES[grade]} size="md">{label}</Badge>
   );
 }
 
 function RankCell({ rank }: { rank: number }) {
   const classes =
     rank === 1
-      ? "bg-[var(--color-warning)] text-white"
+      ? "bg-warning text-white"
       : rank === 2
-        ? "bg-gray-400 text-white"
+        ? "bg-secondary text-white"
         : rank === 3
-          ? "bg-amber-700 text-white"
-          : "bg-[var(--color-border)] text-[var(--color-text-secondary)]";
+          ? "bg-warning/80 text-white"
+          : "bg-border text-muted-foreground";
   return (
     <div className={cn("flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold", classes)}>
       {rank}
@@ -121,7 +104,6 @@ export default function RankingPage() {
     };
   }, [offset, sortBy, order, currentLang]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => load(), [load]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
@@ -145,33 +127,35 @@ export default function RankingPage() {
   }
 
   const headerCellClass =
-    "cursor-pointer select-none whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]";
+    "cursor-pointer select-none whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground";
 
   return (
-    <DashboardShell title={t("app.ranking.title", currentLang)}>
+    <NewDashboardShell title={t("app.ranking.title", currentLang)}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{t("app.ranking.title", currentLang)}</h1>
-          <p className="text-[var(--color-text-secondary)]">{t("app.ranking.subtitle", currentLang)}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("app.ranking.title", currentLang)}</h1>
+          <p className="text-muted-foreground">{t("app.ranking.subtitle", currentLang)}</p>
         </div>
 
         {loading ? (
-          <PageLoading />
+          <div className="flex justify-center py-12">
+            <Spinner size="lg" />
+          </div>
         ) : error ? (
           <ErrorMessage
             message={t("app.ranking.error_title", currentLang)}
             actions={[{ label: t("app.ranking.retry", currentLang), onAction: () => load() }]}
           />
         ) : (
-          <TarotCard>
+          <Card>
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-[var(--color-text-secondary)]">
+              <p className="text-sm text-muted-foreground">
                 {t("app.ranking.showing", currentLang)
                   .replace("{from}", String(from))
                   .replace("{to}", String(to))
                   .replace("{total}", String(total))}
               </p>
-              <p className="text-sm text-[var(--color-text-secondary)]">
+              <p className="text-sm text-muted-foreground">
                 {t("app.ranking.page", currentLang)
                   .replace("{page}", String(currentPage))
                   .replace("{pages}", String(totalPages))}
@@ -179,60 +163,47 @@ export default function RankingPage() {
             </div>
 
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-16">
-                <h3 className="mt-2 text-lg font-medium text-[var(--color-text-primary)]">{t("app.ranking.no_results", currentLang)}</h3>
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/30 py-16">
+                <h3 className="mt-2 text-lg font-medium text-foreground">{t("app.ranking.no_results", currentLang)}</h3>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--color-border)]">
-                      <th
-                        className={cn(headerCellClass, "w-12 text-center")}
-                        onClick={() => toggleSort("overall_score")}
-                      >
+                    <tr className="border-b border-border">
+                      <th className={cn(headerCellClass, "w-12 text-center")} onClick={() => toggleSort("overall_score")}>
                         {t("app.ranking.rank", currentLang)}
                       </th>
                       <th className={cn(headerCellClass, "min-w-[80px]")}>{t("app.ranking.symbol", currentLang)}</th>
                       <th className={cn(headerCellClass, "min-w-[160px]")}>{t("app.ranking.name", currentLang)}</th>
-                      <th
-                        className={headerCellClass}
-                        onClick={() => toggleSort("overall_score")}
-                      >
+                      <th className={headerCellClass} onClick={() => toggleSort("overall_score")}>
                         {t("app.ranking.overall_score", currentLang)}
                         {sortIndicator("overall_score")}
                       </th>
                       <th className={cn(headerCellClass, "min-w-[110px]")}>{t("app.ranking.grade", currentLang)}</th>
-                      {DIMENSIONS.map((dim) => (
-                        <th
-                          key={dim.key}
-                          className={headerCellClass}
-                          onClick={() => toggleSort(dim.key)}
-                        >
-                          {t(dim.labelKey, currentLang)}
-                          {sortIndicator(dim.key)}
+                      {["fundamental", "technical", "sentiment", "risk", "macro", "ai"].map((dim) => (
+                        <th key={dim} className={headerCellClass} onClick={() => toggleSort(dim as RankingSortField)}>
+                          {t(`app.ranking.${dim}`, currentLang)}
+                          {sortIndicator(dim as RankingSortField)}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border">
                     {items.map((row, idx) => (
-                      <tr
-                        key={row.symbol}
-                        className="border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-surface)]/50"
-                      >
+                      <tr key={row.symbol} className="transition-colors hover:bg-neutral/50">
                         <td className="px-3 py-3 text-center">
                           <RankCell rank={row.rank || offset + idx + 1} />
                         </td>
                         <td className="px-3 py-3">
                           <Link
                             href={`/stocks/${row.symbol}`}
-                            className="font-semibold text-[var(--color-primary)] hover:underline"
+                            className="font-semibold text-primary hover:underline"
                           >
                             {row.symbol}
                           </Link>
                         </td>
-                        <td className="max-w-[220px] truncate px-3 py-3 text-[var(--color-text-secondary)]" title={row.name}>
+                        <td className="max-w-[220px] truncate px-3 py-3 text-muted-foreground" title={row.name}>
                           {row.name}
                         </td>
                         <td className="px-3 py-3">
@@ -241,9 +212,9 @@ export default function RankingPage() {
                         <td className="px-3 py-3">
                           <GradeBadge grade={row.grade} />
                         </td>
-                        {DIMENSIONS.map((dim) => (
-                          <td key={dim.key} className="px-3 py-3">
-                            <ScoreBar score={row[dim.key]} />
+                        {(["fundamental", "technical", "sentiment", "risk", "macro", "ai"] as RankingSortField[]).map((dim) => (
+                          <td key={dim} className="px-3 py-3">
+                            <ScoreBar score={row[dim] as number} />
                           </td>
                         ))}
                       </tr>
@@ -254,26 +225,26 @@ export default function RankingPage() {
             )}
 
             <div className="mt-4 flex items-center justify-between">
-              <PrimaryButton
+              <Button
                 size="sm"
                 variant="outline"
                 disabled={currentPage <= 1}
                 onClick={() => setOffset((prev) => Math.max(0, prev - PAGE_SIZE))}
               >
                 {t("app.ranking.previous", currentLang)}
-              </PrimaryButton>
-              <PrimaryButton
+              </Button>
+              <Button
                 size="sm"
                 variant="outline"
                 disabled={currentPage >= totalPages}
                 onClick={() => setOffset((prev) => Math.min((totalPages - 1) * PAGE_SIZE, prev + PAGE_SIZE))}
               >
                 {t("app.ranking.next", currentLang)}
-              </PrimaryButton>
+              </Button>
             </div>
-          </TarotCard>
+          </Card>
         )}
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }

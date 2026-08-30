@@ -4,8 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { fetchDashboardData } from "@/lib/api/dashboard";
+import type { AssetRow, MarketStat, SignalRow, NewsItem } from "@/lib/dashboard-data";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
+import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
+import { useUXStore } from "@/store/useUXStore";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import type { BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 
-// Types
 interface MarketIndex {
   symbol: string;
   name: string;
@@ -15,50 +21,6 @@ interface MarketIndex {
   isOpen: boolean;
 }
 
-interface TopStock {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: string;
-  marketCap: string;
-  peRatio: number;
-  sector: string;
-  score?: number;
-}
-
-interface MarketMover {
-  symbol: string;
-  name: string;
-  changePercent: number;
-  type: "gainer" | "loser";
-}
-
-// Mock Data (will be replaced with API calls)
-const mockIndices: MarketIndex[] = [
-  { symbol: "IXIC", name: "NASDAQ Composite", price: 17713.52, change: 125.38, changePercent: 0.71, isOpen: true },
-  { symbol: "NDX", name: "NASDAQ-100", price: 20412.18, change: 142.65, changePercent: 0.70, isOpen: true },
-  { symbol: "SPX", name: "S&P 500", price: 5980.36, change: 28.44, changePercent: 0.48, isOpen: true },
-];
-
-const mockTopStocks: TopStock[] = [
-  { symbol: "NVDA", name: "NVIDIA Corporation", price: 138.25, change: 4.87, changePercent: 3.65, volume: "312.5M", marketCap: "3.39T", peRatio: 62.8, sector: "Technology", score: 96 },
-  { symbol: "MSFT", name: "Microsoft Corporation", price: 432.05, change: 5.12, changePercent: 1.20, volume: "21.8M", marketCap: "3.21T", peRatio: 35.1, sector: "Technology", score: 94 },
-  { symbol: "AAPL", name: "Apple Inc.", price: 233.67, change: 3.45, changePercent: 1.50, volume: "52.3M", marketCap: "3.56T", peRatio: 32.4, sector: "Technology", score: 92 },
-  { symbol: "GOOGL", name: "Alphabet Inc.", price: 178.35, change: 1.25, changePercent: 0.71, volume: "19.2M", marketCap: "2.21T", peRatio: 25.6, sector: "Communication Services", score: 90 },
-  { symbol: "AMZN", name: "Amazon.com Inc.", price: 197.83, change: 2.14, changePercent: 1.09, volume: "38.9M", marketCap: "2.05T", peRatio: 58.3, sector: "Consumer Cyclical", score: 88 },
-];
-
-const mockMarketMovers: MarketMover[] = [
-  { symbol: "NVDA", name: "NVIDIA Corporation", changePercent: 3.65, type: "gainer" },
-  { symbol: "AMD", name: "Advanced Micro Devices", changePercent: 2.45, type: "gainer" },
-  { symbol: "META", name: "Meta Platforms Inc.", changePercent: 2.07, type: "gainer" },
-  { symbol: "TSLA", name: "Tesla Inc.", changePercent: -2.07, type: "loser" },
-  { symbol: "INTC", name: "Intel Corporation", changePercent: -1.85, type: "loser" },
-];
-
-// Components
 function StatCard({ title, value, subtitle, trend, trendUp }: { title: string; value: string; subtitle?: string; trend?: string; trendUp?: boolean }) {
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
@@ -76,7 +38,6 @@ function StatCard({ title, value, subtitle, trend, trendUp }: { title: string; v
 
 function MarketIndexCard({ index }: { index: MarketIndex }) {
   const isPositive = index.change >= 0;
-  
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
       <div className="flex items-start justify-between">
@@ -98,9 +59,8 @@ function MarketIndexCard({ index }: { index: MarketIndex }) {
   );
 }
 
-function StockRow({ stock, index }: { stock: TopStock; index: number }) {
-  const isPositive = stock.change >= 0;
-  
+function StockRow({ stock, index }: { stock: AssetRow; index: number }) {
+  const isPositive = stock.changePct >= 0;
   return (
     <Link
       href={`/stocks/${stock.symbol}`}
@@ -115,33 +75,19 @@ function StockRow({ stock, index }: { stock: TopStock; index: number }) {
       )}>
         {index + 1}
       </div>
-      
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[var(--color-primary)]/10 text-sm font-bold text-[var(--color-primary)]">
         {stock.symbol.slice(0, 2)}
       </div>
-      
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-[var(--color-text-primary)]">{stock.symbol}</span>
           <span className="truncate text-xs text-[var(--color-text-secondary)]">{stock.name}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-          <span>{stock.sector}</span>
-          <span>|</span>
-          <span>P/E: {stock.peRatio}</span>
-        </div>
       </div>
-      
-      {stock.score && (
-        <div className="hidden sm:flex shrink-0 items-center gap-1 rounded bg-[var(--color-primary)]/10 px-2 py-1">
-          <span className="text-xs font-semibold text-[var(--color-primary)]">{stock.score}</span>
-        </div>
-      )}
-      
       <div className="shrink-0 text-right">
         <p className="font-semibold text-[var(--color-text-primary)]">${stock.price.toFixed(2)}</p>
         <p className={cn("text-xs", isPositive ? "text-[var(--color-success)]" : "text-[var(--color-error)]")}>
-          {isPositive ? "+" : ""}{stock.changePercent.toFixed(2)}%
+          {isPositive ? "+" : ""}{stock.changePct.toFixed(2)}%
         </p>
       </div>
     </Link>
@@ -149,49 +95,121 @@ function StockRow({ stock, index }: { stock: TopStock; index: number }) {
 }
 
 export default function DashboardPage() {
-  const [indices, setIndices] = useState<MarketIndex[]>(mockIndices);
-  const [topStocks, setTopStocks] = useState<TopStock[]>(mockTopStocks);
-  const [marketMovers, setMarketMovers] = useState<MarketMover[]>(mockMarketMovers);
+  const [indices, setIndices] = useState<MarketIndex[]>([]);
+  const [topStocks, setTopStocks] = useState<AssetRow[]>([]);
+  const [marketStats, setMarketStats] = useState<MarketStat[]>([]);
+  const [signals, setSignals] = useState<SignalRow[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const addToast = useUXStore((state) => state.addToast);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    let active = true;
+
+    async function loadDashboard() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchDashboardData();
+
+        if (!active) return;
+
+        setMarketStats(data.marketStats);
+        setTopStocks(data.topMovers.slice(0, 5));
+        setSignals(data.signals);
+        setNews(data.news);
+
+        try {
+          const indicesRes = await apiClient.get<Record<string, unknown>>("/market/market-overview?market=NASDAQ");
+          if ((indicesRes.data as Record<string, unknown>)?.status === "success") {
+            setIndices([
+              { symbol: "IXIC", name: "NASDAQ Composite", price: 0, change: 0, changePercent: ((indicesRes.data as Record<string, unknown>).average_change_pct as number) || 0, isOpen: true },
+            ]);
+          }
+        } catch {
+          // Indices fetch failed, continue without them
+        }
+      } catch (err) {
+        if (active) {
+          const message = err instanceof Error ? err.message : "Failed to load dashboard data";
+          setError(message);
+          addToast({ type: "error", message, action: { label: "Retry", onClick: () => { setError(null); loadDashboard(); } } });
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadDashboard();
+    return () => { active = false; };
+  }, [addToast]);
+
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: "Dashboard" },
+  ];
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-[var(--color-text-secondary)]">Loading dashboard...</p>
-      </div>
+      <NewDashboardShell title="Dashboard" breadcrumbs={breadcrumbs}>
+        <StockDetailSkeleton />
+      </NewDashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <NewDashboardShell title="Dashboard" breadcrumbs={breadcrumbs}>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <ErrorMessage
+            message={error}
+            actions={[{ label: "Retry", onAction: () => { setError(null); window.location.reload(); } }]}
+            moreHelpSteps={["Check your internet connection", "Verify the API service is running"]}
+            helpTitle="Troubleshooting steps"
+          />
+        </div>
+      </NewDashboardShell>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Dashboard</h1>
-        <p className="mt-1 text-[var(--color-text-secondary)]">Overview of NASDAQ market performance</p>
-      </div>
-
-      {/* Market Indices */}
-        <div className="mb-8 grid gap-6 md:grid-cols-3">
-          {indices.map((index) => (
-            <MarketIndexCard key={index.symbol} index={index} />
-          ))}
+    <NewDashboardShell title="Dashboard" breadcrumbs={breadcrumbs}>
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Dashboard</h1>
+          <p className="mt-1 text-[var(--color-text-secondary)]">Overview of NASDAQ market performance</p>
         </div>
 
-        {/* Stats Grid */}
+        {indices.length > 0 && (
+          <div className="mb-8 grid gap-6 md:grid-cols-3">
+            {indices.map((index) => (
+              <MarketIndexCard key={index.symbol} index={index} />
+            ))}
+          </div>
+        )}
+
         <div className="mb-8 grid gap-6 md:grid-cols-4">
-          <StatCard title="Total Volume" value="2.4B" subtitle="Daily trading volume" trend="12%" trendUp={true} />
-          <StatCard title="Market Cap" value="$15.2T" subtitle="Total NASDAQ market cap" trend="8%" trendUp={true} />
-          <StatCard title="Active Stocks" value="3,745" subtitle="Stocks actively trading" trend="0.5%" trendUp={true} />
-          <StatCard title="Avg Score" value="74.2" subtitle="Average AI score" trend="2%" trendUp={true} />
+          {marketStats.length > 0 ? (
+            marketStats.map((stat, i) => (
+              <StatCard
+                key={i}
+                title={stat.label}
+                value={stat.value}
+                trend={stat.changePct !== undefined ? `${stat.changePct >= 0 ? "+" : ""}${stat.changePct.toFixed(2)}%` : undefined}
+                trendUp={stat.changePct !== undefined ? stat.changePct >= 0 : undefined}
+              />
+            ))
+          ) : (
+            <>
+              <StatCard title="Nasdaq Composite" value="—" />
+              <StatCard title="Active Symbols" value="—" />
+              <StatCard title="Top Gainer" value="—" />
+              <StatCard title="Top Loser" value="—" />
+            </>
+          )}
         </div>
 
-        {/* Top Stocks */}
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Top NASDAQ Stocks</h2>
@@ -200,11 +218,64 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {topStocks.slice(0, 5).map((stock, index) => (
-              <StockRow key={stock.symbol} stock={stock} index={index} />
-            ))}
+            {topStocks.length > 0 ? (
+              topStocks.map((stock, index) => (
+                <StockRow key={stock.symbol} stock={stock} index={index} />
+              ))
+            ) : (
+              <p className="text-center text-[var(--color-text-secondary)] py-8">No stock data available</p>
+            )}
           </div>
         </div>
-    </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Trading Signals</h2>
+            {signals.length > 0 ? (
+              <div className="space-y-3">
+                {signals.slice(0, 5).map((signal, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-background)]">
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        "px-2 py-1 rounded text-xs font-bold",
+                        signal.type === "BUY" || signal.type === "STRONG_BUY" ? "bg-[var(--color-success)]/20 text-[var(--color-success)]" :
+                        signal.type === "SELL" || signal.type === "STRONG_SELL" ? "bg-[var(--color-error)]/20 text-[var(--color-error)]" :
+                        "bg-[var(--color-warning)]/20 text-[var(--color-warning)]"
+                      )}>
+                        {signal.type}
+                      </span>
+                      <span className="font-medium text-[var(--color-text-primary)]">{signal.symbol}</span>
+                    </div>
+                    <span className="text-sm text-[var(--color-text-secondary)]">{signal.confidence}%</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-[var(--color-text-secondary)] py-8">No active signals</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Market News</h2>
+            {news.length > 0 ? (
+              <div className="space-y-3">
+                {news.slice(0, 5).map((item, i) => (
+                  <div key={i} className="p-3 rounded-lg bg-[var(--color-background)]">
+                    <p className="font-medium text-[var(--color-text-primary)] text-sm">{item.title}</p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-secondary)]">
+                      <span>{item.source}</span>
+                      <span>•</span>
+                      <span>{item.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-[var(--color-text-secondary)] py-8">No news available</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </NewDashboardShell>
   );
 }

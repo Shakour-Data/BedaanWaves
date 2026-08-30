@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { NewSidebar } from "./NewSidebar";
 import { NewTopbar } from "./NewTopbar";
+import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
+import { Breadcrumbs, type BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 
 interface NewDashboardShellProps {
   title: string;
   children: React.ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
 }
 
-export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
+export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboardShellProps) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.loading);
   const router = useRouter();
@@ -25,10 +28,10 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[#00d4ff]" />
-          <p className="text-[var(--color-text-secondary)]">Loading...</p>
+          <Spinner size="lg" />
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -36,26 +39,27 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
-        <p className="text-[var(--color-text-secondary)]">Redirecting to login...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--color-background)]">
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-background">
       <NewSidebar />
 
-      {/* Main Content */}
       <div className="flex flex-1 flex-col lg:ml-64">
         <NewTopbar title={title} />
-        
+
         <main className={cn(
           "flex-1 p-4 lg:p-6",
           "min-h-[calc(100vh-4rem)]"
         )}>
           <div className="container-grid">
+            {breadcrumbs && breadcrumbs.length > 0 && (
+              <Breadcrumbs items={breadcrumbs} />
+            )}
             {children}
           </div>
         </main>

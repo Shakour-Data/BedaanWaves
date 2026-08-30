@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { NewsList } from "@/components/dashboard/NewsList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
@@ -68,16 +68,16 @@ export default function NewsPage() {
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.news.title", "en")}>
+      <NewDashboardShell title={t("app.news.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
           {t("app.news.loading", "en")}
         </div>
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.news.title", "en")}>
+    <NewDashboardShell title={t("app.news.title", "en")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
@@ -87,7 +87,7 @@ export default function NewsPage() {
                 onClick={() => setSelectedSource(null)}
                 className={cn(
                   "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
-                  selectedSource === null ? "bg-red-600 text-[var(--color-text-primary)] shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                   selectedSource === null ? "bg-error text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
                 )}
               >
                 {false ? "همه اخبار" : "All News"}
@@ -98,7 +98,7 @@ export default function NewsPage() {
                   onClick={() => setSelectedSource(source)}
                   className={cn(
                     "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
-                    selectedSource === source ? "bg-red-600 text-[var(--color-text-primary)] shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                     selectedSource === source ? "bg-error text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
                   )}
                 >
                   {source}
@@ -138,7 +138,7 @@ export default function NewsPage() {
           </TarotCard>
         </div>
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }
 

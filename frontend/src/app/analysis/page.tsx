@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { SignalList } from "@/components/dashboard/SignalList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
@@ -97,16 +97,16 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.analysis.title", "en")}>
+      <NewDashboardShell title={t("app.analysis.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
           {t("app.analysis.loading", "en")}
         </div>
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.analysis.title", "en")}>
+    <NewDashboardShell title={t("app.analysis.title", "en")}>
       <div className="flex flex-col gap-6">
         {/* Analysis Tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -259,6 +259,6 @@ export default function AnalysisPage() {
           </TarotCard>
         )}
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }

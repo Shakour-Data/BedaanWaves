@@ -68,6 +68,9 @@ pginst_extracted/
 frontend/cleanup-lang.js
 frontend/refactor.js
 
+# Temporary verification scripts
+verify_no_mock_data.py
+
 # Frontend test results (Playwright)
 frontend/test-results/
 
@@ -96,7 +99,6 @@ backend/debug_token.txt
 backend/logs/
 backend/*.log
 
-# Temporary utility scripts
 remove_emojis.py
 backend/scripts/seed_real_data.py
 backend/scripts/seed.py
@@ -122,3 +124,9 @@ scripts/
 
 # SEC EDGAR cache
 backend/sec_cik_cache.json
+
+# Data files
+backend/nasdaq_symbols.csv
+
+# Backup files
+backend/*.backup

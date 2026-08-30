@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -109,15 +109,15 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.portfolio.title", "en")}>
+      <NewDashboardShell title={t("app.portfolio.title", "en")}>
         <PageLoading />
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
   if (error) {
     return (
-      <DashboardShell title={t("app.portfolio.title", "en")}>
+      <NewDashboardShell title={t("app.portfolio.title", "en")}>
         <TarotCard icon="⚠️" title={t("app.portfolio.error_loading", "en")} className="max-w-md mx-auto border-error/20 bg-error/5">
           <div className="py-4 text-center">
             <p className="text-sm text-error font-medium mb-4">{error}</p>
@@ -126,12 +126,12 @@ export default function PortfolioPage() {
             </PrimaryButton>
           </div>
         </TarotCard>
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.portfolio.title", "en")}>
+    <NewDashboardShell title={t("app.portfolio.title", "en")}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Portfolio Summary */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -183,6 +183,6 @@ export default function PortfolioPage() {
           </TarotCard>
         </div>
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }

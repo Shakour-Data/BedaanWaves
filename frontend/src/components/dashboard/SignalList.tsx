@@ -1,12 +1,14 @@
 import { cn } from "@/lib/cn";
 import type { SignalRow } from "@/lib/dashboard-data";
+import { Badge } from "@/components/ui/Badge";
 
-const TYPE_STYLE: Record<SignalRow["type"], string> = {
-  BUY: "bg-success/15 text-success",
-  SELL: "bg-primary/15 text-primary",
-  HOLD: "bg-accent/30 text-accent-foreground",
-  STRONG_BUY: "bg-success/25 text-success font-bold",
-  STRONG_SELL: "bg-primary/25 text-primary font-bold" };
+const TYPE_STYLE: Record<SignalRow["type"], "default" | "success" | "error" | "warning" | "info" | "neutral"> = {
+  BUY: "success",
+  SELL: "error",
+  HOLD: "warning",
+  STRONG_BUY: "success",
+  STRONG_SELL: "error",
+};
 
 const TYPE_LABEL: Record<SignalRow["type"], string> = {
   BUY: "خرید",
@@ -21,9 +23,9 @@ export function SignalList({ signals }: { signals: SignalRow[] }) {
       {signals.map((s) => (
         <li key={`${s.symbol}-${s.model}`} className="flex items-center gap-3">
           <span className="w-16 font-semibold text-sm text-primary">{s.symbol}</span>
-          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", TYPE_STYLE[s.type])}>
+          <Badge variant={TYPE_STYLE[s.type]} size="sm">
             {TYPE_LABEL[s.type]}
-          </span>
+          </Badge>
           <span className="text-sm text-muted-foreground">اطمینان {Math.max(0, Math.min(100, s.confidence)).toFixed(1)}٪</span>
           <span className="ms-auto truncate text-xs text-muted-foreground">{s.model}</span>
         </li>

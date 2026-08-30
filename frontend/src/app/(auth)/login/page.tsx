@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TarotCard } from "@/components/ui/TarotCard";
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useUXStore } from "@/store/useUXStore";
 import { t } from "@/lib/i18n";
-
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -16,27 +15,57 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [usernameValid, setUsernameValid] = useState<"idle" | "valid" | "invalid">("idle");
+  const [passwordValid, setPasswordValid] = useState<"idle" | "valid" | "invalid">("idle");
   const loginStore = useAuthStore((s) => s.login);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const router = useRouter();
+  const addToast = useUXStore((state) => state.addToast);
 
   useEffect(() => {
     if (isAuthenticated) {
       router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
-  
 
+  const validateUsername = useCallback((value: string) => {
+    if (value.length === 0) return "idle";
+    if (value.length < 3) return "invalid";
+    return "valid";
+  }, []);
+
+  const validatePassword = useCallback((value: string) => {
+    if (value.length === 0) return "idle";
+    if (value.length < 6) return "invalid";
+    return "valid";
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const uStatus = validateUsername(username);
+    const pStatus = validatePassword(password);
+    setUsernameValid(uStatus);
+    setPasswordValid(pStatus);
+
+    if (uStatus === "invalid") {
+      setError("Username must be at least 3 characters.");
+      return;
+    }
+    if (pStatus === "invalid") {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
       await loginStore(username, password);
-    } catch (err: any) {
-      const message = err.response?.data?.detail || t("auth.error_authentication");
+      addToast({ type: "success", message: "Welcome back! Redirecting to dashboard..." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("auth.error_authentication");
       setError(message);
+      addToast({ type: "error", message });
     } finally {
       setLoading(false);
     }
@@ -64,9 +93,14 @@ export default function LoginPage() {
               label={t("login.username")}
               required
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setUsernameValid(validateUsername(e.target.value));
+              }}
               placeholder={t("login.username_placeholder") || t("login.username")}
               disabled={loading}
+              validationState={usernameValid}
+              validationMessage={usernameValid === "invalid" ? "Username must be at least 3 characters." : undefined}
             />
 
             <InputField
@@ -75,9 +109,14 @@ export default function LoginPage() {
               label="Password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordValid(validatePassword(e.target.value));
+              }}
               placeholder="••••••••"
               disabled={loading}
+              validationState={passwordValid}
+              validationMessage={passwordValid === "invalid" ? "Password must be at least 6 characters." : undefined}
             />
             
             <button
@@ -99,20 +138,17 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 px-1 hidden">
-          </div>
-
           <PrimaryButton
             type="submit"
             disabled={loading}
             className="mt-2 w-full justify-center h-11"
             size="lg"
           >
-            {loading ? "Processing..." : "Sign in"}
+            {loading ? "Signing in..." : "Sign in"}
           </PrimaryButton>
 
           <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-[var(--color-primary)] hover:underline font-bold">
               Sign up
             </Link>

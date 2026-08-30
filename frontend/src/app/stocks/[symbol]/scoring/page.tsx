@@ -6,10 +6,11 @@ import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PageLoading } from "@/components/ui/PageLoading";
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 import { CoefficientChart } from "@/components/charts/CoefficientChart";
+import type { BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 import {
   fetchHierarchyScores,
   fetchScoreHistory,
@@ -141,27 +142,33 @@ export default function StockScoringPage() {
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.scoring.title", "en")}>
+      <NewDashboardShell title={t("app.scoring.title", "en")} breadcrumbs={[{ label: "Stocks", href: "/stocks" }, { label: symbol.toUpperCase() }, { label: t("app.scoring.title", "en") }]}>
         <PageLoading />
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
   if (error || !hierarchy) {
     return (
-      <DashboardShell title={t("app.scoring.title", "en")}>
+      <NewDashboardShell title={t("app.scoring.title", "en")} breadcrumbs={[{ label: "Stocks", href: "/stocks" }, { label: symbol.toUpperCase() }, { label: t("app.scoring.title", "en") }]}>
         <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found", "en")}>
           <p className="text-sm text-muted-foreground">{error || t("app.analysis.scoring_not_found", "en")}</p>
           <Link href={`/stocks/${symbol}`} className="mt-3 inline-block text-sm text-secondary hover:underline">
             ← {t("app.stocks.detail.back_to_list", "en")}
           </Link>
         </TarotCard>
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
+  const scoringBreadcrumbs: BreadcrumbItem[] = [
+    { label: "Stocks", href: "/stocks" },
+    { label: symbol.toUpperCase(), href: `/stocks/${symbol}` },
+    { label: t("app.scoring.title", "en") },
+  ];
+
   return (
-    <DashboardShell title={t("app.scoring.title", "en")}>
+    <NewDashboardShell title={t("app.scoring.title", "en")} breadcrumbs={scoringBreadcrumbs}>
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href={`/stocks/${symbol}`} className="hover:text-foreground">
@@ -176,7 +183,7 @@ export default function StockScoringPage() {
             <div
               className={cn(
                 "text-4xl font-black rounded-full h-24 w-24 flex items-center justify-center border-8 shadow-inner",
-                hierarchy.overallScore >= 70 ? "text-green-600 border-green-600/20" : hierarchy.overallScore >= 40 ? "text-yellow-500 border-yellow-500/20" : "text-red-600 border-red-600/20"
+                 hierarchy.overallScore >= 70 ? "text-success border-success/20" : hierarchy.overallScore >= 40 ? "text-warning border-warning/20" : "text-error border-error/20"
               )}
             >
               {hierarchy.overallScore}
@@ -196,9 +203,9 @@ export default function StockScoringPage() {
             onClick={() => handleBreadcrumb(1)}
             className={cn(
               "rounded-full px-3 py-1 transition",
-              drill.level === 1
-                ? "bg-red-600/10 font-semibold text-red-600"
-                : "text-muted-foreground hover:bg-black/5"
+               drill.level === 1
+                 ? "bg-primary/10 font-semibold text-primary"
+                 : "text-muted-foreground hover:bg-neutral"
             )}
           >
             {LEVEL_LABELS[1]}
@@ -231,9 +238,9 @@ export default function StockScoringPage() {
                   onClick={() => setTrendFilter(item.key)}
                   className={cn(
                     "rounded-full px-3 py-1 text-xs transition",
-                    trendFilter === item.key
-                      ? "bg-red-600/10 font-semibold text-red-600"
-                      : "text-muted-foreground hover:bg-black/5"
+                     trendFilter === item.key
+                       ? "bg-primary/10 font-semibold text-primary"
+                       : "text-muted-foreground hover:bg-neutral"
                   )}
                 >
                   {item.label}
@@ -246,7 +253,7 @@ export default function StockScoringPage() {
                   {
                     key: trendFilter,
                     label: itemsForLevel.find((i) => i.key === trendFilter)?.label || trendFilter,
-                    color: "#2563EB",
+                     color: "var(--color-primary)",
                     data: history.map((pt) => ({
                       time: pt.date,
                       value: num(pt[trendFilter] !== undefined ? pt[trendFilter] : pt.overall),
@@ -311,6 +318,6 @@ export default function StockScoringPage() {
           ))}
         </div>
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }

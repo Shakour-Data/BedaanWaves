@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { SignalList } from "@/components/dashboard/SignalList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
@@ -126,16 +126,16 @@ export default function AlertsPage() {
 
   if (loading) {
     return (
-      <DashboardShell title={t("app.alerts.title", "en")}>
+      <NewDashboardShell title={t("app.alerts.title", "en")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
           {t("app.alerts.loading", "en")}
         </div>
-      </DashboardShell>
+      </NewDashboardShell>
     );
   }
 
   return (
-    <DashboardShell title={t("app.alerts.title", "en")}>
+    <NewDashboardShell title={t("app.alerts.title", "en")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
@@ -217,6 +217,6 @@ export default function AlertsPage() {
           </TarotCard>
         </div>
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }

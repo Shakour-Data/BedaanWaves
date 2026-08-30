@@ -12,8 +12,8 @@ vi.mock('@/store/useAuthStore', () => ({
   useAuthStore: vi.fn(),
 }));
 
-vi.mock('@/components/layout/DashboardShell', () => ({
-  DashboardShell: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-shell">{children}</div>,
+vi.mock('@/components/layout/NewDashboardShell', () => ({
+  NewDashboardShell: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-shell">{children}</div>,
 }));
 
 vi.mock('@/components/ui/TarotCard', () => ({

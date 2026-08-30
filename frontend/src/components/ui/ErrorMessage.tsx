@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 export interface ActionOption {
   label: string;
@@ -27,7 +29,7 @@ export function ErrorMessage({
   return (
     <div
       className={cn(
-        "rounded-xl border border-[#EF4444]/20 bg-[#EF4444]/5 px-4 py-3",
+        "rounded-xl border border-error/20 bg-error/5 px-4 py-3",
         "flex items-start gap-3",
         className,
       )}
@@ -35,7 +37,7 @@ export function ErrorMessage({
       aria-live="polite"
     >
       <svg
-        className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#EF4444]"
+        className="mt-0.5 h-5 w-5 flex-shrink-0 text-error"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -51,26 +53,20 @@ export function ErrorMessage({
       </svg>
 
       <div className="flex-1">
-        <p className="text-sm text-[#EF4444]">{message}</p>
+        <p className="text-sm text-error">{message}</p>
 
         {hasActions && (
           <div className="mt-2 flex flex-wrap gap-2">
             {actions.map((action, idx) => (
-              <button
+              <Button
                 key={idx}
-                type="button"
+                size="sm"
+                variant="outline"
                 onClick={action.onAction}
-                className={cn(
-                  "inline-flex items-center justify-center rounded-lg",
-                  "border border-[#005A9C] px-4 py-1.5 text-sm font-medium",
-                  "text-[#005A9C] transition-colors duration-150",
-                  "hover:bg-[#005A9C]/5 focus:outline-none focus:ring-2",
-                  "focus:ring-[#005A9C]/30",
-                )}
                 aria-label={action.label}
               >
                 {action.label}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -93,42 +89,27 @@ function HelpDialog({ steps, title }: { steps: string[]; title?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 text-xs font-medium text-[#005A9C] hover:underline focus:outline-none focus:ring-1 focus:ring-[#005A9C]/30"
+        className="mt-2 text-xs font-medium text-primary hover:underline focus:outline-none focus:ring-1 focus:ring-primary/30"
         aria-label={title ?? "Show step-by-step help"}
       >
         More Help
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="morehelp-title"
-        >
-          <div className="w-full max-w-sm rounded-xl bg-[#FFFFFF] p-5 shadow-xl">
-            <h3 id="morehelp-title" className="text-sm font-semibold text-[#1E293B]">
-              {title ?? "Step-by-step help"}
-            </h3>
-            <ul className="mt-3 space-y-2 text-sm text-[#1E293B]">
-              {steps.map((step, idx) => (
-                <li key={idx} className="flex gap-2">
-                  <span className="flex-shrink-0 font-bold text-[#005A9C]">{idx + 1}.</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="mt-4 w-full rounded-lg bg-[#005A9C] py-2 text-sm font-medium text-[#FFFFFF] hover:bg-[#005A9C]/90 focus:outline-none focus:ring-2 focus:ring-[#005A9C]/30"
-              aria-label="Close help"
-            >
-              Got it
-            </button>
-          </div>
+      <Modal isOpen={open} onClose={() => setOpen(false)} title={title ?? "Step-by-step help"} size="sm">
+        <ul className="mt-3 space-y-2 text-sm text-foreground">
+          {steps.map((step, idx) => (
+            <li key={idx} className="flex gap-2">
+              <span className="flex-shrink-0 font-bold text-primary">{idx + 1}.</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex justify-end">
+          <Button size="sm" onClick={() => setOpen(false)}>
+            Got it
+          </Button>
         </div>
-      )}
+      </Modal>
     </>
   );
 }
