@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getApiErrorMessage } from "@/lib/api";
 import {
   fetchNasdaqRankings,
   type Grade,
@@ -93,7 +94,7 @@ export default function RankingPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
-        const message = err instanceof Error ? err.message : String(err);
+        const message = getApiErrorMessage(err);
         setError(message || t("app.ranking.error_desc", currentLang));
       })
       .finally(() => {

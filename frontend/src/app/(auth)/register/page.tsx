@@ -7,6 +7,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
 import { t } from "@/lib/i18n";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -42,7 +43,7 @@ export default function RegisterPage() {
       await registerStore(username, email, password, name);
       addToast({ type: "success", message: "Account created successfully! Welcome aboard." });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("auth.error_authentication");
+      const message = getApiErrorMessage(err);
       setError(message);
       addToast({ type: "error", message });
     } finally {

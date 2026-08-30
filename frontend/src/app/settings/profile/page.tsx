@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
 import { cn } from "@/lib/cn";
-import { apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import type { UserProfile } from "@/store/useAuthStore";
 
@@ -61,7 +61,7 @@ export default function ProfilePage() {
         throw new Error(t("app.settings.profile.error_save", "en"));
       }
     } catch (error) {
-      addToast({ type: "error", message: error instanceof Error ? error.message : "Failed to save profile" });
+      addToast({ type: "error", message: getApiErrorMessage(error) });
     } finally {
       setLoading(false);
     }

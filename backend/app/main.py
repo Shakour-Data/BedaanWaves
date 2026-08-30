@@ -52,6 +52,8 @@ from app.services.data.ingestion_service import IntelligentIngestionService
 from app.services.data.news_service import NewsService
 from app.services.core.dependency_container import DependencyContainer, set_global_container
 
+from app.services.user.auth_service import ensure_admin_user
+
 from app.api.routes import (
     auth_router,
     stocks_router,
@@ -332,20 +334,11 @@ async def lifespan(app: FastAPI):
         container.register_instance("scheduler", scheduler_svc)
         container.register_instance("metrics", container.get("metrics_service"))
 
-        # try:
-        #     await container.initialize()
-        # except Exception as e:
-        #     logger.error(f"Service initialization partially failed, continuing in degraded mode: {e}")
-            
         app.state.container = container
         _container = container
         set_global_container(container)
 
         logger.info("Registered core services in dependency container")
-
-        # Step 6: Pre-flight health checks
-        # checks = _preflight_checks()
-        # logger.info(f"Pre-flight checks: {checks}")
 
         # Register all routers
         app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
@@ -378,7 +371,10 @@ async def lifespan(app: FastAPI):
 
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}", exc_info=True)
-        raise
+        logger.warning("Continuing in degraded mode - some features may be unavailable")
+        if _container is None:
+            _container = DependencyContainer()
+            set_global_container(_container)
 
     yield
 

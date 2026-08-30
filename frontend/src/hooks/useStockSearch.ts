@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { StockSearchResult } from "./types";
-import { apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -153,7 +153,7 @@ export function useStockSearch(minQueryLength = 1) {
             query: trimmed,
             results: [],
             status: "error",
-            error: err instanceof Error ? err.message : "Search failed",
+            error: getApiErrorMessage(err),
           }));
         }
       }

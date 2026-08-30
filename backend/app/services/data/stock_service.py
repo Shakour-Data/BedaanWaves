@@ -136,6 +136,13 @@ class StockService(CachedService):
             info = t.info or {}
             if not info:
                 raise DataProviderException(f"No data returned for {ticker}", details={"provider": "yfinance"})
+            price = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
+            previous_close = info.get("regularMarketPreviousClose") or info.get("previousClose")
+            change = None
+            change_percent = None
+            if isinstance(price, (int, float)) and isinstance(previous_close, (int, float)) and previous_close:
+                change = round(price - previous_close, 4)
+                change_percent = round((change / previous_close) * 100, 4)
             return {
                 "symbol": ticker.upper(),
                 "name": info.get("shortName") or info.get("longName") or ticker,
@@ -145,7 +152,10 @@ class StockService(CachedService):
                 "currency": info.get("currency") or "USD",
                 "market_cap": info.get("marketCap"),
                 "pe_ratio": info.get("trailingPE"),
-                "price": info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose"),
+                "price": price,
+                "previous_close": previous_close,
+                "change": change,
+                "change_percent": change_percent,
                 "volume": info.get("volume") or info.get("regularMarketVolume"),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { exportData } from '@/lib/export';
 import { Asset, fetchSymbols, fetchLatestPrices, LatestPrice } from '@/lib/api/stocks';
+import { getApiErrorMessage } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ChangeBadge } from './StatCard';
@@ -30,7 +31,7 @@ export function StockDashboardWidget() {
           setPrices(priceData || {});
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'خطا در بارگذاری داده‌ها');
+        setError(getApiErrorMessage(err));
       } finally {
         setLoading(false);
       }

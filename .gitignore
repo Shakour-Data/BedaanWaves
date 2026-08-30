@@ -99,6 +99,7 @@ backend/debug_token.txt
 backend/logs/
 backend/*.log
 
+# Temporary utility scripts
 remove_emojis.py
 backend/scripts/seed_real_data.py
 backend/scripts/seed.py

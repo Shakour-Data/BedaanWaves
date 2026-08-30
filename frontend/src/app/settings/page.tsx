@@ -4,7 +4,7 @@ import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useState, useEffect } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
@@ -78,7 +78,7 @@ export default function SettingsPage() {
       if (prefsRes.data) setMarketData(prefsRes.data);
       addToast({ type: "success", message: "Settings saved successfully" });
     } catch (error) {
-      addToast({ type: "error", message: "Failed to save settings" });
+      addToast({ type: "error", message: getApiErrorMessage(error) });
     } finally {
       setLoading(false);
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { fetchDashboardData } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, SignalRow, NewsItem } from "@/lib/dashboard-data";
@@ -127,7 +127,7 @@ export default function DashboardPage() {
         // Indices fetch failed, continue without them
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load dashboard data";
+      const message = getApiErrorMessage(err);
       setError(message);
       addToast({ type: "error", message });
     } finally {

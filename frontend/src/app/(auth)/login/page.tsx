@@ -8,6 +8,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
 import { t } from "@/lib/i18n";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -63,7 +64,7 @@ export default function LoginPage() {
       await loginStore(username, password);
       addToast({ type: "success", message: "Welcome back! Redirecting to dashboard..." });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("auth.error_authentication");
+      const message = getApiErrorMessage(err);
       setError(message);
       addToast({ type: "error", message });
     } finally {

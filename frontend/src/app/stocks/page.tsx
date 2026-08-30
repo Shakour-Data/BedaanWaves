@@ -9,17 +9,40 @@ import { StockSearchBar } from "@/components/search/StockSearchBar";
 import { useRouter } from "next/navigation";
 import { useUXStore } from "@/store/useUXStore";
 
+const POPULAR_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "BRK-B"];
+
 interface Stock {
   symbol: string;
   name: string;
   price: number;
   change: number;
   changePercent: number;
-  volume: string;
+  volume: number;
   marketCap: string;
   peRatio: number;
   sector: string;
   score?: number;
+}
+
+function formatMarketCap(value: unknown): string {
+  if (typeof value !== "number" || !isFinite(value) || value <= 0) return "-";
+  const units = [
+    { threshold: 1e12, suffix: "T" },
+    { threshold: 1e9, suffix: "B" },
+    { threshold: 1e6, suffix: "M" },
+  ];
+  for (const { threshold, suffix } of units) {
+    if (value >= threshold) return `$${(value / threshold).toFixed(2)}${suffix}`;
+  }
+  return `$${value.toLocaleString()}`;
+}
+
+function formatVolume(value: number): string {
+  if (!isFinite(value) || value <= 0) return "-";
+  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
+  return value.toLocaleString();
 }
 
 function StockRow({ stock, index }: { stock: Stock; index: number }) {
@@ -107,7 +130,7 @@ function StockCard({ stock }: { stock: Stock }) {
         </div>
         <div>
           <p className="text-xs text-[var(--color-text-secondary)]">Volume</p>
-          <p className="text-sm font-medium text-[var(--color-text-primary)]">{stock.volume}</p>
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">{formatVolume(stock.volume)}</p>
         </div>
       </div>
     </Link>
@@ -127,20 +150,34 @@ export default function StocksPage() {
   useEffect(() => {
     async function loadStocks() {
       try {
-        const res = await apiClient.get("/stocks/search?q=&limit=100");
-        const data = res.data?.data ?? [];
-        setStocks(data.map((item: Record<string, unknown>) => ({
-          symbol: (item.symbol ?? item.ticker ?? "") as string,
-          name: (item.name ?? item.security_name ?? "") as string,
-          price: typeof item.price === "number" ? item.price : 0,
-          change: typeof item.change === "number" ? item.change : 0,
-          changePercent: typeof item.change_percent === "number" ? item.change_percent : 0,
-          volume: typeof item.volume === "number" ? item.volume : 0,
-          marketCap: "-",
-          peRatio: 0,
-          sector: (item.sector ?? "-") as string,
-          score: typeof item.score === "number" ? item.score : undefined,
-        })));
+        let raw: unknown[] = [];
+        if (searchQuery.trim()) {
+          const res = await apiClient.get(`/stocks/search?q=${encodeURIComponent(searchQuery)}&limit=100`);
+          raw = res.data?.data ?? [];
+        } else {
+          // Browse view: fetch a default set of popular stocks. Use the batch
+          // endpoint (POST) so an empty query never triggers a 422 from
+          // backends that require a non-empty `q`.
+          const res = await apiClient.post(`/stocks/batch`, POPULAR_TICKERS);
+          const payload = res.data?.data ?? {};
+          raw = Array.isArray(payload) ? payload : Object.values(payload);
+        }
+        setStocks(
+          (raw as Record<string, unknown>[])
+            .filter((item) => item && !("error" in item))
+            .map((item) => ({
+              symbol: (item.symbol ?? item.ticker ?? "") as string,
+              name: (item.name ?? item.security_name ?? "") as string,
+              price: typeof item.price === "number" ? item.price : 0,
+              change: typeof item.change === "number" ? item.change : 0,
+              changePercent: typeof item.change_percent === "number" ? item.change_percent : 0,
+              volume: typeof item.volume === "number" ? item.volume : 0,
+              marketCap: formatMarketCap(item.market_cap),
+              peRatio: typeof item.pe_ratio === "number" ? item.pe_ratio : 0,
+              sector: (item.sector ?? "-") as string,
+              score: typeof item.score === "number" ? item.score : undefined,
+            }))
+        );
       } catch (err) {
         console.error("Failed to load stocks:", err);
         addToast({ type: "error", message: "Failed to load stocks. Please try again." });
