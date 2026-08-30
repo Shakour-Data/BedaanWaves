@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { UXProviders } from "@/providers/UXProviders";
+import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr" data-scroll-behavior="smooth">
       <body>
-        <UXProviders>{children}</UXProviders>
+        <ReactQueryProvider>
+          <UXProviders>{children}</UXProviders>
+        </ReactQueryProvider>
       </body>
     </html>
   );

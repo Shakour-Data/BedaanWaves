@@ -3,21 +3,44 @@
 import { useState } from "react";
 import Link from "next/link";
 import { InputField } from "@/components/ui/InputField";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useUXStore } from "@/store/useUXStore";
 import { t } from "@/lib/i18n";
+import { requestPasswordReset, isValidEmail, type PasswordRecoveryApiError } from "@/lib/password-recovery-api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+  const addToast = useUXStore((state) => state.addToast);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setSent(true);
-    setLoading(false);
+    setError(null);
+
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await requestPasswordReset(email);
+      if (result.success) {
+        setSent(true);
+        addToast({ type: "success", message: result.message });
+      } else {
+        const apiError = result.error as PasswordRecoveryApiError | undefined;
+        setError(apiError?.message ?? result.message ?? "Failed to send reset link. Please try again.");
+        addToast({ type: "error", message: apiError?.message ?? result.message ?? "Failed to send reset link." });
+      }
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+      addToast({ type: "error", message: "Network error. Please try again." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,7 +50,7 @@ export default function ForgotPasswordPage() {
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Reset Password</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">Enter your email to receive a reset link</p>
         </div>
-        
+
         {sent ? (
           <div className="bg-[var(--color-success)]/10 border border-[var(--color-success)] text-[var(--color-success)] px-4 py-3 rounded-md text-center">
             <p className="font-medium">Reset link sent!</p>
@@ -38,6 +61,11 @@ export default function ForgotPasswordPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {error && (
+              <div className="rounded-xl bg-error/10 px-4 py-3 text-sm text-error border border-error/20 animate-in fade-in slide-in-from-top-2">
+                {error}
+              </div>
+            )}
             <div className="space-y-4">
               <InputField
                 id="email"
@@ -48,12 +76,14 @@ export default function ForgotPasswordPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@email.com"
                 disabled={loading}
+                validationState={email ? (isValidEmail(email) ? "valid" : "invalid") : "idle"}
+                validationMessage={email && !isValidEmail(email) ? "Please enter a valid email address." : undefined}
               />
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading} 
+            <button
+              type="submit"
+              disabled={loading}
               className="h-10 px-4 mt-2 w-full bg-[var(--color-primary)] text-white font-medium rounded-md hover:bg-[var(--color-primary-hover)] transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Processing..." : "Send Reset Link"}

@@ -35,18 +35,55 @@ def get_stock_service() -> StockService:
     return StockService()
 
 
+DEFAULT_POPULAR_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "BRK-B"]
+
+
 @router.get("/search", response_model=dict)
 async def search_stocks(
-    q: str = Query(..., min_length=1),
+    q: str = Query("", min_length=0),
     limit: int = Query(20, ge=1, le=100),
     service: StockService = Depends(get_stock_service),
     response: Response = None
 ) -> dict:
-    """Search stocks by query using live yfinance data."""
+    """Search stocks by query using live yfinance data.
+
+    An empty query returns a default set of popular tickers so the browse
+    view is populated instead of failing validation (422) on an empty string.
+
+    Every result is enriched with full quote data (price, change, volume,
+    sector, etc.) so the UI renders complete, correct information.
+    """
     if response:
         _add_version_header(response, "v1")
-    
-    results = await service.search(q)
+
+    if q.strip():
+        # yfinance suggestions only contain symbol/name; enrich with full data.
+        suggestions = await service.search(q.strip())
+        symbols = [s.get("symbol") for s in suggestions if s.get("symbol")]
+        enriched = await service.get_multiple(symbols)
+        results = []
+        for symbol in symbols:
+            data = enriched.get(symbol)
+            if isinstance(data, dict) and "error" not in data:
+                results.append(data)
+            else:
+                # Fallback to the bare suggestion if enrichment failed.
+                fallback = next((s for s in suggestions if s.get("symbol") == symbol), None)
+                if fallback:
+                    results.append({
+                        "symbol": symbol,
+                        "name": fallback.get("name", symbol),
+                        "price": 0,
+                        "change": 0,
+                        "change_percent": 0,
+                        "volume": 0,
+                        "sector": fallback.get("sector", "-"),
+                        "exchange": fallback.get("exchange", ""),
+                    })
+    else:
+        multiple = await service.get_multiple(DEFAULT_POPULAR_TICKERS)
+        results = [data for data in multiple.values() if isinstance(data, dict) and "error" not in data]
+
     return {
         "status": "success",
         "query": q,

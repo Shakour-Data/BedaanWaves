@@ -43,7 +43,7 @@ export function NewSidebar() {
             <span className="font-bold text-lg">N</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-foreground">NasdaqPulse</span>
+            <span className="text-lg font-bold text-foreground">BedaanWaves</span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Analytics</span>
           </div>
         </Link>
@@ -62,15 +62,12 @@ export function NewSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-border hover:text-foreground"
               )}
             >
-              <span className={cn("h-5 w-5 flex items-center justify-center transition-colors", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")}>
-                {item.label[0]}
-              </span>
               <span>{item.label}</span>
               {active && (
                 <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
@@ -85,19 +82,18 @@ export function NewSidebar() {
           {bottomNavItems.map((item) => {
             const active = isActive(item.href);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-border hover:text-foreground"
-                )}
-              >
-                <span className="h-4 w-4 flex items-center justify-center">{item.label[0]}</span>
-                <span>{item.label}</span>
-              </Link>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-border hover:text-foreground"
+              )}
+            >
+              <span>{item.label}</span>
+            </Link>
             );
           })}
         </div>

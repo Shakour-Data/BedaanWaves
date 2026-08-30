@@ -4,9 +4,23 @@ import { useAuthStore } from '../store/useAuthStore';
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1";
 
+export function getApiErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const axiosErr = error as AxiosError<{ detail?: unknown }>;
+    const detail = axiosErr.response?.data?.detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0] as { msg?: unknown };
+      if (typeof first?.msg === 'string') return first.msg;
+    }
+    if (typeof detail === 'string') return detail;
+    return error.message;
+  }
+  return String(error);
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json' } });
 
@@ -100,6 +114,18 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
         refreshPromise = null;
       }
+    }
+
+    if (error.response?.status === 422) {
+      const detail = (error.response.data as { detail?: unknown })?.detail;
+      let message = "Validation error";
+      if (Array.isArray(detail) && detail.length > 0) {
+        const first = detail[0] as { msg?: unknown };
+        if (typeof first?.msg === 'string' && first.msg.length > 0) message = first.msg;
+      } else if (typeof detail === 'string' && detail.length > 0) {
+        message = detail;
+      }
+      return Promise.reject(new Error(message));
     }
 
     return Promise.reject(error);

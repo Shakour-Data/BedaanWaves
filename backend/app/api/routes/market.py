@@ -267,31 +267,40 @@ async def nasdaq_dashboard(
     """
     Candle = candle_model_for_market("NASDAQ")
 
-    # Single query that retrieves assets and their latest candles in one statement
+    latest_two_cte = (
+        select(
+            Candle.asset_id,
+            Candle.close,
+            func.row_number()
+            .over(
+                partition_by=Candle.asset_id,
+                order_by=Candle.timestamp.desc(),
+            )
+            .label("rn"),
+        )
+        .where(Candle.timeframe == "1d")
+        .cte("latest_two")
+    )
+
     query = (
         select(
             Asset.id,
             Asset.symbol,
             Asset.name,
-            Candle.close.label("latest_close"),
-            func.lead(Candle.close, 1).over(
-                partition_by=Candle.asset_id,
-                order_by=Candle.timestamp.desc()
-            ).label("previous_close")
+            func.max(latest_two_cte.c.close).filter(latest_two_cte.c.rn == 1).label("latest_close"),
+            func.max(latest_two_cte.c.close).filter(latest_two_cte.c.rn == 2).label("previous_close"),
         )
-        .join(Candle, Asset.id == Candle.asset_id)
+        .join(latest_two_cte, Asset.id == latest_two_cte.c.asset_id)
         .where(
             and_(
                 Asset.market == "NASDAQ",
                 Asset.active == True,
-                Candle.timeframe == "1d"
             )
         )
         .group_by(
             Asset.id,
             Asset.symbol,
             Asset.name,
-            Candle.close
         )
         .order_by(Asset.symbol)
     )
