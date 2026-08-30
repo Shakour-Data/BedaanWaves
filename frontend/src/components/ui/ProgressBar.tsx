@@ -3,11 +3,8 @@
 import { cn } from "@/lib/cn";
 
 export interface ProgressBarProps {
-  /** Current step number (1-based). */
   currentStep: number;
-  /** Total number of steps. */
   totalSteps: number;
-  /** Optional label for screen readers describing the step purpose. */
   stepLabels?: string[];
   className?: string;
 }
@@ -25,23 +22,23 @@ export function ProgressBar({
   return (
     <div className={cn("w-full", className)} aria-label="Progress">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-[#64748B]">
+        <span className="text-xs font-medium text-muted-foreground">
           {stepLabels?.[safeCurrent - 1] ?? `Step ${safeCurrent} of ${totalSteps}`}
         </span>
-        <span className="text-xs font-medium text-[#64748B]" aria-label={`Progress: ${pct}%`}>
+        <span className="text-xs font-medium text-muted-foreground" aria-label={`Progress: ${pct}%`}>
           {pct}%
         </span>
       </div>
 
       <div
-        className="relative h-2 w-full overflow-hidden rounded-full bg-[#E2E8F0]"
+        className="relative h-2 w-full overflow-hidden rounded-full bg-border"
         role="progressbar"
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className="h-full bg-[#005A9C] transition-all duration-300 ease-out"
+          className="h-full bg-primary transition-all duration-300 ease-out"
           style={{ width: `${progressPct}%` }}
         />
       </div>
@@ -58,10 +55,10 @@ export function ProgressBar({
                 "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
                 "transition-colors duration-150",
                 isComplete
-                  ? "bg-[#10B981] text-[#FFFFFF]"
+                  ? "bg-success text-white"
                   : isActive
-                    ? "bg-[#005A9C] text-[#FFFFFF] ring-2 ring-[#005A9C]/20"
-                    : "bg-[#E2E8F0] text-[#64748B]",
+                    ? "bg-primary text-white ring-2 ring-primary/20"
+                    : "bg-border text-muted-foreground",
               )}
               aria-current={isActive ? "step" : undefined}
             >

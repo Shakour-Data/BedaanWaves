@@ -61,7 +61,7 @@ async def get_signal(
             and_(
                 MLSignal.asset_id == asset.id,
                 MLSignal.is_active == True,
-                MLSignal.valid_until >= datetime.now(timezone.utc),
+                MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
             )
         )
         .order_by(MLSignal.generated_at.desc())
@@ -100,7 +100,7 @@ async def get_signals_summary(
     query = select(MLSignal).where(
         and_(
             MLSignal.is_active == True,
-            MLSignal.valid_until >= datetime.now(timezone.utc),
+            MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
             MLSignal.confidence >= min_confidence * 100,
         )
     )
@@ -242,7 +242,7 @@ async def get_risk_analysis(
     
     # Calculate returns
     from datetime import timedelta
-    start_date = datetime.now(timezone.utc) - timedelta(days=period_days)
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=period_days)
     
     candle_query = (
         select(candle_model_for_market(asset.market))

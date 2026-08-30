@@ -5,9 +5,8 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
-import { fetchSymbols, fetchScoring } from "@/lib/api/stocks";
+import { fetchSymbols, fetchScoring, fetchPriceHistory } from "@/lib/api/stocks";
 
-// Types
 interface ScoredStock {
   symbol: string;
   name: string;
@@ -27,127 +26,14 @@ interface ScoredStock {
   aiAnalysis: string;
 }
 
-// Mock Data
-const mockScoredStocks: ScoredStock[] = [
-  {
-    symbol: "NVDA",
-    name: "NVIDIA Corporation",
-    price: 138.25,
-    change: 4.87,
-    changePercent: 3.65,
-    score: 96,
-    recommendation: "Strong Buy",
-    sector: "Technology",
-    metrics: { value: 85, growth: 98, profitability: 95, momentum: 94, quality: 92 },
-    aiAnalysis: "Exceptional AI chip demand with dominant market position. Strong financials and growth trajectory."
-  },
-  {
-    symbol: "MSFT",
-    name: "Microsoft Corporation",
-    price: 432.05,
-    change: 5.12,
-    changePercent: 1.20,
-    score: 94,
-    recommendation: "Strong Buy",
-    sector: "Technology",
-    metrics: { value: 88, growth: 92, profitability: 96, momentum: 90, quality: 94 },
-    aiAnalysis: "Cloud computing leader with consistent innovation. Excellent balance sheet and dividend history."
-  },
-  {
-    symbol: "AAPL",
-    name: "Apple Inc.",
-    price: 233.67,
-    change: 3.45,
-    changePercent: 1.50,
-    score: 92,
-    recommendation: "Buy",
-    sector: "Technology",
-    metrics: { value: 85, growth: 78, profitability: 98, momentum: 88, quality: 93 },
-    aiAnalysis: "Strong brand loyalty and cash generation. Growth concerns balanced by innovation pipeline."
-  },
-  {
-    symbol: "GOOGL",
-    name: "Alphabet Inc.",
-    price: 178.35,
-    change: 1.25,
-    changePercent: 0.71,
-    score: 90,
-    recommendation: "Buy",
-    sector: "Communication Services",
-    metrics: { value: 90, growth: 85, profitability: 88, momentum: 82, quality: 89 },
-    aiAnalysis: "Search dominance and AI capabilities. Regulatory concerns remain a risk factor."
-  },
-  {
-    symbol: "AMZN",
-    name: "Amazon.com Inc.",
-    price: 197.83,
-    change: 2.14,
-    changePercent: 1.09,
-    score: 88,
-    recommendation: "Buy",
-    sector: "Consumer Cyclical",
-    metrics: { value: 82, growth: 88, profitability: 75, momentum: 86, quality: 85 },
-    aiAnalysis: "AWS growth and e-commerce dominance. Margin expansion continues to improve."
-  },
-  {
-    symbol: "META",
-    name: "Meta Platforms Inc.",
-    price: 612.77,
-    change: 12.45,
-    changePercent: 2.07,
-    score: 86,
-    recommendation: "Buy",
-    sector: "Communication Services",
-    metrics: { value: 78, growth: 92, profitability: 85, momentum: 90, quality: 80 },
-    aiAnalysis: "Metaverse investments showing early returns. Strong social media engagement."
-  },
-  {
-    symbol: "AMD",
-    name: "Advanced Micro Devices",
-    price: 142.88,
-    change: 3.42,
-    changePercent: 2.45,
-    score: 82,
-    recommendation: "Buy",
-    sector: "Technology",
-    metrics: { value: 80, growth: 88, profitability: 78, momentum: 85, quality: 78 },
-    aiAnalysis: "Strong CPU/GPU market position. Data center growth accelerating."
-  },
-  {
-    symbol: "TSLA",
-    name: "Tesla Inc.",
-    price: 248.50,
-    change: -5.25,
-    changePercent: -2.07,
-    score: 75,
-    recommendation: "Hold",
-    sector: "Consumer Cyclical",
-    metrics: { value: 65, growth: 82, profitability: 72, momentum: 68, quality: 70 },
-    aiAnalysis: "EV market leader facing increased competition. Regulatory and execution risks."
-  },
-  {
-    symbol: "INTC",
-    name: "Intel Corporation",
-    price: 21.24,
-    change: -0.42,
-    changePercent: -1.85,
-    score: 58,
-    recommendation: "Hold",
-    sector: "Technology",
-    metrics: { value: 70, growth: 45, profitability: 55, momentum: 42, quality: 60 },
-    aiAnalysis: "Turnaround story with significant execution challenges. Dividend at risk."
-  },
-];
-
-// Components
 function getRecommendationColor(rec: string) {
   switch (rec) {
-    case "Strong Buy": return "bg-[var(--color-success)]";
-    case "Buy": return "bg-[var(--color-primary)]";
-    case "Hold": return "bg-[var(--color-warning)]";
-    case "Sell": return "bg-orange-500";
-    case "Strong Sell": return "bg-[var(--color-error)]";
-    default: return "bg-[var(--color-border)]";
+    case "Strong Buy": return "bg-success";
+    case "Buy": return "bg-primary";
+    case "Hold": return "bg-warning";
+    case "Sell": return "bg-error";
+    case "Strong Sell": return "bg-error";
+    default: return "bg-border";
   }
 }
 
@@ -168,13 +54,84 @@ export default function ScoringPage() {
   const [scoringData, setScoringData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [stocks, setStocks] = useState<ScoredStock[]>([]);
+  const [stocksLoading, setStocksLoading] = useState(true);
+  const [filterRec, setFilterRec] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"score" | "symbol" | "change">("score");
 
-  const dimensionDetails = [
+  useEffect(() => {
+    let active = true;
+    async function loadScoring() {
+      setStocksLoading(true);
+      try {
+        const symbols = await fetchSymbols({ market: "NASDAQ", limit: 30 });
+        const scored = await Promise.allSettled(
+          symbols.slice(0, 15).map(async (asset) => {
+            const scoring = await fetchScoring(asset.symbol);
+            if (!scoring) return null;
+            const overallScore = typeof scoring.overall_score === "number" ? scoring.overall_score : 0;
+            const grade = String(scoring.grade || "C_HOLD");
+            let recommendation: ScoredStock["recommendation"] = "Hold";
+            if (overallScore >= 85) recommendation = "Strong Buy";
+            else if (overallScore >= 70) recommendation = "Buy";
+            else if (overallScore >= 55) recommendation = "Hold";
+            else if (overallScore >= 40) recommendation = "Sell";
+            else recommendation = "Strong Sell";
+
+            const priceHistory = await fetchPriceHistory({ symbol: asset.symbol, timeframe: "1d", limit: 2 }).catch(() => [] as any[]);
+            const lastCandle = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : null;
+            const prevCandle = priceHistory.length > 1 ? priceHistory[priceHistory.length - 2] : null;
+            const price = lastCandle ? lastCandle.close : 0;
+            const change = prevCandle && lastCandle ? lastCandle.close - prevCandle.close : 0;
+            const changePct = prevCandle && prevCandle.close ? (change / prevCandle.close) * 100 : 0;
+
+            return {
+              symbol: asset.symbol,
+              name: asset.name || asset.symbol,
+              price,
+              change,
+              changePercent: changePct,
+              score: overallScore,
+              recommendation,
+              sector: asset.sector || "",
+              metrics: {
+                value: typeof scoring.dimension_scores?.fundamental === "number" ? scoring.dimension_scores.fundamental : 50,
+                growth: typeof scoring.dimension_scores?.ai === "number" ? scoring.dimension_scores.ai : 50,
+                profitability: typeof scoring.dimension_scores?.fundamental === "number" ? scoring.dimension_scores.fundamental : 50,
+                momentum: typeof scoring.dimension_scores?.technical === "number" ? scoring.dimension_scores.technical : 50,
+                quality: typeof scoring.dimension_scores?.risk === "number" ? 100 - scoring.dimension_scores.risk : 50,
+              },
+              aiAnalysis: grade.includes("BUY") || grade.includes("STRONG_BUY")
+                ? "Strong AI score indicating favorable market conditions and fundamentals."
+                : grade.includes("SELL") || grade.includes("STRONG_SELL")
+                ? "Weak AI score suggesting potential downside risk."
+                : "Neutral AI score with mixed signals across dimensions.",
+            };
+          })
+        );
+
+        if (active) {
+          const results = scored
+            .filter((r): r is PromiseFulfilledResult<ScoredStock | null> => r.status === "fulfilled")
+            .map((r) => r.value)
+            .filter((s): s is ScoredStock => s !== null)
+            .sort((a, b) => b.score - a.score);
+          setStocks(results);
+        }
+      } catch (error) {
+        console.error("Error fetching scoring data:", error);
+      } finally {
+        if (active) setStocksLoading(false);
+      }
+    }
+    loadScoring();
+    return () => { active = false; };
+  }, []);
     {
       id: "fundamental",
       title: `${t("app.scoring.dimensions.fundamental", currentLang)} (25٪)`,
       weight: 25,
-      color: "bg-blue-500/20 border-blue-400",
+      color: "bg-primary/10 border-primary/30",
       icon: "🏦",
       aspects: [
         { name: "P/E Ratio", desc: currentLang === "fa" ? "نسبت قیمت به سود" : "Price-to-Earnings Ratio" },
@@ -188,7 +145,7 @@ export default function ScoringPage() {
       id: "technical",
       title: `${t("app.scoring.dimensions.technical", currentLang)} (20٪)`,
       weight: 20,
-      color: "bg-green-500/20 border-green-400",
+      color: "bg-success/10 border-success/30",
       icon: "📈",
       aspects: [
         { name: "RSI", desc: currentLang === "fa" ? "شاخص قدرت نسبی" : "Relative Strength Index" },
@@ -202,7 +159,7 @@ export default function ScoringPage() {
       id: "sentiment",
       title: `${t("app.scoring.dimensions.sentiment", currentLang)} (15٪)`,
       weight: 15,
-      color: "bg-purple-500/20 border-purple-400",
+      color: "bg-primary/10 border-primary/30",
       icon: "🎭",
       aspects: [
         { name: "News Sentiment", desc: currentLang === "fa" ? "احساسات خبری" : "News Sentiment" },
@@ -214,7 +171,7 @@ export default function ScoringPage() {
       id: "risk",
       title: `${t("app.scoring.dimensions.risk", currentLang)} (20٪)`,
       weight: 20,
-      color: "bg-red-500/20 border-red-400",
+      color: "bg-error/10 border-error/30",
       icon: "🛡️",
       aspects: [
         { name: "Volatility", desc: currentLang === "fa" ? "نوسان قیمت" : "Price Volatility" },
@@ -227,7 +184,7 @@ export default function ScoringPage() {
       id: "macro",
       title: `${t("app.scoring.dimensions.macro", currentLang)} (10٪)`,
       weight: 10,
-      color: "bg-orange-500/20 border-orange-400",
+      color: "bg-secondary/10 border-secondary/30",
       icon: "🌍",
       aspects: [
         { name: "GDP Growth", desc: currentLang === "fa" ? "رشد تولید ناخالص داخلی" : "GDP Growth" },
@@ -239,7 +196,7 @@ export default function ScoringPage() {
       id: "ai",
       title: `${t("app.scoring.dimensions.ai", currentLang)} (10٪)`,
       weight: 10,
-      color: "bg-cyan-500/20 border-cyan-400",
+      color: "bg-primary/10 border-primary/30",
       icon: "🤖",
       aspects: [
         { name: "LSTM Forecast", desc: currentLang === "fa" ? "پیش‌بینی قیمت با LSTM" : "Price Forecasting with LSTM" },
@@ -250,20 +207,11 @@ export default function ScoringPage() {
   ];
 
   const grades = [
-    { label: currentLang === "fa" ? "A (خرید قوی)" : "A (Strong Buy)", min: 85, color: "text-green-600", bg: "bg-green-500/20" },
-    { label: currentLang === "fa" ? "B (خرید)" : "B (Buy)", min: 70, color: "text-emerald-600", bg: "bg-emerald-500/20" },
-    { label: currentLang === "fa" ? "C (نگهداری)" : "C (Hold)", min: 55, color: "text-yellow-600", bg: "bg-yellow-500/20" },
-    { label: currentLang === "fa" ? "D (فروش)" : "D (Sell)", min: 40, color: "text-orange-600", bg: "bg-orange-500/20" },
-    { label: currentLang === "fa" ? "E (فروش قوی)" : "E (Strong Sell)", min: 0, color: "text-red-600", bg: "bg-red-500/20" },
-  ];
-
-  const mlCoefficients = [
-    { label: t("app.scoring.dimensions.fundamental", currentLang), defaultWeight: 25, mlOptimized: true },
-    { label: t("app.scoring.dimensions.technical", currentLang), defaultWeight: 20, mlOptimized: true },
-    { label: t("app.scoring.dimensions.sentiment", currentLang), defaultWeight: 15, mlOptimized: true },
-    { label: t("app.scoring.dimensions.risk", currentLang), defaultWeight: 20, mlOptimized: true },
-    { label: t("app.scoring.dimensions.macro", currentLang), defaultWeight: 10, mlOptimized: true },
-    { label: t("app.scoring.dimensions.ai", currentLang), defaultWeight: 10, mlOptimized: true }
+    { label: currentLang === "fa" ? "A (خرید قوی)" : "A (Strong Buy)", min: 85, color: "text-success", bg: "bg-success/10" },
+    { label: currentLang === "fa" ? "B (خرید)" : "B (Buy)", min: 70, color: "text-success", bg: "bg-success/10" },
+    { label: currentLang === "fa" ? "C (نگهداری)" : "C (Hold)", min: 55, color: "text-warning", bg: "bg-warning/10" },
+    { label: currentLang === "fa" ? "D (فروش)" : "D (Sell)", min: 40, color: "text-error", bg: "bg-error/10" },
+    { label: currentLang === "fa" ? "E (فروش قوی)" : "E (Strong Sell)", min: 0, color: "text-error", bg: "bg-error/10" },
   ];
 
   useEffect(() => {
@@ -294,15 +242,6 @@ export default function ScoringPage() {
     }
   };
 
-  const [stocks, setStocks] = useState<ScoredStock[]>(mockScoredStocks);
-  const [filterRec, setFilterRec] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"score" | "symbol" | "change">("score");
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
   const filteredStocks = useMemo(() => {
     let filtered = stocks;
 
@@ -325,9 +264,9 @@ export default function ScoringPage() {
   }, [stocks, filterRec, sortBy]);
 
   const recommendations = ["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"];
-  const avgScore = Math.round(stocks.reduce((acc, s) => acc + s.score, 0) / stocks.length);
+  const avgScore = stocks.length > 0 ? Math.round(stocks.reduce((acc, s) => acc + s.score, 0) / stocks.length) : 0;
 
-  if (loading) {
+  if (stocksLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">

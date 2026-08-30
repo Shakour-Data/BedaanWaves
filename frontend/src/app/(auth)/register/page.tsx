@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useUXStore } from "@/store/useUXStore";
 import { t } from "@/lib/i18n";
-
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -18,26 +18,33 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const registerStore = useAuthStore((s) => s.register);
-  
+  const addToast = useUXStore((state) => state.addToast);
 
+  const validateUsername = useCallback((v: string) => v.trim().length >= 3 ? "valid" : "invalid", []);
+  const validateEmail = useCallback((v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "valid" : "invalid", []);
+  const validatePassword = useCallback((v: string) => v.length >= 8 ? "valid" : "invalid", []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError(t("signup.error_password_length"));
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError(t("signup.error_password_match"));
-      return;
-    }
+
+    const uStatus = validateUsername(username);
+    const eStatus = validateEmail(email);
+    const pStatus = validatePassword(password);
+    
+    if (uStatus === "invalid") { setError("Username must be at least 3 characters."); return; }
+    if (eStatus === "invalid") { setError("Please enter a valid email address."); return; }
+    if (pStatus === "invalid") { setError("Password must be at least 8 characters."); return; }
+    if (password !== confirmPassword) { setError("Passwords do not match."); return; }
+
     setLoading(true);
     try {
       await registerStore(username, email, password, name);
-    } catch (err: any) {
-      const message = err.response?.data?.detail || t("auth.error_authentication");
+      addToast({ type: "success", message: "Account created successfully! Welcome aboard." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("auth.error_authentication");
       setError(message);
+      addToast({ type: "error", message });
     } finally {
       setLoading(false);
     }
@@ -68,6 +75,8 @@ export default function RegisterPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t("signup.username_placeholder") || t("signup.username")}
               disabled={loading}
+              validationState={username ? validateUsername(username) : "idle"}
+              validationMessage={username && validateUsername(username) === "invalid" ? "Username must be at least 3 characters." : undefined}
             />
 
             <InputField
@@ -90,6 +99,8 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
               disabled={loading}
+              validationState={email ? validateEmail(email) : "idle"}
+              validationMessage={email && validateEmail(email) === "invalid" ? "Please enter a valid email address." : undefined}
             />
 
             <InputField
@@ -101,6 +112,8 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               disabled={loading}
+              validationState={password ? validatePassword(password) : "idle"}
+              validationMessage={password && validatePassword(password) === "invalid" ? "Password must be at least 8 characters." : undefined}
             />
 
             <InputField
@@ -112,6 +125,8 @@ export default function RegisterPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               disabled={loading}
+              validationState={confirmPassword && password !== confirmPassword ? "invalid" : confirmPassword ? "valid" : "idle"}
+              validationMessage={confirmPassword && password !== confirmPassword ? "Passwords do not match." : undefined}
             />
             
             <button
@@ -123,16 +138,13 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-1 hidden">
-          </div>
-
           <PrimaryButton
             type="submit"
             disabled={loading}
             className="mt-2 w-full justify-center h-11"
             size="lg"
           >
-            {loading ? "Processing..." : "Sign Up"}
+            {loading ? "Creating account..." : "Sign Up"}
           </PrimaryButton>
 
           <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">

@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * CandlestickChart.tsx
- * ---------------------------------------------------------------------------
- * نمودار کندل‌استیک OHLCV + هیستوگرام حجم، مبتنی بر lightweight-charts (v5).
- * - رنگ‌ها با تمِ روشن/تاریک (useAppStore) هماهنگ می‌شوند.
- * - نمودار با تغییر اندازه‌ی ظرف و تمِ برنامه، به‌روزرسانی می‌شود.
- * - حجم به‌صورت overlay در یک‌پنجم پایینِ نمودار رسم می‌شود.
- */
-
 import { useEffect, useMemo, useRef } from "react";
 import {
   createChart,
@@ -21,7 +12,7 @@ import {
   type CandlestickData,
   type HistogramData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
-import { colors, semanticColors } from "@/styles/design-tokens";
+import { semanticColors, darkSemanticColors } from "@/styles/design-tokens";
 import type { Candle, Timeframe } from "@/lib/api/stocks";
 
 interface CandlestickChartProps {
@@ -32,12 +23,10 @@ interface CandlestickChartProps {
 
 const INTRADAY: Timeframe[] = ["1m", "5m", "15m", "1h", "4h"];
 
-/** زمانِ کندل را به قالبِ مناسبِ lightweight-charts تبدیل می‌کند. */
 function toChartTime(timestamp: string, timeframe: Timeframe): UTCTimestamp | string {
   if (INTRADAY.includes(timeframe)) {
     return Math.floor(new Date(timestamp).getTime() / 1000) as UTCTimestamp;
   }
-  // تایم‌فریم روزانه و بالاتر: قالب «YYYY-MM-DD» تا روزِ نمایش‌داده‌شده جابه‌جا نشود.
   return timestamp.slice(0, 10);
 }
 
@@ -59,19 +48,20 @@ const LIGHT: ThemeColors = {
   border: semanticColors.border,
   up: semanticColors.success,
   down: semanticColors.primary,
-  volUp: `${semanticColors.success}59`, // 35% opacity
-  volDown: `${semanticColors.primary}59`, // 35% opacity
+  volUp: `${semanticColors.success}59`,
+  volDown: `${semanticColors.primary}59`,
 };
 
 const DARK: ThemeColors = {
-  background: "#1e293b", // Matches professional slate/dark background
-  text: "#f8fafc",
-  grid: "#334155",
-  border: "#334155",
-  up: "#10b981",
-  down: "#dc2626",
-  volUp: "rgba(16, 185, 129, 0.35)",
-  volDown: "rgba(220, 38, 38, 0.35)" };
+  background: darkSemanticColors.surface,
+  text: darkSemanticColors.foreground,
+  grid: darkSemanticColors.border,
+  border: darkSemanticColors.border,
+  up: darkSemanticColors.success,
+  down: darkSemanticColors.error,
+  volUp: `${darkSemanticColors.success}59`,
+  volDown: `${darkSemanticColors.error}59`,
+};
 
 export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -143,7 +133,6 @@ export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: Ca
       chart.remove();
       chartRef.current = null;
     };
-    // بازسازی نمودار با تغییر داده یا تم (رنگ‌ها).
   }, [candleData, volumeData, colors, height, timeframe]);
 
   return <div ref={containerRef} className="w-full" style={{ height }} />;

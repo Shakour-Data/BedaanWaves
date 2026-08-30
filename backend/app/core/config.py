@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     AUTH_PUBLIC_PATHS: List[str] = [
         "/",
         "/health",
+        "/api/data-health",
     ]
     # Path prefixes that never require authentication (e.g. the auth router itself).
     AUTH_PUBLIC_PREFIXES: List[str] = [
@@ -152,12 +153,37 @@ class Settings(BaseSettings):
     # ============================================================
     # EXTERNAL APIs (BedaanWaves Integration)
     # ============================================================
-    # Yahoo Finance (primary data source for NASDAQ + Crypto)
+    # Yahoo Finance (primary data source for NASDAQ stocks)
     YFINANCE_ENABLED: bool = True
     
-    # External Financial APIs
-    ALPHA_VANTAGE_API_KEY: Optional[str] = None
-    ALPHA_VANTAGE_BASE_URL: str = "https://www.alphavantage.co/query"
+    # Data Provider Selection: yfinance (NASDAQ stocks only)
+    DATA_PROVIDER: str = "yfinance"
+    DATA_PROVIDER_FALLBACK_ENABLED: bool = False
+    DATA_PROVIDER_TIMEOUT: int = 15
+    DATA_PROVIDER_MAX_RETRIES: int = 3
+    DATA_PROVIDER_RETRY_BACKOFF_BASE: float = 1.0
+    
+    # ============================================================
+    # REAL-TIME DATA & CACHE TTL CONFIGURATION
+    # ============================================================
+    REALTIME_QUOTE_CACHE_TTL_SECONDS: int = 10
+    HISTORICAL_DATA_CACHE_TTL_SECONDS: int = 3600
+    INTRADAY_DATA_CACHE_TTL_SECONDS: int = 120
+    MARKET_STATUS_CACHE_TTL_SECONDS: int = 60
+    
+    # ============================================================
+    # MARKET HOURS CONFIGURATION
+    # ============================================================
+    MARKET_TIMEZONE: str = "America/New_York"
+    MARKET_OPEN_HOUR: int = 9
+    MARKET_OPEN_MINUTE: int = 30
+    MARKET_CLOSE_HOUR: int = 16
+    MARKET_CLOSE_MINUTE: int = 0
+    PRE_MARKET_START_HOUR: int = 4
+    PRE_MARKET_START_MINUTE: int = 0
+    AFTER_HOURS_END_HOUR: int = 20
+    AFTER_HOURS_END_MINUTE: int = 0
+    WEEKEND_CLOSED: bool = True
     
     # News APIs
     NEWS_SOURCES: List[str] = ["financial-news", "market-news"]
@@ -327,19 +353,6 @@ class Settings(BaseSettings):
     ARCHIVE_PATH: str = "./data/archive"
     
     # ============================================================
-    # CRYPTO FEATURES (CryptoAndStocks Integration)
-    # ============================================================
-    CRYPTO_SUPPORT_ENABLED: bool = True
-    CRYPTO_PORTFOLIOS_ENABLED: bool = True
-    CRYPTO_ALERTS_ENABLED: bool = True
-    
-    # Supported Cryptocurrencies
-    SUPPORTED_CRYPTOCURRENCIES: List[str] = [
-        "BTC", "ETH", "BNB", "XRP", "SOL", "ADA", "DOT", "DOGE",
-        "MATIC", "UNI", "LINK", "AVAX", "FTM", "ATOM",
-    ]
-    
-    # ============================================================
     # PAGINATION & LIMITS
     # ============================================================
     DEFAULT_PAGE_SIZE: int = 50
@@ -356,9 +369,6 @@ class Settings(BaseSettings):
         "CACHE_ENABLED",
         "RATE_LIMIT_ENABLED",
         "REQUIRE_AUTH",
-        "CRYPTO_SUPPORT_ENABLED",
-        "CRYPTO_PORTFOLIOS_ENABLED",
-        "CRYPTO_ALERTS_ENABLED",
     ]
 
     @field_validator(*_bool_consume_list, mode="before")

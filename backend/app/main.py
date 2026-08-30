@@ -45,6 +45,8 @@ from app.services.system.queue_service import QueueService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
+from app.services.data.real_time_market_data_service import RealTimeMarketDataService
+from app.services.data.market_hours_service import MarketHoursService
 from app.services.crypto.crypto_ingestion_service import CryptoIngestionService
 from app.services.data.ingestion_service import IntelligentIngestionService
 from app.services.data.news_service import NewsService
@@ -73,6 +75,8 @@ from app.api.routes import (
     settings_router,
     ranking_router,
     password_reset_router,
+    market_data_router,
+    data_health_router,
 )
 
 logging.basicConfig(
@@ -290,11 +294,15 @@ async def lifespan(app: FastAPI):
         crypto_svc = CryptoIngestionService()
         ingest_svc = IntelligentIngestionService()
         news_svc = NewsService()
+        market_hours_svc = MarketHoursService()
+        realtime_market_svc = RealTimeMarketDataService(cache_service=cache_svc)
         container.register_instance("nasdaq_service", nasdaq_svc)
         container.register_instance("nasdaq_ingestion_service", nasdaq_svc)
         container.register_instance("crypto_ingestion_service", crypto_svc)
         container.register_instance("data_ingest_service", ingest_svc)
         container.register_instance("news_service", news_svc)
+        container.register_instance("market_hours_service", market_hours_svc)
+        container.register_instance("real_time_market_data_service", realtime_market_svc)
         container.register_instance("data_integrity_service",
                                    DataIntegrityService())
 
@@ -359,6 +367,8 @@ async def lifespan(app: FastAPI):
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
+        app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
+        app.include_router(data_health_router, tags=["data-health"])
         app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
         app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
         app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])

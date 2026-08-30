@@ -472,3 +472,67 @@ class CalendarEventCreate(BaseModel):
     description: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
+
+# ===========================================================================
+# Real-Time Market Data Schemas (Live / Historical / Intraday)
+# ===========================================================================
+
+class RealtimeQuoteResponse(BaseModel):
+    symbol: str
+    current_price: float
+    change_value: float
+    change_percent: float
+    open: float
+    high: float
+    low: float
+    previous_close: float
+    volume: int
+    timestamp: datetime
+    market_status: str
+    freshness_label: str
+    is_delayed: bool
+    data_source: str
+    adjusted_close: Optional[float] = None
+
+
+class HistoricalCandleResponse(BaseModel):
+    timestamp: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    adjusted_close: float
+    volume: int
+    split_ratio: Optional[float] = None
+    source: str = "yfinance"
+
+
+class HistoricalDataResponse(BaseModel):
+    symbol: str
+    interval: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    candles: List[HistoricalCandleResponse]
+    data_source: str
+    fetched_at: datetime
+
+
+class IntradayDataResponse(BaseModel):
+    symbol: str
+    interval: str
+    candles: List[HistoricalCandleResponse]
+    market_status: str
+    freshness_label: str
+    data_source: str
+    fetched_at: datetime
+
+
+class DataProviderHealthResponse(BaseModel):
+    provider: str
+    status: str
+    last_successful_fetch: Optional[datetime] = None
+    last_error: Optional[str] = None
+    latency_ms: Optional[float] = None
+    details: Optional[Dict[str, Any]] = None
+
+

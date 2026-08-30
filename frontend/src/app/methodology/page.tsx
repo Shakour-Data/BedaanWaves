@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
@@ -89,7 +89,7 @@ export default function MethodologyPage() {
   ];
 
   return (
-    <DashboardShell title={t("app.methodology.title", "en")}>
+    <NewDashboardShell title={t("app.methodology.title", "en")}>
       <div className="flex flex-col gap-6">
         {/* Header */}
         <TarotCard icon="📘" title={t("app.methodology.overview", "en")}>
@@ -216,6 +216,6 @@ export default function MethodologyPage() {
           </Link>
         </div>
       </div>
-    </DashboardShell>
+    </NewDashboardShell>
   );
 }

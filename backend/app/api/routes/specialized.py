@@ -71,7 +71,7 @@ async def _build_universe(
                 and_(
                     MLSignal.asset_id.in_(asset_ids),
                     MLSignal.is_active == True,  # noqa: E712
-                    MLSignal.valid_until >= datetime.now(timezone.utc),
+                    MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
             .order_by(MLSignal.generated_at.desc())
