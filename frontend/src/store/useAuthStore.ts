@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (username, password) => {
         set({ loading: true });
         try {
-          const currentLang = localStorage.getItem('lang') as "en" | "fa" || 'en';
+          const currentLang = getInitialLang();
           const response = await apiClient.post(`auth/login?lang=${currentLang}`, { username, password });
           const token = response.data.access_token;
           const refreshToken = response.data.refresh_token;
@@ -77,7 +77,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (username, email, password, full_name) => {
         set({ loading: true });
         try {
-          const currentLang = localStorage.getItem('lang') as "en" | "fa" || 'en';
+          const currentLang = getInitialLang();
           const response = await apiClient.post(`auth/register?lang=${currentLang}`, { username, email, password, full_name });
           const token = response.data.access_token;
           const refreshToken = response.data.refresh_token;
@@ -105,6 +105,7 @@ export const useAuthStore = create<AuthState>()(
         });
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
+          localStorage.removeItem('auth-storage');
           window.location.href = '/login';
         }
       },

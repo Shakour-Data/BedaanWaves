@@ -19,7 +19,8 @@ export interface SearchState {
 // In-memory cache: Map<query_lowercase, StockSearchResult[]>
 // ---------------------------------------------------------------------------
 
-const searchCache = new Map<string, StockSearchResult[]>();
+const searchCache = new Map<string, { results: StockSearchResult[]; timestamp: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Utility: Debounce
@@ -88,12 +89,12 @@ export function useStockSearch(minQueryLength = 1) {
 
     const cacheKey = trimmed.toLowerCase();
 
-    // Return cached result if available
-    if (searchCache.has(cacheKey)) {
+    const cached = searchCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
       setSearchState((prev) => ({
         ...prev,
         query: trimmed,
-        results: searchCache.get(cacheKey)!,
+        results: cached.results,
         status: "success",
         error: null,
       }));
@@ -132,8 +133,8 @@ export function useStockSearch(minQueryLength = 1) {
 
         if (cancelled || controller.signal.aborted) return;
 
-        // Cache the result
-        searchCache.set(cacheKey, results);
+        // Cache the result with TTL
+        searchCache.set(cacheKey, { results, timestamp: Date.now() });
 
         if (isMountedRef.current) {
           setSearchState((prev) => ({

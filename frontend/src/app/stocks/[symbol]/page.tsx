@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -92,11 +92,14 @@ export default function StockDetailPage() {
     return () => { cancelled = true; };
   }, [symbol, activeTab, addToast]);
 
+  const MARKET_LABEL: Record<Market, string> = {
+    NASDAQ: t("app.stocks.markets.nasdaq", "en") };
+
   const RANGES = useMemo(() => [
     { key: "30", label: t("app.stocks.detail.ranges.1m", "en"), days: 30 },
     { key: "90", label: t("app.stocks.detail.ranges.3m", "en"), days: 90 },
     { key: "all", label: t("app.stocks.detail.ranges.all", "en"), days: null },
-  ], [t]);
+  ], []);
 
   const visibleCandles = useMemo(() => {
     if (!candles) return [];
@@ -130,13 +133,14 @@ export default function StockDetailPage() {
     { key: "history", label: "Historical Data" },
   ];
 
-  const MARKET_LABEL: Record<Market, string> = {
-    NASDAQ: t("app.stocks.markets.nasdaq", "en") };
-
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Stocks", href: "/stocks" },
     { label: symbol.toUpperCase() },
   ];
+
+  function fmt(n: number, digits = 0): string {
+    return n.toLocaleString("en-US", { maximumFractionDigits: digits });
+  }
 
   if (loading) {
     return (
@@ -158,18 +162,6 @@ export default function StockDetailPage() {
     );
   }
 
-  function scoreVariant(score: number): "success" | "warning" | "error" | "default" {
-    if (score >= 70) return "success";
-    if (score >= 40) return "warning";
-    return "error";
-  }
-
-  function fmt(n: number, digits = 0): string {
-    return false
-      ? n.toLocaleString("fa-IR", { maximumFractionDigits: digits })
-      : n.toLocaleString("en-US", { maximumFractionDigits: digits });
-  }
-
   return (
     <NewDashboardShell title={t("app.stocks.title", "en")} breadcrumbs={breadcrumbs}>
       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
@@ -185,9 +177,9 @@ export default function StockDetailPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold">{symbol}</h1>
                 {asset ? (
-                  <Badge variant="neutral" size="sm">
+                  <span className="rounded-full bg-neutral/70 px-2 py-0.5 text-xs text-muted-foreground">
                     {MARKET_LABEL[asset.market]}
-                  </Badge>
+                  </span>
                 ) : null}
               </div>
               {asset ? <span className="text-muted-foreground">{asset.name}</span> : null}
@@ -207,7 +199,7 @@ export default function StockDetailPage() {
           </div>
         </TarotCard>
 
-        <div className="flex items-center gap-1 border-b border-border">
+        <div className="flex items-center gap-1 border-b border-[var(--color-border)]">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -216,15 +208,15 @@ export default function StockDetailPage() {
               className={cn(
                 "relative rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors",
                 activeTab === tab.key
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-[var(--color-primary)]"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
               )}
               role="tab"
               aria-selected={activeTab === tab.key}
             >
               {tab.label}
               {activeTab === tab.key && (
-                <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-t-full bg-primary" />
+                <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-t-full bg-[var(--color-primary)]" />
               )}
             </button>
           ))}
@@ -242,12 +234,12 @@ export default function StockDetailPage() {
             ) : null}
 
             {scoring ? (
-              <TarotCard title={t("app.stocks.detail.analysis_6d", "en")}>
+              <TarotCard icon="💎" title={t("app.stocks.detail.analysis_6d", "en")}>
                 <div className="flex flex-col md:flex-row items-center gap-8 py-4">
                   <div className="flex flex-col items-center justify-center">
                     <div className={cn(
-                      "text-5xl font-black rounded-full h-32 w-32 flex items-center justify-center border-4 shadow-inner",
-                      typeof scoring.overall_score === "number" && scoreVariant(scoring.overall_score as number) === "success" ? "text-success border-success/20" : typeof scoring.overall_score === "number" && scoreVariant(scoring.overall_score as number) === "warning" ? "text-warning border-warning/20" : "text-error border-error/20"
+                      "text-5xl font-black rounded-full h-32 w-32 flex items-center justify-center border-8 shadow-inner",
+                      typeof scoring.overall_score === "number" && scoring.overall_score >= 70 ? "text-green-600 border-green-600/20" : typeof scoring.overall_score === "number" && scoring.overall_score >= 40 ? "text-yellow-500 border-yellow-500/20" : "text-red-600 border-red-600/20"
                     )}>
                       {scoring.overall_score as number}
                     </div>
@@ -260,14 +252,14 @@ export default function StockDetailPage() {
                         <div className="flex items-center justify-between mt-1">
                           <span className="font-bold text-lg">{score as number}</span>
                           <div className="h-1.5 flex-1 mx-2 bg-border rounded-full overflow-hidden">
-                            <div className={cn("h-full rounded-full", (score as number) >= 70 ? "bg-success" : (score as number) >= 40 ? "bg-warning" : "bg-error")} style={{ width: `${score as number}%` }} />
+                            <div className={cn("h-full rounded-full", (score as number) >= 70 ? "bg-green-600" : (score as number) >= 40 ? "bg-yellow-500" : "bg-red-600")} style={{ width: `${score as number}%` }} />
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-                {Array.isArray(scoring?.signals) && (scoring.signals as string[]).length > 0 && (
+                {scoring.signals && Array.isArray(scoring.signals) && (scoring.signals as string[]).length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-border/40">
                     {(scoring.signals as string[]).map((sig: string, i: number) => (
                       <Badge key={i} variant="error" size="sm">{sig.replace("_", " ")}</Badge>
@@ -294,26 +286,26 @@ export default function StockDetailPage() {
                     <span className="text-sm text-muted-foreground">Score: {String(sentiment.sentiment_score)}/10</span>
                   )}
                 </div>
-                {Boolean(sentiment.sentiment_signals) && Array.isArray(sentiment.sentiment_signals) && sentiment.sentiment_signals.length > 0 && (
+                {Boolean(sentiment.sentiment_signals) && Array.isArray(sentiment.sentiment_signals) && (sentiment.sentiment_signals as string[]).length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {sentiment.sentiment_signals.map((sig: string, i: number) => (
+                    {(sentiment.sentiment_signals as string[]).map((sig: string, i: number) => (
                       <Badge key={i} variant="info" size="sm">{String(sig).replace("_", " ")}</Badge>
                     ))}
                   </div>
                 )}
               </TarotCard>
             )}
-            {scoring?.signals && Array.isArray(scoring.signals) && scoring.signals.length > 0 ? (
+            {Array.isArray(scoring?.signals) && (scoring.signals as string[]).length > 0 ? (
               <TarotCard title="Trading Signals">
                 <div className="flex flex-wrap gap-2">
-                  {scoring.signals.map((sig: string, i: number) => (
+                  {(scoring.signals as string[]).map((sig: string, i: number) => (
                     <Badge key={i} variant="info" size="sm">{String(sig).replace("_", " ")}</Badge>
                   ))}
                 </div>
               </TarotCard>
             ) : (
-              <div className="rounded-xl border border-dashed border-border bg-surface/30 py-12 text-center">
-                <p className="text-sm text-muted-foreground">No signals available for this stock yet. Check back later.</p>
+              <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-12 text-center">
+                <p className="text-sm text-[var(--color-text-secondary)]">No signals available for this stock yet. Check back later.</p>
               </div>
             )}
           </div>
@@ -347,8 +339,8 @@ export default function StockDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-border bg-surface/30 py-12 text-center">
-                <p className="text-sm text-muted-foreground">Risk analysis data is not yet available for this stock.</p>
+              <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-12 text-center">
+                <p className="text-sm text-[var(--color-text-secondary)]">Risk analysis data is not yet available for this stock.</p>
               </div>
             )}
           </div>

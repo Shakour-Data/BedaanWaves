@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -104,47 +104,40 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
 
-  useEffect(() => {
-    let active = true;
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-    async function loadDashboard() {
-      setLoading(true);
-      setError(null);
+    try {
+      const data = await fetchDashboardData();
+
+      setMarketStats(data.marketStats);
+      setTopStocks(data.topMovers.slice(0, 5));
+      setSignals(data.signals);
+      setNews(data.news);
 
       try {
-        const data = await fetchDashboardData();
-
-        if (!active) return;
-
-        setMarketStats(data.marketStats);
-        setTopStocks(data.topMovers.slice(0, 5));
-        setSignals(data.signals);
-        setNews(data.news);
-
-        try {
-          const indicesRes = await apiClient.get<Record<string, unknown>>("/market/market-overview?market=NASDAQ");
-          if ((indicesRes.data as Record<string, unknown>)?.status === "success") {
-            setIndices([
-              { symbol: "IXIC", name: "NASDAQ Composite", price: 0, change: 0, changePercent: ((indicesRes.data as Record<string, unknown>).average_change_pct as number) || 0, isOpen: true },
-            ]);
-          }
-        } catch {
-          // Indices fetch failed, continue without them
+        const indicesRes = await apiClient.get<Record<string, unknown>>("/market/market-overview?market=NASDAQ");
+        if ((indicesRes.data as Record<string, unknown>)?.status === "success") {
+          setIndices([
+            { symbol: "IXIC", name: "NASDAQ Composite", price: 0, change: 0, changePercent: ((indicesRes.data as Record<string, unknown>).average_change_pct as number) || 0, isOpen: true },
+          ]);
         }
-      } catch (err) {
-        if (active) {
-          const message = err instanceof Error ? err.message : "Failed to load dashboard data";
-          setError(message);
-          addToast({ type: "error", message, action: { label: "Retry", onClick: () => { setError(null); loadDashboard(); } } });
-        }
-      } finally {
-        if (active) setLoading(false);
+      } catch {
+        // Indices fetch failed, continue without them
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load dashboard data";
+      setError(message);
+      addToast({ type: "error", message });
+    } finally {
+      setLoading(false);
     }
-
-    loadDashboard();
-    return () => { active = false; };
   }, [addToast]);
+
+  useEffect(() => {
+    loadDashboard(); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [loadDashboard]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Dashboard" },
@@ -164,7 +157,7 @@ export default function DashboardPage() {
         <div className="flex min-h-[40vh] items-center justify-center">
           <ErrorMessage
             message={error}
-            actions={[{ label: "Retry", onAction: () => { setError(null); window.location.reload(); } }]}
+            actions={[{ label: "Retry", onAction: () => { setError(null); loadDashboard(); } }]}
             moreHelpSteps={["Check your internet connection", "Verify the API service is running"]}
             helpTitle="Troubleshooting steps"
           />
