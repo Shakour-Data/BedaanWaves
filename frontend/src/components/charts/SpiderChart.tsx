@@ -189,7 +189,7 @@ export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick 
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      <canvas ref={canvasRef} className="block" />
+      <canvas ref={canvasRef} className="block" style={{ cursor: onLabelClick ? "pointer" : "default" }} />
     </div>
   );
 }

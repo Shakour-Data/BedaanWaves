@@ -1,11 +1,14 @@
 """Dashboard API Routes"""
 
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, and_, case
 from typing import Optional
 import logging
 
 from app.db.base import get_async_session
+from app.models.models import Asset, ScoreHistory
 from app.services.analysis.dashboard_service import DashboardService
 
 logger = logging.getLogger(__name__)

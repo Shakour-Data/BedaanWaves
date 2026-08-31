@@ -182,25 +182,12 @@ export function AiDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <SignalBadge type={null} />
-                  <span className="text-xs text-[var(--color-text-secondary)]">Score: {s.score.toFixed(1)}</span>
+                  <SignalBadge type={s.signal_type} />
+                  <span className="text-xs text-[var(--color-text-secondary)]">
+                    {s.confidence > 0 ? `${s.confidence.toFixed(0)}%` : "—"}
+                  </span>
                 </div>
               </Link>
-            ))}
-            {data.symbols.slice(0, 5).filter(s => s.signal_type).map((s, i) => (
-              <div key={s.symbol} className="flex items-center justify-between rounded-lg p-3 bg-[var(--color-background)]">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-[var(--color-text-secondary)]">#{i + 1}</span>
-                  <div>
-                    <span className="font-semibold text-[var(--color-text-primary)]">{s.symbol}</span>
-                    <span className="text-xs text-[var(--color-text-secondary)] ml-2">{s.name}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <SignalBadge type={s.signal_type} />
-                  <span className="text-xs text-[var(--color-text-secondary)]">{s.confidence}%</span>
-                </div>
-              </div>
             ))}
           </div>
         </div>
@@ -220,9 +207,12 @@ export function AiDashboard() {
                     <span className="text-xs text-[var(--color-text-secondary)] ml-2">{s.name}</span>
                   </div>
                 </div>
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  Score: {s.score.toFixed(1)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <SignalBadge type={s.signal_type} />
+                  <span className="text-xs text-[var(--color-text-secondary)]">
+                    {s.confidence > 0 ? `${s.confidence.toFixed(0)}%` : "—"}
+                  </span>
+                </div>
               </Link>
             ))}
           </div>

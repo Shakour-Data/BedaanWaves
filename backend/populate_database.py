@@ -26,6 +26,7 @@ from app.models.models import (
     IntlPriceCandle,
     FinancialStatement,
     News,
+    NewsSentiment,
     Portfolio,
     Position,
     Alert,
@@ -53,6 +54,8 @@ async def populate_database():
                 from sqlalchemy import text
                 await session.execute(text("DELETE FROM raw_market_data"))
                 await session.execute(text("DELETE FROM market_data_snapshots"))
+                await session.execute(text("DELETE FROM news_sentiment"))
+                await session.execute(text("DELETE FROM news_summaries"))
                 await session.execute(text("DELETE FROM news"))
                 await session.execute(text("DELETE FROM financial_statements"))
                 await session.execute(text("DELETE FROM ml_signals"))
@@ -407,7 +410,9 @@ async def populate_news_articles(session, assets, start_date, end_date):
     """Populates news articles for assets."""
 
     total_records = 0
+    total_sentiments = 0
     current_date = start_date
+    batch = []
 
     news_headlines = {
         "positive": [
@@ -441,31 +446,66 @@ async def populate_news_articles(session, assets, start_date, end_date):
 
             news = News(
                 asset_id=asset.id,
-                headline=headline,
-                summary=f"Lorem ipsum dolor sit amet, consectetur adipiscing elit. {headline.lower()} for {asset.symbol}.",
-                content="Full article content placeholder. This would contain the complete news article text, analysis, and relevant financial metrics.",
+                title=headline,
+                body=f"Lorem ipsum dolor sit amet, consectetur adipiscing elit. {headline.lower()} for {asset.symbol}.",
                 url="https://example-news-source.com/news/" + str(uuid.uuid4()),
                 source="synthetic-news-service",
                 published_at=current_date + timedelta(hours=random.randint(8, 17)),
-                sentiment_score=Decimal(str(round(
-                    random.uniform(0.5, 1.0) if sentiment == "positive"
-                    else random.uniform(0.0, 0.5) if sentiment == "negative"
-                    else random.uniform(0.4, 0.6),
-                    2
-                ))),
                 language="en",
             )
-            session.add(news)
+            batch.append((news, sentiment))
             total_records += 1
 
-        if total_records % 1000 == 0:
+        if total_records % 1000 == 0 and total_records > 0:
+            for news, _ in batch:
+                session.add(news)
             await session.flush()
-            print(f"News articles: {total_records} records inserted...")
+            for news, sentiment in batch:
+                if sentiment == "positive":
+                    score = round(random.uniform(0.5, 1.0), 2)
+                elif sentiment == "negative":
+                    score = round(random.uniform(0.0, 0.5), 2)
+                else:
+                    score = round(random.uniform(0.4, 0.6), 2)
+                sentiment_record = NewsSentiment(
+                    news_id=news.id,
+                    asset_id=news.asset_id,
+                    sentiment_label=sentiment.upper(),
+                    sentiment_score=Decimal(str(score)),
+                    model_version="populate-v1",
+                )
+                session.add(sentiment_record)
+                total_sentiments += 1
+            await session.flush()
+            print(f"News articles: {total_records} records inserted, {total_sentiments} sentiments...")
+            batch = []
 
         current_date += timedelta(days=1)
 
-    await session.flush()
+    if batch:
+        for news, _ in batch:
+            session.add(news)
+        await session.flush()
+        for news, sentiment in batch:
+            if sentiment == "positive":
+                score = round(random.uniform(0.5, 1.0), 2)
+            elif sentiment == "negative":
+                score = round(random.uniform(0.0, 0.5), 2)
+            else:
+                score = round(random.uniform(0.4, 0.6), 2)
+            sentiment_record = NewsSentiment(
+                news_id=news.id,
+                asset_id=news.asset_id,
+                sentiment_label=sentiment.upper(),
+                sentiment_score=Decimal(str(score)),
+                model_version="populate-v1",
+            )
+            session.add(sentiment_record)
+            total_sentiments += 1
+        await session.flush()
+
     print(f"Total news articles inserted: {total_records}")
+    print(f"Total news sentiments inserted: {total_sentiments}")
 
 
 async def populate_ml_signals(session, assets):

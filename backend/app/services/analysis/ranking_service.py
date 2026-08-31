@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import Asset, IntlPriceCandle, ScoreHistory, candle_model_for_market
 from app.services.analysis.scoring_service import ScoringService
+from app.services.analysis.technical_indicators import compute_all_indicators, Candle
 from app.services.core.dependency_container import get_global_container
 
 logger = logging.getLogger(__name__)
@@ -103,31 +104,66 @@ class RankingService:
                     .order_by(Candle.timestamp.desc())
                     .limit(100)
                 )
-                candles = list(reversed(candle_result.scalars().all()))
+                candles_raw = list(reversed(candle_result.scalars().all()))
 
-                prices = [float(c.close) for c in candles] if candles else []
+                prices = [float(c.close) for c in candles_raw] if candles_raw else []
 
                 scoring_input = {
                     "ticker": asset.symbol,
                     "market": asset.market,
-                    "technical": {
-                        "current_price": prices[-1] if prices else 0,
-                        "rsi": 50,
-                        "macd": 0,
-                    },
+                    "technical": {},
                     "fundamental": {},
-                    "risk": {
-                        "volatility": 0.2,
-                    },
-                    "sentiment": {
-                        "news_sentiment": 0.6,
-                    },
+                    "risk": {},
+                    "sentiment": {},
                     "macro": {},
-                    "ai": {
-                        "prediction": "HOLD",
-                        "confidence": 50,
-                    },
+                    "ai": {},
                 }
+
+                if candles_raw:
+                    candles = [
+                        Candle(
+                            open=float(c.open),
+                            high=float(c.high),
+                            low=float(c.low),
+                            close=float(c.close),
+                            volume=float(c.volume) if c.volume else 0.0,
+                        )
+                        for c in candles_raw
+                    ]
+                    indicators = compute_all_indicators(candles)
+
+                    technical_data = {}
+                    if "rsi" in indicators:
+                        technical_data["rsi"] = indicators["rsi"]
+                    if "macd" in indicators:
+                        technical_data["macd"] = indicators["macd"]
+                    if "macd_histogram" in indicators:
+                        technical_data["macd_histogram"] = indicators["macd_histogram"]
+                    if "bb_percent_b" in indicators:
+                        technical_data["bb_position"] = indicators["bb_percent_b"]
+                    if "volume_ratio" in indicators:
+                        technical_data["volume_ratio"] = indicators["volume_ratio"]
+                    if "volatility" in indicators:
+                        technical_data["volatility"] = indicators["volatility"]
+                    if "momentum" in indicators:
+                        technical_data["momentum"] = indicators["momentum"]
+                    if "stoch_k" in indicators:
+                        technical_data["stoch_k"] = indicators["stoch_k"]
+                    if "atr" in indicators:
+                        technical_data["atr"] = indicators["atr"]
+                    if "price_vs_sma20" in indicators:
+                        technical_data["price_vs_sma20"] = indicators["price_vs_sma20"]
+                    if "price_vs_sma50" in indicators:
+                        technical_data["price_vs_sma50"] = indicators["price_vs_sma50"]
+                    technical_data["current_price"] = prices[-1] if prices else 0
+                    scoring_input["technical"] = technical_data
+
+                    risk_data = {}
+                    if "volatility" in indicators:
+                        risk_data["volatility"] = indicators["volatility"]
+                    if "atr" in indicators and prices and prices[-1] > 0:
+                        risk_data["atr_ratio"] = indicators["atr"] / prices[-1]
+                    scoring_input["risk"] = risk_data
 
                 if self._scoring_service:
                     scored = await self._scoring_service.analyze(scoring_input)
@@ -252,23 +288,65 @@ class RankingService:
             .order_by(Candle.timestamp.desc())
             .limit(100)
         )
-        candles = list(reversed(candle_result.scalars().all()))
-        prices = [float(c.close) for c in candles] if candles else []
+        candles_raw = list(reversed(candle_result.scalars().all()))
+        prices = [float(c.close) for c in candles_raw] if candles_raw else []
 
         scoring_input = {
             "ticker": asset.symbol,
             "market": asset.market,
-            "technical": {
-                "current_price": prices[-1] if prices else 0,
-                "rsi": 50,
-                "macd": 0,
-            },
+            "technical": {},
             "fundamental": {},
-            "risk": {"volatility": 0.2},
-            "sentiment": {"news_sentiment": 0.6},
+            "risk": {},
+            "sentiment": {},
             "macro": {},
-            "ai": {"prediction": "HOLD", "confidence": 50},
+            "ai": {},
         }
+
+        if candles_raw:
+            candles = [
+                Candle(
+                    open=float(c.open),
+                    high=float(c.high),
+                    low=float(c.low),
+                    close=float(c.close),
+                    volume=float(c.volume) if c.volume else 0.0,
+                )
+                for c in candles_raw
+            ]
+            indicators = compute_all_indicators(candles)
+
+            technical_data = {}
+            if "rsi" in indicators:
+                technical_data["rsi"] = indicators["rsi"]
+            if "macd" in indicators:
+                technical_data["macd"] = indicators["macd"]
+            if "macd_histogram" in indicators:
+                technical_data["macd_histogram"] = indicators["macd_histogram"]
+            if "bb_percent_b" in indicators:
+                technical_data["bb_position"] = indicators["bb_percent_b"]
+            if "volume_ratio" in indicators:
+                technical_data["volume_ratio"] = indicators["volume_ratio"]
+            if "volatility" in indicators:
+                technical_data["volatility"] = indicators["volatility"]
+            if "momentum" in indicators:
+                technical_data["momentum"] = indicators["momentum"]
+            if "stoch_k" in indicators:
+                technical_data["stoch_k"] = indicators["stoch_k"]
+            if "atr" in indicators:
+                technical_data["atr"] = indicators["atr"]
+            if "price_vs_sma20" in indicators:
+                technical_data["price_vs_sma20"] = indicators["price_vs_sma20"]
+            if "price_vs_sma50" in indicators:
+                technical_data["price_vs_sma50"] = indicators["price_vs_sma50"]
+            technical_data["current_price"] = prices[-1] if prices else 0
+            scoring_input["technical"] = technical_data
+
+            risk_data = {}
+            if "volatility" in indicators:
+                risk_data["volatility"] = indicators["volatility"]
+            if "atr" in indicators and prices and prices[-1] > 0:
+                risk_data["atr_ratio"] = indicators["atr"] / prices[-1]
+            scoring_input["risk"] = risk_data
 
         if not self._scoring_service:
             await self.initialize()

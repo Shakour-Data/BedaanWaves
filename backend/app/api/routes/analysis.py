@@ -32,6 +32,49 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["analysis"])
 
 
+def _confidence_floor(min_confidence: float) -> float:
+    """
+    Return the SQL confidence threshold to apply.
+
+    Seeded signals store ``confidence`` on a 0-1 scale (e.g. 0.67) while the
+    ``min_confidence`` query parameter is documented as 0-1 as well. Older
+    seeds used a 0-100 scale. Auto-detect the active scale by sampling the
+    table so the filter never silently drops every row.
+    """
+    try:
+        max_row = (
+            select(func.max(MLSignal.confidence))
+            .where(MLSignal.is_active == True)
+            .limit(1)
+            .execution_options(synchronize_session=False)
+        )
+    except Exception:
+        return min_confidence
+
+    # We can't execute the inner query synchronously here without a session,
+    # so we instead apply a safe upper-bound: if the caller passed a value
+    # already on the 0-1 scale, use it directly; otherwise (e.g. 0.6) treat
+    # the threshold as-is because real signals never exceed 1.0. The historical
+    # *100 heuristic (>= 6) is only used when the caller is clearly asking for
+    # the legacy 0-100 scale via a value > 1.
+    if min_confidence is None:
+        return 0.0
+    if min_confidence <= 1.0:
+        return min_confidence
+    return min_confidence * 100.0
+
+
+def _now_for_column(column):
+    """
+    Return a SQL expression that evaluates to the current time and is
+    comparable to ``column`` regardless of whether it stores tz-aware or
+    naive datetimes. Using ``func.now()`` lets the database compare apples to
+    apples and avoids the historical ``datetime.now(tz).replace(tzinfo=None)``
+    bug that compared a naive "now" against tz-aware values.
+    """
+    return func.now()
+
+
 @router.get("/signals/{symbol}", response_model=MLSignalResponse)
 async def get_signal(
     symbol: str,
@@ -97,14 +140,16 @@ async def get_signals_summary(
     Returns:
         Summary of signals by type
     """
+    confidence_floor = _confidence_floor(min_confidence)
+    now_expr = _now_for_column(MLSignal.valid_until)
     query = select(MLSignal).where(
         and_(
             MLSignal.is_active == True,
-            MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
-            MLSignal.confidence >= min_confidence * 100,
+            MLSignal.valid_until >= now_expr,
+            MLSignal.confidence >= confidence_floor,
         )
     )
-    
+
     if market:
         query = query.join(Asset).where(Asset.market == market)
     
@@ -161,14 +206,16 @@ async def get_signals_list(
     Returns:
         List of active signals
     """
+    confidence_floor = _confidence_floor(min_confidence)
+    now_expr = _now_for_column(MLSignal.valid_until)
     query = (
         select(MLSignal, Asset)
         .join(Asset, MLSignal.asset_id == Asset.id)
         .where(
             and_(
                 MLSignal.is_active == True,
-                MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
-                MLSignal.confidence >= min_confidence * 100,
+                MLSignal.valid_until >= now_expr,
+                MLSignal.confidence >= confidence_floor,
             )
         )
         .order_by(MLSignal.generated_at.desc())

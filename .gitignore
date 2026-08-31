@@ -81,6 +81,7 @@ logs/
 backend/check_routes.py
 backend/test_*.py
 backend/check_*.py
+backend/fix_*.py
 backend/run_*.py
 backend/verify_*.py
 backend/fetch_*.py
@@ -108,6 +109,8 @@ backend/scripts/seed_local.py
 backend/generate_processed_data.py
 backend/complete_snapshots.py
 compare_symbols.py
+check_board_data.py
+check_state.py
 inspect_db.py
 inspect_schema.py
 inspect_values.py

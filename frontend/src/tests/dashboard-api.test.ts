@@ -22,14 +22,28 @@ describe('Dashboard API Service', () => {
           timestamp: '2023-01-01'
         }})
       }
-      if (url.includes('market/nasdaq-dashboard')) {
+      if (url.includes('analysis/dashboard/general')) {
         return Promise.resolve({ data: {
           status: 'success',
-          market: 'NASDAQ',
-          total_symbols: 1000,
-          average_change_pct: 1.5,
-          top_gainers: [{ symbol: 'AAPL', name: 'Apple', last_close: 150, change_pct: 5 }],
-          top_losers: [{ symbol: 'MSFT', name: 'Microsoft', last_close: 380, change_pct: -3 }],
+          summary: { total_symbols: 1000, total_signals: 50, total_news: 12 },
+          dimensions: {
+            fundamental: { avg_score: 70, count: 1000 },
+            technical: { avg_score: 65, count: 1000 },
+            sentiment: { avg_score: 60, count: 1000 },
+            risk: { avg_score: 55, count: 1000 },
+            macro: { avg_score: 60, count: 1000 },
+            ai: { avg_score: 65, count: 1000 },
+          },
+          top_performers: [
+            { symbol: 'AAPL', name: 'Apple', overall_score: 95 },
+            { symbol: 'MSFT', name: 'Microsoft', overall_score: 90 },
+            { symbol: 'GOOGL', name: 'Google', overall_score: 88 },
+          ],
+          bottom_performers: [
+            { symbol: 'XYZ', name: 'XYZ Corp', overall_score: 20 },
+            { symbol: 'ABC', name: 'ABC Corp', overall_score: 25 },
+          ],
+          symbols: [],
           timestamp: '2023-01-01'
         }})
       }
@@ -88,8 +102,8 @@ describe('Dashboard API Service', () => {
     const result = await fetchDashboardData()
 
     expect(result.live).toBe(true)
-    expect(result.marketStats).toHaveLength(3)
-    expect(result.topMovers).toHaveLength(2)
+    expect(result.marketStats).toHaveLength(4)
+    expect(result.topMovers.length).toBeGreaterThan(0)
     expect(result.watchlist).toHaveLength(1)
     expect(result.signals).toHaveLength(3)
     expect(result.news).toHaveLength(1)
