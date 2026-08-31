@@ -476,6 +476,62 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
         </div>
       </div>
 
+      {dimension === "fundamental" && data.symbols.some((s) => s.key_ratios) && (
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-[var(--color-border)]">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
+              Key Fundamental Ratios
+            </h2>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+              EPS, P/E, P/B, ROE and margin pulled live from the <code>fundamental_ratios</code> table.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--color-background)]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Symbol</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">EPS</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">P/E</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">P/B</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">DPS</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">ROE</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Margin</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Period</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {data.symbols
+                  .filter((s) => s.key_ratios)
+                  .map((s) => {
+                    const r = s.key_ratios!;
+                    const fmt = (v: number | null) =>
+                      v === null || v === undefined ? "—" : v.toFixed(2);
+                    const fmtPct = (v: number | null) =>
+                      v === null || v === undefined ? "—" : `${(v * 100).toFixed(2)}%`;
+                    return (
+                      <tr key={s.symbol} className="hover:bg-[var(--color-background)]">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Link href={`/stocks/${s.symbol}`} className="font-semibold text-[var(--color-primary)] hover:underline">
+                            {s.symbol}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-primary)]">{fmt(r.eps)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-primary)]">{fmt(r.pe)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-primary)]">{fmt(r.pb)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-primary)]">{fmt(r.dps)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-primary)]">{fmtPct(r.roe)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-primary)]">{fmtPct(r.profit_margin)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-xs text-[var(--color-text-secondary)]">{r.period ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
         <div className="p-6 border-b border-[var(--color-border)]">
           <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">

@@ -101,6 +101,9 @@ def _belongs_to_dimension(key: str, dimension: str) -> bool:
         return False
     if k.startswith(f"{d}_") or k.startswith(f"{d}."):
         return True
+    known_prefixes = [f"{dim}_" for dim in ("fundamental", "technical", "sentiment", "risk", "macro", "ai")]
+    if any(k.startswith(p) for p in known_prefixes):
+        return False
     return True
 
 
