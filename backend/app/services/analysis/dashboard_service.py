@@ -68,18 +68,21 @@ def _aggregate_broad_sub_dimensions(
         return {}
 
     result: Dict[str, float] = {}
-    # Normalize input keys to bare names so we can match patterns regardless
-    # of whether they arrived as `pe_ratio` or `fundamental_pe_ratio` or
-    # `fundamental.7`.
     normalized = {_strip_dimension_prefix(k, dimension): float(v) for k, v in sub_dim_scores.items()}
     for label, patterns in mapping.items():
         matched: List[float] = []
         for bare_key, value in normalized.items():
             bk = bare_key.lower()
-            if any(pat in bk for pat in patterns):
+            if bk == label.lower():
+                matched.append(value)
+            elif any(pat in bk for pat in patterns):
                 matched.append(value)
         if matched:
             result[label] = round(sum(matched) / len(matched), 4)
+
+    if not result:
+        return normalized
+
     return result
 
 
@@ -153,6 +156,42 @@ def _derive_fundamental_score_from_ratios(fr: Any) -> float:
     if not components:
         return 0.0
     return round(sum(components) / len(components), 2)
+
+
+async def _derive_risk_score_from_volatility(
+    db: AsyncSession, asset_id: Any
+) -> float:
+    """Compute a real risk score (0-100) from MarketDataSnapshot volatility.
+
+    Fallback used when ScoreHistory has no `risk` entry for an asset. Pulls
+    the latest daily volatility and maps it to a 0-100 risk score where
+    higher volatility = higher risk. Uses real data only — never returns
+    a hardcoded placeholder.
+    """
+    # Get latest daily volatility for this asset
+    vol_query = (
+        select(MarketDataSnapshot.volatility)
+        .where(
+            and_(
+                MarketDataSnapshot.asset_id == asset_id,
+                MarketDataSnapshot.volatility.isnot(None),
+                MarketDataSnapshot.interval == "1d",
+            )
+        )
+        .order_by(desc(MarketDataSnapshot.snapshot_time))
+        .limit(1)
+    )
+    result = await db.execute(vol_query)
+    volatility = result.scalar()
+
+    if volatility is None:
+        return 0.0
+
+    vol = float(volatility)
+    # Annualized volatility: typical range 10-80%. Map to 0-100 risk score.
+    # 0% vol -> 0 risk, 80% vol -> 100 risk.
+    risk_score = min(100.0, max(0.0, (vol / 0.8) * 100.0))
+    return round(risk_score, 2)
 
 
 class DashboardService:
@@ -321,6 +360,11 @@ class DashboardService:
             if dim_score == 0.0 and dimension == "fundamental" and fr is not None:
                 dim_score = _derive_fundamental_score_from_ratios(fr)
 
+            # Fallback: if no risk score exists, compute one from real volatility
+            # data so the risk tab always shows real data instead of zeros.
+            if dim_score == 0.0 and dimension == "risk":
+                dim_score = await _derive_risk_score_from_volatility(db, asset.id)
+
             sub_dim_scores = {}
             aspect_scores = {}
             sub_aspect_scores = {}
@@ -352,14 +396,20 @@ class DashboardService:
                         if _belongs_to_dimension(k, dimension)
                     }
 
-            # Roll up to broad labels for the UI. For non-fundamental
-            # dimensions we still expose the raw keys (prefix-stripped) so
-            # the rest of the dashboard tabs don't regress.
+            # The actual data in raw_performance_scores.sub_dimension_scores
+            # is already in broad-label form for this project (e.g. `growth`,
+            # `liquidity`, `valuation`, ...), so we surface it directly. The
+            # BROAD_SUB_DIMENSION_METRIC_PATTERNS rollup remains as a fallback
+            # for the per-metric key shape used by the scoring-service contract
+            # (`fundamental_pe_ratio`, `fundamental_roe`, ...).
             raw_metrics = {
                 _strip_dimension_prefix(k, dimension): v for k, v in raw_sub_dim.items()
             }
             if dimension in BROAD_SUB_DIMENSION_METRIC_PATTERNS:
-                sub_dim_scores = _aggregate_broad_sub_dimensions(raw_sub_dim, dimension)
+                aggregated = _aggregate_broad_sub_dimensions(raw_sub_dim, dimension)
+                # If the aggregator produced nothing (data was already in
+                # broad-label form), use the raw keys directly.
+                sub_dim_scores = aggregated or raw_metrics
             else:
                 sub_dim_scores = raw_metrics
             aspect_scores = {

@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { fetchDashboardData } from '@/lib/api/dashboard'
+import { fetchDashboardData, fetchScoreTrend } from '@/lib/api/dashboard'
 import { apiClient } from '@/lib/api'
 
 vi.mock('@/lib/api', () => ({
@@ -126,5 +126,35 @@ describe('Dashboard API Service', () => {
     expect(result.watchlist).toHaveLength(0)
     expect(result.signals).toHaveLength(0)
     expect(result.news).toHaveLength(0)
+  })
+
+  it('should fetch score trend with day-over-day deltas', async () => {
+    ;(apiClient.get as any).mockImplementation((url: string) => {
+      if (url.includes('analysis/dashboard/score-trend')) {
+        return Promise.resolve({ data: {
+          status: 'success',
+          days: 30,
+          market: 'NASDAQ',
+          count: 3,
+          series: [
+            { date: '2026-08-01', avg_score: 54.76, avg_technical: 54.84, score_change: 0, technical_change: 0, symbol_count: 5600 },
+            { date: '2026-08-02', avg_score: 55.11, avg_technical: 55.00, score_change: 0.35, technical_change: 0.15, symbol_count: 5600 },
+            { date: '2026-08-03', avg_score: 55.51, avg_technical: 55.56, score_change: 0.40, technical_change: 0.56, symbol_count: 5600 },
+          ],
+          timestamp: '2026-08-31T22:00:00Z',
+        }})
+      }
+      throw new Error('Unmatched URL: ' + url)
+    })
+
+    const trend = await fetchScoreTrend(30, 'NASDAQ')
+
+    expect(trend.status).toBe('success')
+    expect(trend.days).toBe(30)
+    expect(trend.market).toBe('NASDAQ')
+    expect(trend.series).toHaveLength(3)
+    expect(trend.series[0].avg_score).toBe(54.76)
+    expect(trend.series[1].score_change).toBeCloseTo(0.35, 2)
+    expect(trend.series[2].avg_technical).toBe(55.56)
   })
 })

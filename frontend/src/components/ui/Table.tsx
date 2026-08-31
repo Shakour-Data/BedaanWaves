@@ -20,6 +20,7 @@ interface TableCellProps {
   children: React.ReactNode;
   className?: string;
   header?: boolean;
+  numeric?: boolean;
 }
 
 export function Table({ children, className }: TableProps) {
@@ -57,11 +58,12 @@ export function TableRow({ children, className, onClick }: TableRowProps) {
   );
 }
 
-export function TableHead({ children, className, header = true }: TableCellProps) {
+export function TableHead({ children, className, header = true, numeric }: TableCellProps & { numeric?: boolean }) {
   return (
     <th
       className={cn(
         "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+        numeric && "text-right tabular-nums",
         header && "whitespace-nowrap",
         className
       )}

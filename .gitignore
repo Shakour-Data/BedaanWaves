@@ -86,6 +86,7 @@ logs/
 backend/check_routes.py
 backend/test_*.py
 backend/check_*.py
+backend/_check_*.py
 backend/fix_*.py
 backend/run_*.py
 backend/verify_*.py

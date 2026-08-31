@@ -9,7 +9,7 @@ import logging
 
 from app.db.base import get_async_session
 from app.models.models import Asset, MLSignal, candle_model_for_market, MacroIndicator
-from app.schemas.schemas import MLSignalResponse, SignalTypeEnum
+from app.schemas.schemas import MLSignalResponse
 from app.services.analysis.technical_service import TechnicalAnalysisService
 from app.services.analysis.risk_service import RiskAnalysisService
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
@@ -81,47 +81,13 @@ async def get_signal(
     db: AsyncSession = Depends(get_async_session),
 ) -> MLSignalResponse:
     """
-    Get latest ML signal for a symbol
-    
-    Args:
-        symbol: Asset symbol
-        
-    Returns:
-        Latest ML signal
+    Trading recommendations are disabled. Endpoint kept for backwards
+    compatibility and always returns 404.
     """
-    # Get asset
-    asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
-    asset_result = await db.execute(asset_query)
-    asset = asset_result.scalars().first()
-    
-    if not asset:
-        raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-    
-    # Get latest active signal
-    signal_query = (
-        select(MLSignal)
-        .where(
-            and_(
-                MLSignal.asset_id == asset.id,
-                MLSignal.is_active == True,
-                MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
-            )
-        )
-        .order_by(MLSignal.generated_at.desc())
-        .limit(1)
+    raise HTTPException(
+        status_code=404,
+        detail=f"Trading recommendations are not available for {symbol}",
     )
-    
-    result = await db.execute(signal_query)
-    signal = result.scalars().first()
-    
-    if not signal:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No active signal found for {symbol}"
-        )
-    
-    logger.info(f"Retrieved signal for {symbol}: {signal.signal_type}")
-    return signal
 
 
 @router.get("/signals-summary", response_model=dict)
@@ -130,61 +96,13 @@ async def get_signals_summary(
     min_confidence: float = Query(0.6, ge=0, le=1),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """
-    Get summary of all active signals
-    
-    Args:
-        market: Filter by market (optional)
-        min_confidence: Minimum confidence threshold
-        
-    Returns:
-        Summary of signals by type
-    """
-    confidence_floor = _confidence_floor(min_confidence)
-    now_expr = _now_for_column(MLSignal.valid_until)
-    query = select(MLSignal).where(
-        and_(
-            MLSignal.is_active == True,
-            MLSignal.valid_until >= now_expr,
-            MLSignal.confidence >= confidence_floor,
-        )
-    )
-
-    if market:
-        query = query.join(Asset).where(Asset.market == market)
-    
-    result = await db.execute(query)
-    signals = result.scalars().all()
-    
-    # Aggregate by signal type
-    summary = {
-        "BUY": 0,
-        "SELL": 0,
-        "HOLD": 0,
-        "STRONG_BUY": 0,
-        "STRONG_SELL": 0,
-    }
-    
-    confidence_sum = {signal_type: 0 for signal_type in summary.keys()}
-    
-    for signal in signals:
-        summary[signal.signal_type] += 1
-        confidence_sum[signal.signal_type] += float(signal.confidence)
-    
-    # Calculate average confidence
-    avg_confidence = {}
-    for signal_type in summary.keys():
-        if summary[signal_type] > 0:
-            avg_confidence[signal_type] = round(
-                confidence_sum[signal_type] / summary[signal_type], 2
-            )
-    
+    """Trading recommendations are disabled. Always returns empty summary."""
     return {
-        "status": "success",
+        "status": "disabled",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "total_signals": len(signals),
-        "summary": summary,
-        "average_confidence": avg_confidence,
+        "total_signals": 0,
+        "summary": {},
+        "average_confidence": {},
     }
 
 
@@ -195,54 +113,11 @@ async def get_signals_list(
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """
-    Get list of active signals with asset symbols.
-    
-    Args:
-        market: Filter by market (optional)
-        min_confidence: Minimum confidence threshold
-        limit: Maximum number of signals to return
-        
-    Returns:
-        List of active signals
-    """
-    confidence_floor = _confidence_floor(min_confidence)
-    now_expr = _now_for_column(MLSignal.valid_until)
-    query = (
-        select(MLSignal, Asset)
-        .join(Asset, MLSignal.asset_id == Asset.id)
-        .where(
-            and_(
-                MLSignal.is_active == True,
-                MLSignal.valid_until >= now_expr,
-                MLSignal.confidence >= confidence_floor,
-            )
-        )
-        .order_by(MLSignal.generated_at.desc())
-        .limit(limit)
-    )
-    
-    if market:
-        query = query.where(Asset.market == market)
-    
-    result = await db.execute(query)
-    rows = result.all()
-    
-    signals = []
-    for signal, asset in rows:
-        signals.append({
-            "symbol": asset.symbol,
-            "name": asset.name,
-            "signal_type": signal.signal_type,
-            "confidence": float(signal.confidence),
-            "model": signal.ml_model_version,
-            "generated_at": signal.generated_at.isoformat(),
-        })
-    
+    """Trading recommendations are disabled. Always returns empty list."""
     return {
-        "status": "success",
+        "status": "disabled",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "data": signals,
+        "data": [],
     }
 
 
@@ -767,17 +642,17 @@ async def get_symbol_scoring(
     await financial_ingest_service.shutdown()
     
     # 4. Prepare data for scoring
-    # Fetch signals for AI component
+    # Fetch signals for AI component (analytics only, no buy/sell/hold)
     signal_query = select(MLSignal).where(MLSignal.asset_id == asset.id).order_by(MLSignal.generated_at.desc()).limit(1)
     signal_result = await db.execute(signal_query)
     latest_signal = signal_result.scalars().first()
-    
+
     # Fetch macro indicators
     macro_query = select(MacroIndicator).order_by(MacroIndicator.as_of.desc()).limit(10)
     macro_result = await db.execute(macro_query)
     macros = macro_result.scalars().all()
     macro_data = {m.indicator_code: float(m.value) for m in macros}
-    
+
     # Assemble analysis data
     scoring_input = {
         "ticker": asset.symbol,
@@ -796,7 +671,6 @@ async def get_symbol_scoring(
         },
         "macro": macro_data,
         "ai": {
-            "prediction": latest_signal.signal_type if latest_signal else "HOLD",
             "confidence": latest_signal.confidence if latest_signal else 50,
         }
     }

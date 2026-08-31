@@ -198,13 +198,12 @@ def order_book_model_for_market(market: str):
 # 5. ML Signals
 # ===========================================================================
 class MLSignal(Base):
-    """ML-Generated Trading Signals"""
+    """ML-Generated Analytics Records (no trading recommendations)."""
     __tablename__ = "ml_signals"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
-    signal_type = Column(String(20), nullable=False)  # BUY, SELL, HOLD, etc.
     confidence = Column(Numeric(5, 2), nullable=False)  # 0-100
 
     expected_return = Column(Numeric(8, 2))
@@ -902,14 +901,13 @@ class CryptoMLSignal(Base):
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
     snapshot_id = Column(UUID(as_uuid=True), ForeignKey("market_data_snapshots.id"), nullable=True, index=True)
 
-    signal_type = Column(String(20), nullable=False, index=True)  # BUY, SELL, HOLD, STRONG_BUY, STRONG_SELL
     confidence = Column(Numeric(5, 2), nullable=False)
 
     expected_return = Column(Numeric(8, 2))
     expected_volatility = Column(Numeric(8, 2))
     risk_score = Column(Numeric(5, 2))
 
-    # Which model produced this signal
+    # Which model produced this record
     model_name = Column(String(100))
     model_version = Column(String(50), index=True)
 
