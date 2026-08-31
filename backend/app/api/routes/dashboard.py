@@ -56,7 +56,7 @@ async def get_technical_dashboard(
 
 @router.get("/dashboard/fundamental", response_model=dict)
 async def get_fundamental_dashboard(
-    limit: int = Query(50, ge=10, le=200),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
@@ -76,7 +76,7 @@ async def get_fundamental_dashboard(
 
 @router.get("/dashboard/news", response_model=dict)
 async def get_news_dashboard(
-    limit: int = Query(50, ge=10, le=200),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
@@ -96,7 +96,7 @@ async def get_news_dashboard(
 
 @router.get("/dashboard/risk", response_model=dict)
 async def get_risk_dashboard(
-    limit: int = Query(50, ge=10, le=200),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
@@ -116,7 +116,7 @@ async def get_risk_dashboard(
 
 @router.get("/dashboard/board", response_model=dict)
 async def get_board_dashboard(
-    limit: int = Query(50, ge=10, le=200),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
@@ -136,7 +136,7 @@ async def get_board_dashboard(
 
 @router.get("/dashboard/ai", response_model=dict)
 async def get_ai_dashboard(
-    limit: int = Query(50, ge=10, le=200),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """

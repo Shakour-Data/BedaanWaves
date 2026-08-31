@@ -419,3 +419,34 @@ export async function fetchAiDashboard(): Promise<AiDashboardResponse> {
   const res = await apiClient.get<AiDashboardResponse>("/analysis/dashboard/ai", { timeout: 120000 });
   return res.data;
 }
+
+export interface ScoreTrendPoint {
+  date: string;
+  avg_score: number;
+  avg_technical: number;
+  score_change: number;
+  technical_change: number;
+  symbol_count: number;
+}
+
+export interface ScoreTrendResponse {
+  status: string;
+  days: number;
+  market: string;
+  count: number;
+  series: ScoreTrendPoint[];
+  timestamp: string;
+}
+
+export async function fetchScoreTrend(
+  days: number = 30,
+  market?: string,
+): Promise<ScoreTrendResponse> {
+  const params = new URLSearchParams({ days: String(days) });
+  if (market) params.set("market", market);
+  const res = await apiClient.get<ScoreTrendResponse>(
+    `/analysis/dashboard/score-trend?${params.toString()}`,
+    { timeout: 60000 },
+  );
+  return res.data;
+}
