@@ -21,13 +21,13 @@ const mainNavItems: NavItem[] = [
 ];
 
 const dashboardTabs: NavItem[] = [
-  { label: "General", href: "/dashboard" },
-  { label: "Technical", href: "/dashboard" },
-  { label: "Fundamental", href: "/dashboard" },
-  { label: "News", href: "/dashboard" },
-  { label: "Risk", href: "/dashboard" },
-  { label: "Board", href: "/dashboard" },
-  { label: "AI", href: "/dashboard" },
+  { label: "General", href: "/dashboard?tab=general" },
+  { label: "Technical", href: "/dashboard?tab=technical" },
+  { label: "Fundamental", href: "/dashboard?tab=fundamental" },
+  { label: "News", href: "/dashboard?tab=news" },
+  { label: "Risk", href: "/dashboard?tab=risk" },
+  { label: "Board", href: "/dashboard?tab=board" },
+  { label: "AI", href: "/dashboard?tab=ai" },
 ];
 
 const bottomNavItems: NavItem[] = [
