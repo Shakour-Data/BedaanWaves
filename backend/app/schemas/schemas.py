@@ -27,6 +27,12 @@ class MarketEnum(str, Enum):
     TSE = "TSE"
 
 
+class ScoreTierEnum(str, Enum):
+    STRONG = "STRONG"
+    MODERATE = "MODERATE"
+    WEAK = "WEAK"
+
+
 class SignalTypeEnum(str, Enum):
     BUY = "BUY"
     SELL = "SELL"
@@ -109,9 +115,8 @@ class PriceCandleResponse(PriceCandleBase):
         from_attributes = True
 
 
-# ML Signal Schemas
+# ML Signal Schemas (analytics only, no buy/sell/hold classification)
 class MLSignalBase(BaseModel):
-    signal_type: SignalTypeEnum
     confidence: Decimal = Field(..., ge=0, le=100)
     expected_return: Optional[Decimal] = None
     risk_score: Optional[Decimal] = None
@@ -133,7 +138,7 @@ class MLSignalResponse(MLSignalBase):
     generated_at: datetime
     valid_until: datetime
     is_active: bool
-    
+
     class Config:
         from_attributes = True
 

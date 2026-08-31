@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard } from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard, fetchScoreTrend } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, SignalRow, NewsItem } from "@/lib/dashboard-data";
-import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse } from "@/lib/api/dashboard";
+import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
+import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 import { DimensionDashboard } from "@/components/dashboard/DimensionDashboard";
 import { NewsDashboard } from "@/components/dashboard/NewsDashboard";
 import { BoardDashboard } from "@/components/dashboard/BoardDashboard";
@@ -42,9 +43,24 @@ export default function DashboardPage() {
   const [topStocks, setTopStocks] = useState<AssetRow[]>([]);
   const [signals, setSignals] = useState<SignalRow[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [scoreTrend, setScoreTrend] = useState<ScoreTrendResponse | null>(null);
+  const [scoreTrendLoading, setScoreTrendLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
+
+  const loadScoreTrend = useCallback(async () => {
+    setScoreTrendLoading(true);
+    try {
+      const trend = await fetchScoreTrend(30, "NASDAQ");
+      setScoreTrend(trend);
+    } catch (err) {
+      const message = getApiErrorMessage(err);
+      addToast({ type: "error", message });
+    } finally {
+      setScoreTrendLoading(false);
+    }
+  }, [addToast]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -74,7 +90,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboard();
-  }, [loadDashboard]);
+    loadScoreTrend();
+  }, [loadDashboard, loadScoreTrend]);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as Tab | null;
@@ -231,6 +248,93 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">30-Day Trend</h2>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Daily averages across {scoreTrend?.series?.[0]?.symbol_count?.toLocaleString() ?? "—"} NASDAQ symbols
+                    {scoreTrend?.market ? ` (${scoreTrend.market})` : ""}
+                  </p>
+                </div>
+                {scoreTrend && (
+                  <span className="text-xs text-[var(--color-text-secondary)]">
+                    {scoreTrend.count} data points
+                  </span>
+                )}
+              </div>
+              {scoreTrendLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+                </div>
+              ) : scoreTrend && scoreTrend.series.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Score</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">Average overall score (0-100)</p>
+                    </div>
+                    <ScoreTrendChart
+                      series={[{
+                        key: "avg_score",
+                        label: "Score",
+                        color: "#2563EB",
+                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.avg_score })),
+                      }]}
+                      height={220}
+                    />
+                  </div>
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Score Changes</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">Day-over-day delta</p>
+                    </div>
+                    <ScoreTrendChart
+                      series={[{
+                        key: "score_change",
+                        label: "Score change",
+                        color: "#10B981",
+                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.score_change })),
+                      }]}
+                      height={220}
+                    />
+                  </div>
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Technical Analysis Weight</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">Average technical dimension (0-100)</p>
+                    </div>
+                    <ScoreTrendChart
+                      series={[{
+                        key: "avg_technical",
+                        label: "Technical weight",
+                        color: "#F59E0B",
+                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.avg_technical })),
+                      }]}
+                      height={220}
+                    />
+                  </div>
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Technical Analysis Weight Changes</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">Day-over-day delta</p>
+                    </div>
+                    <ScoreTrendChart
+                      series={[{
+                        key: "technical_change",
+                        label: "Technical change",
+                        color: "#EF4444",
+                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.technical_change })),
+                      }]}
+                      height={220}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-[var(--color-text-secondary)] py-8">No trend data available</p>
+              )}
+            </div>
 
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">

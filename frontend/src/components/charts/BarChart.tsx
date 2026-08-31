@@ -8,8 +8,10 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type BarData } from "lightweight-charts";
+  type TickMarkFormatter,
+} from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
+import { toTimestamp } from "@/lib/chart-time";
 
 interface BarChartProps {
   data: { time: string | UTCTimestamp; value: number; color?: string }[];
@@ -34,18 +36,30 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
   const { theme } = useAppStore();
   const colors = theme === "dark" ? DARK : LIGHT;
 
-  const chartData = useMemo(
-    () =>
-      data.map((d) => ({
-        time: d.time as BarData["time"],
-        value: d.value,
-        color: d.color })),
-    [data]
-  );
+  const chartSeries = useMemo(() => {
+    const ordinalLabels = new Map<number, string>();
+    const chartData = data.map((d, i) => ({
+      time: toTimestamp(d.time, i, ordinalLabels),
+      value: d.value,
+      color: d.color,
+    }));
+    return { chartData, ordinalLabels };
+  }, [data]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    const hasOrdinal = chartSeries.ordinalLabels.size > 0;
+    const timeScaleFormatter: TickMarkFormatter | undefined = hasOrdinal
+      ? (time, _tickMarkType, _locale) => {
+          if (typeof time === "number") {
+            const label = chartSeries.ordinalLabels.get(time);
+            if (label) return label;
+          }
+          return "";
+        }
+      : undefined;
 
     const chart = createChart(container, {
       height,
@@ -57,7 +71,10 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
         vertLines: { color: colors.grid },
         horzLines: { color: colors.grid } },
       rightPriceScale: { borderColor: colors.border },
-      timeScale: { borderColor: colors.border },
+      timeScale: {
+        borderColor: colors.border,
+        tickMarkFormatter: timeScaleFormatter,
+      },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "fa-IR",
@@ -67,7 +84,7 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
 
     const series = chart.addSeries(BarSeries, {
       priceFormat: { type: "volume" } });
-    series.setData(chartData);
+    series.setData(chartSeries.chartData);
 
     chart.timeScale().fitContent();
 
@@ -81,7 +98,7 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
       chart.remove();
       chartRef.current = null;
     };
-  }, [chartData, colors, height]);
+  }, [chartSeries, colors, height]);
 
   return <div ref={containerRef} className="w-full" style={{ height }} />;
 }

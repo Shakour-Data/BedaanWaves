@@ -174,7 +174,7 @@ class MultiSourceNewsFetcher(DataService):
         for item in news_items:
             item.asset_id = asset_id
             item.language = language
-            item.fetched_at = datetime.now(timezone.utc)
+            item.fetched_at = datetime.utcnow()
 
         self.logger.info(
             f"Fetched {len(news_items)} news items for {symbol} from {len(set(n.source for n in news_items))} sources"
@@ -210,7 +210,7 @@ class MultiSourceNewsFetcher(DataService):
                 if item.url and item.url not in seen_urls:
                     seen_urls.add(item.url)
                     item.language = "en"
-                    item.fetched_at = datetime.now(timezone.utc)
+                    item.fetched_at = datetime.utcnow()
                     news_items.append(item)
                     if len(news_items) >= limit * 3:
                         break
@@ -309,7 +309,7 @@ class MultiSourceNewsFetcher(DataService):
                 permalink = post.get("permalink", "")
                 link = f"https://www.reddit.com{permalink}" if permalink else post.get("url", "")
                 created = post.get("created_utc")
-                published_at = datetime.fromtimestamp(created, tz=timezone.utc) if created else datetime.now(timezone.utc)
+                published_at = datetime.fromtimestamp(created, tz=timezone.utc) if created else datetime.utcnow()
                 self_comment = post.get("selftext", "")
                 body = self_comment[:500] if self_comment else title
 
@@ -343,7 +343,7 @@ class MultiSourceNewsFetcher(DataService):
             for msg in messages[:20]:
                 body = msg.get("body", "")
                 created = msg.get("created_at")
-                published_at = datetime.fromisoformat(created.replace("Z", "+00:00")) if created else datetime.now(timezone.utc)
+                published_at = datetime.fromisoformat(created.replace("Z", "+00:00")) if created else datetime.utcnow()
                 msg_id = msg.get("id", "")
                 link = f"https://stocktwits.com/message/{msg_id}" if msg_id else ""
                 items.append(

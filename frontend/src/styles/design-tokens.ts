@@ -12,9 +12,9 @@ export const colors = {
   neutral: "#F8FAFC",
   foreground: "#0F172A",
   "text-primary": "#0F172A",
-  "text-secondary": "#475569",
+  "text-secondary": "#64748B",
   "text-muted": "#94A3B8",
-  "muted-foreground": "#475569",
+  "muted-foreground": "#64748B",
   border: "#E2E8F0",
   "border-light": "#F1F5F9",
 } as const;

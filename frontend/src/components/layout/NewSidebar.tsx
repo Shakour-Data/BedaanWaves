@@ -235,6 +235,7 @@ export function NewSidebar() {
 
   const expandedCategories = useMemo(() => {
     return new Set([...autoExpanded, ...userExpanded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoExpanded, userExpanded]);
 
   useEffect(() => {

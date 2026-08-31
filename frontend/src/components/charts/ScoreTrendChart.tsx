@@ -8,9 +8,10 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type LineData,
+  type TickMarkFormatter,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
+import { normalizeChartData } from "@/lib/chart-time";
 
 interface SeriesDef {
   key: string;
@@ -65,9 +66,32 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
     [series]
   );
 
+  const chartSeries = useMemo(() => {
+    const ordinalLabels = new Map<number, string>();
+    let base = 0;
+    const series = visibleSeries.map((s) => {
+      const { data, ordinalLabels: labels } = normalizeChartData(s.data, base);
+      base += s.data.length;
+      for (const [k, v] of labels) ordinalLabels.set(k, v);
+      return { ...s, data };
+    });
+    return { series, ordinalLabels };
+  }, [visibleSeries]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    const hasOrdinal = chartSeries.ordinalLabels.size > 0;
+    const timeScaleFormatter: TickMarkFormatter | undefined = hasOrdinal
+      ? (time, _tickMarkType, _locale) => {
+          if (typeof time === "number") {
+            const label = chartSeries.ordinalLabels.get(time);
+            if (label) return label;
+          }
+          return "";
+        }
+      : undefined;
 
     const chart = createChart(container, {
       height,
@@ -84,7 +108,10 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
         borderColor: colors.border,
         autoScale: true,
       },
-      timeScale: { borderColor: colors.border },
+      timeScale: {
+        borderColor: colors.border,
+        tickMarkFormatter: timeScaleFormatter,
+      },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "fa-IR",
@@ -95,18 +122,13 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
     chartRef.current = chart;
 
     seriesRefs.current = [];
-    for (const s of visibleSeries) {
+    for (const s of chartSeries.series) {
       const line = chart.addSeries(LineSeries, {
         color: s.color,
         lineWidth: 2,
         priceScaleId: "right",
       });
-      line.setData(
-        s.data.map((d) => ({
-          time: d.time as LineData["time"],
-          value: d.value,
-        }))
-      );
+      line.setData(s.data);
       seriesRefs.current.push(line);
     }
 
@@ -123,7 +145,7 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
       chartRef.current = null;
       seriesRefs.current = [];
     };
-  }, [visibleSeries, colors, height]);
+  }, [chartSeries, colors, height]);
 
   return (
     <div className="w-full">
