@@ -9,10 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
 import { StatBox } from "@/components/dashboard/StatBox";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
-import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
-import type { BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -133,37 +131,27 @@ export default function StockDetailPage() {
     { key: "history", label: "Historical Data" },
   ];
 
-  const breadcrumbs: BreadcrumbItem[] = [
-    { label: "Stocks", href: "/stocks" },
-    { label: symbol.toUpperCase() },
-  ];
-
   function fmt(n: number, digits = 0): string {
     return n.toLocaleString("en-US", { maximumFractionDigits: digits });
   }
 
   if (loading) {
     return (
-      <NewDashboardShell title={t("app.stocks.title", "en")} breadcrumbs={breadcrumbs}>
-        <StockDetailSkeleton />
-      </NewDashboardShell>
+      <StockDetailSkeleton />
     );
   }
 
   if (error) {
     return (
-      <NewDashboardShell title={t("app.stocks.title", "en")} breadcrumbs={breadcrumbs}>
-        <TarotCard icon="⚠️" title={t("app.stocks.detail.error_title", "en")}>
-          <p className="text-sm text-muted-foreground">{t("app.stocks.detail.error_desc", "en").replace("{symbol}", symbol)}</p>
-          <p className="mt-2 text-xs text-error">{error}</p>
-          <Link href="/stocks" className="mt-3 inline-block text-sm text-secondary hover:underline">← {t("app.stocks.detail.back_to_list", "en")}</Link>
-        </TarotCard>
-      </NewDashboardShell>
+      <TarotCard icon="⚠️" title={t("app.stocks.detail.error_title", "en")}>
+        <p className="text-sm text-muted-foreground">{t("app.stocks.detail.error_desc", "en").replace("{symbol}", symbol)}</p>
+        <p className="mt-2 text-xs text-error">{error}</p>
+        <Link href="/stocks" className="mt-3 inline-block text-sm text-secondary hover:underline">← {t("app.stocks.detail.back_to_list", "en")}</Link>
+      </TarotCard>
     );
   }
 
   return (
-    <NewDashboardShell title={t("app.stocks.title", "en")} breadcrumbs={breadcrumbs}>
       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/stocks" className="hover:text-foreground">{t("app.nav.stocks", "en")}</Link>
@@ -368,6 +356,5 @@ export default function StockDetailPage() {
           </div>
         )}
       </div>
-    </NewDashboardShell>
   );
 }

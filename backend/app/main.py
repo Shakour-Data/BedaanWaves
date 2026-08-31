@@ -15,7 +15,8 @@ import os
 import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -79,6 +80,7 @@ from app.api.routes import (
     password_reset_router,
     market_data_router,
     data_health_router,
+    dashboard_router,
 )
 
 logging.basicConfig(
@@ -258,8 +260,8 @@ async def lifespan(app: FastAPI):
     pass
 
     # Step 4: Auto-seed if database is empty
-    # Disabled for audit testing
-    pass
+    if _needs_seeding():
+        _run_seed()
 
     try:
         await ensure_admin_user()
@@ -362,6 +364,7 @@ async def lifespan(app: FastAPI):
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
         app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
         app.include_router(data_health_router, tags=["data-health"])
+        app.include_router(dashboard_router, prefix="/api/v1/analysis", tags=["dashboard"])
         app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
         app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
         app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
@@ -391,9 +394,33 @@ app = FastAPI(
     title=settings.API_TITLE,
     description=settings.APP_DESCRIPTION,
     version=settings.APP_VERSION,
-    openapi_url=settings.OPENAPI_URL,
-    docs_url=settings.DOCS_URL,
-    redoc_url=settings.REDOC_URL,
+    terms_of_service="https://bedaanwaves.com/terms/",
+    contact={
+        "name": "BedaanWaves Team",
+        "url": "https://bedaanwaves.com/support",
+        "email": "support@bedaanwaves.com",
+    },
+    license_info={
+        "name": "Proprietary",
+        "url": "https://bedaanwaves.com/license",
+    },
+    docs_url=settings.DOCS_URL if getattr(settings, "ENABLE_DOCS", True) else None,
+    redoc_url=settings.REDOC_URL if getattr(settings, "ENABLE_DOCS", True) else None,
+    openapi_url=settings.OPENAPI_URL if getattr(settings, "ENABLE_DOCS", True) else None,
+    swagger_ui_parameters={
+        "syntaxHighlight": True,
+        "syntaxHighlight.activate": True,
+        "tryItOutEnabled": True,
+        "displayOperationId": True,
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+        "docExpansion": "list",
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 2,
+        "persistAuthorization": True,
+        "withCredentials": True,
+    },
     lifespan=lifespan,
 )
 
@@ -409,6 +436,67 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        license_info=app.license_info,
+        contact=app.contact,
+        terms_of_service=app.terms_of_service,
+    )
+
+    openapi_schema["servers"] = [
+        {
+            "url": "http://localhost:8000",
+            "description": "Local development",
+        },
+        {
+            "url": "http://localhost:3000",
+            "description": "Frontend dev proxy",
+        },
+    ]
+
+    if settings.ENVIRONMENT == "staging":
+        openapi_schema["servers"].append({
+            "url": "https://staging-api.bedaanwaves.com",
+            "description": "Staging environment",
+        })
+    elif settings.ENVIRONMENT == "production":
+        openapi_schema["servers"].append({
+            "url": "https://api.bedaanwaves.com",
+            "description": "Production environment",
+        })
+
+    openapi_schema.setdefault("components", {})
+    openapi_schema["components"].setdefault("securitySchemes", {})
+
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter the access token obtained from `/api/v1/auth/login`",
+        },
+        "CookieAuth": {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": "refresh_token",
+            "description": "Optional refresh token cookie for session renewal",
+        },
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import Request

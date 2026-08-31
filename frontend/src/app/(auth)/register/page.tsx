@@ -54,11 +54,6 @@ export default function RegisterPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
       <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Create Account</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-2">Sign up to get started</p>
-        </div>
-        
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error ? (
             <div className="rounded-xl bg-error/10 px-4 py-3 text-sm text-error border border-error/20 animate-in fade-in slide-in-from-top-2">

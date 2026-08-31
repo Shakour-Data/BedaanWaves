@@ -143,6 +143,62 @@ async def get_signals_summary(
     }
 
 
+@router.get("/signals", response_model=dict)
+async def get_signals_list(
+    market: str = Query(None),
+    min_confidence: float = Query(0.6, ge=0, le=1),
+    limit: int = Query(10, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Get list of active signals with asset symbols.
+    
+    Args:
+        market: Filter by market (optional)
+        min_confidence: Minimum confidence threshold
+        limit: Maximum number of signals to return
+        
+    Returns:
+        List of active signals
+    """
+    query = (
+        select(MLSignal, Asset)
+        .join(Asset, MLSignal.asset_id == Asset.id)
+        .where(
+            and_(
+                MLSignal.is_active == True,
+                MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
+                MLSignal.confidence >= min_confidence * 100,
+            )
+        )
+        .order_by(MLSignal.generated_at.desc())
+        .limit(limit)
+    )
+    
+    if market:
+        query = query.where(Asset.market == market)
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    signals = []
+    for signal, asset in rows:
+        signals.append({
+            "symbol": asset.symbol,
+            "name": asset.name,
+            "signal_type": signal.signal_type,
+            "confidence": float(signal.confidence),
+            "model": signal.ml_model_version,
+            "generated_at": signal.generated_at.isoformat(),
+        })
+    
+    return {
+        "status": "success",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": signals,
+    }
+
+
 @router.get("/top-performers", response_model=dict)
 async def get_top_performers(
     limit: int = Query(10, ge=1, le=100),

@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     DOCS_URL: str = "/api/v1/docs"
     REDOC_URL: str = "/api/v1/redoc"
     OPENAPI_URL: str = "/api/v1/openapi.json"
+    ENABLE_DOCS: bool = True
     
     # ============================================================
     # CORS CONFIGURATION
@@ -119,6 +120,9 @@ class Settings(BaseSettings):
         "/api/v1/docs",
         "/api/v1/redoc",
         "/api/v1/openapi.json",
+        "/api/v1/market",
+        "/api/v1/analysis",
+        "/api/v1/news",
     ]
     # Permissions granted to a normal (non-admin) authenticated user.
     DEFAULT_USER_PERMISSIONS: List[str] = [
