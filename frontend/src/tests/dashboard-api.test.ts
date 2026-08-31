@@ -26,7 +26,7 @@ describe('Dashboard API Service', () => {
         return Promise.resolve({ data: {
           status: 'success',
           market: 'NASDAQ',
-          total_assets: 1000,
+          total_symbols: 1000,
           average_change_pct: 1.5,
           top_gainers: [{ symbol: 'AAPL', name: 'Apple', last_close: 150, change_pct: 5 }],
           top_losers: [{ symbol: 'MSFT', name: 'Microsoft', last_close: 380, change_pct: -3 }],
@@ -64,6 +64,17 @@ describe('Dashboard API Service', () => {
           }})
         }
       }
+      if (url.includes('analysis/signals')) {
+        return Promise.resolve({ data: {
+          status: 'success',
+          timestamp: '2023-01-01',
+          data: [
+            { symbol: 'AAPL', name: 'Apple', signal_type: 'BUY', confidence: 0.8, model: 'ML', generated_at: '2023-01-01' },
+            { symbol: 'MSFT', name: 'Microsoft', signal_type: 'SELL', confidence: 0.7, model: 'ML', generated_at: '2023-01-01' },
+            { symbol: 'GOOGL', name: 'Google', signal_type: 'HOLD', confidence: 0.6, model: 'ML', generated_at: '2023-01-01' },
+          ]
+        }})
+      }
       if (url.includes('news/market')) {
         return Promise.resolve({ data: {
           status: 'success',
@@ -91,14 +102,12 @@ describe('Dashboard API Service', () => {
 
     const result = await fetchDashboardData()
 
-    // Functions return default/fallback values on error
     expect(Array.isArray(result.marketStats)).toBe(true)
     expect(Array.isArray(result.topMovers)).toBe(true)
     expect(Array.isArray(result.watchlist)).toBe(true)
     expect(Array.isArray(result.signals)).toBe(true)
     expect(Array.isArray(result.news)).toBe(true)
-    // marketStats always returns defaults even on failure
-    expect(result.live).toBe(true)
+    expect(result.marketStats).toHaveLength(0)
     expect(result.topMovers).toHaveLength(0)
     expect(result.watchlist).toHaveLength(0)
     expect(result.signals).toHaveLength(0)

@@ -16,10 +16,146 @@ export interface DashboardData {
   live: boolean;
 }
 
+export interface DimensionDashboardResponse {
+  status: string;
+  dimension: string;
+  summary: {
+    total_symbols: number;
+    avg_score: number;
+    best_symbol: string | null;
+    best_score: number;
+    worst_symbol: string | null;
+    worst_score: number;
+  };
+  distribution: Array<{ range: string; count: number }>;
+  symbols: Array<{
+    symbol: string;
+    name: string;
+    sector: string | null;
+    score: number;
+    grade: string;
+    sub_dimensions: Record<string, number>;
+    aspects: Record<string, number>;
+    sub_aspects: Record<string, number>;
+  }>;
+  top_performers: Array<{ symbol: string; name: string; score: number }>;
+  bottom_performers: Array<{ symbol: string; name: string; score: number }>;
+  timestamp: string;
+}
+
+export interface NewsDashboardResponse {
+  status: string;
+  dimension: string;
+  summary: {
+    total_symbols: number;
+    total_news: number;
+    avg_score: number;
+    best_symbol: string | null;
+    best_score: number;
+    worst_symbol: string | null;
+    worst_score: number;
+  };
+  symbols: Array<{
+    symbol: string;
+    name: string;
+    sector: string | null;
+    score: number;
+    grade: string;
+    news_count: number;
+    avg_sentiment: number;
+    positive_count: number;
+    negative_count: number;
+    neutral_count: number;
+    latest_news: { title: string; source: string; published_at: string } | null;
+  }>;
+  top_performers: Array<{ symbol: string; name: string; score: number }>;
+  bottom_performers: Array<{ symbol: string; name: string; score: number }>;
+  timestamp: string;
+}
+
+export interface BoardDashboardResponse {
+  status: string;
+  dimension: string;
+  summary: {
+    total_symbols: number;
+    avg_score: number;
+    best_symbol: string | null;
+    best_score: number;
+    worst_symbol: string | null;
+    worst_score: number;
+    total_boards: number;
+  };
+  symbols: Array<{
+    symbol: string;
+    name: string;
+    sector: string | null;
+    score: number;
+    board_count: number;
+    officer_count: number;
+    total_leaders: number;
+    fundamental_score: number;
+    grade: string;
+  }>;
+  top_performers: Array<{ symbol: string; name: string; score: number; board_count: number; officer_count: number }>;
+  bottom_performers: Array<{ symbol: string; name: string; score: number; board_count: number; officer_count: number }>;
+  timestamp: string;
+}
+
+export interface AiDashboardResponse {
+  status: string;
+  dimension: string;
+  summary: {
+    total_symbols: number;
+    avg_score: number;
+    best_symbol: string | null;
+    best_score: number;
+    worst_symbol: string | null;
+    worst_score: number;
+    total_signals: number;
+  };
+  symbols: Array<{
+    symbol: string;
+    name: string;
+    sector: string | null;
+    score: number;
+    grade: string;
+    signal_type: string | null;
+    confidence: number;
+    expected_return: number;
+    risk_score: number;
+    generated_at: string | null;
+  }>;
+  top_performers: Array<{ symbol: string; name: string; score: number }>;
+  bottom_performers: Array<{ symbol: string; name: string; score: number }>;
+  timestamp: string;
+}
+
+export interface GeneralDashboardResponse {
+  status: string;
+  summary: {
+    total_symbols: number;
+    total_signals: number;
+    total_news: number;
+  };
+  dimensions: Record<string, { avg_score: number; count: number }>;
+  symbols: Array<{
+    symbol: string;
+    name: string;
+    sector: string | null;
+    market: string;
+    overall_score: number;
+    grade: string;
+    dimensions: Record<string, number>;
+  }>;
+  top_performers: Array<{ symbol: string; name: string; overall_score: number }>;
+  bottom_performers: Array<{ symbol: string; name: string; overall_score: number }>;
+  timestamp: string;
+}
+
 interface NasdaqDashboardResponse {
   status: string;
   market: string;
-  total_assets: number;
+  total_symbols: number;
   average_change_pct: number;
   top_gainers: { symbol: string; name: string; last_close: number; change_pct: number }[];
   top_losers: { symbol: string; name: string; last_close: number; change_pct: number }[];
@@ -74,58 +210,47 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 async function fetchMarketStats(): Promise<MarketStat[]> {
-  try {
-    const [marketOverviewRes, nasdaqDashboardRes] = await Promise.all([
-      apiClient.get<MarketOverviewResponse>("market/market-overview?market=NASDAQ").catch(() => null),
-      apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard").catch(() => null),
-    ]);
+  const [marketOverviewRes, nasdaqDashboardRes] = await Promise.all([
+    apiClient.get<MarketOverviewResponse>("market/market-overview?market=NASDAQ", { timeout: 60000 }),
+    apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard", { timeout: 60000 }),
+  ]);
 
-    const marketOverview = marketOverviewRes?.data;
-    const nasdaqDashboard = nasdaqDashboardRes?.data;
+  const marketOverview = marketOverviewRes.data;
+  const nasdaqDashboard = nasdaqDashboardRes.data;
 
-    const stats: MarketStat[] = [];
+  const stats: MarketStat[] = [];
 
-    if (nasdaqDashboard?.status === "success") {
-      stats.push(
-        { label: "Nasdaq Composite", value: nasdaqDashboard.total_assets.toLocaleString("en-US"), changePct: nasdaqDashboard.average_change_pct },
-        { label: "Top Gainer", value: nasdaqDashboard.top_gainers[0]?.symbol + " " + nasdaqDashboard.top_gainers[0]?.change_pct.toFixed(2) + "%", changePct: nasdaqDashboard.top_gainers[0]?.change_pct ?? 0 },
-      );
-    }
-
-    if (marketOverview?.status === "success") {
-      stats.push(
-        { label: "Active Symbols", value: marketOverview.total_assets.toLocaleString("en-US"), changePct: 0 },
-      );
-    }
-
-    return stats.length ? stats : [
-      { label: "Nasdaq Composite", value: "—", changePct: 0 },
-      { label: "Active Symbols", value: "—", changePct: 0 },
-    ];
-  } catch {
-    return [
-      { label: "Nasdaq Composite", value: "—", changePct: 0 },
-      { label: "Active Symbols", value: "—", changePct: 0 },
-    ];
+  if (nasdaqDashboard?.status === "success") {
+    stats.push(
+      { label: "Nasdaq Composite", value: nasdaqDashboard.total_symbols.toLocaleString("en-US"), changePct: nasdaqDashboard.average_change_pct ?? 0 },
+      { label: "Top Gainer", value: nasdaqDashboard.top_gainers[0]?.symbol + " " + nasdaqDashboard.top_gainers[0]?.change_pct.toFixed(2) + "%", changePct: nasdaqDashboard.top_gainers[0]?.change_pct ?? 0 },
+    );
   }
+
+  if (marketOverview?.status === "success") {
+    stats.push(
+      { label: "Active Symbols", value: marketOverview.total_assets.toLocaleString("en-US"), changePct: 0 },
+    );
+  }
+
+  return stats.length ? stats : [
+    { label: "Nasdaq Composite", value: "—", changePct: 0 },
+    { label: "Active Symbols", value: "—", changePct: 0 },
+  ];
 }
 
 async function fetchTopMovers(): Promise<AssetRow[]> {
-  try {
-    const res = await apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard");
-    const data = res.data;
-    if (data.status !== "success") return [];
+  const res = await apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard", { timeout: 60000 });
+  const data = res.data;
+  if (data.status !== "success") return [];
 
-    const map = (r: NasdaqDashboardResponse["top_gainers"][number]): AssetRow => ({
-      symbol: r.symbol, name: r.name, market: "NASDAQ",
-      price: r.last_close, changePct: r.change_pct });
+  const map = (r: NasdaqDashboardResponse["top_gainers"][number]): AssetRow => ({
+    symbol: r.symbol, name: r.name, market: "NASDAQ",
+    price: r.last_close, changePct: r.change_pct });
 
-    const gainers = (data.top_gainers ?? []).map(map);
-    const losers = (data.top_losers ?? []).map(map);
-    return [...gainers, ...losers].slice(0, 10);
-  } catch {
-    return [];
-  }
+  const gainers = (data.top_gainers ?? []).map(map);
+  const losers = (data.top_losers ?? []).map(map);
+  return [...gainers, ...losers].slice(0, 10);
 }
 
 async function fetchWatchlist(): Promise<AssetRow[]> {
@@ -154,63 +279,56 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
   }
 }
 
+interface SignalsListResponse {
+  status: string;
+  data: Array<{
+    symbol: string;
+    name: string;
+    signal_type: string;
+    confidence: number;
+    model: string;
+    generated_at: string;
+  }>;
+}
+
 async function fetchSignals(): Promise<SignalRow[]> {
-  try {
-    const res = await apiClient.get<SignalsSummaryResponse>("analysis/signals-summary?min_confidence=0.6");
-    const data = res.data;
-    if (data.status !== "success") return [];
+  const res = await apiClient.get<SignalsListResponse>("analysis/signals?min_confidence=0.6&limit=10");
+  const data = res.data;
+  if (data.status !== "success") return [];
 
-    const signalTypes = Object.entries(data.summary ?? {})
-      .filter(([, count]) => Number(count) > 0)
-      .sort(([, a], [, b]) => Number(b) - Number(a))
-      .slice(0, 5)
-      .map(([type]) => type);
-
-    const allSignals: SignalRow[] = [];
-    for (const type of signalTypes) {
-      try {
-        const typeRes = await apiClient.get<SignalsSummaryResponse>("analysis/signals-summary?min_confidence=0.6");
-        const typeData = typeRes.data;
-        if (typeData?.status === "success") {
-          const summary = typeData.summary;
-          allSignals.push({
-            symbol: `${type}`,
-            type: type as SignalRow["type"],
-            confidence: typeData.average_confidence?.[type] ?? 50,
-            model: "ML" });
-        }
-      } catch {}
-    }
-
-    return allSignals.slice(0, 10);
-  } catch {
-    return [];
-  }
+  return (data.data ?? []).map((s) => ({
+    symbol: s.symbol,
+    type: s.signal_type as SignalRow["type"],
+    confidence: s.confidence,
+    model: s.model,
+  }));
 }
 
 async function fetchNews(): Promise<NewsItem[]> {
-  try {
-    const res = await apiClient.get<NewsResponse>("news/market?limit=10");
-    const data = res.data;
-    if (data.status !== "success") return [];
+  const res = await apiClient.get<NewsResponse>("news/market?limit=10");
+  const data = res.data;
+  if (data.status !== "success") return [];
 
-    return (data.data ?? []).map((n) => ({
-      title: n.title,
-      source: n.source,
-      time: formatTimeAgo(n.published_at) }));
-  } catch {
-    return [];
-  }
+  return (data.data ?? []).map((n) => ({
+    title: n.title,
+    source: n.source,
+    time: formatTimeAgo(n.published_at) }));
 }
 
 export async function fetchDashboardData(): Promise<DashboardData> {
-  const [marketStats, topMovers, watchlist, signals, news] = await Promise.all([
+  const results = await Promise.allSettled([
     fetchMarketStats(),
     fetchTopMovers(),
     fetchWatchlist(),
     fetchSignals(),
     fetchNews(),
   ]);
+
+  const marketStats = results[0].status === "fulfilled" ? results[0].value : [];
+  const topMovers = results[1].status === "fulfilled" ? results[1].value : [];
+  const watchlist = results[2].status === "fulfilled" ? results[2].value : [];
+  const signals = results[3].status === "fulfilled" ? results[3].value : [];
+  const news = results[4].status === "fulfilled" ? results[4].value : [];
 
   const live = [marketStats, topMovers, watchlist, signals, news].some(
     (d) => Array.isArray(d) ? d.length > 0 : true
@@ -223,4 +341,39 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     signals,
     news,
     live };
+}
+
+export async function fetchGeneralDashboard(): Promise<GeneralDashboardResponse> {
+  const res = await apiClient.get<GeneralDashboardResponse>("/analysis/dashboard/general", { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchTechnicalDashboard(): Promise<DimensionDashboardResponse> {
+  const res = await apiClient.get<DimensionDashboardResponse>("/analysis/dashboard/technical", { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchFundamentalDashboard(): Promise<DimensionDashboardResponse> {
+  const res = await apiClient.get<DimensionDashboardResponse>("/analysis/dashboard/fundamental", { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchNewsDashboard(): Promise<NewsDashboardResponse> {
+  const res = await apiClient.get<NewsDashboardResponse>("/analysis/dashboard/news", { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchRiskDashboard(): Promise<DimensionDashboardResponse> {
+  const res = await apiClient.get<DimensionDashboardResponse>("/analysis/dashboard/risk", { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchBoardDashboard(): Promise<BoardDashboardResponse> {
+  const res = await apiClient.get<BoardDashboardResponse>("/analysis/dashboard/board", { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchAiDashboard(): Promise<AiDashboardResponse> {
+  const res = await apiClient.get<AiDashboardResponse>("/analysis/dashboard/ai", { timeout: 120000 });
+  return res.data;
 }

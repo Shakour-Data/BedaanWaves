@@ -6,11 +6,9 @@ import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PageLoading } from "@/components/ui/PageLoading";
-import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 import { CoefficientChart } from "@/components/charts/CoefficientChart";
-import type { BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 import {
   fetchHierarchyScores,
   fetchScoreHistory,
@@ -142,34 +140,23 @@ export default function StockScoringPage() {
 
   if (loading) {
     return (
-      <NewDashboardShell title={t("app.scoring.title", "en")} breadcrumbs={[{ label: "Stocks", href: "/stocks" }, { label: symbol.toUpperCase() }, { label: t("app.scoring.title", "en") }]}>
-        <PageLoading />
-      </NewDashboardShell>
+      <PageLoading />
     );
   }
 
   if (error || !hierarchy) {
     return (
-      <NewDashboardShell title={t("app.scoring.title", "en")} breadcrumbs={[{ label: "Stocks", href: "/stocks" }, { label: symbol.toUpperCase() }, { label: t("app.scoring.title", "en") }]}>
-        <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found", "en")}>
-          <p className="text-sm text-muted-foreground">{error || t("app.analysis.scoring_not_found", "en")}</p>
-          <Link href={`/stocks/${symbol}`} className="mt-3 inline-block text-sm text-secondary hover:underline">
-            ← {t("app.stocks.detail.back_to_list", "en")}
-          </Link>
-        </TarotCard>
-      </NewDashboardShell>
+      <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found", "en")}>
+        <p className="text-sm text-muted-foreground">{error || t("app.analysis.scoring_not_found", "en")}</p>
+        <Link href={`/stocks/${symbol}`} className="mt-3 inline-block text-sm text-secondary hover:underline">
+          ← {t("app.stocks.detail.back_to_list", "en")}
+        </Link>
+      </TarotCard>
     );
   }
 
-  const scoringBreadcrumbs: BreadcrumbItem[] = [
-    { label: "Stocks", href: "/stocks" },
-    { label: symbol.toUpperCase(), href: `/stocks/${symbol}` },
-    { label: t("app.scoring.title", "en") },
-  ];
-
   return (
-    <NewDashboardShell title={t("app.scoring.title", "en")} breadcrumbs={scoringBreadcrumbs}>
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href={`/stocks/${symbol}`} className="hover:text-foreground">
             {symbol}
@@ -318,6 +305,5 @@ export default function StockScoringPage() {
           ))}
         </div>
       </div>
-    </NewDashboardShell>
   );
 }

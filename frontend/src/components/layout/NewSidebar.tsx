@@ -20,6 +20,16 @@ const mainNavItems: NavItem[] = [
   { label: "Methodology", href: "/methodology" },
 ];
 
+const dashboardTabs: NavItem[] = [
+  { label: "General", href: "/dashboard" },
+  { label: "Technical", href: "/dashboard" },
+  { label: "Fundamental", href: "/dashboard" },
+  { label: "News", href: "/dashboard" },
+  { label: "Risk", href: "/dashboard" },
+  { label: "Board", href: "/dashboard" },
+  { label: "AI", href: "/dashboard" },
+];
+
 const bottomNavItems: NavItem[] = [
   { label: "Settings", href: "/settings" },
   { label: "Help", href: "/help" },
@@ -63,6 +73,32 @@ export function NewSidebar() {
               href={item.href}
               className={cn(
                 "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-border hover:text-foreground"
+              )}
+            >
+              <span>{item.label}</span>
+              {active && (
+                <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+              )}
+            </Link>
+          );
+        })}
+
+        <div className="mt-4 mb-2 px-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Dashboards
+          </span>
+        </div>
+        {dashboardTabs.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                 active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-border hover:text-foreground"

@@ -6,10 +6,10 @@ vi.mock('next/navigation', () => ({
     push: vi.fn() }) }));
 
 describe('ForgotPasswordPage', () => {
-  it('renders initially with heading and Send button', () => {
+  it('renders initially with email field and Send button', () => {
     render(<ForgotPasswordPage />);
 
-    expect(screen.getByText(/reset password/i)).not.toBeNull();
+    expect(screen.getByLabelText(/email/i)).not.toBeNull();
     expect(screen.getByRole('button', { name: /send reset link/i })).not.toBeNull();
   });
 

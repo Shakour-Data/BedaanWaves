@@ -46,11 +46,6 @@ export default function ForgotPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
       <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Reset Password</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-2">Enter your email to receive a reset link</p>
-        </div>
-
         {sent ? (
           <div className="bg-[var(--color-success)]/10 border border-[var(--color-success)] text-[var(--color-success)] px-4 py-3 rounded-md text-center">
             <p className="font-medium">Reset link sent!</p>

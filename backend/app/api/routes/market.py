@@ -1,12 +1,15 @@
 """Market Data Routes"""
 
 from collections import defaultdict
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from datetime import timezone, datetime, timedelta
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
+import math
+import time
+import asyncio
 
 from app.db.base import get_async_session
 from app.models.models import Asset, candle_model_for_market
@@ -14,6 +17,9 @@ from app.schemas.schemas import (
     AssetResponse, PriceCandleResponse, PaginationParams,
     MarketDataResponse, TimeframeEnum, AssetClassEnum, MarketEnum
 )
+from app.services.core.dependency_container import get_global_container
+from app.services.data.real_time_market_data_service import RealTimeMarketDataService
+from app.services.data.market_hours_service import MarketHoursService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["market"])
@@ -324,6 +330,8 @@ async def nasdaq_dashboard(
         latest_close = float(row.latest_close)
         previous_close = float(row.previous_close) if row.previous_close is not None else latest_close
         change_pct = ((latest_close - previous_close) / previous_close * 100) if previous_close else 0.0
+        if isinstance(change_pct, float) and math.isnan(change_pct):
+            change_pct = 0.0
 
         result_rows.append({
             "symbol": row.symbol,
@@ -333,7 +341,8 @@ async def nasdaq_dashboard(
         })
 
     ranked_change = sorted(result_rows, key=lambda x: x["change_pct"], reverse=True)
-    avg_change = sum(r["change_pct"] for r in ranked_change) / len(ranked_change) if ranked_change else 0.0
+    change_values = [r["change_pct"] for r in ranked_change if isinstance(r["change_pct"], (int, float)) and not math.isnan(r["change_pct"])]
+    avg_change = round(sum(change_values) / len(change_values), 2) if change_values else 0.0
 
     return {
         "status": "success",
@@ -344,6 +353,75 @@ async def nasdaq_dashboard(
         "top_losers": sorted(ranked_change, key=lambda x: x["change_pct"])[:5],
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# Major market indices tracked by the dashboard. `yf_symbol` is the yfinance
+# ticker used to fetch live quotes.
+MAJOR_INDICES = [
+    {"symbol": "IXIC", "yf_symbol": "^IXIC", "name": "NASDAQ Composite"},
+    {"symbol": "INX", "yf_symbol": "^GSPC", "name": "S&P 500"},
+    {"symbol": "DJI", "yf_symbol": "^DJI", "name": "Dow Jones Industrial Average"},
+    {"symbol": "RUT", "yf_symbol": "^RUT", "name": "Russell 2000"},
+]
+
+_indices_cache: Dict[str, Any] = {}
+_indices_cache_expiry: float = 0.0
+_INDICES_CACHE_TTL = 60.0
+
+
+@router.get("/indices", response_model=dict)
+async def get_market_indices(response: Response = None) -> dict:
+    """
+    Live prices for major market indices (NASDAQ Composite, S&P 500, Dow, Russell 2000).
+
+    Uses the real-time market data service (yfinance) so the dashboard can show
+    real index levels instead of a placeholder. Results are cached for a short
+    window to avoid hammering the downstream provider on every dashboard load.
+    """
+    if response:
+        response.headers["X-API-Version"] = "v1"
+
+    global _indices_cache, _indices_cache_expiry
+    now = time.time()
+    if _indices_cache and now < _indices_cache_expiry:
+        return _indices_cache
+
+    container = get_global_container()
+    if container.has("real_time_market_data_service"):
+        rt_service = container.get("real_time_market_data_service")
+    else:
+        rt_service = RealTimeMarketDataService()
+
+    market_hours = MarketHoursService()
+    is_open = market_hours.is_market_open()
+
+    async def _fetch_one(idx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+        try:
+            quote = await rt_service.get_realtime_quote(idx["yf_symbol"])
+        except Exception as exc:
+            logger.warning(f"Failed to fetch index quote for {idx['yf_symbol']}: {exc}")
+            return None
+        return {
+            "symbol": idx["symbol"],
+            "yf_symbol": idx["yf_symbol"],
+            "name": idx["name"],
+            "price": quote.current_price,
+            "change": quote.change_value,
+            "change_percent": quote.change_percent,
+            "is_open": is_open,
+        }
+
+    results = await asyncio.gather(*[_fetch_one(idx) for idx in MAJOR_INDICES])
+    data = [item for item in results if item is not None]
+
+    result = {
+        "status": "success",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": data,
+    }
+    _indices_cache = result
+    _indices_cache_expiry = now + _INDICES_CACHE_TTL
+    return result
 
 
 @router.get("/industry-ranking", response_model=dict)

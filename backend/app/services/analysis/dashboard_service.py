@@ -1,0 +1,697 @@
+"""
+Dashboard Service - Aggregates dimension scores and metrics for all dashboard views.
+
+Provides real data from:
+- ScoreHistory (dimension scores per asset)
+- RawPerformanceScore (sub-dimension, aspect, sub-aspect breakdown)
+- NewsSentiment (news sentiment aggregation)
+- CompanyLeadership (board/governance metrics)
+- MLSignal (AI predictions)
+- MarketDataSnapshot (technical indicators)
+- Anomaly (risk anomalies)
+"""
+
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+import logging
+from sqlalchemy import select, func, and_, desc, case
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import literal_column
+
+from app.models.models import (
+    Asset,
+    ScoreHistory,
+    RawPerformanceScore,
+    NewsSentiment,
+    News,
+    CompanyLeadership,
+    MLSignal,
+    MarketDataSnapshot,
+    Anomaly,
+    FundamentalRatio,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class DashboardService:
+    """Service for dashboard data aggregation."""
+
+    def __init__(self):
+        pass
+
+    async def get_dimension_dashboard(
+        self,
+        db: AsyncSession,
+        dimension: str,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Get dashboard data for a specific dimension (technical, fundamental, risk, ai, sentiment).
+        
+        Args:
+            db: Database session
+            dimension: One of technical, fundamental, risk, ai, sentiment
+            limit: Max symbols to return in detailed list
+            
+        Returns:
+            Dashboard data with summary, distribution, and symbol breakdown
+        """
+        dimension = dimension.lower().strip()
+        valid_dimensions = {"technical", "fundamental", "risk", "ai", "sentiment"}
+        if dimension not in valid_dimensions:
+            raise ValueError(f"Invalid dimension: {dimension}. Must be one of {valid_dimensions}")
+
+        # Get all active NASDAQ assets
+        assets_query = (
+            select(Asset.id, Asset.symbol, Asset.name, Asset.sector, Asset.industry)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .order_by(Asset.symbol.asc())
+        )
+        assets_result = await db.execute(assets_query)
+        assets = assets_result.all()
+
+        if not assets:
+            return {
+                "status": "success",
+                "dimension": dimension,
+                "summary": {"total_symbols": 0, "avg_score": 0, "best_symbol": None, "worst_symbol": None},
+                "distribution": [],
+                "symbols": [],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        active_assets_subq = (
+            select(Asset.id)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .subquery()
+        )
+
+        # Get latest ScoreHistory per asset
+        latest_sh_subq = (
+            select(
+                ScoreHistory.asset_id,
+                ScoreHistory.dimension_scores,
+                ScoreHistory.overall_score,
+                ScoreHistory.grade,
+                ScoreHistory.date,
+            )
+            .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+            .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+            .distinct(ScoreHistory.asset_id)
+            .subquery()
+        )
+
+        sh_query = select(latest_sh_subq)
+        sh_result = await db.execute(sh_query)
+        sh_rows = sh_result.all()
+        sh_map = {row.asset_id: row for row in sh_rows}
+
+        # Get latest RawPerformanceScore per asset for detailed breakdown
+        latest_rps_subq = (
+            select(
+                RawPerformanceScore.asset_id,
+                RawPerformanceScore.sub_dimension_scores,
+                RawPerformanceScore.aspect_scores,
+                RawPerformanceScore.sub_aspect_scores,
+            )
+            .join(active_assets_subq, RawPerformanceScore.asset_id == active_assets_subq.c.id)
+            .order_by(RawPerformanceScore.asset_id, desc(RawPerformanceScore.captured_at))
+            .distinct(RawPerformanceScore.asset_id)
+            .subquery()
+        )
+
+        rps_query = select(latest_rps_subq)
+        rps_result = await db.execute(rps_query)
+        rps_rows = rps_result.all()
+        rps_map = {row.asset_id: row for row in rps_rows}
+
+        # Build symbol breakdown
+        symbols_data = []
+        for asset in assets:
+            sh = sh_map.get(asset.id)
+            rps = rps_map.get(asset.id)
+
+            dim_score = 0.0
+            if sh and sh.dimension_scores:
+                dim_score = float(sh.dimension_scores.get(dimension, 0.0))
+
+            sub_dim_scores = {}
+            aspect_scores = {}
+            sub_aspect_scores = {}
+
+            if rps:
+                if rps.sub_dimension_scores:
+                    sub_dim_scores = {
+                        k: float(v) for k, v in rps.sub_dimension_scores.items()
+                        if dimension in k.lower()
+                    }
+                if rps.aspect_scores:
+                    aspect_scores = {
+                        k: float(v) for k, v in rps.aspect_scores.items()
+                        if dimension in k.lower()
+                    }
+                if rps.sub_aspect_scores:
+                    sub_aspect_scores = {
+                        k: float(v) for k, v in rps.sub_aspect_scores.items()
+                        if dimension in k.lower()
+                    }
+
+            symbols_data.append({
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "sector": asset.sector,
+                "score": round(dim_score, 2),
+                "grade": sh.grade if sh else "",
+                "sub_dimensions": sub_dim_scores,
+                "aspects": aspect_scores,
+                "sub_aspects": sub_aspect_scores,
+            })
+
+        # Compute summary
+        scores = [s["score"] for s in symbols_data if s["score"] is not None]
+        avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
+        best = max(symbols_data, key=lambda x: x["score"]) if symbols_data else None
+        worst = min(symbols_data, key=lambda x: x["score"]) if symbols_data else None
+
+        # Compute distribution (bins of 10)
+        bins = [0] * 10
+        for s in symbols_data:
+            idx = min(int(s["score"] / 10), 9)
+            bins[idx] += 1
+        distribution = [
+            {"range": f"{i*10}-{(i+1)*10}", "count": bins[i]}
+            for i in range(10)
+        ]
+
+        # Top and bottom performers
+        symbols_data.sort(key=lambda x: x["score"], reverse=True)
+        top_performers = symbols_data[:10]
+        bottom_performers = symbols_data[-10:][::-1]
+
+        return {
+            "status": "success",
+            "dimension": dimension,
+            "summary": {
+                "total_symbols": len(symbols_data),
+                "avg_score": avg_score,
+                "best_symbol": best["symbol"] if best else None,
+                "best_score": best["score"] if best else 0,
+                "worst_symbol": worst["symbol"] if worst else None,
+                "worst_score": worst["score"] if worst else 0,
+            },
+            "distribution": distribution,
+            "symbols": symbols_data[:limit],
+            "top_performers": top_performers,
+            "bottom_performers": bottom_performers,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    async def get_news_dashboard(
+        self,
+        db: AsyncSession,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """Get news sentiment dashboard for all symbols."""
+        # Get all active assets
+        assets_query = (
+            select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .order_by(Asset.symbol.asc())
+        )
+        assets_result = await db.execute(assets_query)
+        assets = assets_result.all()
+
+        if not assets:
+            return {
+                "status": "success",
+                "dimension": "news",
+                "summary": {"total_symbols": 0, "total_news": 0},
+                "symbols": [],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        active_assets_subq = (
+            select(Asset.id)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .subquery()
+        )
+
+        # Aggregate news sentiment by asset
+        news_agg_query = (
+            select(
+                NewsSentiment.asset_id,
+                func.count(NewsSentiment.id).label("news_count"),
+                func.avg(NewsSentiment.sentiment_score).label("avg_sentiment"),
+                func.sum(case((NewsSentiment.sentiment_label == "POSITIVE", 1), else_=0)).label("positive_count"),
+                func.sum(case((NewsSentiment.sentiment_label == "NEGATIVE", 1), else_=0)).label("negative_count"),
+                func.sum(case((NewsSentiment.sentiment_label == "NEUTRAL", 1), else_=0)).label("neutral_count"),
+            )
+            .join(active_assets_subq, NewsSentiment.asset_id == active_assets_subq.c.id)
+            .group_by(NewsSentiment.asset_id)
+        )
+        news_agg_result = await db.execute(news_agg_query)
+        news_agg = {row.asset_id: row for row in news_agg_result.all()}
+
+        # Get latest news per asset
+        latest_news_subq = (
+            select(
+                News.asset_id,
+                News.title,
+                News.source,
+                News.published_at,
+            )
+            .join(active_assets_subq, News.asset_id == active_assets_subq.c.id)
+            .order_by(News.asset_id, desc(News.published_at))
+            .distinct(News.asset_id)
+            .subquery()
+        )
+        latest_news_result = await db.execute(select(latest_news_subq))
+        latest_news_map = {row.asset_id: row for row in latest_news_result.all()}
+
+        # Get dimension scores for news/sentiment
+        latest_sh_subq = (
+            select(
+                ScoreHistory.asset_id,
+                ScoreHistory.dimension_scores,
+                ScoreHistory.overall_score,
+                ScoreHistory.grade,
+            )
+            .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+            .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+            .distinct(ScoreHistory.asset_id)
+            .subquery()
+        )
+        sh_result = await db.execute(select(latest_sh_subq))
+        sh_map = {row.asset_id: row for row in sh_result.all()}
+
+        symbols_data = []
+        for asset in assets:
+            news_agg_row = news_agg.get(asset.id)
+            sh = sh_map.get(asset.id)
+            latest_news = latest_news_map.get(asset.id)
+
+            dim_score = 0.0
+            if sh and sh.dimension_scores:
+                dim_score = float(sh.dimension_scores.get("sentiment", 0.0))
+
+            symbols_data.append({
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "sector": asset.sector,
+                "score": round(dim_score, 2),
+                "grade": sh.grade if sh else "",
+                "news_count": news_agg_row.news_count if news_agg_row else 0,
+                "avg_sentiment": round(float(news_agg_row.avg_sentiment), 2) if news_agg_row and news_agg_row.avg_sentiment else 0,
+                "positive_count": news_agg_row.positive_count if news_agg_row else 0,
+                "negative_count": news_agg_row.negative_count if news_agg_row else 0,
+                "neutral_count": news_agg_row.neutral_count if news_agg_row else 0,
+                "latest_news": {
+                    "title": latest_news.title if latest_news else "",
+                    "source": latest_news.source if latest_news else "",
+                    "published_at": latest_news.published_at.isoformat() if latest_news and latest_news.published_at else "",
+                } if latest_news else None,
+            })
+
+        scores = [s["score"] for s in symbols_data if s["score"] is not None]
+        avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
+        total_news = sum(s["news_count"] for s in symbols_data)
+
+        symbols_data.sort(key=lambda x: x["score"], reverse=True)
+
+        return {
+            "status": "success",
+            "dimension": "news",
+            "summary": {
+                "total_symbols": len(symbols_data),
+                "total_news": total_news,
+                "avg_score": avg_score,
+                "best_symbol": symbols_data[0]["symbol"] if symbols_data else None,
+                "best_score": symbols_data[0]["score"] if symbols_data else 0,
+                "worst_symbol": symbols_data[-1]["symbol"] if symbols_data else None,
+                "worst_score": symbols_data[-1]["score"] if symbols_data else 0,
+            },
+            "symbols": symbols_data[:limit],
+            "top_performers": symbols_data[:10],
+            "bottom_performers": symbols_data[-10:][::-1],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    async def get_board_dashboard(
+        self,
+        db: AsyncSession,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """Get board/governance dashboard for all symbols."""
+        assets_query = (
+            select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .order_by(Asset.symbol.asc())
+        )
+        assets_result = await db.execute(assets_query)
+        assets = assets_result.all()
+
+        if not assets:
+            return {
+                "status": "success",
+                "dimension": "board",
+                "summary": {"total_symbols": 0},
+                "symbols": [],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        active_assets_subq = (
+            select(Asset.id)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .subquery()
+        )
+
+        # Aggregate leadership by asset
+        leadership_query = (
+            select(
+                CompanyLeadership.asset_id,
+                func.count(CompanyLeadership.id).label("total_leaders"),
+                func.sum(case((CompanyLeadership.leadership_type == "board", 1), else_=0)).label("board_count"),
+                func.sum(case((CompanyLeadership.leadership_type == "officer", 1), else_=0)).label("officer_count"),
+            )
+            .join(active_assets_subq, CompanyLeadership.asset_id == active_assets_subq.c.id)
+            .group_by(CompanyLeadership.asset_id)
+        )
+        leadership_result = await db.execute(leadership_query)
+        leadership_map = {row.asset_id: row for row in leadership_result.all()}
+
+        # Get dimension scores (fundamental includes governance)
+        latest_sh_subq = (
+            select(
+                ScoreHistory.asset_id,
+                ScoreHistory.dimension_scores,
+                ScoreHistory.overall_score,
+                ScoreHistory.grade,
+            )
+            .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+            .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+            .distinct(ScoreHistory.asset_id)
+            .subquery()
+        )
+        sh_result = await db.execute(select(latest_sh_subq))
+        sh_map = {row.asset_id: row for row in sh_result.all()}
+
+        symbols_data = []
+        for asset in assets:
+            lead = leadership_map.get(asset.id)
+            sh = sh_map.get(asset.id)
+
+            board_count = lead.board_count if lead else 0
+            officer_count = lead.officer_count if lead else 0
+            total_leaders = lead.total_leaders if lead else 0
+
+            # Governance score: derived from fundamental dimension and leadership data
+            fundamental_score = 0.0
+            if sh and sh.dimension_scores:
+                fundamental_score = float(sh.dimension_scores.get("fundamental", 0.0))
+
+            # Board score heuristic: combination of fundamental score and leadership completeness
+            board_score = round(fundamental_score * 0.7 + min(total_leaders * 5, 30) * 0.3, 2)
+
+            symbols_data.append({
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "sector": asset.sector,
+                "score": board_score,
+                "board_count": board_count,
+                "officer_count": officer_count,
+                "total_leaders": total_leaders,
+                "fundamental_score": round(fundamental_score, 2),
+                "grade": sh.grade if sh else "",
+            })
+
+        scores = [s["score"] for s in symbols_data if s["score"] is not None]
+        avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
+        best = max(symbols_data, key=lambda x: x["score"]) if symbols_data else None
+        worst = min(symbols_data, key=lambda x: x["score"]) if symbols_data else None
+
+        symbols_data.sort(key=lambda x: x["score"], reverse=True)
+
+        return {
+            "status": "success",
+            "dimension": "board",
+            "summary": {
+                "total_symbols": len(symbols_data),
+                "avg_score": avg_score,
+                "best_symbol": best["symbol"] if best else None,
+                "best_score": best["score"] if best else 0,
+                "worst_symbol": worst["symbol"] if worst else None,
+                "worst_score": worst["score"] if worst else 0,
+                "total_boards": sum(1 for s in symbols_data if s["board_count"] > 0),
+            },
+            "symbols": symbols_data[:limit],
+            "top_performers": [
+                {"symbol": s["symbol"], "name": s["name"], "score": s["score"], "board_count": s["board_count"], "officer_count": s["officer_count"]}
+                for s in symbols_data[:10]
+            ],
+            "bottom_performers": [
+                {"symbol": s["symbol"], "name": s["name"], "score": s["score"], "board_count": s["board_count"], "officer_count": s["officer_count"]}
+                for s in symbols_data[-10:][::-1]
+            ],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    async def get_ai_dashboard(
+        self,
+        db: AsyncSession,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """Get AI/ML dashboard for all symbols."""
+        assets_query = (
+            select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .order_by(Asset.symbol.asc())
+        )
+        assets_result = await db.execute(assets_query)
+        assets = assets_result.all()
+
+        if not assets:
+            return {
+                "status": "success",
+                "dimension": "ai",
+                "summary": {"total_symbols": 0},
+                "symbols": [],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        active_assets_subq = (
+            select(Asset.id)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .subquery()
+        )
+
+        # Get latest ML signals per asset
+        latest_signal_subq = (
+            select(
+                MLSignal.asset_id,
+                MLSignal.signal_type,
+                MLSignal.confidence,
+                MLSignal.expected_return,
+                MLSignal.risk_score,
+                MLSignal.generated_at,
+            )
+            .join(active_assets_subq, MLSignal.asset_id == active_assets_subq.c.id)
+            .order_by(MLSignal.asset_id, desc(MLSignal.generated_at))
+            .distinct(MLSignal.asset_id)
+            .subquery()
+        )
+        signal_result = await db.execute(select(latest_signal_subq))
+        signal_map = {row.asset_id: row for row in signal_result.all()}
+
+        # Get dimension scores
+        latest_sh_subq = (
+            select(
+                ScoreHistory.asset_id,
+                ScoreHistory.dimension_scores,
+                ScoreHistory.overall_score,
+                ScoreHistory.grade,
+            )
+            .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+            .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+            .distinct(ScoreHistory.asset_id)
+            .subquery()
+        )
+        sh_result = await db.execute(select(latest_sh_subq))
+        sh_map = {row.asset_id: row for row in sh_result.all()}
+
+        symbols_data = []
+        for asset in assets:
+            signal = signal_map.get(asset.id)
+            sh = sh_map.get(asset.id)
+
+            dim_score = 0.0
+            if sh and sh.dimension_scores:
+                dim_score = float(sh.dimension_scores.get("ai", 0.0))
+
+            symbols_data.append({
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "sector": asset.sector,
+                "score": round(dim_score, 2),
+                "grade": sh.grade if sh else "",
+                "signal_type": signal.signal_type if signal else None,
+                "confidence": round(float(signal.confidence), 2) if signal and signal.confidence else 0,
+                "expected_return": round(float(signal.expected_return), 4) if signal and signal.expected_return else 0,
+                "risk_score": round(float(signal.risk_score), 2) if signal and signal.risk_score else 0,
+                "generated_at": signal.generated_at.isoformat() if signal and signal.generated_at else None,
+            })
+
+        scores = [s["score"] for s in symbols_data if s["score"] is not None]
+        avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
+        best = max(symbols_data, key=lambda x: x["score"]) if symbols_data else None
+        worst = min(symbols_data, key=lambda x: x["score"]) if symbols_data else None
+
+        symbols_data.sort(key=lambda x: x["score"], reverse=True)
+
+        return {
+            "status": "success",
+            "dimension": "ai",
+            "summary": {
+                "total_symbols": len(symbols_data),
+                "avg_score": avg_score,
+                "best_symbol": best["symbol"] if best else None,
+                "best_score": best["score"] if best else 0,
+                "worst_symbol": worst["symbol"] if worst else None,
+                "worst_score": worst["score"] if worst else 0,
+                "total_signals": sum(1 for s in symbols_data if s["signal_type"] is not None),
+            },
+            "symbols": symbols_data[:limit],
+            "top_performers": symbols_data[:10],
+            "bottom_performers": symbols_data[-10:][::-1],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    async def get_general_dashboard(
+        self,
+        db: AsyncSession,
+    ) -> Dict[str, Any]:
+        """Get general/overall dashboard data."""
+        # Get all active assets with latest scores
+        assets_query = (
+            select(Asset.id, Asset.symbol, Asset.name, Asset.sector, Asset.industry, Asset.market)
+            .where(Asset.active == True)
+            .order_by(Asset.symbol.asc())
+        )
+        assets_result = await db.execute(assets_query)
+        assets = assets_result.all()
+
+        if not assets:
+            return {
+                "status": "success",
+                "summary": {"total_symbols": 0},
+                "dimensions": {},
+                "symbols": [],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        # Get latest ScoreHistory per asset using subquery to avoid parameter limits
+        active_assets_subq = (
+            select(Asset.id)
+            .where(Asset.active == True)
+            .subquery()
+        )
+        latest_sh_subq = (
+            select(
+                ScoreHistory.asset_id,
+                ScoreHistory.dimension_scores,
+                ScoreHistory.overall_score,
+                ScoreHistory.grade,
+                ScoreHistory.date,
+            )
+            .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+            .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+            .distinct(ScoreHistory.asset_id)
+            .subquery()
+        )
+        sh_result = await db.execute(select(latest_sh_subq))
+        sh_rows = sh_result.all()
+        sh_map = {row.asset_id: row for row in sh_rows}
+
+        # Get latest signals count
+        signals_query = (
+            select(func.count(MLSignal.id))
+            .where(and_(MLSignal.is_active == True, MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None)))
+        )
+        signals_result = await db.execute(signals_query)
+        total_signals = signals_result.scalar() or 0
+
+        # Get latest news count
+        news_query = select(func.count(News.id))
+        news_result = await db.execute(news_query)
+        total_news = news_result.scalar() or 0
+
+        # Build dimension summaries
+        dimension_scores = {
+            "fundamental": [],
+            "technical": [],
+            "sentiment": [],
+            "risk": [],
+            "macro": [],
+            "ai": [],
+        }
+
+        symbols_data = []
+        for asset in assets:
+            sh = sh_map.get(asset.id)
+            overall = float(sh.overall_score) if sh else 0.0
+            dims = sh.dimension_scores if sh else {}
+
+            for dim in dimension_scores.keys():
+                score = float(dims.get(dim, 0.0)) if dims else 0.0
+                dimension_scores[dim].append(score)
+
+            symbols_data.append({
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "sector": asset.sector,
+                "market": asset.market,
+                "overall_score": round(overall, 2),
+                "grade": sh.grade if sh else "",
+                "dimensions": {k: round(float(v), 2) for k, v in dims.items()} if dims else {},
+            })
+
+        dimension_summaries = {}
+        for dim, scores in dimension_scores.items():
+            if scores:
+                dimension_summaries[dim] = {
+                    "avg_score": round(sum(scores) / len(scores), 2),
+                    "count": len(scores),
+                }
+
+        symbols_data.sort(key=lambda x: x["overall_score"], reverse=True)
+
+        return {
+            "status": "success",
+            "summary": {
+                "total_symbols": len(symbols_data),
+                "total_signals": total_signals,
+                "total_news": total_news,
+            },
+            "dimensions": dimension_summaries,
+            "symbols": symbols_data[:100],
+            "top_performers": symbols_data[:10],
+            "bottom_performers": symbols_data[-10:][::-1],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    async def get_dashboard(
+        self,
+        db: AsyncSession,
+        dimension: str = "general",
+    ) -> Dict[str, Any]:
+        """Get dashboard data by dimension."""
+        if dimension == "general":
+            return await self.get_general_dashboard(db)
+        elif dimension == "news":
+            return await self.get_news_dashboard(db)
+        elif dimension == "board":
+            return await self.get_board_dashboard(db)
+        elif dimension == "ai":
+            return await self.get_ai_dashboard(db)
+        else:
+            return await self.get_dimension_dashboard(db, dimension)

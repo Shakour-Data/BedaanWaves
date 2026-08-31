@@ -7,6 +7,7 @@ interface SpiderChartProps {
   data: { label: string; value: number }[];
   size?: number;
   color?: string;
+  onLabelClick?: (label: string) => void;
 }
 
 const LIGHT = {
@@ -31,7 +32,7 @@ const DIMENSION_COLORS = [
   "#EC4899",
   "#84CC16" ];
 
-export function SpiderChart({ data, size = 360, color = "#2563EB" }: SpiderChartProps) {
+export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick }: SpiderChartProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { theme } = useAppStore();
   const colors = theme === "dark" ? DARK : LIGHT;
@@ -40,6 +41,40 @@ export function SpiderChart({ data, size = 360, color = "#2563EB" }: SpiderChart
   const max = 100;
 
   const angleStep = useMemo(() => data.length > 0 ? (2 * Math.PI) / data.length : 0, [data.length]);
+
+  const getLabelAtPosition = (clientX: number, clientY: number): string | null => {
+    const canvas = canvasRef.current;
+    if (!canvas || data.length === 0) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const center = size / 2;
+    const radius = Math.min(size, size) * 0.38;
+    const labelRadius = radius + 22;
+
+    const dx = x - center;
+    const dy = y - center;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < labelRadius - 15 || dist > labelRadius + 30) return null;
+
+    let angle = Math.atan2(dy, dx) + Math.PI / 2;
+    if (angle < 0) angle += 2 * Math.PI;
+
+    for (let i = 0; i < data.length; i++) {
+      const labelAngle = i * angleStep;
+      let diff = angle - labelAngle;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+
+      if (Math.abs(diff) < angleStep / 2) {
+        return data[i].label;
+      }
+    }
+
+    return null;
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -136,6 +171,21 @@ export function SpiderChart({ data, size = 360, color = "#2563EB" }: SpiderChart
       ctx.fillText(data[i].label, x, y);
     }
   }, [data, size, color, colors, angleStep]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !onLabelClick) return;
+
+    const handleClick = (event: MouseEvent) => {
+      const label = getLabelAtPosition(event.clientX, event.clientY);
+      if (label) {
+        onLabelClick(label);
+      }
+    };
+
+    canvas.addEventListener("click", handleClick);
+    return () => canvas.removeEventListener("click", handleClick);
+  }, [onLabelClick, data]);
 
   return (
     <div className="relative inline-flex items-center justify-center">

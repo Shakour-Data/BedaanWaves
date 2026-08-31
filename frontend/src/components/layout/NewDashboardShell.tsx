@@ -56,7 +56,7 @@ export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboard
           "flex-1 p-4 lg:p-6",
           "min-h-[calc(100vh-4rem)]"
         )}>
-          <div className="container-grid">
+          <div className="w-full max-w-[90rem]">
             {breadcrumbs && breadcrumbs.length > 0 && (
               <Breadcrumbs items={breadcrumbs} />
             )}
