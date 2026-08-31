@@ -41,6 +41,9 @@ out/
 .vercel/
 tsconfig.tsbuildinfo
 temp_emnapi.json
+# Don't ignore frontend/src/lib (contains API utilities, caught by generic lib/)
+!frontend/src/lib/
+!frontend/src/lib/api/dashboard.ts
 
 # OS
 .DS_Store
@@ -70,6 +73,8 @@ frontend/refactor.js
 
 # Temporary verification scripts
 verify_no_mock_data.py
+verify_*.py
+verify_*.out
 
 # Frontend test results (Playwright)
 frontend/test-results/
@@ -108,6 +113,7 @@ backend/scripts/seed_data.py
 backend/scripts/seed_local.py
 backend/generate_processed_data.py
 backend/generate_*.py
+backend/ingest_*.py
 backend/complete_snapshots.py
 compare_symbols.py
 check_board_data.py

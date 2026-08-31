@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, date, timezone, timedelta
 from typing import Dict, List, Any, Optional
 
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,10 @@ from app.models.models import (
     Asset,
     IntlPriceCandle,
     ScoreHistory,
+    FundamentalRatio,
+    NewsSentiment,
+    MacroIndicator,
+    MLSignal,
     candle_model_for_market,
 )
 from app.services.analysis.scoring_service import ScoringService
@@ -159,7 +163,14 @@ class ScoreHistoryPipeline:
         if not candles or len(candles) < 30:
             return {"scored": False, "reason": "insufficient_candles", "symbol": symbol}
 
-        scoring_input = self._build_scoring_input(symbol, market, candles)
+        fundamental_data = await self._fetch_fundamental_data(asset_id)
+        sentiment_data = await self._fetch_sentiment_data(asset_id)
+        macro_data = await self._fetch_macro_data()
+        ai_data = await self._fetch_ai_data(asset_id)
+
+        scoring_input = self._build_scoring_input(
+            symbol, market, candles, fundamental_data, sentiment_data, macro_data, ai_data
+        )
         if not scoring_input:
             return {"scored": False, "reason": "scoring_input_failed", "symbol": symbol}
 
@@ -174,6 +185,123 @@ class ScoreHistoryPipeline:
         )
 
         return {"scored": True, "symbol": symbol, "overall": scored.get("overall_score")}
+
+    async def _fetch_fundamental_data(self, asset_id) -> Dict[str, Any]:
+        """Fetch fundamental ratios for an asset."""
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(FundamentalRatio)
+                .where(FundamentalRatio.asset_id == asset_id)
+                .order_by(desc(FundamentalRatio.as_of))
+                .limit(1)
+            )
+            row = result.scalar_one_or_none()
+
+        if not row:
+            return {}
+
+        data = {}
+        if row.pe is not None:
+            data["pe_ratio"] = float(row.pe)
+        if row.pb is not None:
+            data["pb_ratio"] = float(row.pb)
+        if row.roe is not None:
+            data["roe"] = float(row.roe)
+        if row.profit_margin is not None:
+            data["profit_margin"] = float(row.profit_margin)
+        if row.eps is not None:
+            data["eps"] = float(row.eps)
+        if row.dps is not None:
+            data["dps"] = float(row.dps)
+        if row.market_cap is not None:
+            data["market_cap"] = float(row.market_cap)
+        if row.book_value is not None:
+            data["book_value"] = float(row.book_value)
+
+        return data
+
+    async def _fetch_sentiment_data(self, asset_id) -> Dict[str, Any]:
+        """Fetch news sentiment for an asset."""
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(
+                    func.avg(NewsSentiment.sentiment_score).label("avg_sentiment"),
+                    func.count(NewsSentiment.id).label("count"),
+                )
+                .where(NewsSentiment.asset_id == asset_id)
+            )
+            row = result.first()
+
+        if not row or row.count == 0:
+            return {}
+
+        return {
+            "news_sentiment": float(row.avg_sentiment) if row.avg_sentiment else 0.5,
+            "news_count": row.count,
+        }
+
+    async def _fetch_macro_data(self) -> Dict[str, Any]:
+        """Fetch latest macro indicators."""
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(MacroIndicator)
+                .order_by(desc(MacroIndicator.as_of))
+                .limit(10)
+            )
+            rows = result.scalars().all()
+
+        data = {}
+        for row in rows:
+            code = row.indicator_code
+            val = float(row.value) if row.value else 0
+            if code == "^VIX":
+                data["vix"] = val
+            elif code == "^TNX":
+                data["treasury_yield"] = val
+            elif code == "DX-Y.NYB":
+                data["dollar_index"] = val
+            elif code == "GC=F":
+                data["gold_price"] = val
+            elif code == "CL=F":
+                data["oil_price"] = val
+
+        return data
+
+    async def _fetch_ai_data(self, asset_id) -> Dict[str, Any]:
+        """Fetch latest ML signal for an asset."""
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(MLSignal)
+                .where(and_(MLSignal.asset_id == asset_id, MLSignal.is_active == True))
+                .order_by(desc(MLSignal.generated_at))
+                .limit(1)
+            )
+            row = result.scalar_one_or_none()
+
+        if not row:
+            return {}
+
+        data = {}
+        if row.expected_return is not None:
+            exp_ret = float(row.expected_return)
+            data["expected_return"] = exp_ret
+            if exp_ret > 0.05:
+                data["prediction"] = "BUY"
+            elif exp_ret < -0.05:
+                data["prediction"] = "SELL"
+            else:
+                data["prediction"] = "HOLD"
+        if row.confidence is not None:
+            data["confidence"] = float(row.confidence)
+        if row.risk_score is not None:
+            data["risk_score"] = float(row.risk_score)
+        if row.technical_factors:
+            if "rsi" in row.technical_factors:
+                data["ml_rsi"] = row.technical_factors["rsi"]
+            if "macd" in row.technical_factors:
+                data["ml_macd"] = row.technical_factors["macd"]
+
+        return data
 
     async def _fetch_candles(
         self, asset_id, market: str, asset_class: str, lookback: int = 100
@@ -212,9 +340,16 @@ class ScoreHistoryPipeline:
         return candles
 
     def _build_scoring_input(
-        self, symbol: str, market: str, candles: List[Candle]
+        self,
+        symbol: str,
+        market: str,
+        candles: List[Candle],
+        fundamental_data: Optional[Dict[str, Any]] = None,
+        sentiment_data: Optional[Dict[str, Any]] = None,
+        macro_data: Optional[Dict[str, Any]] = None,
+        ai_data: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Build the scoring input dict from computed indicators."""
+        """Build the scoring input dict from computed indicators and additional data."""
         if not candles:
             return None
 
@@ -223,8 +358,6 @@ class ScoreHistoryPipeline:
             return None
 
         closes = [c.close for c in candles]
-        volumes = [c.volume for c in candles]
-
         current_price = closes[-1] if closes else 0
 
         technical_data = {}
@@ -263,10 +396,10 @@ class ScoreHistoryPipeline:
             "market": market,
             "technical": technical_data,
             "risk": risk_data,
-            "fundamental": {},
-            "sentiment": {},
-            "macro": {},
-            "ai": {},
+            "fundamental": fundamental_data or {},
+            "sentiment": sentiment_data or {},
+            "macro": macro_data or {},
+            "ai": ai_data or {},
         }
 
         return scoring_input
