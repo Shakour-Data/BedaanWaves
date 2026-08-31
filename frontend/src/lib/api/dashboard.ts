@@ -37,6 +37,7 @@ export interface DimensionDashboardResponse {
     sub_dimensions: Record<string, number>;
     aspects: Record<string, number>;
     sub_aspects: Record<string, number>;
+    raw_metrics?: Record<string, number>;
     key_ratios?: {
       eps: number | null;
       pe: number | null;
