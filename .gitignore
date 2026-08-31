@@ -107,6 +107,7 @@ backend/scripts/seed.py
 backend/scripts/seed_data.py
 backend/scripts/seed_local.py
 backend/generate_processed_data.py
+backend/generate_*.py
 backend/complete_snapshots.py
 compare_symbols.py
 check_board_data.py
