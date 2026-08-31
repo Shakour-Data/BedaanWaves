@@ -4,7 +4,7 @@ import { apiClient } from '../lib/api';
 
 type Role = "user" | "admin";
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   username: string;
   email: string;
