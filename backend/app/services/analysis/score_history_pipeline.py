@@ -290,6 +290,7 @@ class ScoreHistoryPipeline:
                 dimension_scores=dimension_scores,
                 overall_score=overall_score,
                 grade=grade,
+                created_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
             stmt = stmt.on_conflict_do_update(
                 index_elements=["asset_id", "date"],
@@ -297,6 +298,7 @@ class ScoreHistoryPipeline:
                     "dimension_scores": stmt.excluded.dimension_scores,
                     "overall_score": stmt.excluded.overall_score,
                     "grade": stmt.excluded.grade,
+                    "created_at": stmt.excluded.created_at,
                 },
             )
             await session.execute(stmt)
