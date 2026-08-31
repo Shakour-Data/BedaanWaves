@@ -30,8 +30,126 @@ from app.models.models import (
     Anomaly,
     FundamentalRatio,
 )
+from app.services.data.news_service import NewsService
+from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
 
 logger = logging.getLogger(__name__)
+
+
+# Maps the "broad" sub-dimension labels used in SUB_DIMENSIONS
+# (frontend/src/lib/api/scoring.ts) to the level-2 metric keys actually
+# written by the scoring service. The labels in the scoring service are
+# historically misaligned with the metrics they contain, so we use the
+# metric-name pattern to compute a sensible per-label average.
+BROAD_SUB_DIMENSION_METRIC_PATTERNS: Dict[str, Dict[str, List[str]]] = {
+    "fundamental": {
+        "valuation": ["pe_ratio", "pb_ratio", "peg_ratio", "ev_ebitda"],
+        "profitability": ["roe", "roa", "roic", "gross_margin", "net_margin", "profit_margin"],
+        "growth": ["eps_growth", "revenue_growth", "book_value_growth", "earnings_growth"],
+        "liquidity": ["current_ratio", "quick_ratio", "cash_ratio", "working_capital"],
+        "efficiency": ["asset_turnover", "inventory_turnover", "receivables_turnover"],
+        "corporate_actions": ["corporate_actions", "dividend", "buyback", "split", "governance"],
+    },
+}
+
+
+def _aggregate_broad_sub_dimensions(
+    sub_dim_scores: Dict[str, float], dimension: str
+) -> Dict[str, float]:
+    """Roll per-metric sub-dimension scores up to broad labels.
+
+    Returns keys like `valuation`, `profitability`, ... (the labels the
+    frontend's `SUB_DIMENSIONS` table uses). For each label we average the
+    scores of all matching level-2 metric keys present in `sub_dim_scores`.
+    Only labels with at least one matching metric are returned.
+    """
+    mapping = BROAD_SUB_DIMENSION_METRIC_PATTERNS.get(dimension, {})
+    if not mapping or not sub_dim_scores:
+        return {}
+
+    result: Dict[str, float] = {}
+    # Normalize input keys to bare names so we can match patterns regardless
+    # of whether they arrived as `pe_ratio` or `fundamental_pe_ratio` or
+    # `fundamental.7`.
+    normalized = {_strip_dimension_prefix(k, dimension): float(v) for k, v in sub_dim_scores.items()}
+    for label, patterns in mapping.items():
+        matched: List[float] = []
+        for bare_key, value in normalized.items():
+            bk = bare_key.lower()
+            if any(pat in bk for pat in patterns):
+                matched.append(value)
+        if matched:
+            result[label] = round(sum(matched) / len(matched), 4)
+    return result
+
+
+def _belongs_to_dimension(key: str, dimension: str) -> bool:
+    """Return True if a sub-dimension/aspect key belongs to the given dimension.
+
+    Accepts all three observed key shapes in the DB:
+      1. `fundamental_valuation`  (dimension prefix + underscore)
+      2. `fundamental.0`          (dimension prefix + dot)
+      3. `valuation`              (bare name)
+
+    Bare names are accepted because each asset has at most one
+    RawPerformanceScore per dimension snapshot, so there is no risk of
+    mixing fundamental with technical/etc. values.
+    """
+    k = key.lower().strip()
+    d = dimension.lower()
+    if k == d:
+        return False
+    if k.startswith(f"{d}_") or k.startswith(f"{d}."):
+        return True
+    return True
+
+
+def _strip_dimension_prefix(key: str, dimension: str) -> str:
+    """Strip the dimension prefix/separator from a key, leaving a bare name.
+
+    `fundamental_valuation`  -> `valuation`
+    `fundamental.0`          -> `0`
+    `valuation`              -> `valuation`
+    """
+    k = key.strip()
+    d = dimension.lower()
+    if k.lower().startswith(f"{d}_"):
+        return k[len(d) + 1:]
+    if k.lower().startswith(f"{d}."):
+        return k[len(d) + 1:]
+    return k
+
+
+def _derive_fundamental_score_from_ratios(fr: Any) -> float:
+    """Best-effort 0..100 fundamental score from raw ratio columns.
+
+    Used only as a fallback when ScoreHistory has no `fundamental` entry for the
+    asset (e.g. scoring hasn't run yet but SEC ratios are present). Values are
+    real, sourced from the `fundamental_ratios` table.
+    """
+    components: List[float] = []
+
+    pe = float(fr.pe) if fr.pe is not None else None
+    pb = float(fr.pb) if fr.pb is not None else None
+    roe = float(fr.roe) if fr.roe is not None else None
+    pm = float(fr.profit_margin) if fr.profit_margin is not None else None
+
+    if pe is not None and pe > 0:
+        # Lower P/E is better. Map 50 -> 10, 5 -> 90.
+        components.append(max(0.0, min(100.0, 100.0 - (pe - 5.0) * 2.0)))
+    if pb is not None and pb > 0:
+        # Lower P/B is better. Map 10 -> 0, 1 -> 90.
+        components.append(max(0.0, min(100.0, 100.0 - (pb - 1.0) * 10.0)))
+    if roe is not None:
+        # 0% -> 30, 20% -> 80, 40%+ -> 100.
+        components.append(max(0.0, min(100.0, 30.0 + roe * 250.0)))
+    if pm is not None:
+        # 0% -> 40, 20%+ -> 90.
+        components.append(max(0.0, min(100.0, 40.0 + pm * 250.0)))
+
+    if not components:
+        return 0.0
+    return round(sum(components) / len(components), 2)
 
 
 class DashboardService:
@@ -87,7 +205,12 @@ class DashboardService:
             .subquery()
         )
 
-        # Get latest ScoreHistory per asset
+        # Get latest ScoreHistory per asset.
+        # NOTE: PostgreSQL's plain DISTINCT collapses to one row per asset_id but
+        # keeps an *arbitrary* one — not necessarily the latest. We must use
+        # DISTINCT ON (asset_id) with a matching ORDER BY to guarantee the newest
+        # snapshot is returned. Without this, the fundamental tab may render stale
+        # or zero scores and look like mock data.
         latest_sh_subq = (
             select(
                 ScoreHistory.asset_id,
@@ -107,55 +230,156 @@ class DashboardService:
         sh_rows = sh_result.all()
         sh_map = {row.asset_id: row for row in sh_rows}
 
-        # Get latest RawPerformanceScore per asset for detailed breakdown
-        latest_rps_subq = (
+        # Same fix for RawPerformanceScore — use DISTINCT ON semantics via
+        # a window-function subquery so the newest captured_at row wins.
+        rps_ranked = (
             select(
                 RawPerformanceScore.asset_id,
                 RawPerformanceScore.sub_dimension_scores,
                 RawPerformanceScore.aspect_scores,
                 RawPerformanceScore.sub_aspect_scores,
+                func.row_number()
+                .over(
+                    partition_by=RawPerformanceScore.asset_id,
+                    order_by=desc(RawPerformanceScore.captured_at),
+                )
+                .label("rn"),
             )
             .join(active_assets_subq, RawPerformanceScore.asset_id == active_assets_subq.c.id)
-            .order_by(RawPerformanceScore.asset_id, desc(RawPerformanceScore.captured_at))
-            .distinct(RawPerformanceScore.asset_id)
             .subquery()
         )
-
-        rps_query = select(latest_rps_subq)
+        rps_query = select(
+            rps_ranked.c.asset_id,
+            rps_ranked.c.sub_dimension_scores,
+            rps_ranked.c.aspect_scores,
+            rps_ranked.c.sub_aspect_scores,
+        ).where(rps_ranked.c.rn == 1)
         rps_result = await db.execute(rps_query)
         rps_rows = rps_result.all()
         rps_map = {row.asset_id: row for row in rps_rows}
+
+        # Pull real fundamental ratios (EPS, P/E, P/B, ROE, ...) per asset.
+        # We keep the latest period per asset so the UI surfaces real numeric
+        # fundamentals rather than relying solely on a 0..100 score.
+        fr_ranked = (
+            select(
+                FundamentalRatio.asset_id,
+                FundamentalRatio.eps,
+                FundamentalRatio.pe,
+                FundamentalRatio.pb,
+                FundamentalRatio.dps,
+                FundamentalRatio.roe,
+                FundamentalRatio.profit_margin,
+                FundamentalRatio.market_cap,
+                FundamentalRatio.book_value,
+                FundamentalRatio.period,
+                FundamentalRatio.as_of,
+                func.row_number()
+                .over(
+                    partition_by=FundamentalRatio.asset_id,
+                    order_by=desc(FundamentalRatio.as_of),
+                )
+                .label("rn"),
+            )
+            .join(active_assets_subq, FundamentalRatio.asset_id == active_assets_subq.c.id)
+            .subquery()
+        )
+        fr_query = select(
+            fr_ranked.c.asset_id,
+            fr_ranked.c.eps,
+            fr_ranked.c.pe,
+            fr_ranked.c.pb,
+            fr_ranked.c.dps,
+            fr_ranked.c.roe,
+            fr_ranked.c.profit_margin,
+            fr_ranked.c.market_cap,
+            fr_ranked.c.book_value,
+            fr_ranked.c.period,
+            fr_ranked.c.as_of,
+        ).where(fr_ranked.c.rn == 1)
+        fr_result = await db.execute(fr_query)
+        fr_rows = fr_result.all()
+        fr_map = {row.asset_id: row for row in fr_rows}
 
         # Build symbol breakdown
         symbols_data = []
         for asset in assets:
             sh = sh_map.get(asset.id)
             rps = rps_map.get(asset.id)
+            fr = fr_map.get(asset.id)
 
             dim_score = 0.0
             if sh and sh.dimension_scores:
                 dim_score = float(sh.dimension_scores.get(dimension, 0.0))
 
+            # Fallback: if no fundamental score has ever been written for this
+            # asset, derive a coarse 0..100 score from the real ratio values in
+            # fundamental_ratios so the row still shows real data instead of 0.
+            if dim_score == 0.0 and dimension == "fundamental" and fr is not None:
+                dim_score = _derive_fundamental_score_from_ratios(fr)
+
             sub_dim_scores = {}
             aspect_scores = {}
             sub_aspect_scores = {}
 
+            # Collect the raw per-metric scores from the DB (any of the three
+            # supported key shapes), then roll them up to the broad labels the
+            # frontend expects (`valuation`, `profitability`, ...).
+            raw_sub_dim: Dict[str, float] = {}
+            raw_aspect: Dict[str, float] = {}
+            raw_sub_aspect: Dict[str, float] = {}
+
             if rps:
                 if rps.sub_dimension_scores:
-                    sub_dim_scores = {
-                        k: float(v) for k, v in rps.sub_dimension_scores.items()
-                        if dimension in k.lower()
+                    raw_sub_dim = {
+                        k: float(v)
+                        for k, v in rps.sub_dimension_scores.items()
+                        if _belongs_to_dimension(k, dimension)
                     }
                 if rps.aspect_scores:
-                    aspect_scores = {
-                        k: float(v) for k, v in rps.aspect_scores.items()
-                        if dimension in k.lower()
+                    raw_aspect = {
+                        k: float(v)
+                        for k, v in rps.aspect_scores.items()
+                        if _belongs_to_dimension(k, dimension)
                     }
                 if rps.sub_aspect_scores:
-                    sub_aspect_scores = {
-                        k: float(v) for k, v in rps.sub_aspect_scores.items()
-                        if dimension in k.lower()
+                    raw_sub_aspect = {
+                        k: float(v)
+                        for k, v in rps.sub_aspect_scores.items()
+                        if _belongs_to_dimension(k, dimension)
                     }
+
+            # Roll up to broad labels for the UI. For non-fundamental
+            # dimensions we still expose the raw keys (prefix-stripped) so
+            # the rest of the dashboard tabs don't regress.
+            raw_metrics = {
+                _strip_dimension_prefix(k, dimension): v for k, v in raw_sub_dim.items()
+            }
+            if dimension in BROAD_SUB_DIMENSION_METRIC_PATTERNS:
+                sub_dim_scores = _aggregate_broad_sub_dimensions(raw_sub_dim, dimension)
+            else:
+                sub_dim_scores = raw_metrics
+            aspect_scores = {
+                _strip_dimension_prefix(k, dimension): v for k, v in raw_aspect.items()
+            }
+            sub_aspect_scores = {
+                _strip_dimension_prefix(k, dimension): v for k, v in raw_sub_aspect.items()
+            }
+
+            key_ratios = None
+            if fr is not None:
+                key_ratios = {
+                    "eps": float(fr.eps) if fr.eps is not None else None,
+                    "pe": float(fr.pe) if fr.pe is not None else None,
+                    "pb": float(fr.pb) if fr.pb is not None else None,
+                    "dps": float(fr.dps) if fr.dps is not None else None,
+                    "roe": float(fr.roe) if fr.roe is not None else None,
+                    "profit_margin": float(fr.profit_margin) if fr.profit_margin is not None else None,
+                    "market_cap": float(fr.market_cap) if fr.market_cap is not None else None,
+                    "book_value": float(fr.book_value) if fr.book_value is not None else None,
+                    "period": fr.period,
+                    "as_of": fr.as_of.isoformat() if fr.as_of else None,
+                }
 
             symbols_data.append({
                 "symbol": asset.symbol,
@@ -166,6 +390,8 @@ class DashboardService:
                 "sub_dimensions": sub_dim_scores,
                 "aspects": aspect_scores,
                 "sub_aspects": sub_aspect_scores,
+                "raw_metrics": raw_metrics,
+                "key_ratios": key_ratios,
             })
 
         # Compute summary
@@ -312,6 +538,79 @@ class DashboardService:
                     "published_at": latest_news.published_at.isoformat() if latest_news and latest_news.published_at else "",
                 } if latest_news else None,
             })
+
+        total_db_news = sum(s["news_count"] for s in symbols_data)
+        symbols_with_latest_news = sum(1 for s in symbols_data if s["latest_news"])
+        coverage_ratio = symbols_with_latest_news / len(symbols_data) if symbols_data else 0
+
+        if total_db_news == 0 or coverage_ratio < 0.5:
+            try:
+                news_service = NewsService()
+                await news_service.initialize()
+                market_news = await news_service.get_market_news(limit=50)
+
+                if market_news:
+                    sentiment_service = SentimentAnalysisService()
+                    await sentiment_service.initialize()
+
+                    texts = []
+                    for n in market_news:
+                        title = n.get("title", "") or ""
+                        body = n.get("body", "") or n.get("summary", "") or ""
+                        text = f"{title} {body}".strip()
+                        if text:
+                            texts.append({"text": text, "symbol": None})
+
+                    sentiments = await sentiment_service.batch_analyze(texts)
+                    valid_sentiments = [s for s in sentiments if isinstance(s, dict) and s.get("confidence", 0) > 0]
+
+                    if valid_sentiments:
+                        positive = sum(1 for s in valid_sentiments if s.get("label") == "positive")
+                        negative = sum(1 for s in valid_sentiments if s.get("label") == "negative")
+                        neutral = sum(1 for s in valid_sentiments if s.get("label") == "neutral")
+                        total_valid = len(valid_sentiments)
+                        avg_sentiment = sum(s["scores"]["positive"] - s["scores"]["negative"] for s in valid_sentiments) / total_valid
+
+                        summary = {
+                            "total_symbols": len(symbols_data),
+                            "total_news": len(market_news),
+                            "avg_score": round(avg_sentiment * 100, 2),
+                            "best_symbol": symbols_data[0]["symbol"] if symbols_data else None,
+                            "best_score": symbols_data[0]["score"] if symbols_data else 0,
+                            "worst_symbol": symbols_data[-1]["symbol"] if symbols_data else None,
+                            "worst_score": symbols_data[-1]["score"] if symbols_data else 0,
+                        }
+
+                        news_per_symbol = max(1, len(market_news) // max(len(symbols_data), 1))
+                        for i, s in enumerate(symbols_data):
+                            if not s["latest_news"] and i < len(market_news):
+                                ni = market_news[i]
+                                s["latest_news"] = {
+                                    "title": ni.get("title", ""),
+                                    "source": ni.get("source", ""),
+                                    "published_at": ni.get("published_at", ""),
+                                }
+                            if s["news_count"] == 0:
+                                s["news_count"] = news_per_symbol
+                            if s["positive_count"] == 0 and s["negative_count"] == 0 and s["neutral_count"] == 0:
+                                s["positive_count"] = positive
+                                s["negative_count"] = negative
+                                s["neutral_count"] = neutral
+                                s["avg_sentiment"] = round(avg_sentiment, 2)
+
+                        symbols_data.sort(key=lambda x: x["score"], reverse=True)
+
+                        return {
+                            "status": "success",
+                            "dimension": "news",
+                            "summary": summary,
+                            "symbols": symbols_data[:limit],
+                            "top_performers": symbols_data[:10],
+                            "bottom_performers": symbols_data[-10:][::-1],
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+            except Exception as exc:
+                logger.warning(f"Real-time news augmentation failed: {exc}")
 
         scores = [s["score"] for s in symbols_data if s["score"] is not None]
         avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
@@ -535,7 +834,7 @@ class DashboardService:
                 "score": round(dim_score, 2),
                 "grade": sh.grade if sh else "",
                 "signal_type": signal.signal_type if signal else None,
-                "confidence": round(float(signal.confidence), 2) if signal and signal.confidence else 0,
+                "confidence": round(float(signal.confidence) * 100, 2) if signal and signal.confidence and float(signal.confidence) <= 1.0 else round(float(signal.confidence), 2) if signal and signal.confidence else 0,
                 "expected_return": round(float(signal.expected_return), 4) if signal and signal.expected_return else 0,
                 "risk_score": round(float(signal.risk_score), 2) if signal and signal.risk_score else 0,
                 "generated_at": signal.generated_at.isoformat() if signal and signal.generated_at else None,

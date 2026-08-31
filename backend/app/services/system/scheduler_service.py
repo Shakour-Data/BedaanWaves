@@ -151,31 +151,19 @@ class SchedulerService(BaseService):
         # === SCORING & ANALYSIS JOBS ===
 
         async def daily_score_recalculation_job():
-            if self.scoring_service is not None:
-                await self.scoring_service.initialize()
-                from app.db.base import async_session_maker
-                scored = 0
-                async with async_session_maker() as session:
-                    assets_result = await session.execute(
-                        select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
-                        .where(Asset.active == True)
-                        .limit(100)
-                    )
-                    assets = assets_result.fetchall()
-                    for row in assets:
-                        asset_id, symbol, asset_class, market = row
-                        try:
-                            await self.scoring_service.analyze({
-                                "ticker": symbol,
-                                "market": market or "NASDAQ",
-                            })
-                            scored += 1
-                        except Exception as e:
-                            self.logger.warning(f"Scoring failed for {symbol}: {e}")
-                result = {"status": "completed", "assets_scored": scored}
-                await self.scoring_service.shutdown()
+            from app.services.analysis.score_history_pipeline import ScoreHistoryPipeline
+            pipeline = ScoreHistoryPipeline()
+            await pipeline.initialize()
+            try:
+                result = await pipeline.compute_and_persist_all(
+                    market="NASDAQ", batch_size=100
+                )
                 return result
-            return {"status": "skipped", "reason": "service not available"}
+            except Exception as e:
+                logger.error(f"DailyScoreRecalculation failed: {e}")
+                return {"status": "error", "error": str(e)}
+            finally:
+                await pipeline.shutdown()
 
         self.register_job(
             name="DailyScoreRecalculation",

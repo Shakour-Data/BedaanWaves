@@ -647,7 +647,7 @@ class CompanyLeadership(Base):
     start_date = Column(Date)
     end_date = Column(Date)
     source = Column(String(50), default="SEC")
-    fetched_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    fetched_at = Column(DateTime, default=lambda: datetime.now())
 
     __table_args__ = (
         Index('idx_company_leadership_asset', 'asset_id'),

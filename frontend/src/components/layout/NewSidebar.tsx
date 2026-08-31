@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 
 interface NavItem {
@@ -20,6 +21,11 @@ const mainNavItems: NavItem[] = [
   { label: "Methodology", href: "/methodology" },
 ];
 
+const bottomNavItems: NavItem[] = [
+  { label: "Settings", href: "/settings" },
+  { label: "Help", href: "/help" },
+];
+
 const dashboardTabs: NavItem[] = [
   { label: "General", href: "/dashboard?tab=general" },
   { label: "Technical", href: "/dashboard?tab=technical" },
@@ -30,17 +36,18 @@ const dashboardTabs: NavItem[] = [
   { label: "AI", href: "/dashboard?tab=ai" },
 ];
 
-const bottomNavItems: NavItem[] = [
-  { label: "Settings", href: "/settings" },
-  { label: "Help", href: "/help" },
-];
-
 export function NewSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab") || "general";
 
   const isActive = (href: string) => {
+    if (href.startsWith("/dashboard?tab=")) {
+      const tab = href.split("=")[1];
+      return pathname === "/dashboard" && currentTab === tab;
+    }
     if (href === "/dashboard") {
-      return pathname === href;
+      return pathname === href && currentTab === "general";
     }
     return pathname.startsWith(href);
   };
@@ -110,7 +117,7 @@ export function NewSidebar() {
               )}
             </Link>
           );
-        })}
+        }      )}
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background p-4">

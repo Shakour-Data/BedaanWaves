@@ -14,17 +14,17 @@ export function PageTransition({
   const [displayChildren, setDisplayChildren] = useState(children);
   const [transitionStage, setTransitionStage] = useState("enter");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevChildrenRef = useRef(children);
 
   useEffect(() => {
-    if (children !== displayChildren) {
-      Promise.resolve().then(() => {
-        setTransitionStage("exit");
+    if (children !== prevChildrenRef.current) {
+      prevChildrenRef.current = children;
+      setTransitionStage("exit");
 
-        timeoutRef.current = setTimeout(() => {
-          setDisplayChildren(children);
-          setTransitionStage("enter");
-        }, 200);
-      });
+      timeoutRef.current = setTimeout(() => {
+        setDisplayChildren(children);
+        setTransitionStage("enter");
+      }, 200);
     }
 
     return () => {
@@ -32,7 +32,7 @@ export function PageTransition({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [children, displayChildren]);
+  }, [children]);
 
   const animationClass =
     transitionType === "slide"

@@ -37,6 +37,18 @@ export interface DimensionDashboardResponse {
     sub_dimensions: Record<string, number>;
     aspects: Record<string, number>;
     sub_aspects: Record<string, number>;
+    key_ratios?: {
+      eps: number | null;
+      pe: number | null;
+      pb: number | null;
+      dps: number | null;
+      roe: number | null;
+      profit_margin: number | null;
+      market_cap: number | null;
+      book_value: number | null;
+      period: string | null;
+      as_of: string | null;
+    } | null;
   }>;
   top_performers: Array<{ symbol: string; name: string; score: number }>;
   bottom_performers: Array<{ symbol: string; name: string; score: number }>;
@@ -125,8 +137,26 @@ export interface AiDashboardResponse {
     risk_score: number;
     generated_at: string | null;
   }>;
-  top_performers: Array<{ symbol: string; name: string; score: number }>;
-  bottom_performers: Array<{ symbol: string; name: string; score: number }>;
+  top_performers: Array<{
+    symbol: string;
+    name: string;
+    score: number;
+    signal_type: string | null;
+    confidence: number;
+    expected_return: number;
+    risk_score: number;
+    generated_at: string | null;
+  }>;
+  bottom_performers: Array<{
+    symbol: string;
+    name: string;
+    score: number;
+    signal_type: string | null;
+    confidence: number;
+    expected_return: number;
+    risk_score: number;
+    generated_at: string | null;
+  }>;
   timestamp: string;
 }
 
@@ -209,48 +239,55 @@ function formatTimeAgo(dateStr: string): string {
   return `${days} days ago`;
 }
 
-async function fetchMarketStats(): Promise<MarketStat[]> {
-  const [marketOverviewRes, nasdaqDashboardRes] = await Promise.all([
+async function fetchMarketStats(generalPromise: Promise<GeneralDashboardResponse> = apiClient.get<GeneralDashboardResponse>("/analysis/dashboard/general", { timeout: 60000 }).then((r) => r.data)): Promise<MarketStat[]> {
+  const [marketOverviewRes, generalRes] = await Promise.all([
     apiClient.get<MarketOverviewResponse>("market/market-overview?market=NASDAQ", { timeout: 60000 }),
-    apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard", { timeout: 60000 }),
+    generalPromise,
   ]);
 
   const marketOverview = marketOverviewRes.data;
-  const nasdaqDashboard = nasdaqDashboardRes.data;
+  const general = generalRes;
 
   const stats: MarketStat[] = [];
 
-  if (nasdaqDashboard?.status === "success") {
+  if (general?.status === "success") {
+    const top = general.top_performers?.[0];
+    const totalSymbols = general.summary?.total_symbols ?? 0;
+    const totalSignals = general.summary?.total_signals ?? 0;
     stats.push(
-      { label: "Nasdaq Composite", value: nasdaqDashboard.total_symbols.toLocaleString("en-US"), changePct: nasdaqDashboard.average_change_pct ?? 0 },
-      { label: "Top Gainer", value: nasdaqDashboard.top_gainers[0]?.symbol + " " + nasdaqDashboard.top_gainers[0]?.change_pct.toFixed(2) + "%", changePct: nasdaqDashboard.top_gainers[0]?.change_pct ?? 0 },
+      { label: "Active Symbols", value: totalSymbols.toLocaleString("en-US"), changePct: 0 },
+      { label: "Active Signals", value: totalSignals.toLocaleString("en-US"), changePct: 0 },
+      { label: "Top Scorer", value: top ? `${top.symbol} ${top.overall_score?.toFixed(1) ?? "0"}` : "—", changePct: 0 },
+      { label: "Lowest Scorer", value: general.bottom_performers?.[0] ? `${general.bottom_performers[0].symbol} ${general.bottom_performers[0].overall_score?.toFixed(1) ?? "0"}` : "—", changePct: 0 },
     );
   }
 
-  if (marketOverview?.status === "success") {
+  if (marketOverview?.status === "success" && stats.length === 0) {
     stats.push(
       { label: "Active Symbols", value: marketOverview.total_assets.toLocaleString("en-US"), changePct: 0 },
     );
   }
 
   return stats.length ? stats : [
-    { label: "Nasdaq Composite", value: "—", changePct: 0 },
     { label: "Active Symbols", value: "—", changePct: 0 },
   ];
 }
 
-async function fetchTopMovers(): Promise<AssetRow[]> {
-  const res = await apiClient.get<NasdaqDashboardResponse>("market/nasdaq-dashboard", { timeout: 60000 });
-  const data = res.data;
-  if (data.status !== "success") return [];
+async function fetchTopMovers(generalPromise: Promise<GeneralDashboardResponse> = apiClient.get<GeneralDashboardResponse>("/analysis/dashboard/general", { timeout: 60000 }).then((r) => r.data)): Promise<AssetRow[]> {
+  const data = await generalPromise;
+  if (!data || data.status !== "success") return [];
 
-  const map = (r: NasdaqDashboardResponse["top_gainers"][number]): AssetRow => ({
-    symbol: r.symbol, name: r.name, market: "NASDAQ",
-    price: r.last_close, changePct: r.change_pct });
+  const map = (p: GeneralDashboardResponse["top_performers"][number]): AssetRow => ({
+    symbol: p.symbol,
+    name: p.name,
+    market: "NASDAQ",
+    price: 0,
+    changePct: 0,
+  });
 
-  const gainers = (data.top_gainers ?? []).map(map);
-  const losers = (data.top_losers ?? []).map(map);
-  return [...gainers, ...losers].slice(0, 10);
+  const ranked = [...(data.top_performers ?? []), ...(data.bottom_performers ?? [])]
+    .sort((a, b) => b.overall_score - a.overall_score);
+  return ranked.slice(0, 10).map(map);
 }
 
 async function fetchWatchlist(): Promise<AssetRow[]> {
@@ -315,10 +352,14 @@ async function fetchNews(): Promise<NewsItem[]> {
     time: formatTimeAgo(n.published_at) }));
 }
 
-export async function fetchDashboardData(): Promise<DashboardData> {
+export async function fetchDashboardData(generalOverride?: GeneralDashboardResponse): Promise<DashboardData> {
+  const generalPromise: Promise<GeneralDashboardResponse> = generalOverride
+    ? Promise.resolve(generalOverride)
+    : apiClient.get<GeneralDashboardResponse>("/analysis/dashboard/general", { timeout: 60000 }).then((r) => r.data);
+
   const results = await Promise.allSettled([
-    fetchMarketStats(),
-    fetchTopMovers(),
+    fetchMarketStats(generalPromise),
+    fetchTopMovers(generalPromise),
     fetchWatchlist(),
     fetchSignals(),
     fetchNews(),

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard } from "@/lib/api/dashboard";
@@ -31,7 +32,11 @@ const tabs: { id: Tab; label: string; shortcut: string }[] = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("general");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const subParam = searchParams.get("sub");
+  const [activeTab, setActiveTab] = useState<Tab>(tabParam && tabs.some(t => t.id === tabParam) ? tabParam : "general");
+  const [activeSub, setActiveSub] = useState<string | null>(subParam);
   const [generalData, setGeneralData] = useState<GeneralDashboardResponse | null>(null);
   const [marketStats, setMarketStats] = useState<MarketStat[]>([]);
   const [topStocks, setTopStocks] = useState<AssetRow[]>([]);
@@ -46,10 +51,8 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const [dashboardData, general] = await Promise.all([
-        fetchDashboardData(),
-        fetchGeneralDashboard().catch(() => null),
-      ]);
+      const general = await fetchGeneralDashboard().catch(() => null);
+      const dashboardData = await fetchDashboardData(general ?? undefined);
 
       setMarketStats(dashboardData.marketStats);
       const uniqueTop = dashboardData.topMovers.reduce<AssetRow[]>((acc, stock) => {
@@ -72,6 +75,18 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab") as Tab | null;
+    if (tab && tabs.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const sub = searchParams.get("sub");
+    setActiveSub(sub);
+  }, [searchParams]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -100,8 +115,22 @@ export default function DashboardPage() {
     };
     const target = map[label];
     if (target) {
-      setActiveTab(target);
+      router.push(`/dashboard?tab=${target}`);
     }
+  };
+
+  const handleTabChange = (tabId: Tab) => {
+    setActiveTab(tabId);
+    setActiveSub(null);
+    router.push(`/dashboard?tab=${tabId}`, { scroll: false });
+  };
+
+  const handleSubChange = (sub: string | null) => {
+    setActiveSub(sub);
+    const params = new URLSearchParams();
+    params.set("tab", activeTab);
+    if (sub) params.set("sub", sub);
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
 
   const spiderData = generalData ? [
@@ -137,34 +166,29 @@ export default function DashboardPage() {
       case "general":
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Dashboard</h1>
-              <p className="mt-1 text-[var(--color-text-secondary)]">Overview of NASDAQ market performance</p>
-            </div>
-
             <div className="mb-8 grid gap-6 md:grid-cols-4">
               {marketStats.length > 0 ? (
                 marketStats.map((stat, i) => (
-                  <div key={i} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                  <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm hover:shadow-md transition-shadow">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">{stat.label}</p>
                     <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{stat.value}</p>
                   </div>
                 ))
               ) : (
                 <>
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Nasdaq Composite</p>
                     <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
                   </div>
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Active Symbols</p>
                     <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
                   </div>
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Top Gainer</p>
                     <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
                   </div>
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Top Loser</p>
                     <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
                   </div>
@@ -173,19 +197,26 @@ export default function DashboardPage() {
             </div>
 
             {generalData && spiderData.length > 0 && (
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">6D Score Overview</h2>
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                <div className="mb-4">
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">6D Score Overview</h2>
+                  <p className="text-xs text-[var(--color-text-secondary)]">Click a dimension on the chart to open its dashboard</p>
+                </div>
                 <div className="flex flex-wrap items-center gap-8">
                   <SpiderChart data={spiderData} size={280} color="#2563EB" onLabelClick={handleDimensionClick} />
                   <div className="flex-1 min-w-[200px]">
                     <div className="space-y-3">
                       {Object.entries(generalData.dimensions).map(([key, val]) => (
-                        <div key={key} className="flex items-center justify-between">
+                        <button
+                          key={key}
+                          onClick={() => handleDimensionClick(key)}
+                          className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-[var(--color-background)]"
+                        >
                           <span className="capitalize text-sm font-medium text-[var(--color-text-secondary)]">{key}</span>
                           <div className="flex items-center gap-3">
                             <div className="h-2 w-32 rounded-full bg-[var(--color-border)] overflow-hidden">
                               <div
-                                className="h-full bg-[var(--color-primary)]"
+                                className="h-full bg-[var(--color-primary)] transition-all"
                                 style={{ width: `${Math.min(val.avg_score, 100)}%` }}
                               />
                             </div>
@@ -193,7 +224,7 @@ export default function DashboardPage() {
                               {val.avg_score.toFixed(1)}
                             </span>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -201,7 +232,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Top NASDAQ Stocks</h2>
                 <Link href="/stocks" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
@@ -235,9 +266,13 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="font-semibold text-[var(--color-text-primary)]">${stock.price.toFixed(2)}</p>
+                        <p className="font-semibold text-[var(--color-text-primary)]">
+                          {stock.price > 0 ? `$${stock.price.toFixed(2)}` : "—"}
+                        </p>
                         <p className={cn("text-xs", stock.changePct >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-error)]")}>
-                          {stock.changePct >= 0 ? "+" : ""}{stock.changePct.toFixed(2)}%
+                          {stock.changePct !== 0
+                            ? `${stock.changePct >= 0 ? "+" : ""}${stock.changePct.toFixed(2)}%`
+                            : `Score ${(stock as unknown as { overall_score?: number }).overall_score?.toFixed(1) ?? "—"}`}
                         </p>
                       </div>
                     </Link>
@@ -249,7 +284,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Trading Signals</h2>
                 {signals.length > 0 ? (
                   <div className="space-y-3">
@@ -275,7 +310,7 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Market News</h2>
                 {news.length > 0 ? (
                   <div className="space-y-3">
@@ -299,16 +334,16 @@ export default function DashboardPage() {
         );
 
       case "technical":
-        return <DimensionDashboard dimension="technical" fetchFn={fetchTechnicalDashboard} color="#2563EB" />;
+        return <DimensionDashboard dimension="technical" fetchFn={fetchTechnicalDashboard} color="#2563EB" activeSub={activeSub} onSubChange={handleSubChange} />;
 
       case "fundamental":
-        return <DimensionDashboard dimension="fundamental" fetchFn={fetchFundamentalDashboard} color="#10B981" />;
+        return <DimensionDashboard dimension="fundamental" fetchFn={fetchFundamentalDashboard} color="#10B981" activeSub={activeSub} onSubChange={handleSubChange} />;
 
       case "news":
         return <NewsDashboard />;
 
       case "risk":
-        return <DimensionDashboard dimension="risk" fetchFn={fetchRiskDashboard} color="#EF4444" />;
+        return <DimensionDashboard dimension="risk" fetchFn={fetchRiskDashboard} color="#EF4444" activeSub={activeSub} onSubChange={handleSubChange} />;
 
       case "board":
         return <BoardDashboard />;
@@ -323,14 +358,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6">
+      <div className="sticky top-16 z-30 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-4 pb-2 bg-background/80 backdrop-blur-xl border-b border-border">
+        <div className="mb-3">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Dashboards</h1>
+          <p className="text-xs text-[var(--color-text-secondary)]">Select a dashboard below</p>
+        </div>
         <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={cn(
                   "relative flex-1 rounded-lg px-3 py-2.5 text-center text-sm font-medium transition-all",
                   isActive
@@ -343,8 +382,8 @@ export default function DashboardPage() {
             );
           })}
         </div>
-        <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-          Select a dashboard above to view detailed scores and analytics. Shortcuts: G T F N R B A
+        <p className="mt-2 text-[10px] text-[var(--color-text-secondary)]">
+          Shortcuts: G T F N R B A
         </p>
       </div>
 

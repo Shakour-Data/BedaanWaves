@@ -76,7 +76,7 @@ const DIMENSION_WEIGHTS: Record<string, number> = {
   ai: 0.10,
 };
 
-const SUB_DIMENSIONS: Record<string, { key: string; label: string; weight: number }[]> = {
+export const SUB_DIMENSIONS: Record<string, { key: string; label: string; weight: number }[]> = {
   fundamental: [
     { key: "valuation", label: "Valuation", weight: 0.25 },
     { key: "profitability", label: "Profitability", weight: 0.20 },
