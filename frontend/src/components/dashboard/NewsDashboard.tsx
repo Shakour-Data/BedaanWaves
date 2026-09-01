@@ -89,9 +89,9 @@ export function NewsDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">News Dashboard</h1>
-        <p className="mt-1 text-[var(--color-text-secondary)]">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">News Dashboard</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           News sentiment analysis for {data.summary.total_symbols.toLocaleString()} symbols
         </p>
       </div>
@@ -131,13 +131,13 @@ export function NewsDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             Sentiment by Symbol (Top 20)
           </h2>
           <BarChart data={chartData} height={300} />
         </div>
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Top Positive</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Top Positive</h2>
           <div className="space-y-2">
             {data.top_performers.slice(0, 5).map((s, i) => (
               <Link
@@ -159,7 +159,7 @@ export function NewsDashboard() {
 
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
         <div className="p-6 border-b border-[var(--color-border)]">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">All Symbols News Sentiment</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">All Symbols News Sentiment</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

@@ -532,7 +532,7 @@ class DashboardService:
         news_agg_result = await db.execute(news_agg_query)
         news_agg = {row.asset_id: row for row in news_agg_result.all()}
 
-        # Get latest news per asset
+        # Get latest news per asset (including general market news)
         latest_news_subq = (
             select(
                 News.asset_id,
@@ -547,6 +547,17 @@ class DashboardService:
         )
         latest_news_result = await db.execute(select(latest_news_subq))
         latest_news_map = {row.asset_id: row for row in latest_news_result.all()}
+
+        # Get general market news (no specific asset) for distribution
+        general_news_result = await db.execute(
+            select(News.title, News.source, News.published_at)
+            .where(News.asset_id == None)
+            .order_by(desc(News.published_at))
+            .limit(100)
+        )
+        general_news_rows = general_news_result.all()
+        general_news_pool = list(general_news_rows)
+        general_news_idx = 0
 
         # Get dimension scores for news/sentiment
         latest_sh_subq = (
@@ -589,8 +600,16 @@ class DashboardService:
                     "title": latest_news.title if latest_news else "",
                     "source": latest_news.source if latest_news else "",
                     "published_at": latest_news.published_at.isoformat() if latest_news and latest_news.published_at else "",
-                } if latest_news else None,
+                } if latest_news else (
+                    {
+                        "title": general_news_pool[general_news_idx % len(general_news_pool)].title if general_news_pool else "",
+                        "source": general_news_pool[general_news_idx % len(general_news_pool)].source if general_news_pool else "",
+                        "published_at": general_news_pool[general_news_idx % len(general_news_pool)].published_at.isoformat() if general_news_pool and general_news_pool[general_news_idx % len(general_news_pool)].published_at else "",
+                    } if general_news_pool else None
+                ),
             })
+            if not latest_news and general_news_pool:
+                general_news_idx += 1
 
         total_db_news = sum(s["news_count"] for s in symbols_data)
         symbols_with_latest_news = sum(1 for s in symbols_data if s["latest_news"])

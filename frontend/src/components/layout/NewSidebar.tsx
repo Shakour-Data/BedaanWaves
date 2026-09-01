@@ -231,12 +231,9 @@ export function NewSidebar() {
       }
     });
     return auto;
-  }, [isActive, userExpanded]);
+  }, [isActive]);
 
-  const expandedCategories = useMemo(() => {
-    return new Set([...autoExpanded, ...userExpanded]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoExpanded, userExpanded]);
+  const expandedCategories = new Set([...autoExpanded, ...userExpanded]);
 
   useEffect(() => {
     if (sidebarOpen) {
@@ -285,7 +282,7 @@ export function NewSidebar() {
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-foreground leading-tight">BedaanWaves</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider leading-tight">Analytics</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider leading-tight">Analytics</span>
               </div>
             </Link>
           </div>
@@ -294,7 +291,7 @@ export function NewSidebar() {
             <nav className="flex flex-col gap-1 px-3">
               {categories.map((cat) => {
                 const isExpanded = expandedCategories.has(cat.label);
-                const hasActive = isCategoryActive(cat.items);
+                const hasActive = isCategoryActive(cat.items, isActive);
 
                 return (
                   <div key={cat.label} className="mb-1">
@@ -329,17 +326,17 @@ export function NewSidebar() {
                         {cat.items.map((item) => {
                           const active = isActive(item.href);
                           return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              onClick={() => setSidebarOpen(false)}
-                              className={cn(
-                                "group flex items-center gap-3 rounded-r-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                                active
-                                  ? "bg-primary/10 text-primary"
-                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                              )}
-                            >
+                             <Link
+                               key={item.href}
+                               href={item.href}
+                               onClick={() => setSidebarOpen(false)}
+                               className={cn(
+                                 "group flex items-center gap-3 rounded-r-lg px-3 py-2 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
+                                 active
+                                   ? "bg-primary/10 text-primary border-l-primary"
+                                   : "text-muted-foreground hover:bg-muted hover:text-foreground hover:border-l-border"
+                               )}
+                             >
                               <span
                                 className={cn(
                                   "flex h-5 w-5 items-center justify-center rounded transition-colors",
@@ -373,17 +370,17 @@ export function NewSidebar() {
               {bottomItems.map((item) => {
                 const active = isActive(item.href);
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
+                   <Link
+                     key={item.href}
+                     href={item.href}
+                     onClick={() => setSidebarOpen(false)}
+                     className={cn(
+                       "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
+                       active
+                         ? "bg-primary/10 text-primary border-l-primary"
+                         : "text-muted-foreground hover:bg-muted hover:text-foreground hover:border-l-border"
+                     )}
+                   >
                     <span
                       className={cn(
                         "flex h-5 w-5 items-center justify-center rounded transition-colors",

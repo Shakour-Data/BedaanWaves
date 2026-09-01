@@ -48,7 +48,7 @@ export function TableRow({ children, className, onClick }: TableRowProps) {
     <tr
       className={cn(
         "transition-colors duration-150",
-        onClick && "cursor-pointer hover:bg-neutral/50",
+        onClick && "cursor-pointer hover:bg-[var(--color-muted)]",
         className
       )}
       onClick={onClick}
@@ -58,7 +58,7 @@ export function TableRow({ children, className, onClick }: TableRowProps) {
   );
 }
 
-export function TableHead({ children, className, header = true, numeric }: TableCellProps & { numeric?: boolean }) {
+export function TableHead({ children, className, header = true, numeric }: TableCellProps) {
   return (
     <th
       className={cn(
@@ -73,9 +73,9 @@ export function TableHead({ children, className, header = true, numeric }: Table
   );
 }
 
-export function TableCell({ children, className }: TableCellProps) {
+export function TableCell({ children, className, numeric }: TableCellProps) {
   return (
-    <td className={cn("px-4 py-3 text-foreground", className)}>
+    <td className={cn("px-4 py-3 text-foreground", numeric && "text-right tabular-nums", className)}>
       {children}
     </td>
   );

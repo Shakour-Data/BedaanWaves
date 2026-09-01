@@ -96,7 +96,7 @@ function SubDimensionCard({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Score Distribution</h3>
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Score Distribution</h3>
           <div className="space-y-3">
             {subStats.distribution.map((bin) => (
               <div key={bin.range} className="flex items-center gap-3 group">
@@ -120,7 +120,7 @@ function SubDimensionCard({
         </div>
 
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
             Top 10 &mdash; {subInfo.label}
           </h3>
           <ScoreTrendChart
@@ -139,7 +139,7 @@ function SubDimensionCard({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Top Performers</h3>
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Top Performers</h3>
           <div className="space-y-2">
             {subStats.topPerformers.map((stock, i) => (
               <Link
@@ -158,7 +158,7 @@ function SubDimensionCard({
         </div>
 
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Bottom Performers</h3>
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Bottom Performers</h3>
           <div className="space-y-2">
             {subStats.bottomPerformers.map((stock, i) => (
               <Link
@@ -387,7 +387,7 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             Score Distribution
           </h2>
           <div className="space-y-3">
@@ -413,7 +413,7 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
         </div>
 
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             Top 10 Performers
           </h2>
           <ScoreTrendChart
@@ -432,7 +432,7 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Top Performers</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Top Performers</h2>
           <div className="space-y-2">
             {data.top_performers.map((stock, i) => (
               <Link
@@ -454,7 +454,7 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
         </div>
 
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Bottom Performers</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Bottom Performers</h2>
           <div className="space-y-2">
             {data.bottom_performers.map((stock, i) => (
               <Link
@@ -533,11 +533,11 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
       )}
 
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-[var(--color-border)]">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-            All {dimension.charAt(0).toUpperCase() + dimension.slice(1)} Scores
-          </h2>
-        </div>
+          <div className="p-6 border-b border-[var(--color-border)]">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+              All {dimension.charAt(0).toUpperCase() + dimension.slice(1)} Scores
+            </h2>
+          </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[var(--color-background)]">
@@ -584,17 +584,17 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="mb-8 pb-4 border-b border-[var(--color-border)]">
+      <div className="mb-6 pb-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
           <span
             className="h-3 w-3 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <h1 className="text-3xl font-bold text-[var(--color-text-primary)] capitalize">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] capitalize">
             {dimension} Dashboard
           </h1>
         </div>
-        <p className="mt-1 text-[var(--color-text-secondary)]">
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {data.summary.total_symbols.toLocaleString()} symbols analyzed
         </p>
       </div>
