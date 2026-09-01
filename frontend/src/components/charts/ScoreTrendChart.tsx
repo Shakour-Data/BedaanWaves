@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   createChart,
   LineSeries,
@@ -8,10 +8,9 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type TickMarkFormatter,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
-import { normalizeChartData } from "@/lib/chart-time";
+import { normalizeChartData, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
 
 interface SeriesDef {
   key: string;
@@ -68,10 +67,8 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
 
   const chartSeries = useMemo(() => {
     const ordinalLabels = new Map<number, string>();
-    let base = 0;
     const series = visibleSeries.map((s) => {
-      const { data, ordinalLabels: labels } = normalizeChartData(s.data, base);
-      base += s.data.length;
+      const { data, ordinalLabels: labels } = normalizeChartData(s.data);
       for (const [k, v] of labels) ordinalLabels.set(k, v);
       return { ...s, data };
     });
@@ -83,14 +80,8 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
     if (!container) return;
 
     const hasOrdinal = chartSeries.ordinalLabels.size > 0;
-    const timeScaleFormatter: TickMarkFormatter | undefined = hasOrdinal
-      ? (time, _tickMarkType, _locale) => {
-          if (typeof time === "number") {
-            const label = chartSeries.ordinalLabels.get(time);
-            if (label) return label;
-          }
-          return "";
-        }
+    const timeScaleFormatter = hasOrdinal
+      ? createOrdinalTickMarkFormatter(chartSeries.ordinalLabels)
       : undefined;
 
     const chart = createChart(container, {

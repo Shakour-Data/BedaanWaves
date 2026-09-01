@@ -669,7 +669,7 @@ class News(Base):
     published_at = Column(DateTime, index=True)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
     language = Column(String(5), default="fa")
-    fetched_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    fetched_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (Index('idx_news_published', 'published_at'),)
 

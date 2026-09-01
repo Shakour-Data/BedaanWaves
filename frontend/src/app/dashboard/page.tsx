@@ -183,31 +183,31 @@ export default function DashboardPage() {
       case "general":
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="mb-8 grid gap-6 md:grid-cols-4">
+            <div className="mb-8 grid gap-4 md:grid-cols-4">
               {marketStats.length > 0 ? (
                 marketStats.map((stat, i) => (
                   <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm hover:shadow-md transition-shadow">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">{stat.label}</p>
-                    <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{stat.value}</p>
+                    <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">{stat.value}</p>
                   </div>
                 ))
               ) : (
                 <>
                   <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Nasdaq Composite</p>
-                    <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
+                    <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">—</p>
                   </div>
                   <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Active Symbols</p>
-                    <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
+                    <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">—</p>
                   </div>
                   <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Top Gainer</p>
-                    <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
+                    <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">—</p>
                   </div>
                   <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-sm font-medium text-[var(--color-text-secondary)]">Top Loser</p>
-                    <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">—</p>
+                    <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">—</p>
                   </div>
                 </>
               )}
@@ -216,7 +216,7 @@ export default function DashboardPage() {
             {generalData && spiderData.length > 0 && (
               <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                 <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">6D Score Overview</h2>
+                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">6D Score Overview</h2>
                   <p className="text-xs text-[var(--color-text-secondary)]">Click a dimension on the chart to open its dashboard</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-8">
@@ -338,7 +338,7 @@ export default function DashboardPage() {
 
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Top NASDAQ Stocks</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Top NASDAQ Stocks</h2>
                 <Link href="/stocks" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
                   View All
                 </Link>
@@ -389,7 +389,7 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Trading Signals</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Trading Signals</h2>
                 {signals.length > 0 ? (
                   <div className="space-y-3">
                     {signals.slice(0, 5).map((signal, i) => (
@@ -415,7 +415,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Market News</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Market News</h2>
                 {news.length > 0 ? (
                   <div className="space-y-3">
                     {news.slice(0, 5).map((item, i) => (
@@ -462,33 +462,35 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-16 z-30 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-4 pb-2 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="mb-3">
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Dashboards</h1>
-          <p className="text-xs text-[var(--color-text-secondary)]">Select a dashboard below</p>
+      <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
+        <div className="px-4 lg:px-6 pt-4 pb-2">
+          <div className="mb-3">
+            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Dashboards</h1>
+            <p className="text-xs text-[var(--color-text-secondary)]">Select a dashboard below</p>
+          </div>
+          <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={cn(
+                    "relative flex-1 rounded-lg px-3 py-2.5 text-center text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-[var(--color-primary)] text-white shadow-sm"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-[var(--color-text-secondary)]">
+            Shortcuts: G T F N R B A
+          </p>
         </div>
-        <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  "relative flex-1 rounded-lg px-3 py-2.5 text-center text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-[var(--color-primary)] text-white shadow-sm"
-                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
-                )}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-2 text-[10px] text-[var(--color-text-secondary)]">
-          Shortcuts: G T F N R B A
-        </p>
       </div>
 
       {renderTabContent()}

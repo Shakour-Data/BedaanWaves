@@ -11,7 +11,6 @@ from app.models.models import Asset, candle_model_for_market
 from app.services.ml.prediction_service import PredictionService
 from app.services.ml.pattern_recognition_service import PatternRecognitionService
 from app.services.ml.anomaly_detection_service import AnomalyDetectionService
-from app.services.ml.recommendation_service import RecommendationService
 from app.services.ml.portfolio_optimization_service import PortfolioOptimizationService
 from app.services.ml.time_series_forecasting_service import TimeSeriesForecastingService
 
@@ -68,15 +67,6 @@ async def anomaly(symbol: str, db: AsyncSession = Depends(get_async_session)):
     await service.initialize()
     train = await service.train({"values": returns})
     result = await service.predict({"ticker": symbol, "prices": prices, "returns": returns})
-    return {"status": "success", "data": result}
-
-
-@router.post("/recommendation")
-async def recommendation(data: dict):
-    ticker = data.get("ticker", "UNKNOWN")
-    service = _load_service(RecommendationService)
-    await service.initialize()
-    result = await service.predict(data)
     return {"status": "success", "data": result}
 
 

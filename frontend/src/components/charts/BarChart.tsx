@@ -8,10 +8,9 @@ import {
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type TickMarkFormatter,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
-import { toTimestamp } from "@/lib/chart-time";
+import { toTimestamp, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
 
 interface BarChartProps {
   data: { time: string | UTCTimestamp; value: number; color?: string }[];
@@ -51,14 +50,8 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
     if (!container) return;
 
     const hasOrdinal = chartSeries.ordinalLabels.size > 0;
-    const timeScaleFormatter: TickMarkFormatter | undefined = hasOrdinal
-      ? (time, _tickMarkType, _locale) => {
-          if (typeof time === "number") {
-            const label = chartSeries.ordinalLabels.get(time);
-            if (label) return label;
-          }
-          return "";
-        }
+    const timeScaleFormatter = hasOrdinal
+      ? createOrdinalTickMarkFormatter(chartSeries.ordinalLabels)
       : undefined;
 
     const chart = createChart(container, {
