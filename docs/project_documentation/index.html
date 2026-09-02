@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BedaanWaves - مستندات پروژه کامل</title>
+  <title>BedaanWaves - Complete Project Documentation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -388,8 +388,8 @@
         <span class="logo-text">BedaanWaves</span>
       </div>
       <div class="header-title">
-        <h1>مستندات پروژه BedaanWaves</h1>
-        <p>پлатформа تحلیل سرمایه‌گذاری یکificada</p>
+        <h1>BedaanWaves Project Documentation</h1>
+        <p>Unified Investment Analysis Platform</p>
       </div>
     </div>
   </header>
@@ -397,46 +397,46 @@
   <div class="main">
     <!-- Section 1: Project & Process Docs -->
     <section class="section" id="section-1">
-      <h2>بخش ۱: مستندات مدیریتی و فرآیندی
+      <h2>Section 1: Project & Process Docs
         <span class="tag">Project & Process Docs</span>
       </h2>
       <div class="cards-grid">
         <div class="card">
-          <h3>۱. برنامه مدیریت پروژه (Project Management Plan)</h3>
-          <p>شماره_VERSION 1.0 – شامل زمان‌بندی دقیق、های Gantt Chart، تخصیص منابع، مدیریت بودجه ۵۰۰٬۰۰۰$, و شناسایی ۱۵ ریسک اصلی با راهکارهای پیش‌بینی‌شده.</p>
-          <p>بخش‌های اصلی:cheduled milestones, resource allocation, budget tracking, risk matrix, communication plan, quality assurance process.</p>
+          <h3>1. Project Management Plan</h3>
+          <p>Version 1.0 - includes precise scheduling, Gantt Chart, resource allocation, budget management of $500,000, and identification of 15 main risks with proposed solutions.</p>
+          <p>Main sections: scheduled milestones, resource allocation, budget tracking, risk matrix, communication plan, quality assurance process.</p>
         </div>
         <div class="card">
-          <h3>۲. SRS (Software Requirements Specification)</h3>
-          <p>ضمن 지정 کامل نیازمندی‌های عملکردی (Functional Requirements: ۱۲۰ مورد، Non-functional Requirements: ۸۵ مورد) و غیرعملکردی (Performance: p95 < 200ms, Scalability: 10K RPS, Security: RBAC, ۱۰۰٪ Coverage).</p>
-          <p>User stories: ۸۰ مورد، Acceptance criteria: ۳۰۰ مورد، Priority levels: P0-P3, Use cases: ۲۵ حالت اصلی.</p>
+          <h3>2. SRS (Software Requirements Specification)</h3>
+          <p>Complete specification of functional requirements (120 items) and non-functional requirements (85 items), including performance targets (p95 &lt; 200ms), scalability (10K RPS), security (RBAC), and 100% coverage.</p>
+          <p>User stories: 80 items, Acceptance criteria: 300 items, Priority levels: P0-P3, Use cases: 25 main scenarios.</p>
         </div>
         <div class="card">
-          <h3>۳. نمودار WBS (Work Breakdown Structure)</h3>
-          <p>ساختار شکفت کار در ۹ سطح و ۱۲۰ بنه شامل: Tier 1 Core Services (6), Tier 2 Data Services (13), Tier 3 Analysis Services (7), Tier 4 ML Services (9), Tier 5 NLP Services (6), Tier 6 User Services (8), Tier 7 Specialized Services (7), Tier 8 Crypto Services (8), Tier 9 System Services (8).</p>
-          <p>Her work package شامل ID, Title, Description, Owner, Estimated Effort (weeks), Dependencies, Status استخراج شده است.</p>
+          <h3>3. WBS (Work Breakdown Structure)</h3>
+          <p>Work breakdown structure across 9 levels and 120 deliverables including: Tier 1 Core Services (6), Tier 2 Data Services (13), Tier 3 Analysis Services (7), Tier 4 ML Services (9), Tier 5 NLP Services (6), Tier 6 User Services (8), Tier 7 Specialized Services (7), Tier 8 Crypto Services (8), Tier 9 System Services (8).</p>
+          <p>Each work package includes ID, Title, Description, Owner, Estimated Effort (weeks), Dependencies, Status.</p>
         </div>
         <div class="card">
-          <h3>۴. مستندات تست (Test Plan & Test Strategy)</h3>
-          <p>استراتژی تست inklu Unit Testing (450+	tests), Integration Testing (28	tests), System Testing, UAT (User Acceptance Testing).</p>
-          <p>Environment: Dev (PostgreSQL local), Staging (separate DB), Production (same setup). Acceptance criteria: Test coverage > 80%, Zero critical bugs, Performance benchmarks met.</p>
+          <h3>4. Test Plan & Test Strategy</h3>
+          <p>Test strategy including Unit Testing (450+ tests), Integration Testing (28 tests), System Testing, UAT (User Acceptance Testing).</p>
+          <p>Environment: Dev (PostgreSQL local), Staging (separate DB), Production (same setup). Acceptance criteria: Test coverage &gt; 80%, Zero critical bugs, Performance benchmarks met.</p>
         </div>
         <div class="card">
-          <h3>۵. گزارش‌های تست (Test Reports)</h3>
-          <p>شماره_فاز ۶ -unite: 228 تمرکز, passing: 228 (۱۰۰٪), coverage: 86%. Integration: 28/28 , ML: 54/54 , NLP: 38/38 . Detailed breakdown per service tier available in docs/phase6_report.md.</p>
+          <h3>5. Test Reports</h3>
+          <p>Phase 6 - unit: 228 focus tests, passing: 228 (100%), coverage: 86%. Integration: 28/28, ML: 54/54, NLP: 38/38. Detailed breakdown per service tier available in docs/phase6_report.md.</p>
         </div>
         <div class="card">
-          <h3>۶. مستندات راه‌اندازی و استقرار (Deployment Plan)</h3>
-          <p>steps: Install Python dependencies (`pip install -e .`), Configure .env, Initialize DB (`createdb bedaanwaves`), Apply migrations (`alembic upgrade head`), Start service (`uvicorn app.main:app`).</p>
-          <p>No Docker: All services run directly on local machine. Frontend: `npm ci && npm run build`.</p>
+          <h3>6. Deployment Plan</h3>
+          <p>Steps: Install Python dependencies (`pip install -e .`), Configure .env, Initialize DB (`createdb bedaanwaves`), Apply migrations (`alembic upgrade head`), Start service (`uvicorn app.main:app`).</p>
+          <p>No Docker: All services run directly on local machine. Frontend: `npm ci &amp;&amp; npm run build`.</p>
         </div>
         <div class="card">
-          <h3>۷. مستندات آموزشی (Training Manuals)</h3>
-          <p>برای کاربران نهایی: User Guide ( navigation, dashboard widgets, analysis tools, portfolio management).</p>
-          <p>برای تیم پشتیبانی: Admin Guide (service management, data ingestion troubleshooting, alert configuration, backup restoration).</p>
+          <h3>7. Training Manuals</h3>
+          <p>For end users: User Guide (navigation, dashboard widgets, analysis tools, portfolio management).</p>
+          <p>For the support team: Admin Guide (service management, data ingestion troubleshooting, alert configuration, backup restoration).</p>
         </div>
         <div class="card">
-          <h3>۸. گزارش‌های عملکرد و امنیت (Performance & Security Report)</h3>
+          <h3>8. Performance &amp; Security Report</h3>
           <p>Load Testing: 10,000 concurrent users, p95 latency: 180ms, Throughput: 8,500 req/s.</p>
           <p>Security Audit: OWASP Top 10 passed, XSS prevention, CSRF tokens, JWT best practices, Dependency vulnerabilities: 0 critical.</p>
         </div>
@@ -445,13 +445,13 @@
 
     <!-- Section 2: Diagrams & Models -->
     <section class="section" id="section-2">
-      <h2>بخش ۲: دیاگرام‌ها و مدل‌های بصری
+      <h2>Section 2: Diagrams & Visual Models
         <span class="tag">Diagrams & Models</span>
       </h2>
 
       <!-- UML Diagrams -->
       <div class="card">
-        <h3>الف) دیاگرام‌های UML (۹ مورد)</h3>
+        <h3>A) UML Diagrams (9 items)</h3>
         <div class="tabs">
           <button class="tab-btn active" data-tab="uml-1">Use Case</button>
           <button class="tab-btn" data-tab="uml-2">Class</button>
@@ -466,7 +466,7 @@
 
         <div id="uml-1" class="tab-content active">
           <h4>Use Case Diagram</h4>
-          <p>سناریوهای تعامل کاربر با سیستم شامل: Authentication (Register/Login/Refresh), Market Data Access, Analysis Pipelines, ML Inference, Portfolio Management, Notifications, System Operations.</p>
+          <p>User-system interaction scenarios: Authentication (Register/Login/Refresh), Market Data Access, Analysis Pipelines, ML Inference, Portfolio Management, Notifications, System Operations.</p>
           <div class="diagram-code">
 @startuml
 skinparam componentStyle rectangle
@@ -494,7 +494,7 @@ end note
 
         <div id="uml-2" class="tab-content">
           <h4>Class Diagram</h4>
-          <p>ساختار اشیاء، روابط و متدها: Asset, PriceCandle, MLSignal, Portfolio, Position, User, Notification با روابط 1:n و many:many.</p>
+          <p>Object structure, relationships, and methods: Asset, PriceCandle, MLSignal, Portfolio, Position, User, Notification with 1:n and many:many relationships.</p>
           <div class="diagram-code">
 class Asset {
   id: UUID
@@ -545,7 +545,7 @@ User "1" -- "many" Notification
 
         <div id="uml-3" class="tab-content">
           <h4>Sequence Diagram</h4>
-          <p>تعاملات در طول زمانی برای Login, Get ML Signal, Add Holding, Live Candlestick Proxy, Enqueue System Job.</p>
+          <p>Time-based interactions for Login, Get ML Signal, Add Holding, Live Candlestick Proxy, Enqueue System Job.</p>
           <div class="diagram-code">
 @startuml
 actor User
@@ -572,7 +572,7 @@ end
 
         <div id="uml-4" class="tab-content">
           <h4>Activity Diagram</h4>
-          <p>فیربrojهای منطقی سیستم: Data Ingestion Pipeline, Analysis Workflow, Signal Generation Process, Portfolio Management Flow.</p>
+          <p>System workflows: Data Ingestion Pipeline, Analysis Workflow, Signal Generation Process, Portfolio Management Flow.</p>
           <div class="diagram-code">
 @startuml
 skinparam monkeyenderer asymptote
@@ -592,7 +592,7 @@ merge
 
         <div id="uml-5" class="tab-content">
           <h4>State Machine Diagram</h4>
-          <p>وضعیت‌های مختلف یک موجودیت (مثلاً وضعیت سفارش): Order States (Pending → Confirmed → Processing → Shipped → Delivered/Cancelled), User States (Active, Suspended, Archived), System States (Idle, Processing, Error, Maintenance).</p>
+          <p>Various states of an entity (e.g., order state): Order States (Pending → Confirmed → Processing → Shipped → Delivered/Cancelled), User States (Active, Suspended, Archived), System States (Idle, Processing, Error, Maintenance).</p>
           <div class="diagram-code">
 @startuml
 skinparam stateDiagramV2
@@ -615,7 +615,7 @@ St -> P : cancel
 
         <div id="uml-6" class="tab-content">
           <h4>Component Diagram</h4>
-          <p>ساختار ماژول‌ها و وابستگی‌های آن‌ها: Core Services (6), Data Services (13), Analysis Services (7), ML Services (9), NLP Services (6), User Services (8), Specialized Services (7), Crypto Services (8), System Services (8).</p>
+          <p>Module structure and dependencies: Core Services (6), Data Services (13), Analysis Services (7), ML Services (9), NLP Services (6), User Services (8), Specialized Services (7), Crypto Services (8), System Services (8).</p>
           <div class="diagram-code">
 @startuml
 skinparam componentStyle rectangle
@@ -642,7 +642,7 @@ package "System Services" { [SchedulerService] [MetricsService] }
 
         <div id="uml-7" class="tab-content">
           <h4>Deployment Diagram</h4>
-          <p>توزیع فیزیکی نرم‌افزار روی سرورها و زیرساخت: Localhost (Backend FastAPI + Uvicorn), PostgreSQL (port 5432), Redis (port 6379), Frontend (Next.js served by NGINX), API Gateway.</p>
+          <p>Physical software distribution across servers and infrastructure: Localhost (Backend FastAPI + Uvicorn), PostgreSQL (port 5432), Redis (port 6379), Frontend (Next.js served by NGINX), API Gateway.</p>
           <div class="diagram-code">
 @startuml
 skinparam componentStyle rectangle
@@ -666,7 +666,7 @@ backend --> redis
 
         <div id="uml-8" class="tab-content">
           <h4>Package Diagram</h4>
-          <p>ارائه‌دهی گروه‌های کلاس: app/services/ (core, data, analysis, ml, nlp, user, specialized, crypto, system), app/models/, app/schemas/, app/api/routes/, core/ (config, di container).</p>
+          <p>Class group organization: app/services/ (core, data, analysis, ml, nlp, user, specialized, crypto, system), app/models/, app/schemas/, app/api/routes/, core/ (config, di container).</p>
           <div class="diagram-code">
 @startuml
 skinparam packageStyle rect
@@ -694,7 +694,7 @@ package "app/" {
 
         <div id="uml-9" class="tab-content">
           <h4>Communication Diagram</h4>
-          <p>ارتباط بین اشیاء در سیستم‌های توزیع‌شده: FastAPI Routers <--> Services <--> Database, External API calls, Message Queue interactions.</p>
+          <p>Communication between objects in distributed systems: FastAPI Routers <--> Services <--> Database, External API calls, Message Queue interactions.</p>
           <div class="diagram-code">
 @startuml
 skinparam handwriting false
@@ -727,8 +727,8 @@ BRS_API --> Service_Layer : returns data
 
     <!-- DFD Diagrams -->
     <div class="card">
-      <h3>ب) دیاگرام DFD (Flow Data)</h3>
-      <p>حداقل سطح ۰ و سطح ۱ (در صورت پیچیدگی سطح ۲ و ۳ نیز ارائه شده):</p>
+      <h3>b) DFD Diagrams (Flow Data)</h3>
+      <p>At minimum Level 0 and Level 1 (Level 2 and 3 provided if complexity requires):</p>
       <div class="tabs">
         <button class="tab-btn active" data-tab="dfd-0">Context (Level 0)</button>
         <button class="tab-btn" data-tab="dfd-1">Level 1</button>
@@ -740,7 +740,7 @@ BRS_API --> Service_Layer : returns data
       </div>
 
       <div id="dfd-0" class="tab-content active">
-        <h4>Context Diagram (سطح ۰)</h4>
+        <h4>Context Diagram (Level 0)</h4>
         <div class="diagram-code">
 flowchart LR
   U[User / Frontend] -->|HTTP/WebSocket requests| BE[Backend API (FastAPI)]
@@ -951,8 +951,8 @@ flowchart TD
 
     <!-- BPMN Diagrams -->
     <div class="card">
-      <h3>گ) діاگرام BPMN (Business Process Model and Notation)</h3>
-      <p>فلوتر کامل فرآیندهای کسب‌وکار (حداقل یک دیاگرام برای هر فرآیند اصلی). شامل المان‌های Pool, Lane, Events و Gateways.</p>
+      <h3>c) BPMN Diagrams (Business Process Model and Notation)</h3>
+      <p>Complete business process flows (at least one diagram per main process). Includes Pool, Lane, Events, and Gateway elements.</p>
       <div class="tabs">
         <button class="tab-btn active" data-tab="bpmn-1">Level 1 - Overview</button>
         <button class="tab-btn" data-tab="bpmn-2">Level 2 - Auth</button>
@@ -964,7 +964,7 @@ flowchart TD
 
       <div id="bpmn-1" class="tab-content active">
         <h4>BPMN Level 1 - Processes Overview</h4>
-        <p>فرآیندهای اصلی: Authentication, Market Data Access, Live Data Proxy, Analysis Pipeline, ML Inference, Portfolio Management, Notifications, System Operations.</p>
+        <p>Main processes: Authentication, Market Data Access, Live Data Proxy, Analysis Pipeline, ML Inference, Portfolio Management, Notifications, System Operations.</p>
         <div class="diagram-code">
 flowchart TD
   U[User / Frontend] -->|Auth| AUTH[API /auth]
@@ -1191,7 +1191,7 @@ flowchart TD
 
     <!-- Architecture Diagrams -->
     <div class="card">
-      <h3>د) دیاگرام معماری نرم‌افزار</h3>
+      <h3>d) Software Architecture Diagrams</h3>
       <div class="tabs">
         <button class="tab-btn active" data-tab="arch-layered">Layered Architecture</button>
         <button class="tab-btn" data-tab="arch-4plus1">4+1 View</button>
@@ -1201,7 +1201,7 @@ flowchart TD
 
       <div id="arch-layered" class="tab-content active">
         <h4>Layered Architecture</h4>
-        <p>نمایش لایه‌های Presentation، Business، Data و Integration: Frontend (Next.js/React) → API Gateway (FastAPI) → Core Services → Data Services (PostgreSQL/Redis) → External APIs (BRS, Crypto, Intl) → Database.</p>
+        <p>Presentation, Business, Data, and Integration layers: Frontend (Next.js/React) → API Gateway (FastAPI) → Core Services → Data Services (PostgreSQL/Redis) → External APIs (BRS, Crypto, Intl) → Database.</p>
         <div class="diagram-code">
 graph TD
     A[User Layer] --> B[Frontend Layer]
@@ -1223,7 +1223,7 @@ graph TD
 
       <div id="arch-4plus1" class="tab-content">
         <h4>4+1 View Architecture</h4>
-        <p>یکپارچینی دیدگاه‌های منطقی،rocess, Physical, Development و Scenarios: Logical View (class diagram & packages), Process View (activity & sequence diagrams for concurrent processes), Physical View (deployment diagram), Development View (folder & module structure), Scenarios View (key scenarios confirming all views).</p>
+        <p>Integration of Logical, Process, Physical, Development, and Scenarios views: Logical View (class diagram & packages), Process View (activity & sequence diagrams for concurrent processes), Physical View (deployment diagram), Development View (folder & module structure), Scenarios View (key scenarios confirming all views).</p>
         <div class="diagram-code">
 graph TD
     subgraph Logical[Logical View]
@@ -1251,7 +1251,7 @@ graph TD
 
       <div id="arch-microservice" class="tab-content">
         <h4>Microservice Communications</h4>
-        <p>در صورت استفاده از معماری سرویس‌گرا: API Gateway, Service Registry, و جریان رویدادها: Event-driven communication via Redis Pub/Sub, Async message queue for data processing, Synchronous HTTP calls via FastAPI endpoints, Circuit breaker pattern for resilience.</p>
+        <p>If using service-oriented architecture: API Gateway, Service Registry, and event flows: Event-driven communication via Redis Pub/Sub, Async message queue for data processing, Synchronous HTTP calls via FastAPI endpoints, Circuit breaker pattern for resilience.</p>
         <div class="diagram-code">
 graph TD
     GW[API Gateway] -->|HTTP| MS1[Market Service]
@@ -1279,7 +1279,7 @@ graph TD
 
       <div id="arch-network" class="tab-content">
         <h4>Network & Infrastructure Diagram</h4>
-        <p>نمایش فایروال‌ها, Load Balancer, دیتابیس‌ها و ذخیره-storage: Firewall (UFW/WAF), Load Balancer (NGINX), PostgreSQL Primary/Replica, Redis Cache, Object Storage (S3), Network Segmentation (DMZ for APIs, Internal for DB).</p>
+        <p>Firewalls, Load Balancer, databases, and storage: Firewall (UFW/WAF), Load Balancer (NGINX), PostgreSQL Primary/Replica, Redis Cache, Object Storage (S3), Network Segmentation (DMZ for APIs, Internal for DB).</p>
         <div class="diagram-code">
 graph TD
     subgraph Internet[Internet]
@@ -1317,28 +1317,28 @@ graph TD
       </h2>
       <div class="cards-grid">
         <div class="card">
-          <h3>۱. کد منبع کامل (Source Code)</h3>
+          <h3>1. Complete Source Code</h3>
           <p>Backend: 50+ service files + routes + models (~15,000+ LOC), FastAPI app.main:app, SQLAlchemy models in app/models/, Pydantic schemas in app/schemas/, Alembic migrations in backend/database/alembic/. Frontend: Next.js 16+ React app with 50+ pages, TypeScript components, TailwindCSS styling.</p>
           <p>Commit history: 15+ commits, Tagged releases: v1.0.0, v1.1.0, v1.2.0. All source code with full git history available.</p>
         </div>
         <div class="card">
-          <h3>۲. فایل‌های تنظیمات و محیط (Environment Configs)</h3>
+          <h3>2. Environment Configuration Files</h3>
           <p>.env file settings: ENVIRONMENT=production, DEBUG=false, LOG_LEVEL=INFO, DB_DRIVER=postgresql, DB_HOST=localhost, DB_PORT=5432, DB_NAME=bedaanwaves, DB_USER=postgres, DB_PASSWORD=your_secure_password, REDIS_URL=redis://localhost:6379/0, CACHE_BACKEND=memory, JWT_SECRET=your_secure_jwt_secret_9d3e4f6a5b7c8d9e0f1a2b3c4d5e6f7, REQUIRE_AUTH=true, DEBUG=false, DATABASE_POOL_SIZE=20, CACHE_POOL_SIZE=20, REDIS_MAX_CONNECTIONS=50.</p>
           <p>100+ configuration settings organized by category via ConfigService.</p>
         </div>
         <div class="card">
-          <h3>۳. اسکریپت‌های ساخت و دیتابیس (Build & DB Scripts)</h3>
+          <h3>3. Build and Database Scripts</h3>
           <p>DDL scripts: Table creation for USER, PREFERENCE, MARKET_DATA, HISTORICAL_PRICES, STOCK, INDICE, INDUSTRY, SIGNAL, ALERT, FAVORITE, TRANSACTION_LOG tables.</p>
           <p>DML scripts: Seed data for initial stock symbols, sample user records, industry classifications.</p>
           <p>Alembic migration versions: initial (heads), add_stock_data, add_market_data_pipeline, add_ml_signals_table, add_user_portfolio_schema.</p>
         </div>
         <div class="card">
-          <h3>۴. فایل‌های باینری یا کامپایل شده (Artifacts)</h3>
+          <h3>4. Binary or Compiled Files (Artifacts)</h3>
           <p>.pyc compiled Python files, Uvicorn server binary, Next.js production build output (.next/ folder), Docker-free deployment artifacts.</p>
           <p>Production-ready: FastAPI app with uvicorn app.main:app --host 0.0.0.0 --port $API_PORT, Next.js static files ready for NGINX/Apache serving.</p>
         </div>
         <div class="card">
-          <h3>۵. مستندات API (API Documentation)</h3>
+          <h3>5. API Documentation</h3>
           <p>OpenAPI (Swagger) specification at /api/v1/docs endpoint, Postman Collection with sample requests/responses for all 50+ endpoints.</p>
           <p>Key endpoints documented: GET /api/v1/market/symbols, GET /api/v1/market/price-history, GET /api/v1/analysis/technical/{symbol}, GET /api/v1/analysis/signals/{symbol}, GET /api/v1/portfolios, POST /api/v1/portfolios/{id}/holdings, GET /api/v1/auth/login, POST /api/v1/auth/register, GET /api/v1/crypto/prices.</p>
         </div>

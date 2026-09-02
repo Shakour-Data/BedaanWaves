@@ -1,110 +1,110 @@
-﻿# طرح جامع ارتقای سطح اهمیت (Criticality) وظایف مربوط به پایگاه داده
+﻿# Comprehensive Database Criticality Upgrade Plan
 
-**پروژه:** BedaanWaves  
-**تاریخ:** 2026-07-27  
-**نسخه:** 1.0  
-**وضعیت:** پیش‌نویس برای بازبینی و تأیید
+**Project:** BedaanWaves
+**Date:** 2026-07-27
+**Version:** 1.0
+**Status:** Draft for review and approval
 
 ---
 
-## ۱. مقدمه و اهداف
+## 1. Introduction and Objectives
 
-این سند یک طرح جامع برای ارتقای سطح اهمیت (Criticality) وظایف مربوط به پایگاه داده تدوین کرده است. هدف تضمین پایداری، امنیت، عملکرد و مقیاس‌پذیری داده‌ها در سطح تولید (Production) است.
+This document outlines a comprehensive plan for upgrading the criticality level of database-related tasks. The goal is to ensure data reliability, security, performance, and scalability in production.
 
-### ۱.۱ پرینسیپ‌های هدایت‌کننده
+### 1.1 Guiding Principles
 
-| اصل | توضیح |
+| Principle | Description |
 |------|-------|
-| **ACID Compliance** | تمام تراکنش‌های حیاتی باید اتمیک، سازگار، ایزوله و پایدار باشند |
-| **Defense in Depth** | لایه‌های امنیتی متعدد: شبکه، دیتابیس، اپلیکیشن، کد |
-| **Observability First** | لاگینگ، متریک‌ها، و ردیابی (Tracing) از روز اول |
-| **Immutable Infrastructure** | مهاجرتی‌ها (Migrations) غیرقابل‌تغییر، نسخه‌بندی شده، و قابل‌بازگشت |
-| **Zero-Downtime Evolution** | تغییرات اسکیمای بدون قطع خدمت (Online DDL، Blue/Green) |
-| **Data Governance** | طبقه‌بندی داده‌ها، نگهداری (Retention)، و حذف امن (Purging) |
+| **ACID Compliance** | All critical transactions must be atomic, consistent, isolated, and durable |
+| **Defense in Depth** | Multiple security layers: network, database, application, code |
+| **Observability First** | Logging, metrics, and tracing from day one |
+| **Immutable Infrastructure** | Migrations are immutable, versioned, and reversible |
+| **Zero-Downtime Evolution** | Schema changes without service interruption (Online DDL, Blue/Green) |
+| **Data Governance** | Data classification, retention, and secure purging |
 
-### ۱.۲ سطح بحرانیت هدف
+### 1.2 Target Criticality Levels
 
-| سطح | تعریف | مثال |
+| Level | Definition | Example |
 |------|-------|------|
-| **P0 (Critical)** | قطع خدمت کل سیستم، از دست رفتن داده، نقض امنیتی | Migration ناموفق،.inject SQL، خرابی WAL |
-| **P1 (High)** | تدهور عملکرد شدید، خطای داده در گزارش‌دهی | N+1 Query، ایندکس گم‌شده، Connection Leak |
-| **P2 (Medium)** | بدهی فنی، عدم پ conformance با استانداردها | نام‌گذاری ناسازگار، مستندات گم‌شده |
-| **P3 (Low)** | بهینه‌سازی‌های آینده، ویژگی‌های Nice-to-have | Partitioning پیشرفته، Materialized Views |
+| **P0 (Critical)** | Full system outage, data loss, security breach | Failed migration, SQL injection, WAL corruption |
+| **P1 (High)** | Severe performance degradation, data errors in reporting | N+1 queries, missing index, connection leak |
+| **P2 (Medium)** | Technical debt, non-conformance with standards | Inconsistent naming, missing documentation |
+| **P3 (Low)** | Future optimizations, nice-to-have features | Advanced partitioning, materialized views |
 
 ---
 
-## ۲. فاز ۰: پایه‌سازی امنیتی و عملیات (Security & Ops Foundation) — P0
+## 2. Phase 0: Security and Operations Foundation — P0
 
-### ۲.۱ مدیریت رازها و اعتبارنامه‌ها (Secrets Management)
+### 2.1 Secrets and Credentials Management (Secrets Management)
 
-| وظیفه | وضعیت | اولویت | مالک | معیار پذیرش |
+| Task | Status | Priority | Owner | Acceptance Criteria |
 |-------|-------|--------|------|-------------|
-| چرخش `DATABASE_URL` / رمز دیتابیس | ⬜ انجام نشده | P0 | DevOps | رمز جدید در Vault/Secrets Manager، `.env` به‌روزرسانی شده |
-| چرخش `SECRET_KEY` JWT | ⬜ انجام نشده | P0 | Backend | توکن‌های قدیمی منقضی، کاربران لاگ‌اут اجباری |
-| چرخش `BRS_API_KEY` | ⬜ انجام نشده | P0 | Data Team | کلید جدید در سرویس برسی، تست اتصال موفق |
-| حذف رازها از تاریخچه Git | ⬜ انجام نشده | P0 | DevOps | `git-filter-repo` یا `bfg` اجرا شده، force-push با احتیاط |
-| افزودن `trufflehog` / `git-secrets` به CI | ⬜ انجام نشده | P0 | DevOps | Pipeline با خطا متوقف می‌شود اگر راز پیدا شود |
+| Rotate `DATABASE_URL` / database password | ⬜ Not done | P0 | DevOps | New password in Vault/Secrets Manager, `.env` updated |
+| Rotate JWT `SECRET_KEY` | ⬜ Not done | P0 | Backend | Old tokens invalidated, users forced to log out |
+| Rotate `BRS_API_KEY` | ⬜ Not done | P0 | Data Team | New key in BRS service, connection test successful |
+| Remove secrets from Git history | ⬜ Not done | P0 | DevOps | `git-filter-repo` or `bfg` executed, force-push with caution |
+| Add `trufflehog` / `git-secrets` to CI | ⬜ Not done | P0 | DevOps | Pipeline fails if secret is found |
 
-### ۲.۲ سخت‌سازی PostgreSQL (PostgreSQL Hardening)
+### 2.2 PostgreSQL Hardening
 
-| وظیفه | توضیح | اولویت | معیار پذیرش |
+| Task | Description | Priority | Acceptance Criteria |
 |-------|---------|--------|-------------|
-| فعال‌سازی `sslmode=require` | تمام اتصالات TLS 1.2+ | P0 | `psql "sslmode=require"` موفق |
-| غیرفعال‌سازی `trust` authentication | فقط `scram-sha-256` یا `md5` | P0 | `pg_hba.conf` بازبینی شده |
-| محدود کردن `listen_addresses` | فقط IPهای مجاز (App servers، Bastion) | P0 | فایروال + `postgresql.conf` |
-| تنظیم `password_encryption = scram-sha-256` | هش مدرن رمزها | P0 | `SHOW password_encryption` |
-| ایجاد Roleهای به تفکیک: `app_readonly`، `app_readwrite`، `migration_runner`، `admin` | اصل کمینه‌امتیاز (Least Privilege) | P0 | `GRANT` دقیق روی اسکیماها |
-| فعال‌سازی `log_statement = 'ddl'` + `log_min_duration_statement = 1000` | ردیابی کوئری‌های کند و DDL | P0 | لاگ‌های `pg_log` بررسی شده |
-| تنظیم `shared_preload_libraries = 'pg_stat_statements, auto_explain'` | مانیتورینگ کوئری | P1 | Extensionها فعال |
+| Enable `sslmode=require` | All TLS 1.2+ connections | P0 | `psql "sslmode=require"` succeeds |
+| Disable `trust` authentication | Only `scram-sha-256` or `md5` | P0 | `pg_hba.conf` reviewed |
+| Restrict `listen_addresses` | Only allowed IPs (App servers, Bastion) | P0 | Firewall + `postgresql.conf` |
+| Set `password_encryption = scram-sha-256` | Modern password hashing | P0 | `SHOW password_encryption` |
+| Create separated roles: `app_readonly`, `app_readwrite`, `migration_runner`, `admin` | Least privilege principle | P0 | Precise `GRANT` on schemas |
+| Enable `log_statement = 'ddl'` + `log_min_duration_statement = 1000` | Track slow queries and DDL | P0 | `pg_log` logs reviewed |
+| Set `shared_preload_libraries = 'pg_stat_statements, auto_explain'` | Query monitoring | P1 | Extensions enabled |
 
-### ۲.۳ پشتیبان‌گیری و بازیابی (Backup & Recovery)
+### 2.3 Backup and Recovery (Backup & Recovery)
 
-| وظیفه | ابزار / روش | RPO | RTO | اولویت |
+| Task | Tool / Method | RPO | RTO | Priority |
 |-------|-------------|-----|-----|--------|
-| پشتیبان‌گیری فیزیکی روزانه (Base Backup) | `pg_basebackup` + WAL Archiving | 24h | < 4h | P0 |
-| پشتیبان‌گیری منطقی ساعتی (Logical) | `pg_dump --format=custom` | 1h | < 1h | P1 |
-| تست بازیابی ماهانه (Fire Drill) | Restore به استیجینگ، چک‌سام داده‌ها | - | - | P0 |
-| نگهداری WAL برای PITR | `wal_keep_segments` / `max_slot_wal_keep_size` | 7 days | - | P0 |
-| رمزنگاری پشتیبان‌ها | `gpg` یا S3 SSE-KMS | - | - | P0 |
+| Daily physical base backup | `pg_basebackup` + WAL Archiving | 24h | < 4h | P0 |
+| Hourly logical backup | `pg_dump --format=custom` | 1h | < 1h | P1 |
+| Monthly restore test (Fire Drill) | Restore to staging, data check | - | - | P0 |
+| WAL retention for PITR | `wal_keep_segments` / `max_slot_wal_keep_size` | 7 days | - | P0 |
+| Backup encryption | `gpg` or S3 SSE-KMS | - | - | P0 |
 
 ---
 
-## ۳. فاز ۱: معماری داده و اسکیمای استاندارد (Data Architecture & Schema Standards) — P0/P1
+## 3. Phase 1: Data Architecture and Schema Standards — P0/P1
 
-### ۳.۱ استانداردهای نام‌گذاری و طراحی (Naming & Design Conventions)
+### 3.1 Naming and Design Conventions (Naming & Design Conventions)
 
 ```sql
--- جداول: snake_case، جمع، توصیف‌گر
--- مثال: ir_price_candles, user_preferences, ml_signals
+-- Tables: snake_case, plural, descriptive
+-- Example: ir_price_candles, user_preferences, ml_signals
 
--- ستون‌ها: snake_case، واحد مشخص در نام (اختیاری)
--- مثال: volume_24h_usd, price_irr, timestamp_utc
+-- Columns: snake_case, explicit unit in name (optional)
+-- Example: volume_24h_usd, price_irr, timestamp_utc
 
--- ایندکس‌ها: idx_<table>_<col(s)>
--- محدودیت‌های یکتا: uix_<table>_<col(s)>
--- چک‌ها: chk_<table>_<rule>
--- کلیدهای خارجی: fk_<table>_<ref_table>
+-- Indexes: idx_<table>_<col(s)>
+-- Unique constraints: uix_<table>_<col(s)>
+-- Checks: chk_<table>_<rule>
+-- Foreign keys: fk_<table>_<ref_table>
 
--- UUID v4 برای تمام Primary Keys (عمدتاً)
--- BigInteger برای حجم/مبلغ‌های بزرگ
--- NUMERIC(p, s) برای مقادیر مالی (p=20, s=8 برای قیمت)
--- TIMESTAMPTZ برای تمام زمان‌ها (UTC ذخیره، TZ در اپلیکیشن)
--- JSONB برای متادیتا / انعطاف‌پذیر
+-- UUID v4 for all Primary Keys (mostly)
+-- BigInteger for large volumes/amounts
+-- NUMERIC(p, s) for financial values (p=20, s=8 for price)
+-- TIMESTAMPTZ for all timestamps (UTC stored, TZ in app)
+-- JSONB for metadata / flexible data
 ```
 
-| استاندارد | اعمال شده؟ | اقدام لازم |
+| Standard | Applied? | Required Action |
 |-----------|------------|------------|
-| نام‌گذاری جداول/ستونها |  بیشتر | بررسی کامل در Migration بعدی |
-| نوع داده مالی (NUMERIC) |  | - |
-| TIMESTAMPTZ به جای TIMESTAMP |  برخی TIMESTAMP | Migration تبدیل به TIMESTAMPTZ |
-| UUID PK همه جا |  | - |
-| Soft Delete Pattern (`deleted_at`) |  بیشتر جداول | افزودن به جداول حساس |
-| Audit Columns (`created_by`, `updated_by`) |  | افزودن به مدل پایه (Base Mixin) |
+| Table/column naming | Mostly | Full review in next Migration |
+| Financial data type (NUMERIC) |  | - |
+| TIMESTAMPTZ instead of TIMESTAMP | Some TIMESTAMP | Migration to TIMESTAMPTZ |
+| UUID PK everywhere |  | - |
+| Soft Delete Pattern (`deleted_at`) | Most tables | Add to sensitive tables |
+| Audit Columns (`created_by`, `updated_by`) |  | Add to base model (Base Mixin) |
 
-### ۳.۲ مدل پایه و Mixinها (Base Model & Mixins)
+### 3.2 Base Model and Mixins (Base Model & Mixins)
 
 ```python
-# app/db/base_model.py — پیشنهادی
+# app/db/base_model.py — proposed
 from sqlalchemy import Column, DateTime, UUID
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -124,19 +124,19 @@ class SoftDeleteMixin:
         return (Index(f'idx_{cls.__tablename__}_soft_delete', 'deleted_at', 'is_deleted'),)
 
 class AuditMixin:
-    created_by = Column(PG_UUID(as_uuid=True), nullable=True)  # FK به users.id
+    created_by = Column(PG_UUID(as_uuid=True), nullable=True)  # FK to users.id
     updated_by = Column(PG_UUID(as_uuid=True), nullable=True)
 ```
 
-| کار | وضعیت | اولویت |
+| Task | Status | Priority |
 |------|-------|--------|
-| ایجاد `BaseModel` با Mixinهای بالا | ⬜ | P1 |
-| مهاجرت مدل‌های موجود به BaseModel جدید | ⬜ | P1 |
-| افزودن `created_by`/`updated_by` به جداول حساس (portfolio, position, order) | ⬜ | P1 |
+| Create `BaseModel` with above Mixins | ⬜ | P1 |
+| Migrate existing models to new BaseModel | ⬜ | P1 |
+| Add `created_by`/`updated_by` to sensitive tables (portfolio, position, order) | ⬜ | P1 |
 
-### ۳.۳ استراتژی پارتیشن‌بندی (Partitioning Strategy)
+### 3.3 Partitioning Strategy (Partitioning Strategy)
 
-| جدول | حجم پیش‌بینی‌شده | استراتژی پارتیشن | کلید پارتیشن | اولویت |
+| Table | Estimated Volume | Partition Strategy | Partition Key | Priority |
 |-------|-----------------|------------------|---------------|--------|
 | `ir_price_candles` | > 100M rows/year | Range (Monthly) | `timestamp` | P1 |
 | `intl_price_candles` | > 50M rows/year | Range (Monthly) | `timestamp` | P1 |
@@ -148,39 +148,39 @@ class AuditMixin:
 | `ml_signals` | > 1M rows/month | Range (Monthly) | `generated_at` | P2 |
 | `news` / `news_sentiment` | > 10M rows/month | Range (Monthly) | `published_at` / `created_at` | P2 |
 
-**نکته:** استفاده از `pg_partman` برای مدیریت خودکار پارتیشن‌ها.
+**Note:** Use `pg_partman` for automatic partition management.
 
-### ۳.۴ استراتژی ایندکس‌گذاری پیشرفته (Advanced Indexing)
+### 3.4 Advanced Indexing Strategy (Advanced Indexing)
 
-| نوع ایندکس | کاربرد | جداول هدف |
+| Index Type | Use Case | Target Tables |
 |------------|--------|-----------|
-| **BRIN** | جداول بسیار بزرگ، داده‌های زمانی (Append-only) | `*_candles`, `*_order_book`, `api_logs` |
-| **Partial Index** | فیلترهای متداول (مثل `active=true`, `is_deleted=false`) | `assets`, `portfolios`, `ml_signals` |
-| **Covering Index (INCLUDE)** | کوئری‌های Read-Heavy که فقط ستون‌های خاص می‌خوانند | `positions` (portfolio_id, asset_id INCLUDE quantity, current_value) |
-| **Expression Index** | جستجوی Case-insensitive، محاسبه‌محور | `assets` (lower(symbol)), `users` (lower(email)) |
-| **GIN (JSONB)** | جستجو در متادیتا JSONB | `assets.meta`, `ml_signals.technical_factors`, `alerts.condition` |
-| **GIST (tsvector)** | جستجوی متن کامل (Full-text Search) | `news.title`, `news.body` |
+| **BRIN** | Very large tables, time-series data (Append-only) | `*_candles`, `*_order_book`, `api_logs` |
+| **Partial Index** | Common filters (like `active=true`, `is_deleted=false`) | `assets`, `portfolios`, `ml_signals` |
+| **Covering Index (INCLUDE)** | Read-heavy queries that only read specific columns | `positions` (portfolio_id, asset_id INCLUDE quantity, current_value) |
+| **Expression Index** | Case-insensitive search, computation-heavy | `assets` (lower(symbol)), `users` (lower(email)) |
+| **GIN (JSONB)** | Search in JSONB metadata | `assets.meta`, `ml_signals.technical_factors`, `alerts.condition` |
+| **GIST (tsvector)** | Full-text search | `news.title`, `news.body` |
 
 ---
 
-## ۴. فاز ۲: مهاجرتی‌ها و مدیریت تغییر اسکیمای (Migrations & Schema Evolution) — P0
+## 4. Phase 2: Migrations and Schema Change Management (Migrations & Schema Evolution) — P0
 
-### ۴.۱ چارچوب مهاجرتی (Migration Framework)
+### 4.1 Migration Framework (Migration Framework)
 
-| اصل | اجرا شده؟ | اقدام |
+| Principle | Implemented? | Action |
 |------|-----------|-------|
-| همه تغییرات از طریق Alembic |  | - |
-| `alembic revision --autogenerate` برای مدل‌های جدید |  | - |
-| **بدون `create_all` در استارتاپ** | ️ در `base.py:65` هست | حذف کامل، فقط `alembic upgrade head` |
-| Migrationها **Non-destructive** (بدون DROP COLUMN در P0) | ⬜ | یادداشت در PR Template |
-| Migrationهای **Backward Compatible** (Add column nullable، بعد NOT NULL) | ⬜ | استانداردسازی در CONTRIBUTING |
-| هر Migration با **Transaction** (Prevent Partial) |  پیش‌فرض Alembic | - |
-| **Rollback Plan** در هر PR توصیف شود | ⬜ | قالب PR اضافه شود |
+| All changes through Alembic |  | - |
+| `alembic revision --autogenerate` for new models |  | - |
+| **No `create_all` in startup** | ⚠️ Present in `base.py:65` | Full removal, only `alembic upgrade head` |
+| Migrations **Non-destructive** (no DROP COLUMN in P0) | ⬜ | Note in PR Template |
+| Migrations **Backward Compatible** (Add column nullable, then NOT NULL) | ⬜ | Standardize in CONTRIBUTING |
+| Every Migration with **Transaction** (Prevent Partial) | Alembic default | - |
+| **Rollback Plan** described in every PR | ⬜ | Add PR template |
 
-### ۴.۲ خط لوله CI/CD برای دیتابیس (Database CI/CD Pipeline)
+### 4.2 Database CI/CD Pipeline (Database CI/CD Pipeline)
 
 ```yaml
-# .github/workflows/database.yml — پیشنهادی
+# .github/workflows/database.yml — proposed
 name: Database CI
 
 on: [push, pull_request]
@@ -217,38 +217,38 @@ jobs:
           python scripts/check_schema_sync.py
 ```
 
-| گیت‌هوک / چک | توضیح | اولویت |
+| Git Hook / Check | Description | Priority |
 |---------------|--------|--------|
-| `pre-commit`: `alembic check` | جلوگیری از commit مدل بدون migration | P1 |
-| `CI`: `alembic upgrade head` + Test | تست مهاجرتی روی DB خالی | P0 |
-| `CI`: Schema Drift Detection | مقایسه metadata با migrationهای اعمالی | P1 |
-| `CD`: Blue/Green Migration | اعمال migration روی standby، سويچ ترافیک | P2 |
+| `pre-commit`: `alembic check` | Prevent committing models without migration | P1 |
+| `CI`: `alembic upgrade head` + Test | Migration test on empty DB | P0 |
+| `CI`: Schema Drift Detection | Compare metadata with applied migrations | P1 |
+| `CD`: Blue/Green Migration | Apply migration on standby, switch traffic | P2 |
 
 ---
 
-## ۵. فاز ۳: عملکرد و مقیاس‌پذیری (Performance & Scalability) — P1
+## 5. Phase 3: Performance and Scalability — P1
 
-### ۵.۱ بهینه‌سازی کوئری و Connection Pooling
+### 5.1 Query Optimization and Connection Pooling
 
-| ناحیه | وضعیت کنونی | هدف | ابزار / اقدام |
+| Area | Current Status | Target | Tool / Action |
 |--------|-------------|-----|--------------|
-| **N+1 Queries** |  در `market.py:139-174` | ۰ N+1 | `selectinload` / `joinedload` / LATERAL JOIN |
-| **Connection Pool** | `pool_size=10, max_overflow=20` | تنظیم بر اساس Load Test | `pgbouncer` (Transaction mode) برای Production |
-| **Prepared Statements** |  غیرفعال | فعال برای کوئری‌های تکراری | `statement_cache_size` در asyncpg |
-| **Read Replicas** |  | Master/Replica برای خواندن | `async_session_maker` جدا برای Read |
-| **Query Timeout** |  | `statement_timeout = '30s'` | در `postgresql.conf` و Session-level |
+| **N+1 Queries** | In `market.py:139-174` | Zero N+1 | `selectinload` / `joinedload` / LATERAL JOIN |
+| **Connection Pool** | `pool_size=10, max_overflow=20` | Configure based on Load Test | `pgbouncer` (Transaction mode) for Production |
+| **Prepared Statements** | Disabled | Enable for repeated queries | `statement_cache_size` in asyncpg |
+| **Read Replicas** |  | Master/Replica for reads | Separate `async_session_maker` for reads |
+| **Query Timeout** |  | `statement_timeout = '30s'` | In `postgresql.conf` and Session-level |
 
-### ۵.۲ کش‌سازی استراتژیک (Caching Strategy)
+### 5.2 Strategic Caching (Caching Strategy)
 
-| لایه | ابزار | TTL | Invalidation | داده‌های هدف |
+| Layer | Tool | TTL | Invalidation | Target Data |
 |------|-------|-----|--------------|--------------|
 | **L1: In-Process** | `cachetools.LRU` / `aiocache` | 60s | TTL + Event-driven | Asset metadata, User preferences |
 | **L2: Distributed** | Redis Cluster | 5m - 1h | Pub/Sub + Keyspace Notifications | Market data snapshots, ML signals, Screening results |
 | **L3: Materialized Views** | PostgreSQL | 1h - 24h | `REFRESH MATERIALIZED VIEW CONCURRENTLY` | Aggregated scores, Sector rankings, Top gainers/losers |
 
-### ۵.۳ مانیتورینگ و هشداردهی (Observability & Alerting)
+### 5.3 Monitoring and Alerting (Observability & Alerting)
 
-| متریک | آستانه هشدار (Warning) | آستانه بحرانی (Critical) | ابزار |
+| Metric | Warning Threshold | Critical Threshold | Tool |
 |-------|------------------------|---------------------------|-------|
 | `pg_stat_activity` count | > 80% `max_connections` | > 95% | Prometheus + Grafana |
 | `pg_stat_database` deadlocks | > 0/min | > 5/min | |
@@ -261,50 +261,50 @@ jobs:
 
 ---
 
-## ۶. فاز ۴: مدیریت داده‌های حساس و انطباق (Data Governance & Compliance) — P1
+## 6. Phase 4: Sensitive Data Management and Compliance (Data Governance & Compliance) — P1
 
-### ۶.۱ طبقه‌بندی داده‌ها (Data Classification)
+### 6.1 Data Classification (Data Classification)
 
-| سطح | مثال‌ها | رمزنگاری در حالت استراحت | رمزنگاری در ترانزیت | دسترسی |
+| Level | Examples | Encryption at Rest | Encryption in Transit | Access |
 |------|---------|------------------------|-------------------|--------|
-| **Public** | Asset metadata, Market data |  | TLS | همه |
+| **Public** | Asset metadata, Market data |  | TLS | Everyone |
 | **Internal** | ML signals, Screening results |  | TLS | App services |
-| **Confidential** | User PII (email, name), Portfolio holdings |  (Column-level) | TLS + mTLS | Need-to-know |
-| **Restricted** | Password hashes, Refresh tokens, API keys |  (App-level) | TLS + mTLS | فقط Auth Service |
+| **Confidential** | User PII (email, name), Portfolio holdings | (Column-level) | TLS + mTLS | Need-to-know |
+| **Restricted** | Password hashes, Refresh tokens, API keys | (App-level) | TLS + mTLS | Auth Service only |
 
-### ۶.۲ نگهداری و حذف داده‌ها (Retention & Purging)
+### 6.2 Data Retention and Purging (Retention & Purging)
 
-| جدول / دسته | دوره نگهداری | روش حذف | اولویت |
+| Table / Category | Retention Period | Deletion Method | Priority |
 |-------------|--------------|---------|--------|
-| `api_logs` | 90 روز | Partition Drop + `pg_cron` | P1 |
-| `audit_logs` | 7 سال (انطباق) | Archive to Cold Storage (S3/Glacier) | P0 |
-| `refresh_tokens` | تا انقضا + 30 روز | Background Job | P1 |
-| `news` / `news_sentiment` | 2 سال | Partition Drop | P2 |
-| `ml_predictions` / `anomalies` | 1 سال | Partition Drop | P2 |
-| `price_candles` / `order_book` | 10 سال (تحلیل تاریخی) | Tiered Storage (TimescaleDB / Hypertable) | P3 |
+| `api_logs` | 90 days | Partition Drop + `pg_cron` | P1 |
+| `audit_logs` | 7 years (compliance) | Archive to Cold Storage (S3/Glacier) | P0 |
+| `refresh_tokens` | Until expiration + 30 days | Background Job | P1 |
+| `news` / `news_sentiment` | 2 years | Partition Drop | P2 |
+| `ml_predictions` / `anomalies` | 1 year | Partition Drop | P2 |
+| `price_candles` / `order_book` | 10 years (historical analysis) | Tiered Storage (TimescaleDB / Hypertable) | P3 |
 
-### ۶.۳ انطباق GDPR / قانون حفظ حریم خصوصی ایران
+### 6.3 GDPR / Iranian Data Privacy Law Compliance
 
-| الزام | پیاده‌سازی | وضعیت |
+| Requirement | Implementation | Status |
 |--------|-------------|-------|
-| حق حذف (Right to Erasure) | Soft Delete + Anonymization Job | ⬜ |
-| حق دسترسی (Data Portability) | Export API (JSON/CSV) | ⬜ |
-| Minimization | فقط داده‌های لازم جمع‌آوری شود |  بیشتر |
-| DPIA (Data Protection Impact Assessment) | مستندسازی برای پردازش‌های پرریسک | ⬜ |
+| Right to Erasure | Soft Delete + Anonymization Job | ⬜ |
+| Right to Access (Data Portability) | Export API (JSON/CSV) | ⬜ |
+| Minimization | Only necessary data collected | Mostly |
+| DPIA (Data Protection Impact Assessment) | Documentation for high-risk processing | ⬜ |
 
 ---
 
-## ۷. فاز ۵: ویژگی‌های پیشرفته دیتابیس (Advanced Database Features) — P2/P3
+## 7. Phase 5: Advanced Database Features — P2/P3
 
-### ۷.۱ TimescaleDB / Hypertables برای داده‌های سری‌زمانی
+### 7.1 TimescaleDB / Hypertables for Time-Series Data
 
 ```sql
--- اگر TimescaleDB در دسترس باشد:
+-- If TimescaleDB is available:
 SELECT create_hypertable('crypto_price_candles', 'timestamp', 
     chunk_time_interval => INTERVAL '1 week',
     if_not_exists => TRUE);
 
--- Compression برای chunkهای قدیمی
+-- Compression for old chunks
 ALTER TABLE crypto_price_candles SET (
     timescaledb.compress,
     timescaledb.compress_segmentby = 'asset_id, timeframe'
@@ -312,10 +312,10 @@ ALTER TABLE crypto_price_candles SET (
 SELECT add_compression_policy('crypto_price_candles', INTERVAL '30 days');
 ```
 
-### ۷۲ Materialized Views برای داشبوردها
+### 7.2 Materialized Views for Dashboards
 
 ```sql
--- مثال: Top Gainers/Losers روزانه
+-- Example: Daily Top Gainers/Losers
 CREATE MATERIALIZED VIEW mv_daily_top_movers AS
 SELECT 
     a.symbol,
@@ -333,48 +333,48 @@ JOIN LATERAL (
 WHERE a.active = true;
 
 CREATE UNIQUE INDEX ON mv_daily_top_movers (symbol, market);
--- Refresh CONCURRENTLY هر ۱۵ دقیقه در ساعات معاملاتی
+-- Refresh CONCURRENTLY every 15 minutes during trading hours
 ```
 
-### ۷.۳ Row Level Security (RLS) برای Multi-Tenancy
+### 7.3 Row Level Security (RLS) for Multi-Tenancy
 
 ```sql
--- فعال‌سازی RLS روی پورتفولیو
+-- Enable RLS on portfolio
 ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY portfolio_isolation ON portfolios
     USING (user_id = current_setting('app.current_user_id')::uuid);
 
--- در اپلیکیشن: SET LOCAL app.current_user_id = '...';
+-- In application: SET LOCAL app.current_user_id = '...';
 ```
 
-### ۷.۴ Logical Replication برای CDC (Change Data Capture)
+### 7.4 Logical Replication for CDC (Change Data Capture)
 
-| کاربرد | ابزار | جداول هدف |
+| Use Case | Tool | Target Tables |
 |--------|-------|-----------|
-| Sync به Data Warehouse (ClickHouse/BigQuery) | `pgoutput` + Debezium / Airbyte | `assets`, `ml_signals`, `positions`, `portfolios` |
+| Sync to Data Warehouse (ClickHouse/BigQuery) | `pgoutput` + Debezium / Airbyte | `assets`, `ml_signals`, `positions`, `portfolios` |
 | Real-time Notifications | `pg_notify` + LISTEN/NOTIFY | `ml_signals`, `alerts`, `notifications` |
-| Audit Trail immutable | `pgaudit` + Logical Replication to Append-only store | `audit_logs`, sensitive tables |
+| Immutable Audit Trail | `pgaudit` + Logical Replication to Append-only store | `audit_logs`, sensitive tables |
 
 ---
 
-## ۸. فاز ۶: تست، اعتبارسنجی و تضمین کیفیت (Testing & Quality Assurance) — P1
+## 8. Phase 6: Testing, Validation, and Quality Assurance — P1
 
-### ۸.۱ استراتژی تست دیتابیس
+### 8.1 Database Test Strategy
 
-| سطح تست | ابزار | پوشش هدف | مثال |
+| Test Level | Tool | Target Coverage | Example |
 |----------|-------|-----------|------|
-| **Unit (Model)** | `pytest` + `sqlalchemy` | ۱۰۰٪ مدل‌ها | Validation constraints, relationships |
-| **Integration (Repository)** | `pytest-asyncio` + Testcontainers | ۹۰٪ کوئری‌های پیچیده | Repository methods, complex joins |
-| **Migration** | `alembic upgrade/downgrade` | ۱۰۰٪ migrations | Upgrade head, downgrade -1, data integrity |
-| **Contract (API)** | `pytest` + `httpx` | ۱۰۰٪ endpoints | Response schema, status codes |
-| **Performance (Load)** | `locust` / `k6` | Critical paths | ۱۰۰۰ RPS، p99 < 200ms |
+| **Unit (Model)** | `pytest` + `sqlalchemy` | 100% models | Validation constraints, relationships |
+| **Integration (Repository)** | `pytest-asyncio` + Testcontainers | 90% complex queries | Repository methods, complex joins |
+| **Migration** | `alembic upgrade/downgrade` | 100% migrations | Upgrade head, downgrade -1, data integrity |
+| **Contract (API)** | `pytest` + `httpx` | 100% endpoints | Response schema, status codes |
+| **Performance (Load)** | `locust` / `k6` | Critical paths | 1000 RPS, p99 < 200ms |
 | **Chaos (Resilience)** | `chaostoolkit` / `pg_chaos` | Failure scenarios | Connection loss, replica lag, disk full |
 
-### ۸.۲ داده‌های تست (Test Data Management)
+### 8.2 Test Data Management (Test Data Management)
 
 ```python
-# tests/factories.py — Factory Pattern با factory_boy
+# tests/factories.py — Factory Pattern with factory_boy
 import factory
 from factory.alchemy import SQLAlchemyModelFactory
 from app.models.models import Asset, User, Portfolio
@@ -401,7 +401,7 @@ class UserFactory(SQLAlchemyModelFactory):
     is_active = True
 ```
 
-### ۸.۳ Property-Based Testing برای Constraints
+### 8.3 Property-Based Testing for Constraints
 
 ```python
 # tests/test_db_constraints.py
@@ -421,46 +421,46 @@ def test_order_book_rank_valid(rank):
 
 ---
 
-## ۹. فاز ۷: مستندات، دانش‌نامه و انتقال دانش (Documentation & Knowledge Transfer) — P2
+## 9. Phase 7: Documentation, Knowledge Base, and Knowledge Transfer — P2
 
-### ۹.۱ مستندات الزامی
+### 9.1 Required Documentation
 
-| سند | مخاطب | به‌روزرسانی | وضعیت |
+| Document | Audience | Update Frequency | Status |
 |------|--------|-------------|-------|
-| **Data Dictionary** (Excel/Notion) | Dev, QA, BA, Ops | هر Migration | ⬜ |
-| **ER Diagram** (dbdiagram.io / Mermaid) | همه | ماهانه | ⬜ |
-| **Migration Runbook** | DevOps, SRE | هر Release | ⬜ |
-| **Incident Runbook (DB)** | SRE, On-call | ربع‌ساله | ⬜ |
-| **Capacity Planning Doc** | Architecture, Ops | دوماهه | ⬜ |
-| **Security Hardening Checklist** | Security, DevOps | هر Major Version | ⬜ |
+| **Data Dictionary** (Excel/Notion) | Dev, QA, BA, Ops | Every Migration | ⬜ |
+| **ER Diagram** (dbdiagram.io / Mermaid) | Everyone | Monthly | ⬜ |
+| **Migration Runbook** | DevOps, SRE | Every Release | ⬜ |
+| **Incident Runbook (DB)** | SRE, On-call | Quarterly | ⬜ |
+| **Capacity Planning Doc** | Architecture, Ops | Bi-monthly | ⬜ |
+| **Security Hardening Checklist** | Security, DevOps | Every Major Version | ⬜ |
 
-### ۹.۲ Data Dictionary Template
+### 9.2 Data Dictionary Template
 
 | Table | Column | Type | Nullable | Default | Description | Business Rule | Sensitivity | Retention | Indexes |
 |-------|--------|------|----------|---------|-------------|---------------|-------------|-----------|---------|
-| assets | symbol | VARCHAR(50) | NO | - | نماد یکتا | Unique, Uppercase | Public | Permanent | PK, UQ, IX |
-| portfolios | user_id | UUID | NO | - | مالک پورتفولیو | FK users.id | Confidential | User lifetime | IX, FK |
+| assets | symbol | VARCHAR(50) | NO | - | Unique symbol | Unique, Uppercase | Public | Permanent | PK, UQ, IX |
+| portfolios | user_id | UUID | NO | - | Portfolio owner | FK users.id | Confidential | User lifetime | IX, FK |
 
 ---
 
-## ۱۰. نقشه‌یول اجرا (Implementation Roadmap)
+## 10. Implementation Roadmap
 
-### ۱۰.۱ اولویت‌بندی و تایم‌لاین
+### 10.1 Prioritization and Timeline
 
-| هفته | فاز | تحویل‌ها (Deliverables) | مالک |
+| Week | Phase | Deliverables | Owner |
 |------|-----|------------------------|------|
-| **۱-۲** | ۰ | چرخش تمام رازها، Hardening PostgreSQL، Backup Strategy | DevOps + Backend |
-| **۳-۴** | ۱ | BaseModel با Mixinها، Migration تبدیل TIMESTAMPTZ، Soft Delete | Backend |
-| **۵-۶** | ۱ | Partitioning جداول بزرگ (pg_partman)، Advanced Indexes | Backend + DBA |
-| **۷-۸** | ۲ | CI/CD Pipeline کامل (Migration Check, Schema Drift, Load Test) | DevOps |
-| **۹-۱۰** | ۳ | Connection Pooling (PgBouncer)، Read Replicas، Caching Layer (Redis) | Backend + DevOps |
-| **۱۱-۱۲** | ۳ | Observability Stack (Prometheus/Grafana/Alertmanager)، Dashboards | DevOps + SRE |
-| **۱۳-۱۴** | ۴ | Data Classification، Column-level Encryption، Retention Jobs (pg_cron) | Backend + Security |
-| **۱۵-۱۶** | ۵ | TimescaleDB / Hypertables، Materialized Views، RLS | Backend + DBA |
-| **۱۷-۱۸** | ۶ | Test Suite کامل (Unit, Integration, Migration, Load, Chaos) | QA + Backend |
-| **۱۹-۲۰** | ۷ | مستندات کامل، Data Dictionary، Runbooks، Knowledge Transfer Sessions | Tech Lead + Team |
+| **1-2** | 0 | Rotate all secrets, Harden PostgreSQL, Backup Strategy | DevOps + Backend |
+| **3-4** | 1 | BaseModel with Mixins, TIMESTAMPTZ Migration, Soft Delete | Backend |
+| **5-6** | 1 | Partitioning large tables (pg_partman), Advanced Indexes | Backend + DBA |
+| **7-8** | 2 | Full CI/CD Pipeline (Migration Check, Schema Drift, Load Test) | DevOps |
+| **9-10** | 3 | Connection Pooling (PgBouncer), Read Replicas, Caching Layer (Redis) | Backend + DevOps |
+| **11-12** | 3 | Observability Stack (Prometheus/Grafana/Alertmanager), Dashboards | DevOps + SRE |
+| **13-14** | 4 | Data Classification, Column-level Encryption, Retention Jobs (pg_cron) | Backend + Security |
+| **15-16** | 5 | TimescaleDB / Hypertables, Materialized Views, RLS | Backend + DBA |
+| **17-18** | 6 | Complete Test Suite (Unit, Integration, Migration, Load, Chaos) | QA + Backend |
+| **19-20** | 7 | Complete documentation, Data Dictionary, Runbooks, Knowledge Transfer Sessions | Tech Lead + Team |
 
-### ۱۰.۲ معیارهای موفقیت (Success Criteria)
+### 10.2 Success Criteria (Success Criteria)
 
 | KPI | Baseline | Target | Measurement |
 |-----|----------|--------|-------------|
@@ -474,27 +474,27 @@ def test_order_book_rank_valid(rank):
 
 ---
 
-## ۱۱. ریسک‌ها و استراتژی کاهش (Risks & Mitigation)
+## 11. Risks and Mitigation Strategies (Risks & Mitigation)
 
-| ریسک | احتمال | تأثیر | استراتژی کاهش |
+| Risk | Probability | Impact | Mitigation Strategy |
 |------|--------|-------|---------------|
-| Migration ناموفق در Production | متوسط | بالا | Blue/Green Deploy، Canary Migration، Rollback Plan تست‌شده |
-| از دست رفتن داده در Partition Drop | کم | بحرانی | Dry-run، Backup قبل از Drop، Soft Delete اول |
-| Performance Regression پس از Index | متوسط | متوسط | Load Test در Staging، HypoPG برای شبیه‌سازی ایندکس |
-| Secrets Leak از طریق Logs | متوسط | بالا | Log Redaction، Structured Logging، No PII in Logs |
-| Replication Lag باعث Stale Read | بالا | متوسط | Read-after-write Consistency برایCritical paths، Retry Logic |
-| Disk Full در Production | کم | بالا | Monitoring + Alerting، Auto-scaling Storage، Archiving Policy |
-| Team Knowledge Silo | بالا | متوسط | Pair Programming، Documentation، Cross-training |
+| Failed migration in Production | Medium | High | Blue/Green Deploy, Canary Migration, tested Rollback Plan |
+| Data loss in Partition Drop | Low | Critical | Dry-run, Backup before Drop, Soft Delete first |
+| Performance Regression after Index | Medium | Medium | Load Test in Staging, HypoPG for index simulation |
+| Secrets Leak via Logs | Medium | High | Log Redaction, Structured Logging, No PII in Logs |
+| Replication Lag causing Stale Read | High | Medium | Read-after-write Consistency for critical paths, Retry Logic |
+| Disk Full in Production | Low | High | Monitoring + Alerting, Auto-scaling Storage, Archiving Policy |
+| Team Knowledge Silo | High | Medium | Pair Programming, Documentation, Cross-training |
 
 ---
 
-## ۱۲. پیوست‌ها
+## 12. Appendices
 
-### پیوست الف: چک‌لیست hardened `postgresql.conf`
+### Appendix A: Hardened `postgresql.conf` Checklist
 
 ```ini
 # Connection & Security
-listen_addresses = '10.0.0.0/8'          # فقط شبکه داخلی
+listen_addresses = '10.0.0.0/8'          # internal network only
 ssl = on
 ssl_min_protocol_version = 'TLSv1.2'
 password_encryption = scram-sha-256
@@ -543,11 +543,11 @@ auto_explain.log_analyze = on
 pgaudit.log = 'ddl, role, write'
 ```
 
-### پیوست ب: اسکریپت چک‌لیست Schema Drift
+### Appendix B: Schema Drift Checklist Script
 
 ```python
 # scripts/check_schema_sync.py
-"""مقایسه متادیتای SQLAlchemy با Migrationهای اعمالی"""
+"""Compare SQLAlchemy metadata with applied migrations"""
 import sys
 from sqlalchemy import create_engine, inspect
 from alembic.config import Config
@@ -579,9 +579,9 @@ if __name__ == "__main__":
     sys.exit(check_schema_sync())
 ```
 
-### پیوست ج: RACI Matrix
+### Appendix C: RACI Matrix
 
-| فعالیت | Backend Lead | DevOps | DBA | Security | QA | Tech Lead |
+| Activity | Backend Lead | DevOps | DBA | Security | QA | Tech Lead |
 |--------|:------------:|:------:|:---:|:--------:|:--:|:---------:|
 | Secrets Rotation | R | A | C | I | I | I |
 | PostgreSQL Hardening | C | R | A | C | I | I |
@@ -596,9 +596,9 @@ if __name__ == "__main__":
 
 ---
 
-## ۱۳. تأیید و امضا
+## 13. Approval and Signatures
 
-| نقش | نام | امضا | تاریخ |
+| Role | Name | Signature | Date |
 |------|-----|------|-------|
 | Backend Tech Lead | | | |
 | DevOps Lead | | | |
@@ -608,4 +608,4 @@ if __name__ == "__main__":
 
 ---
 
-**نکته:** این سند یک سند زنده (Living Document) است و باید در هر Sprint بازبینی و به‌روزرسانی شود. تمام تغییرات باید از طریق PR با بررسی کد (Code Review) اعمال گردند.
+**Note:** This document is a living document and should be reviewed and updated every sprint. All changes must be made through PRs with code review.

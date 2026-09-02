@@ -4,7 +4,7 @@
 The Alerts page enables users to set up price alerts, technical signal alerts, and portfolio notifications with multi-channel delivery.
 
 ## Key Features
-- **Price Alerts**: Trigger when stock/crypto reaches specified price
+- **Price Alerts**: Trigger when stock reaches specified price
 - **Technical Signal Alerts**: Trigger when indicators cross thresholds (RSI, MACD, etc.)
 - **Portfolio Alerts**: Portfolio value changes, rebalancing needed
 - **News Sentiment Alerts**: Significant market news with sentiment shift

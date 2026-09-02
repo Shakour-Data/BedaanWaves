@@ -14,7 +14,7 @@ from sqlalchemy import (
     text, ARRAY,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, declared_attr
+from sqlalchemy.orm import relationship, declared_attr, validates
 import sqlalchemy as sa
 from datetime import timezone, datetime, date
 import uuid
@@ -25,7 +25,14 @@ from app.db.base import Base
 # ---------------------------------------------------------------------------
 # Market categorization (for selecting correct candle/orderbook table)
 # ---------------------------------------------------------------------------
-INTL_MARKETS = {"NYSE", "NASDAQ", "LSE", "XETRA", "FWB", "HKEX"}
+# Only instruments that participate in the formation of the Nasdaq index
+# are allowed in this codebase. Crypto, forex, commodities, bonds, indexes
+# (other than the kept ^IXIC reference row), and any non-Nasdaq equity
+# (NYSE, TSE, LSE, FWB, HKEX, BINANCE, KRAKEN, COINBASE, etc.) are
+# rejected at the model layer in addition to the database CHECK
+# constraints added by the 20260902_purge_non_nasdaq migration.
+ALLOWED_MARKETS = frozenset({"NASDAQ"})
+ALLOWED_ASSET_CLASSES = frozenset({"EQUITY", "ETF"})
 
 
 # ===========================================================================
@@ -39,9 +46,10 @@ class Asset(Base):
     symbol = Column(String(50), nullable=False, unique=True, index=True)
     name = Column(String(255), nullable=False)
 
-    # Classification
-    asset_class = Column(String(20), nullable=False, index=True)  # EQUITY, ETF, etc.
-    market = Column(String(20), nullable=False, index=True)  # NASDAQ, NYSE, etc.
+    # Classification — both columns are validated below. Only Nasdaq-listed
+    # equities and ETFs are allowed.
+    asset_class = Column(String(20), nullable=False, index=True)
+    market = Column(String(20), nullable=False, index=True)
 
     # Hierarchy
     sector = Column(String(100))
@@ -76,6 +84,26 @@ class Asset(Base):
         Index('idx_asset_active_market', 'active', 'market'),
         Index('idx_asset_sector', 'sector'),
     )
+
+    @validates("market")
+    def _validate_market(self, key: str, value: str) -> str:
+        if value is None or value not in ALLOWED_MARKETS:
+            raise ValueError(
+                f"Asset.market must be one of {sorted(ALLOWED_MARKETS)} "
+                f"(got {value!r}). Crypto, forex, commodities, bonds, and "
+                f"non-Nasdaq equities are not allowed in this codebase."
+            )
+        return value
+
+    @validates("asset_class")
+    def _validate_asset_class(self, key: str, value: str) -> str:
+        if value is None or value not in ALLOWED_ASSET_CLASSES:
+            raise ValueError(
+                f"Asset.asset_class must be one of {sorted(ALLOWED_ASSET_CLASSES)} "
+                f"(got {value!r}). Crypto, forex, commodities, bonds, and "
+                f"indexes are not allowed in this codebase."
+            )
+        return value
 
 
 # ===========================================================================
@@ -741,10 +769,10 @@ class Anomaly(Base):
 
 
 # ===========================================================================
-# 13. ذخیره نتایج تحلیل (Screening)
+# 13. Screening results storage
 # ===========================================================================
 class ScreeningResult(Base):
-    """معیارها و خروجی فیلتر کردن (ScreeningService)"""
+    """Screening criteria and filtered results (ScreeningService)"""
     __tablename__ = "screening_results"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -758,10 +786,10 @@ class ScreeningResult(Base):
 
 
 # ===========================================================================
-# 14. داده‌های خام بازار (Raw Market Data) — International
+# 14. Raw market data (International)
 # ===========================================================================
 class RawMarketData(Base):
-    """ذخیره داده‌های خام از سرویس‌های خارجی (International)"""
+    """Raw data storage from external services (International)"""
     __tablename__ = "raw_market_data"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -809,10 +837,10 @@ class RawMarketData(Base):
 
 
 # ===========================================================================
-# 15. اسنپ‌شات داده‌های پردازش‌شده (Market Data Snapshot)
+# 15. Processed market data snapshots
 # ===========================================================================
 class MarketDataSnapshot(Base):
-    """اسنپ‌شات پردازش‌شده داده‌های بازار — برای ML و تحلیل"""
+    """Processed market data snapshot — for ML and analysis"""
     __tablename__ = "market_data_snapshots"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

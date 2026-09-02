@@ -115,7 +115,7 @@ class TestScoringServiceMLIntegration:
         
         data = {
             "ticker": "TEST",
-            "market": "TSE",
+            "market": "NASDAQ",
             "fundamental": {"pe_ratio": 12},
             "technical": {"rsi": 55},
             "sentiment": {"score": 70},
@@ -147,7 +147,7 @@ class TestScoringServiceMLIntegration:
         
         data = {
             "ticker": "TEST",
-            "market": "TSE",
+            "market": "NASDAQ",
             "fundamental": {"pe_ratio": 12},
             "technical": {"rsi": 55},
             "sentiment": {"score": 70},

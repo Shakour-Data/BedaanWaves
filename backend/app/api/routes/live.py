@@ -1,49 +1,22 @@
 """
 Live Market Data Routes
 
-TSE/BRS-specific streaming endpoints have been removed. The ``get_brs_client``
-dependency is preserved for backward compatibility with stocks.py / history.py
-routes but is deprecated.
+Market data streaming endpoints.
 """
 import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.services.data.brs_api_client import BrsApiClient
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["market-live"])
-
-_client: BrsApiClient | None = None
-_client_initialized = False
-
-
-async def get_brs_client() -> BrsApiClient:
-    """Return the singleton BRS client (deprecated — TSE endpoints removed)."""
-    global _client, _client_initialized
-    if _client is None:
-        _client = BrsApiClient()
-    if not _client_initialized:
-        await _client.initialize()
-        _client_initialized = True
-    return _client
-
-
-async def close_brs_client() -> None:
-    """Close the BRS client session."""
-    global _client, _client_initialized
-    if _client and _client_initialized:
-        await _client.shutdown()
-        _client_initialized = False
-        _client = None
 
 
 async def _not_available() -> Any:
     raise HTTPException(
         status_code=501,
-        detail="TSE/BRS live streaming endpoints have been removed. "
+        detail="Live streaming endpoints are not available. "
                "NASDAQ data is available via /api/v1/market/* endpoints.",
     )
 

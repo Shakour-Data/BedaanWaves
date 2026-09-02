@@ -5,7 +5,7 @@ Advanced specialized analytics services:
 - ScreeningService: filter a stock universe by flexible criteria
 - ComparisonService: cross-symbol metric comparison
 - CorrelationService: return correlation matrix and pair detection
-- CalendarService: TSE trading-day awareness and corporate events
+- CalendarService: Trading-day awareness and corporate events
 """
 
 from .sector_analysis_service import SectorAnalysisService

@@ -74,9 +74,9 @@ Macro analysis evaluates securities based on broader economic and market factors
 - **Weather Impact**: Agricultural supply disruption risk
 
 ## Regional and Geographic Analysis
+### US-Specific Factors
 
-### Iran-Specific Factors
-- **Iran GDP Growth**: Domestic economic expansion
+- **US GDP Growth**: Domestic economic expansion
 - **Sanctions Impact**: International trade restrictions
 - **Currency Devaluation**: Rial exchange rate pressures
 - **Inflation Rate**: Domestic price level changes

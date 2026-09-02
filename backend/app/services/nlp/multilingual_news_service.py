@@ -60,8 +60,7 @@ class MultilingualNewsService(BaseService):
         
         # Country-language mappings
         self.country_languages = {
-            "Iran": ["fa", "en"],
-            "USA": ["en"],
+                        "USA": ["en"],
             "UK": ["en"],
             "Germany": ["de", "en"],
             "France": ["fr", "en"],
@@ -78,8 +77,7 @@ class MultilingualNewsService(BaseService):
         
         # News sources by country
         self.country_news_sources = {
-            "Iran": ["TSE_News", "BourseNews", "Eghtesad_News", "Tasnim"],
-            "USA": ["Reuters", "Bloomberg", "CNBC", "WSJ"],
+                        "USA": ["Reuters", "Bloomberg", "CNBC", "WSJ"],
             "UK": ["Reuters", "Bloomberg", "Financial_Times"],
             "Germany": ["Handelsblatt", "Frankfurter_Allgemeine"],
             "France": ["Les_Echos", "BFM_Business"],

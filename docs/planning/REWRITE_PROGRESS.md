@@ -266,9 +266,9 @@
 
 ---
 
-## coordin API Key (تایید شده ۲۰۲۶-۰۷-۱۱)
-- کلید صحیح: `BA9C8JBliDmfPapn9WYTX76uR5Q3m2r3`
-- تست موفق: `GET /api/v1/market/live/index?index_type=1` → داده واقعی شاخص (سقف ۵۱۷۷۵۹۴، تغییر −۱۰۹۲۶۱، ارزش بازار ≈۱۵۲).
+## coordin API Key (confirmed 2026-07-11)
+- correct key: `BA9C8JBliDmfPapn9WYTX76uR5Q3m2r3`
+- successful test: `GET /api/v1/market/live/index?index_type=1` → real index data (ceiling 5177594, change -109261, market value ≈152).
 
 ##  Code Statistics
 

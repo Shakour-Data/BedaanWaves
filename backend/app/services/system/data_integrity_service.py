@@ -10,7 +10,6 @@ from datetime import timezone, datetime, timedelta
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.data.data_validation_service import DataValidationService
-from app.services.data.brs_api_client import BrsApiClient
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 import logging
@@ -30,7 +29,6 @@ class DataIntegrityService(BaseService):
     def __init__(self,
                  service_name: str = "DataIntegrityService",
                  validation_service: Optional[DataValidationService] = None,
-                 brs_client: Optional[BrsApiClient] = None,
                  intl_client: Optional[IntlApiClient] = None,
                  market_service: Optional[MarketService] = None,
                  logger: Optional[logging.Logger] = None):
@@ -40,18 +38,15 @@ class DataIntegrityService(BaseService):
         Args:
             service_name: Service identifier
             validation_service: Data validation service instance
-            brs_client: BRS API client instance
             intl_client: International API client instance
             market_service: Market data service instance
             logger: Optional logger instance
         """
         super().__init__(service_name, logger=logger)
         self.validation_service = validation_service or DataValidationService(
-            brs_client=brs_client,
-            intl_client=intl_client,
+                        intl_client=intl_client,
             market_service=market_service
         )
-        self.brs_client = brs_client
         self.intl_client = intl_client
         self.market_service = market_service
         
@@ -153,8 +148,7 @@ class DataIntegrityService(BaseService):
     async def _check_source_availability(self) -> Dict[str, Any]:
         """Check availability of all data sources."""
         sources = [
-            ("BRS", self.brs_client),
-            ("International", self.intl_client),
+                        ("International", self.intl_client),
             ("Market", self.market_service)
         ]
         
@@ -571,7 +565,6 @@ class DataIntegrityService(BaseService):
 
 # Factory function for dependency injection
 def get_data_integrity_service(validation_service=None,
-                               brs_client=None,
                                intl_client=None,
                                market_service=None,
                                logger=None) -> DataIntegrityService:
@@ -579,8 +572,7 @@ def get_data_integrity_service(validation_service=None,
     return DataIntegrityService(
         service_name="DataIntegrityService",
         validation_service=validation_service,
-        brs_client=brs_client,
-        intl_client=intl_client,
+                intl_client=intl_client,
         market_service=market_service,
         logger=logger
     )

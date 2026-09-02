@@ -1,8 +1,8 @@
 """Initial migration — all models (generated from metadata)
 
-این مهاجرت کلیه جداول را مستقیماً از متادیتای مدل‌ها می‌سازد تا همیشه
-با تعریف models.py یکی بماند (از جمله جداول کندل مجزا بر اساس بازار،
-عمق بازار، سهامداران عمده، بنیادی، خبری، ML و امنیت).
+This migration creates all tables directly from model metadata so it always
+matches the models.py definitions (including separate candle tables per market,
+market depth, shareholders, fundamental, news, ML, and security tables).
 
 Revision ID: c57c8b5674de
 Revises:

@@ -57,9 +57,6 @@ Specialist service for time-series forecasting using ARIMA, LSTM, Prophet, and e
 ### CoefficientLearningService
 Dynamic coefficient learning and feature importance ranking using SHAP, LIME, and permutation importance.
 
-### CryptoMLService
-Cryptocurrency-specific models for volatility forecasting, exchange flow analysis, and on-chain metrics.
-
 ## Architecture
 
 ```mermaid

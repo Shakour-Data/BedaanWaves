@@ -24,7 +24,7 @@ The Watchlist page enables users to create, manage, and monitor personalized lis
 - **Access Path**: `/watchlist` (protected route)
 - **Visualization**: Grid and list views with customizable columns
 - **Sortable**: Reorder via drag-and-drop interface
-- **Color Coding**: Asset type indicators (stock, crypto, fund, etc.)
+- **Color Coding**: Asset type indicators (stock, fund, etc.)
 - **Notable Assets**: Highlight top performers and watchlist leaders
 - **Synchronization**: Real-time updates across devices and platforms
 

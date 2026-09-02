@@ -13,7 +13,7 @@ Fundamental analysis evaluates the intrinsic value of securities by examining re
 
 ## Data Sources
 - Financial statements (Income Statement, Balance Sheet, Cash Flow)
-- Regulatory filings (CODAL for Iranian companies, SEC filings for international)
+- Regulatory filings (SEC filings for US companies, SEC filings for international)
 - Economic indicators from IMF, World Bank, central banks
 - Analyst estimates and consensus forecasts
 - Corporate actions data (dividends, splits, buybacks)
@@ -203,7 +203,7 @@ This score contributes 25% to the final 6D composite score, making it the single
 ```mermaid
 flowchart TD
     subgraph Data_Ingestion
-        A1[Financial Statements API] --> A2[CODAL/SEC Filings Parser]
+        A1[Financial Statements API] --> A2[SEC Filings Parser]
         A3[Market Data Feed] --> A2
         A4[Analyst Estimates Feed] --> A2
         A2 --> A5[Raw Data Lake (PostgreSQL)]
@@ -266,7 +266,7 @@ flowchart TD
 ```mermaid
 graph LR
     subgraph External_Sources
-        ES1[CODAL/SEC Filings]
+         ES1[SEC Filings]
         ES2[Market Data Vendors]
         ES3[Analyst Estimate Providers]
         ES4[Economic Data (IMF/WorldBank)]

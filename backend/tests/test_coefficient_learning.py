@@ -511,7 +511,7 @@ class TestScoringServiceScoreConstraints:
         # Create data that would produce scores > 100
         data = {
             "ticker": "TEST",
-            "market": "TSE",
+            "market": "NASDAQ",
             "fundamental": {"pe_ratio": 5, "roe": 50},  # Very high values
             "technical": {"rsi": 90, "macd": 10},       # Very high values
             "sentiment": {"score": 150},
@@ -537,7 +537,7 @@ class TestScoringServiceScoreConstraints:
         # Create data that would produce negative scores
         data = {
             "ticker": "TEST",
-            "market": "TSE",
+            "market": "NASDAQ",
             "fundamental": {"pe_ratio": -50, "roe": -1.0},
             "technical": {"rsi": -10, "macd": -5},
             "sentiment": {"score": -50},
@@ -563,7 +563,7 @@ class TestScoringServiceScoreConstraints:
         # Use known values
         data = {
             "ticker": "TEST",
-            "market": "TSE",
+            "market": "NASDAQ",
             "fundamental": {"pe_ratio": 10, "roe": 0.15},
             "technical": {"rsi": 55, "macd": 0.5},
             "sentiment": {"score": 70},

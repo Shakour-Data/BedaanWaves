@@ -3,7 +3,7 @@ BedaanWaves Services Module
 
 Consolidates services from the legacy Bedaan projects into a 9-tier layout:
   Tier 1: Core        (Dependency, Config, Logging, Cache, Database, Health)
-  Tier 2: Data        (BRS API, Stock, Market, Portfolio, History, News, Intl)
+  Tier 2: Data        (Stock, Market, Portfolio, History, News, Intl)
   Tier 3: Analysis    (Scoring, Technical, Fundamental, Risk, Momentum, Volatility)
   Tier 4: ML          (Prediction, Anomaly, Clustering, Ensemble)        [pending]
   Tier 5: NLP         (Sentiment, News, Entity, Summarization)           [pending]

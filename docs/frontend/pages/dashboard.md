@@ -15,7 +15,7 @@ The Dashboard is the main landing page for authenticated users, providing a comp
 - Role-based access: Standard users see basic dashboard, admins see full analytics
 
 ## Widgets
-1. **Market Summary**: Real-time price data for TSE, NASDAQ, and crypto markets
+1. **Market Summary**: Real-time price data for NASDAQ and crypto markets
 2. **Portfolio Performance**: Quick view of user's portfolio value and daily changes
 3. **Latest News**: Aggregated market news with sentiment indicators
 4. **ML Predictions**: Top 5 stocks with AI predictions for the day

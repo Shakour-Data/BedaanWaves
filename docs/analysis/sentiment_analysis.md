@@ -21,7 +21,7 @@ Sentiment analysis evaluates market sentiment through analysis of news, social m
 ---
 
 ## Data Sources
-- Financial news sources (domestic Iranian and international)
+- Financial news sources (domestic and international)
 - Social media platforms (Twitter/X, Telegram, financial forums)
 - Analyst reports and brokerage research
 - Financial forums and discussion boards

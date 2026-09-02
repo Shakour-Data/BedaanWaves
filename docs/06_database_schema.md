@@ -2,7 +2,7 @@
 
 ## Overview
 
-BedaanWaves uses PostgreSQL as the primary database with SQLAlchemy 2.0 ORM for object-relational mapping. The schema supports multi-asset financial data including stocks, cryptocurrencies, ETFs, and derivatives.
+BedaanWaves uses PostgreSQL as the primary database with SQLAlchemy 2.0 ORM for object-relational mapping. The schema supports multi-asset financial data including stocks, ETFs, and derivatives.
 
 ## Database Connection
 
@@ -47,8 +47,8 @@ CREATE TABLE assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     symbol VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
-    asset_class VARCHAR(20) NOT NULL, -- EQUITY, CRYPTO, ETF, COMMODITY, NEWS
-    market VARCHAR(20) NOT NULL, -- NASDAQ, NYSE, BINANCE, COINBASE, KRAKEN
+    asset_class VARCHAR(20) NOT NULL, -- EQUITY, ETF, NEWS
+    market VARCHAR(20) NOT NULL, -- NASDAQ, NYSE, TSE, OTC
     sector VARCHAR(100),
     sub_sector VARCHAR(100),
     country_code VARCHAR(2), -- ISO 3166-1 alpha-2
@@ -84,7 +84,7 @@ CREATE TABLE price_candles (
     turnover DECIMAL(20, 2),
     transactions INTEGER,
     adjusted_close DECIMAL(20, 8),
-    source VARCHAR(50), -- YahooFinance, Binance, Coinbase, etc.
+    source VARCHAR(50), -- YahooFinance, BRS, etc.
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Constraints

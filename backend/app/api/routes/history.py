@@ -2,17 +2,15 @@
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, func
+from datetime import datetime, timedelta
 from typing import List
 from collections import defaultdict
-from datetime import datetime, timedelta
 import logging
 
 from app.db.base import get_async_session
-from app.models.models import Asset, candle_model_for_market
-from app.services.data.history_service import HistoryService
-from app.services.data.brs_api_client import BrsApiClient
-from app.api.routes.live import get_brs_client
+from app.models.models import Asset
+from app.services.data.stock_service import StockService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["history"])
@@ -31,11 +29,18 @@ async def get_price_history(
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {ticker} not found")
 
-    client = await get_brs_client()
-    service = HistoryService(db_service=None, brs_client=client)
+    service = StockService()
     await service.initialize()
+    end = datetime.utcnow().date().isoformat()
+    start = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    history = await service.get_history(asset.symbol, start_date=start, end_date=end, interval="daily")
+    await service.shutdown()
 
-    return await service.get_price_history(ticker, days)
+    return [
+        {"date": h["timestamp"], "open": h["open"], "high": h["high"],
+         "low": h["low"], "close": h["close"]}
+        for h in history
+    ]
 
 
 @router.get("/volume/{ticker}", response_model=List[dict])
@@ -51,8 +56,11 @@ async def get_volume_history(
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {ticker} not found")
 
-    client = await get_brs_client()
-    service = HistoryService(db_service=None, brs_client=client)
+    service = StockService()
     await service.initialize()
+    end = datetime.utcnow().date().isoformat()
+    start = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    history = await service.get_history(asset.symbol, start_date=start, end_date=end, interval="daily")
+    await service.shutdown()
 
-    return await service.get_volume_history(ticker, days)
+    return [{"date": h["timestamp"], "volume": h["volume"]} for h in history]

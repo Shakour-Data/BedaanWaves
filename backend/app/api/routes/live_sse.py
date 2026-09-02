@@ -1,7 +1,7 @@
 """
 Live Market Data SSE Routes
 
-TSE/BRS-specific SSE streams have been removed. These stubs preserve the router
+SSE streaming endpoints (stubs).
 for backward compatibility but return informational messages.
 """
 import json
@@ -25,7 +25,7 @@ async def _sse_format(event: str, data: Any) -> str:
 async def _stream_removed() -> AsyncGenerator[str, None]:
     """Stream a single message indicating the endpoint was removed."""
     yield await _sse_format("info", {
-        "message": "TSE/BRS SSE streams have been removed. "
+        "message": "Live SSE streams are not available. "
                     "NASDAQ data is available via standard OHLCV endpoints."
     })
 

@@ -11,7 +11,6 @@ import hashlib
 import json
 import asyncio
 from app.services.core.base_service import CachedService
-from app.services.data.brs_api_client import BrsApiClient
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 from app.services.data.stock_service import StockService
@@ -28,35 +27,32 @@ class DataValidationService(CachedService):
     - Data quality metrics
     """
     
-    def __init__(self, 
+    def __init__(self,
                  service_name: str = "DataValidationService",
-                 brs_client: Optional[BrsApiClient] = None,
                  intl_client: Optional[IntlApiClient] = None,
                  market_service: Optional[MarketService] = None,
                  stock_service: Optional[StockService] = None,
                  logger: Optional[logging.Logger] = None):
         """
         Initialize data validation service.
-        
+
         Args:
             service_name: Service identifier
-            brs_client: BRS API client instance
             intl_client: International API client instance
             market_service: Market service instance
             stock_service: Stock service instance
             logger: Optional logger instance
         """
         super().__init__(service_name, logger=logger)
-        self.brs_client = brs_client
         self.intl_client = intl_client
         self.market_service = market_service
         self.stock_service = stock_service
-        
+
         self._validation_cache = {}
         self._cache_size_limit = 1000
         self.data_sources = {
             "stocks": {
-                "clients": ["brs_client", "intl_client"],
+                "clients": ["intl_client"],
                 "min_years": 3,
                 "authentication_required": True
             },
@@ -73,8 +69,7 @@ class DataValidationService(CachedService):
         
         # Validate service dependencies
         dependencies = {
-            "BRS Client": self.brs_client,
-            "Intl Client": self.intl_client,
+                        "Intl Client": self.intl_client,
             "Market Service": self.market_service,
             "Stock Service": self.stock_service
         }
@@ -172,7 +167,7 @@ class DataValidationService(CachedService):
         return {
             "ticker": ticker,
             "market_data": "validated",
-            "sources": ["BRS", "INTL", "MARKET"]
+            "sources": ["INTL", "MARKET"]
         }
 
     async def _validate_historical_data(self, ticker: str) -> Dict[str, Any]:
@@ -437,10 +432,10 @@ class DataValidationService(CachedService):
                 try:
                     stock_data = await self.stock_service.get_stock(symbol)
                     if stock_data:
-                        source_data["BRS"] = stock_data
-                        consistency_result["sources_compared"].append("BRS")
+                        source_data["YFINANCE"] = stock_data
+                        consistency_result["sources_compared"].append("YFINANCE")
                 except Exception as e:
-                    self.logger.warning(f"Failed to get BRS data for {symbol}: {str(e)}")
+                    self.logger.warning(f"Failed to get YFinance data for {symbol}: {str(e)}")
             
             # Compare values from different sources
             if len(source_data) >= 2:
@@ -576,12 +571,11 @@ class DataValidationService(CachedService):
         return report
 
 # Service registration function for dependency injection
-def get_data_validation_service(brs_client=None, intl_client=None,
+def get_data_validation_service(intl_client=None,
                               market_service=None, stock_service=None, logger=None) -> DataValidationService:
     """Factory function to create DataValidationService instance."""
     return DataValidationService(
         service_name="DataValidationService",
-        brs_client=brs_client,
         intl_client=intl_client,
         market_service=market_service,
         stock_service=stock_service,

@@ -48,7 +48,7 @@ BATCH_SIZE = 1000
 
 # Base assets definition
 ASSETS = [
-    # Tehran Stock Exchange
+    # International market data
     {"symbol": "KHC1", "name": "Kahied", "asset_class": "EQUITY", "market": "TSE",
      "country_code": "IR", "currency": "IRR", "sector": "Banks"},
     {"symbol": "FAZF1", "name": "Fazf", "asset_class": "EQUITY", "market": "TSE",

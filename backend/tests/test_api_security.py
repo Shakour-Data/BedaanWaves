@@ -4,7 +4,6 @@ Security route/middleware tests (0.1, 0.2, 0.4).
 Covers:
 - 0.1 AuthGuardMiddleware rejects unauthenticated requests with 401
 - 0.2 Portfolio IDOR: user A cannot read/update/delete user B portfolio
-- 0.4 BRS client contract: required methods exist on real and fake clients
 """
 
 import uuid
@@ -15,7 +14,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.middleware import AuthGuardMiddleware
 from app.core.config import get_settings
 from app.services.user.auth_service import create_access_token, create_refresh_token
-from app.services.data.brs_api_client import BrsApiClient
 
 
 # ---------------------------------------------------------------------------
@@ -176,57 +174,3 @@ class TestPortfolioIDOR:
         assert user_id != other_user_portfolio_user_id
         # In the actual code, Portfolio.user_id == user_id filter prevents access
         # This test documents the expected behavior
-
-
-# ---------------------------------------------------------------------------
-# 0.4 BRS client contract tests
-# ---------------------------------------------------------------------------
-
-class TestBRSClientContract:
-    """0.4: BRS client exposes all methods used by routes."""
-
-    REQUIRED_METHODS = [
-        "get_stock_info",
-        "get_stock_price",
-        "get_stock_history",
-        "search_stocks",
-        "get_market_indices",
-        "get_market_stats",
-        "get_top_gainers",
-        "get_top_losers",
-        "get_most_active",
-    ]
-
-    def test_fake_client_has_all_methods(self):
-        """FakeBrsClient in conftest must implement all required methods."""
-        from tests.conftest import _FakeBrsClient
-
-        client = _FakeBrsClient()
-        for method in self.REQUIRED_METHODS:
-            assert hasattr(client, method), f"Missing method: {method}"
-            assert callable(getattr(client, method)), f"Not callable: {method}"
-
-    def test_real_client_has_all_methods(self):
-        """Real BrsApiClient must implement all required methods."""
-        client = BrsApiClient()
-        for method in self.REQUIRED_METHODS:
-            assert hasattr(client, method), f"Missing method: {method}"
-            assert callable(getattr(client, method)), f"Not callable: {method}"
-
-    def test_refresh_token_returns_401_on_expired(self):
-        """1.4: /refresh with expired token returns 401, not 500."""
-        from datetime import datetime, timezone, timedelta
-        from jose import jwt
-        from app.core.config import get_settings
-
-        settings = get_settings()
-
-        expired_payload = {
-            "sub": "testuser",
-            "user_id": str(uuid.uuid4()),
-            "type": "refresh",
-            "exp": datetime.now(timezone.utc) - timedelta(hours=1),
-        }
-        expired_token = jwt.encode(expired_payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
-
-        assert expired_token is not None

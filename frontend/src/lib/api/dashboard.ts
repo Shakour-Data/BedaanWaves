@@ -6,6 +6,7 @@
 
 import { apiClient } from "@/lib/api";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
+import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 
 export interface DashboardData {
   marketStats: MarketStat[];
@@ -283,7 +284,12 @@ async function fetchTopMovers(generalPromise: Promise<GeneralDashboardResponse> 
     changePct: 0,
   });
 
+  // Defense in depth: even if the backend ever returns a non-Nasdaq row,
+  // we drop it before it reaches the dashboard. The backend already
+  // filters to market=NASDAQ, but a stale cache or a future regression
+  // would otherwise leak crypto/non-Nasdaq tickers into the UI.
   const ranked = [...(data.top_performers ?? []), ...(data.bottom_performers ?? [])]
+    .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
     .sort((a, b) => b.overall_score - a.overall_score);
   return ranked.slice(0, 10).map(map);
 }
@@ -302,7 +308,7 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
     const pricesData = pricesRes.data?.data ?? {};
 
     return defaultWatchlist.items
-      .filter((item) => pricesData[item.asset.symbol])
+      .filter((item) => isNasdaqEquityLike(item.asset) && pricesData[item.asset.symbol])
       .map((item) => ({
         symbol: item.asset.symbol,
         name: item.asset.name,

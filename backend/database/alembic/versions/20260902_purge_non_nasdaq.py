@@ -3,7 +3,7 @@
 Remove every financial instrument that does not participate in the
 formation of the Nasdaq index. Crypto, forex, commodities, bonds,
 indexes (other than the kept ^IXIC reference row), and any non-Nasdaq
-equity (NYSE, TSE, LSE, FWB, HKEX, BINANCE, KRAKEN, COINBASE, etc.)
+equity (NYSE, LSE, FWB, HKEX, BINANCE, KRAKEN, COINBASE, etc.)
 are deleted from ``assets`` along with their dependent rows.
 
 This is the database-level counterpart to the

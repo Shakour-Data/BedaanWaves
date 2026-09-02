@@ -377,9 +377,9 @@ class ScoringService(AnalysisService):
         return min(100.0, max(0.0, float(value)))
     
     # ... (remaining scoring helper methods unchanged from original)
-    # These are: _score_rsi_tse, _score_rsi_global,
-    # _score_macd_tse, _score_macd_global, _score_volume_tse,
-    # _score_pe_tse, _score_pe_global, _score_roe_tse, _score_roe_global,
+    # These are: _score_rsi_global,
+    # _score_macd_global, _score_volume_global,
+    # _score_pe_global, _score_roe_global,
     # _assign_grade, _generate_signals, score_multiple, rank_stocks, get_hierarchy_info
     
     def _score_rsi_tse(self, rsi: float) -> float:

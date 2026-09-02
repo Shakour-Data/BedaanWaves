@@ -63,35 +63,6 @@ def database_service() -> DatabaseService:
     )
 
 
-class _FakeBrsClient:
-    async def get_stock_info(self, ticker: str):
-        return {"ticker": ticker, "name": f"Stock {ticker}"}
-
-    async def get_stock_price(self, ticker: str):
-        return {"ticker": ticker, "price": 100.0}
-
-    async def get_stock_history(self, ticker, start_date, end_date, interval):
-        return {"ticker": ticker, "history": []}
-
-    async def search_stocks(self, query: str):
-        return [{"symbol": query}]
-
-    async def get_market_indices(self):
-        return [{"name": "TSE", "value": 1000}]
-
-    async def get_market_stats(self):
-        return {"volume": 1000}
-
-    async def get_top_gainers(self, limit: int = 10):
-        return []
-
-    async def get_top_losers(self, limit: int = 10):
-        return []
-
-    async def get_most_active(self, limit: int = 10):
-        return []
-
-
 class _FakeNewsClient:
     async def get_market_news(self, *args, **kwargs):
         return []
@@ -104,11 +75,6 @@ class _FakeNewsClient:
 
     async def get_related_news(self, *args, **kwargs):
         return []
-
-
-@pytest.fixture
-def brs_client() -> _FakeBrsClient:
-    return _FakeBrsClient()
 
 
 @pytest.fixture

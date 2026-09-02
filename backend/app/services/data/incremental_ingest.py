@@ -19,10 +19,10 @@ class IncrementalFinancialDataIngestService(DataService):
     
     def __init__(self, 
                  service_name: str = "IncrementalFinancialDataIngestService",
-                 brs_client=None,
+                 
                  sec_client=None):
         super().__init__(service_name)
-        self.financial_ingest_service = FinancialDataIngestService(brs_client=brs_client)
+        self.financial_ingest_service = FinancialDataIngestService()
         self.sec_client = sec_client
         self.settings = get_settings()
         

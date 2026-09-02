@@ -91,8 +91,8 @@ Endpoints for market-wide data, indices, and sector performance.
 | GET | `/sentiment` | Market sentiment indicators | Yes |
 
 **Path Parameters**:
-- `index_type`: 1 (Tehran), 2 (International), 3 (Crypto)
-- `exchange`: Exchange code (TSE, OTC, etc.)
+- `index_type`: 1 (NASDAQ), 2 (International)
+- `exchange`: Exchange code (NASDAQ, OTC, etc.)
 
 ### 4. Analysis Router (`/api/v1/analysis`)
 Endpoints for scoring, signals, predictions, and backtesting.
@@ -230,7 +230,6 @@ Endpoints for specialized analysis and filters.
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| GET | `/crypto-industry` | Crypto industry analysis | Yes |
 | GET | `/macro-regime` | Macro regime analysis | Yes |
 | GET | `/exchange-rates` | Exchange rate information | Yes |
 | GET | `/currency-conversion` | Currency conversion | Yes |
@@ -248,21 +247,7 @@ Endpoints for system monitoring and administration.
 | POST | `/maintenance` | Toggle maintenance mode | Yes | Yes |
 | POST | `/cache/clear` | Clear application cache | Yes | Yes |
 
-### 14. Crypto Router (`/api/v1/crypto`)
-Endpoints for cryptocurrency data and portfolio management.
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/prices` | Real-time crypto prices | Yes |
-| GET | `/{symbol}/portfolio` | Crypto portfolio details | Yes |
-| GET | `/{symbol}/analysis` | Crypto analysis | Yes |
-| GET | `/{symbol}/ml` | Crypto ML predictions | Yes |
-| POST | `/portfolio` | Create/update crypto portfolio | Yes |
-| GET | `/market-cap` | Cryptocurrency market cap data | Yes |
-| GET | `/arbitrage` | Arbitrage opportunities | Yes |
-| GET | `/top-300` | Top 300 cryptocurrencies | Yes |
-
-### 15. Intl Router (`/api/v1/intl`)
+### 14. Intl Router (`/api/v1/intl`)
 Endpoints for international market data.
 
 | Method | Endpoint | Description | Auth Required |
@@ -388,7 +373,7 @@ ws://localhost:8000/ws/market/stream?token=<jwt_token>
 ```json
 {
   "action": "subscribe",
-  "symbols": ["AAPL", "GOOGL", "BTCUSDT"],
+    "symbols": ["AAPL", "GOOGL"],
   "channels": ["price", "signal", "news"]
 }
 ```

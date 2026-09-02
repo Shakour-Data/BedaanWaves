@@ -12,8 +12,8 @@ import { cn } from "@/lib/cn";
 
 export default function SettingsPage() {
   const addToast = useUXStore((state) => state.addToast);
-  const [selectedCountry, setSelectedCountry] = useState("ir");
-  const [selectedIndex, setSelectedIndex] = useState("tepix");
+  const [selectedCountry, setSelectedCountry] = useState("us");
+  const [selectedIndex, setSelectedIndex] = useState("spx");
   const [selectedStock, setSelectedStock] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("");
   const [notifications, setNotifications] = useState({
