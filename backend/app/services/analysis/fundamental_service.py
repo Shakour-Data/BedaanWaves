@@ -1,10 +1,11 @@
 """
 Fundamental Analysis Service - Tier 3 Analysis Service
 
-Fundamental financial analysis and ratio calculations for global markets:
-- Iranian market (via CODAL/BRS API)
-- US markets (via Yahoo Finance, Alpha Vantage)
-- International markets (via various providers)
+Fundamental financial analysis and ratio calculations. Public ``AssetClass``
+values are restricted to Nasdaq-index instruments (EQUITY, ETF). The
+internal ``MarketType`` enum still carries legacy routing keys used by
+data ingestion providers; callers should pass ``NASDAQ`` for any
+user-facing market.
 """
 
 from typing import Any, Dict, List, Optional
@@ -25,12 +26,9 @@ from app.db.base import async_session_maker
 
 
 class AssetClass(str, Enum):
-    """Asset classification for fundamental analysis"""
+    """Asset classification restricted to Nasdaq-index instruments."""
     EQUITY = "EQUITY"
     ETF = "ETF"
-    CRYPTO = "CRYPTO"
-    COMMODITY = "COMMODITY"
-    BOND = "BOND"
 
 
 class FundamentalAnalysisService(AnalysisService):
@@ -290,9 +288,6 @@ class FundamentalAnalysisService(AnalysisService):
     
     def _detect_market(self, ticker: str) -> MarketType:
         """Detect market type based on symbol characteristics."""
-        persian_chars = set('ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
-        if any(c in persian_chars for c in ticker):
-            return MarketType.IRAN
         if len(ticker) <= 5 and ticker.isalpha() and ticker.isupper():
             return MarketType.US
         return MarketType.INTERNATIONAL

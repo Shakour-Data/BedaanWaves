@@ -22,7 +22,6 @@ from app.models.models import (
     Asset,
     RawMarketData,
     MarketDataSnapshot,
-    CryptoPriceCandle,
     IntlPriceCandle,
     FinancialStatement,
     News,
@@ -59,7 +58,6 @@ async def populate_database():
                 await session.execute(text("DELETE FROM news"))
                 await session.execute(text("DELETE FROM financial_statements"))
                 await session.execute(text("DELETE FROM ml_signals"))
-                await session.execute(text("DELETE FROM crypto_price_candles"))
                 await session.execute(text("DELETE FROM intl_price_candles"))
                 await session.execute(text("DELETE FROM price_candles"))
                 print("Cleared existing data tables")
@@ -118,34 +116,29 @@ async def populate_database():
 
 
 async def create_sample_assets(session):
-    """Creates sample assets if none exist."""
-    crypto_symbols = [
-        ("BTCUSD", "Bitcoin", "CRYPTO", "BINANCE"),
-        ("ETHUSD", "Ethereum", "CRYPTO", "BINANCE"),
-        ("ADAUSD", "Cardano", "CRYPTO", "BINANCE"),
-        ("XRPUSD", "XRP", "CRYPTO", "BINANCE"),
-        ("DOGEUSD", "Dogecoin", "CRYPTO", "BINANCE"),
-    ]
+    """Creates sample Nasdaq assets if none exist.
 
-    intl_symbols = [
+    Only instruments that participate in the formation of the Nasdaq index
+    are inserted (Nasdaq-listed EQUITY).
+    """
+    nasdaq_symbols = [
         ("AAPL", "Apple Inc.", "EQUITY", "NASDAQ"),
         ("GOOGL", "Google LLC", "EQUITY", "NASDAQ"),
         ("MSFT", "Microsoft Corp", "EQUITY", "NASDAQ"),
         ("TSLA", "Tesla Inc.", "EQUITY", "NASDAQ"),
         ("AMZN", "Amazon.com Inc.", "EQUITY", "NASDAQ"),
-        ("JPM", "JPMorgan Chase", "EQUITY", "NYSE"),
+        ("NVDA", "NVIDIA Corp", "EQUITY", "NASDAQ"),
+        ("META", "Meta Platforms Inc.", "EQUITY", "NASDAQ"),
     ]
 
-    all_symbols = crypto_symbols + intl_symbols
-
-    for symbol, name, asset_class, market in all_symbols:
+    for symbol, name, asset_class, market in nasdaq_symbols:
         asset = Asset(
             symbol=symbol,
             name=name,
             asset_class=asset_class,
             market=market,
-            country_code="US" if market in ("NASDAQ", "NYSE") else "GLOBAL",
-            currency="USD" if market in ("NASDAQ", "NYSE") else "USD",
+            country_code="US",
+            currency="USD",
             active=True,
             metadata={},
             created_at=datetime.now(timezone.utc),
@@ -154,7 +147,7 @@ async def create_sample_assets(session):
         session.add(asset)
 
     await session.flush()
-    print(f"Created {len(all_symbols)} sample assets")
+    print(f"Created {len(nasdaq_symbols)} sample assets")
 
 
 async def populate_price_candles(session, assets, start_date, end_date):
@@ -165,17 +158,10 @@ async def populate_price_candles(session, assets, start_date, end_date):
 
     for asset in assets:
         market = asset.market
-        if market in ("NASDAQ", "NYSE"):
+        if market == "NASDAQ":
             CandleModel = IntlPriceCandle
             main_table = "intl_price_candles"
-        elif market in ("BINANCE", "KRAKEN", "COINBASE"):
-            CandleModel = CryptoPriceCandle
-            main_table = "crypto_price_candles"
         else:
-            CandleModel = None
-            main_table = "price_candles"
-
-        if CandleModel is None:
             continue
 
         current_date = start_date
@@ -235,7 +221,7 @@ async def populate_price_candles(session, assets, start_date, end_date):
             price = close_price
             current_date += timedelta(days=1)
 
-        if market in ("BINANCE", "KRAKEN", "COINBASE") and candles:
+        if candles:
             await session.execute(
                 pg_insert(CandleModel).values([
                     {
@@ -607,7 +593,6 @@ async def print_final_counts(session):
     tables_to_check = [
         ("assets", Asset),
         ("intl_price_candles", IntlPriceCandle),
-        ("crypto_price_candles", CryptoPriceCandle),
         ("raw_market_data", RawMarketData),
         ("market_data_snapshots", MarketDataSnapshot),
         ("news", News),

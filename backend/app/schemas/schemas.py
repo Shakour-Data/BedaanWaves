@@ -9,22 +9,16 @@ import uuid
 
 
 # Enums
+# Only instruments that participate in the formation of the Nasdaq index
+# are allowed. Crypto, forex, commodities, bonds, and non-Nasdaq equities
+# (NYSE, TSE, etc.) are intentionally excluded.
 class AssetClassEnum(str, Enum):
     EQUITY = "EQUITY"
     ETF = "ETF"
-    CRYPTO = "CRYPTO"
-    COMMODITY = "COMMODITY"
-    BOND = "BOND"
-    INDEX = "INDEX"
 
 
 class MarketEnum(str, Enum):
-    BINANCE = "BINANCE"
-    KRAKEN = "KRAKEN"
-    COINBASE = "COINBASE"
-    NYSE = "NYSE"
     NASDAQ = "NASDAQ"
-    TSE = "TSE"
 
 
 class ScoreTierEnum(str, Enum):

@@ -47,7 +47,10 @@ CREATE TABLE IF NOT EXISTS company_leadership (
 CREATE INDEX IF NOT EXISTS idx_company_leadership_asset ON company_leadership(asset_id);
 
 -- ===============================================
--- 3. Insert Nasdaq Composite index
+-- 3. Insert Nasdaq Composite index as a tracked reference
+-- (kept in the assets table for downstream code, but
+-- explicitly excluded from all user-facing lists and
+-- aggregations because its asset_class is not EQUITY/ETF).
 -- ===============================================
 INSERT INTO assets (symbol, name, asset_class, market, sector, country_code, currency, active, metadata)
 VALUES (
@@ -59,7 +62,7 @@ VALUES (
     'US',
     'USD',
     TRUE,
-    '{"description": "Nasdaq Composite Index", "provider": "yfinance"}'::jsonb
+    '{"description": "Nasdaq Composite Index", "provider": "yfinance", "excluded_from_dashboards": true}'::jsonb
 )
 ON CONFLICT (symbol) DO NOTHING;
 

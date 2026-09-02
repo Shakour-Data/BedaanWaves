@@ -2,8 +2,7 @@
 Base API Client Interface - Unified Market Access Layer
 
 This module provides a unified interface for accessing different market data sources
-(Tehran Stock Exchange, Nasdaq, other international exchanges, forex)
-through a consistent API pattern.
+(Nasdaq, other international exchanges, forex) through a consistent API pattern.
 """
 
 import asyncio
@@ -18,12 +17,11 @@ from app.core.config import get_settings
 
 class MarketType:
     """Market type constants for unified access"""
-    TEHRAN = "tehran"
     NASDAQ = "nasdaq"
     NYSE = "nyse"
     OTHER_COUNTRIES = "other_countries"
     FOREX = "forex"
-    SUPPORTED = [TEHRAN, NASDAQ, NYSE, OTHER_COUNTRIES, FOREX]
+    SUPPORTED = [NASDAQ, NYSE, OTHER_COUNTRIES, FOREX]
 
 
 class ApiClient(ABC):
@@ -45,7 +43,7 @@ class ApiClient(ABC):
         Initialize API client for specific market type.
 
         Args:
-            market_type: Type of market (TEHRAN, NASDAQ, etc.)
+            market_type: Type of market (NASDAQ, etc.)
             service_name: Optional service name
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
@@ -138,149 +136,6 @@ class ApiClient(ABC):
             "call_count": self.call_count,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-
-
-class TehranApiClient(ApiClient):
-    """
-    Tehran Stock Exchange (BRS) API client.
-
-    Provides real-time and historical market data for Tehran Stock Exchange.
-    """
-
-    def __init__(self, service_name: str = "TehranApiClient", **kwargs):
-        super().__init__(MarketType.TEHRAN, service_name, **kwargs)
-        self.base_url = "https://Api.BrsApi.ir"
-        self.api_key = kwargs.get("api_key")
-        self.session = None
-
-    async def initialize(self) -> None:
-        """Initialize the HTTP session."""
-        import aiohttp
-
-        self.session = aiohttp.ClientSession()
-        self.logger.info("TehranApiClient initialized")
-
-    async def shutdown(self) -> None:
-        """Close the HTTP session."""
-        if self.session and not self.session.closed:
-            await self.session.close()
-        self.logger.info("TehranApiClient shutdown")
-
-    async def get_stock(self, symbol: str, **kwargs) -> Dict[str, Any]:
-        """
-        Get stock information for Tehran Stock Exchange symbol.
-
-        Args:
-            symbol: Persian ticker symbol (e.g., "فملی", "خودرو")
-
-        Returns:
-            Stock information with OHLC, volume, etc.
-        """
-        if not self.session:
-            raise RuntimeError("TehranApiClient not initialized")
-
-        self.call_count += 1
-        try:
-            # Import here to avoid circular imports
-            from .brs_api_client import BrsApiClient
-
-            # Create BRS client instance with rate limiting
-            settings = get_settings()
-
-            brs_client = BrsApiClient(
-                service_name=f"BRS_{symbol}",
-                base_url=self.base_url,
-                api_key=self.api_key,
-                timeout=self.timeout,
-                max_retries=self.max_retries,
-            )
-
-            # Initialize the BRS client session
-            await brs_client.initialize()
-
-            # Get stock info
-            result = await brs_client.get_stock_info(symbol)
-
-            # Cleanup
-            await brs_client.shutdown()
-
-            return result
-
-        except Exception as e:
-            self.last_error = str(e)
-            self.logger.error(f"Error getting stock {symbol} from Tehran: {e}")
-            raise
-
-    async def get_index(self, index_code: str, **kwargs) -> Dict[str, Any]:
-        """
-        Get index information from Tehran Stock Exchange.
-
-        Args:
-            index_code: Index type (1=Total, 2=Fara Bours, etc.)
-
-        Returns:
-            Index data
-        """
-        if not self.session:
-            raise RuntimeError("TehranApiClient not initialized")
-
-        self.call_count += 1
-        try:
-            # Import here to avoid circular imports
-            from .brs_api_client import BrsApiClient
-
-            brs_client = BrsApiClient(
-                service_name=f"BRS_Index_{index_code}",
-                base_url=self.base_url,
-                api_key=self.api_key,
-                timeout=self.timeout,
-                max_retries=self.max_retries,
-            )
-
-            await brs_client.initialize()
-            result = await brs_client.get_index(index_type=int(index_code))
-            await brs_client.shutdown()
-
-            return result
-
-        except Exception as e:
-            self.last_error = str(e)
-            self.logger.error(f"Error getting index {index_code} from Tehran: {e}")
-            raise
-
-    async def get_market_stats(self, **kwargs) -> Dict[str, Any]:
-        """
-        Get market statistics from Tehran Stock Exchange.
-
-        Returns:
-            Market statistics including top gainers, losers, volume
-        """
-        if not self.session:
-            raise RuntimeError("TehranApiClient not initialized")
-
-        self.call_count += 1
-        try:
-            # Import here to avoid circular imports
-            from .brs_api_client import BrsApiClient
-
-            brs_client = BrsApiClient(
-                service_name="BRS_MarketStats",
-                base_url=self.base_url,
-                api_key=self.api_key,
-                timeout=self.timeout,
-                max_retries=self.max_retries,
-            )
-
-            await brs_client.initialize()
-            result = await brs_client.get_market_stats()
-            await brs_client.shutdown()
-
-            return result
-
-        except Exception as e:
-            self.last_error = str(e)
-            self.logger.error(f"Error getting market stats from Tehran: {e}")
-            raise
 
 
 class NasdaqApiClient(ApiClient):
@@ -511,9 +366,7 @@ class MarketClientFactory:
         }
 
         # Create market-specific client
-        if market_type == MarketType.TEHRAN:
-            return TehranApiClient(**init_kwargs)
-        elif market_type == MarketType.NASDAQ:
+        if market_type == MarketType.NASDAQ:
             return NasdaqApiClient(**init_kwargs)
         else:
             # For other markets, return a generic client

@@ -123,29 +123,29 @@ class TestConfirmPasswordReset:
     def test_uses_lang_query_param(self, client, mock_service):
         mock_service["reset"].return_value = True
         resp = client.post(
-            "/api/v1/auth/password-reset/confirm?lang=fa",
+            "/api/v1/auth/password-reset/confirm?lang=en",
             json={"token": "valid", "new_password": "newpass123"},
         )
         assert resp.status_code == 200
 
 
 class TestLanguageSupport:
-    def test_request_returns_farsi_message(self, client, mock_service):
+    def test_request_returns_english_message(self, client, mock_service):
         mock_service["create"].return_value = "token"
         resp = client.post(
-            "/api/v1/auth/password-reset/request?lang=fa",
+            "/api/v1/auth/password-reset/request?lang=en",
             json={"email": "user@example.com"},
         )
         assert resp.status_code == 200
         msg = resp.json()["message"]
-        assert "لینک" in msg or "ایمیل" in msg
+        assert "link" in msg.lower() or "email" in msg.lower()
 
-    def test_confirm_returns_farsi_on_invalid_token(self, client, mock_service):
+    def test_confirm_returns_english_on_invalid_token(self, client, mock_service):
         mock_service["reset"].return_value = False
         resp = client.post(
-            "/api/v1/auth/password-reset/confirm?lang=fa",
+            "/api/v1/auth/password-reset/confirm?lang=en",
             json={"token": "expired", "new_password": "newpass123"},
         )
         assert resp.status_code == 400
         detail = resp.json()["detail"]
-        assert "لینک" in detail or "بازیابی" in detail
+        assert "link" in detail.lower() or "recovery" in detail.lower()

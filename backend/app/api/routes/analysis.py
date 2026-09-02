@@ -125,25 +125,31 @@ async def get_signals_list(
 async def get_top_performers(
     limit: int = Query(10, ge=1, le=100),
     timeframe: str = Query("1d"),
-    market: str = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
-    Get top performing assets by return percentage
-    
+    Get top performing Nasdaq-listed equities and ETFs by return percentage.
+
+    The ``market`` argument was removed — only the Nasdaq universe is ever
+    considered. Crypto, forex, commodities, bonds, indexes, and non-Nasdaq
+    equities are always excluded.
+
     Args:
         limit: Number of top performers
         timeframe: Candle timeframe
-        market: Filter by market
-        
+
     Returns:
         List of top performers with performance metrics
     """
-    # Get latest candles for all assets
-    Candle = candle_model_for_market(market or "NASDAQ")
+    # Get latest candles for all Nasdaq-listed equities and ETFs only.
+    # Crypto, forex, commodities, bonds, indexes, and non-Nasdaq equities
+    # are always excluded.
+    Candle = candle_model_for_market("NASDAQ")
     query = select(Asset, Candle).where(
         and_(
             Asset.active == True,
+            Asset.market == "NASDAQ",
+            Asset.asset_class.in_(["EQUITY", "ETF"]),
             Candle.timeframe == timeframe,
         )
     ).outerjoin(
@@ -160,9 +166,6 @@ async def get_top_performers(
             )
         )
     )
-    
-    if market:
-        query = query.where(Asset.market == market)
     
     result = await db.execute(query)
     results = result.all()
@@ -408,7 +411,7 @@ async def fundamental_analysis(
     Perform fundamental analysis for a ticker.
     
     Path parameter:
-        symbol: Asset symbol (e.g., 'AAPL', 'MSFT', 'فملی')
+        symbol: Asset symbol (e.g., 'AAPL', 'MSFT', 'FAMILY')
     """
     # Look up asset by symbol
     asset_result = await db.execute(select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol)))

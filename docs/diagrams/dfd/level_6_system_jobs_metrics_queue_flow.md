@@ -1,9 +1,9 @@
 # DFD Level 6 — System Jobs, Scheduler, Metrics & Queue Flow
 
-این سطح جریان داده‌ها برای ماژول سیستم را نشان می‌دهد:
-- Scheduler: ثبت/لغو/Run job
+This level shows the data flows for the system module:
+- Scheduler: register/cancel/run jobs
 - Queue: enqueue/get job status/stats/dead-letter
-- Metrics: get /metrics و health summary
+- Metrics: get /metrics and health summary
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -45,7 +45,6 @@ flowchart TD
 ```
 
 ## Data Flows
-- Job payload و status در QueueService مدیریت می‌شود
-- Scheduler jobs در SchedulerService نگهداری/اجرا می‌شوند
-- Metrics/health از MetricsService جمع‌آوری می‌شوند
-
+- Job payload and status are managed by QueueService
+- Scheduler jobs are stored/executed by SchedulerService
+- Metrics/health are collected by MetricsService

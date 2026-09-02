@@ -20,7 +20,7 @@ This document provides an accurate, verified implementation status across all se
 | **Tier 5: NLP** | 6 | 6 | **100%** |  Yes |
 | **Tier 6: User** | 8 | 8 | **100%** |  Yes |
 | **Tier 7: Specialized** | 7 | 5 | **71%** | ️ Partial |
-| **Tier 8: Crypto** | 8 | 3 | **38%** |  No |
+| **Tier 8: (removed)** | - | - | - | - |
 | **Tier 9: System** | 8 | 3 | **38%** |  No |
 | **TOTAL** | **67** | **53** | **79%** |  **NO** |
 
@@ -61,14 +61,14 @@ This document provides an accurate, verified implementation status across all se
 | IngestionService | `IngestionService` | `app/services/data/ingestion_service.py` | **P0** | No data pipeline orchestration |
 | MarketDataProcessing | `MarketDataProcessing` | `app/services/data/market_data_processing.py` | **P0** | No data cleaning/normalization |
 | IntlApiClient | `IntlApiClient` | `app/services/data/intl_api_client.py` | **P0** | No international market data |
-| CryptoApiClient | `CryptoApiClient` | `app/services/data/crypto_api_client.py` | **P0** | No cryptocurrency data feeds |
+
 | DataValidationService | `DataValidationService` | `app/services/data/data_validation_service.py` | **P1** | No data quality checks |
 | FinancialDataIngestService | `FinancialDataIngestService` | `app/services/data/financial_data_ingest_service.py` | **P1** | No CODAL/Yahoo/AlphaVantage ingestion |
 | StockFundamentalDataIngestionService | `StockFundamentalDataIngestionService` | `app/services/data/stock_fundamental_ingestion_service.py` | **P1** | No fundamental data pipeline |
 
 **Impact**: Without these 7 services, the platform cannot:
 - Ingest real-time or historical market data
-- Process international or crypto market data
+- Process international market data
 - Validate data quality
 - Ingest financial statements from any source
 - Populate fundamental ratios tables
@@ -102,7 +102,7 @@ This document provides an accurate, verified implementation status across all se
 | PortfolioOptimizationService | `PortfolioOptimizationService` | `app/services/ml/portfolio_optimization_service.py` |  |  Complete |
 | TimeSeriesForecastingService | `TimeSeriesForecastingService` | `app/services/ml/time_series_forecasting_service.py` |  |  Complete |
 | CoefficientLearningService | `CoefficientLearningService` | `app/services/ml/coefficient_learning_service.py` |  |  Complete |
-| CryptoMLService | `CryptoMLService` | `app/services/ml/crypto_ml_service.py` |  |  Complete |
+
 | UserFilteredRecommendationService | `UserFilteredRecommendationService` | `app/services/ml/user_filtered_recommendation_service.py` |  |  Complete |
 
 **Note**: 9 services listed in catalog vs 12 in architecture doc - catalog is accurate.
@@ -133,7 +133,7 @@ This document provides an accurate, verified implementation status across all se
 | PreferenceService | `PreferenceService` | `app/services/user/preference_service.py` |  |  Complete |
 | NotificationService | `NotificationService` | `app/services/user/notification_service.py` |  |  Complete |
 | UserMarketSettingsService | `UserMarketSettingsService` | `app/services/user/user_market_settings_service.py` |  |  Complete |
-| UserCryptoSettingsService | `UserCryptoSettingsService` | `app/services/user/user_crypto_settings_service.py` |  |  Complete |
+
 
 ---
 
@@ -155,30 +155,6 @@ This document provides an accurate, verified implementation status across all se
 |---------|-------------------|----------|--------|
 | SectorFilterService | `app/services/specialized/sector_filter_service.py` | **P1** | Industry filtering incomplete |
 | PeerComparisonService | `app/services/specialized/peer_comparison_service.py` | **P2** | Cross-asset benchmarking gaps |
-
----
-
-## Tier 8: Crypto Services - CRITICAL GAPS (38% Complete)
-
-###  IMPLEMENTED (3/8)
-
-| Service | Class | File Location | Tests | Status |
-|---------|-------|---------------|-------|--------|
-| PriceService | `PriceService` | `app/services/crypto/price_service.py` |  |  Complete |
-| CryptoMLService | `CryptoMLService` | `app/services/crypto/crypto_ml_service.py` |  |  Complete |
-| CustomCryptoSelectionService | `CustomCryptoSelectionService` | `app/services/crypto/custom_crypto_selection_service.py` |  |  Complete |
-
-###  MISSING (5/8) - BLOCKING CRYPTO FUNCTIONALITY
-
-| Service | Expected Location | Priority | Blocking Issues |
-|---------|-------------------|----------|-----------------|
-| PortfolioService | `app/services/crypto/portfolio_service.py` | **P0** | No crypto portfolio management |
-| CryptoIngestionService | `app/services/crypto/crypto_ingestion_service.py` | **P0** | No exchange data ingestion |
-| CryptoMarketCapService | `app/services/crypto/crypto_market_cap_service.py` | **P1** | No market cap filtering |
-| CryptoAnalysisService | `app/services/crypto/crypto_analysis_service.py` | **P1** | No on-chain metrics |
-| ArbitrageService | `app/services/crypto/arbitrage_service.py` | **P2** | No cross-exchange arbitrage |
-
-**Impact**: Without CryptoIngestionService, no real-time crypto data flows into system.
 
 ---
 
@@ -211,18 +187,17 @@ This document provides an accurate, verified implementation status across all se
 ### Why Executive Overview Claims 100%
 1. **Documentation Drift**: Overview written before service implementation completed
 2. **No Automated Verification**: No CI check validating service registry vs documentation
-3. **Tier 2/8/9 Underestimated**: Data ingestion and system services complexity underestimated
+3. **Tier 2/9 Underestimated**: Data ingestion and system services complexity underestimated
 4. **Definition of "Complete"**: Architecture designed 67 services, only 53 implemented
 
 ### Critical Path to Production Readiness
 
 | Phase | Services Required | Estimated Effort | Dependencies |
 |-------|-------------------|------------------|--------------|
-| **Phase 1: Data Pipeline** | IngestionService, MarketDataProcessing, IntlApiClient, CryptoApiClient, DataValidationService | 3-4 weeks | BRS API, Alpha Vantage, CoinGecko, Binance APIs |
+| **Phase 1: Data Pipeline** | IngestionService, MarketDataProcessing, IntlApiClient, DataValidationService | 3-4 weeks | BRS API, Alpha Vantage APIs |
 | **Phase 2: Fundamental Data** | FinancialDataIngestService, StockFundamentalDataIngestionService | 2-3 weeks | CODAL API access, Yahoo Finance API |
-| **Phase 3: Crypto Completion** | CryptoIngestionService, CryptoPortfolioService, CryptoMarketCapService | 2-3 weeks | Binance/Kraken API keys |
-| **Phase 4: System Operations** | BackupService, LoggingService, NotificationDispatcher, DataIntegrityService | 2-3 weeks | PostgreSQL backup tools, ELK/Loki stack |
-| **Phase 5: Remaining Specialized** | SectorFilterService, PeerComparisonService, CryptoAnalysisService, ArbitrageService | 1-2 weeks | Depends on Phase 1-3 |
+| **Phase 3: System Operations** | BackupService, LoggingService, NotificationDispatcher, DataIntegrityService | 2-3 weeks | PostgreSQL backup tools, ELK/Loki stack |
+| **Phase 4: Remaining Specialized** | SectorFilterService, PeerComparisonService | 1-2 weeks | Depends on Phase 1-2 |
 
 **Total Estimated Time to Production Ready**: 10-15 weeks
 

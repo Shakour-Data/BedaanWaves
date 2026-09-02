@@ -29,83 +29,83 @@ class TestStockServiceInitialization:
 class TestGetStock:
     async def test_cache_miss_calls_client(self, brs_client):
         service = StockService(cache_ttl_seconds=3600, brs_client=brs_client)
-        result = await service.get_stock("فملی", use_cache=False)
-        assert result == {"ticker": "فملی", "name": "Stock فملی"}
+        result = await service.get_stock("FAMILY", use_cache=False)
+        assert result == {"ticker": "FAMILY", "name": "Stock FAMILY"}
 
     async def test_cache_hit_returns_cached(self, brs_client):
         service = StockService(cache_ttl_seconds=3600, brs_client=brs_client)
-        await service.get_stock("خودرو", use_cache=False)
-        cached = service.get_cached("stock:خودرو")
+        await service.get_stock("KHODRO", use_cache=False)
+        cached = service.get_cached("stock:KHODRO")
         assert cached is not None
-        second = await service.get_stock("خودرو", use_cache=True)
+        second = await service.get_stock("KHODRO", use_cache=True)
         assert second == cached
 
     async def test_missing_client_raises(self):
         service = StockService(brs_client=None)
         with pytest.raises(RuntimeError, match="BRS client not initialized"):
-            await service.get_stock("فملی")
+            await service.get_stock("FAMILY")
 
     async def test_stores_result_in_cache(self, brs_client):
         service = StockService(cache_ttl_seconds=3600, brs_client=brs_client)
-        await service.get_stock("شپنا", use_cache=False)
-        assert service.get_cached("stock:شپنا") is not None
+        await service.get_stock("SHPNA", use_cache=False)
+        assert service.get_cached("stock:SHPNA") is not None
 
 
 class TestGetPrice:
     async def test_delegates_to_client(self, brs_client):
         service = StockService(brs_client=brs_client)
-        result = await service.get_price("فملی")
-        assert result == {"ticker": "فملی", "price": 100.0}
+        result = await service.get_price("FAMILY")
+        assert result == {"ticker": "FAMILY", "price": 100.0}
 
     async def test_missing_client_raises(self):
         service = StockService(brs_client=None)
         with pytest.raises(RuntimeError, match="BRS client not initialized"):
-            await service.get_price("فملی")
+            await service.get_price("FAMILY")
 
 
 class TestGetHistory:
     async def test_cache_miss_calls_client(self, brs_client):
         service = StockService(cache_ttl_seconds=86400, brs_client=brs_client)
-        result = await service.get_history("فملی", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
-        assert result == {"ticker": "فملی", "history": []}
+        result = await service.get_history("FAMILY", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
+        assert result == {"ticker": "FAMILY", "history": []}
 
     async def test_cache_hit_returns_cached(self, brs_client):
         service = StockService(cache_ttl_seconds=86400, brs_client=brs_client)
-        await service.get_history("خودرو", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
-        second = await service.get_history("خودرو", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
-        assert second == {"ticker": "خودرو", "history": []}
+        await service.get_history("KHODRO", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
+        second = await service.get_history("KHODRO", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
+        assert second == {"ticker": "KHODRO", "history": []}
 
     async def test_missing_client_raises(self):
         service = StockService(brs_client=None)
         with pytest.raises(RuntimeError, match="BRS client not initialized"):
-            await service.get_history("فملی")
+            await service.get_history("FAMILY")
 
 
 class TestSearch:
     async def test_cache_miss_calls_client(self, brs_client):
         service = StockService(cache_ttl_seconds=3600, brs_client=brs_client)
-        result = await service.search("پتر")
-        assert result == [{"symbol": "پتر"}]
+        result = await service.search("PETR")
+        assert result == [{"symbol": "PETR"}]
 
     async def test_cache_hit_returns_cached(self, brs_client):
         service = StockService(cache_ttl_seconds=86400, brs_client=brs_client)
-        await service.search("خودرو")
-        second = await service.search("خودرو")
-        assert second == [{"symbol": "خودرو"}]
+        await service.search("KHODRO")
+        second = await service.search("KHODRO")
+        assert second == [{"symbol": "KHODRO"}]
 
     async def test_missing_client_raises(self):
         service = StockService(brs_client=None)
         with pytest.raises(RuntimeError, match="BRS client not initialized"):
-            await service.search("پتر")
+            await service.search("PETR")
 
 
 class TestGetMultiple:
     async def test_collects_all_results(self, brs_client):
         service = StockService(cache_ttl_seconds=3600, brs_client=brs_client)
-        result = await service.get_multiple(["فملی", "خودرو"])
-        assert "فملی" in result
-        assert "خودرو" in result
-        assert result["فملی"]["ticker"] == "فملی"
+        result = await service.get_multiple(["FAMILY", "KHODRO"])
+        assert "FAMILY" in result
+        assert "KHODRO" in result
+        assert result["FAMILY"]["ticker"] == "FAMILY"
 
     async def test_handles_client_error_gracefully(self, brs_client):
         class _BadClient:

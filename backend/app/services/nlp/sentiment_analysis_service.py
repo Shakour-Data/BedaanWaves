@@ -26,38 +26,34 @@ class SentimentAnalysisService(AnalysisService):
     
     FINANCIAL_POSITIVE_KEYWORDS = {
         "profit", "growth", "increase", "rise", "bullish", "buy", "up",
-        "gain", "success", "strong", "improve", "surge", "boost", " rally",
-        "سود", "رشد", "افزایش", "صعودی", "خرید", "صعود", "تقویت", "موفق",
+        "gain", "success", "strong", "improve", "surge", "boost", "rally",
     }
-    
+
     FINANCIAL_NEGATIVE_KEYWORDS = {
         "loss", "decline", "fall", "drop", "bearish", "sell", "down",
         "decrease", "weak", "risk", "crash", "plunge", "dip", "tumble",
-        "ضرر", "کاهش", "سقوط", "نزولی", "فروش", "ریسک", "ضعیف", "سقوط",
     }
-    
+
     def __init__(self, service_name: str = "SentimentAnalysisService"):
         super().__init__(service_name)
         self._model_loaded = False
-        self._persian_stopwords: set = set()
-    
+        self._stopwords: set = set()
+
     async def initialize(self) -> None:
         """Initialize sentiment analysis service"""
-        self._load_persian_stopwords()
+        self._load_stopwords()
         self._model_loaded = True
         self.logger.info("SentimentAnalysisService initialized")
-    
+
     async def shutdown(self) -> None:
         """Shutdown sentiment analysis service"""
         self._model_loaded = False
-        self._persian_stopwords.clear()
+        self._stopwords.clear()
         self.logger.info("SentimentAnalysisService shutdown")
-    
-    def _load_persian_stopwords(self) -> None:
-        """Load Persian stopwords for text preprocessing"""
-        self._persian_stopwords = {
-            "را", "که", "با", "از", "به", "در", "است", "این", "آن", "یک",
-            "ما", "شما", "او", "آنها", "بود", "برای", "تا", "حتی", "هر",
+
+    def _load_stopwords(self) -> None:
+        """Load stopwords for text preprocessing"""
+        self._stopwords = {
             "the", "is", "at", "which", "on", "and", "or", "in", "to", "of",
         }
     

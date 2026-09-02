@@ -1,11 +1,9 @@
 # DFD Level 5 — Portfolio, Positions & Notifications Flow
 
-این سطح جریان داده‌ها برای:
+This level shows the data flows for:
 - Portfolio CRUD
-- Position (holding) مدیریت
-- Notification نمایش و تغییر وضعیت
-
-را نشان می‌دهد.
+- Position (holding) management
+- Notification display and status changes
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -59,7 +57,6 @@ flowchart TD
 ```
 
 ## Data Flows
-- Portfolio ops: داده‌های `Portfolio`
-- Holdings: داده‌های `Position` و ارجاع به `Asset`
-- Notifications: داده‌های `Notification` با scope بر اساس `user_id`
-
+- Portfolio ops: `Portfolio` data
+- Holdings: `Position` data with references to `Asset`
+- Notifications: `Notification` data scoped by `user_id`

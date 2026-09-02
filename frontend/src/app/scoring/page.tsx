@@ -136,11 +136,11 @@ export default function ScoringPage() {
       color: "bg-primary/10 border-primary/30",
       icon: "🏦",
       aspects: [
-        { name: "P/E Ratio", desc: Price-to-Earnings Ratio },
-        { name: "ROE", desc: Return on Equity },
-        { name: "Book Value", desc: Book Value per Share },
-        { name: "Revenue Growth", desc: Annual Revenue Growth },
-        { name: "Debt-to-Equity", desc: Debt-to-Equity Ratio }
+        { name: "P/E Ratio", desc: "Price-to-Earnings Ratio" },
+        { name: "ROE", desc: "Return on Equity" },
+        { name: "Book Value", desc: "Book Value per Share" },
+        { name: "Revenue Growth", desc: "Annual Revenue Growth" },
+        { name: "Debt-to-Equity", desc: "Debt-to-Equity Ratio" }
       ],
     },
     {
@@ -150,11 +150,11 @@ export default function ScoringPage() {
       color: "bg-success/10 border-success/30",
       icon: "📈",
       aspects: [
-        { name: "RSI", desc: Relative Strength Index },
-        { name: "MACD", desc: Moving Average Convergence Divergence },
-        { name: "Moving Averages", desc: 50 and 200-day Moving Averages },
-        { name: "Bollinger Bands", desc: Bollinger Bands },
-        { name: "Volume Profile", desc: Volume Profile }
+        { name: "RSI", desc: "Relative Strength Index" },
+        { name: "MACD", desc: "Moving Average Convergence Divergence" },
+        { name: "Moving Averages", desc: "50 and 200-day Moving Averages" },
+        { name: "Bollinger Bands", desc: "Bollinger Bands" },
+        { name: "Volume Profile", desc: "Volume Profile" }
       ],
     },
     {
@@ -164,9 +164,9 @@ export default function ScoringPage() {
       color: "bg-primary/10 border-primary/30",
       icon: "🎭",
       aspects: [
-        { name: "News Sentiment", desc: News Sentiment },
-        { name: "Social Media", desc: Social Media Sentiment },
-        { name: "Analyst Ratings", desc: Analyst Ratings }
+        { name: "News Sentiment", desc: "News Sentiment" },
+        { name: "Social Media", desc: "Social Media Sentiment" },
+        { name: "Analyst Ratings", desc: "Analyst Ratings" }
       ],
     },
     {
@@ -176,10 +176,10 @@ export default function ScoringPage() {
       color: "bg-error/10 border-error/30",
       icon: "🛡️",
       aspects: [
-        { name: "Volatility", desc: Price Volatility },
-        { name: "VaR", desc: Value at Risk },
-        { name: "Sharpe Ratio", desc: Sharpe Ratio },
-        { name: "Max Drawdown", desc: Maximum Drawdown }
+        { name: "Volatility", desc: "Price Volatility" },
+        { name: "VaR", desc: "Value at Risk" },
+        { name: "Sharpe Ratio", desc: "Sharpe Ratio" },
+        { name: "Max Drawdown", desc: "Maximum Drawdown" }
       ],
     },
     {
@@ -189,9 +189,9 @@ export default function ScoringPage() {
       color: "bg-secondary/10 border-secondary/30",
       icon: "🌍",
       aspects: [
-        { name: "GDP Growth", desc: GDP Growth },
-        { name: "Inflation", desc: Inflation Rate },
-        { name: "Interest Rates", desc: Interest Rates }
+        { name: "GDP Growth", desc: "GDP Growth" },
+        { name: "Inflation", desc: "Inflation Rate" },
+        { name: "Interest Rates", desc: "Interest Rates" }
       ],
     },
     {
@@ -201,19 +201,19 @@ export default function ScoringPage() {
       color: "bg-primary/10 border-primary/30",
       icon: "🤖",
       aspects: [
-        { name: "LSTM Forecast", desc: Price Forecasting with LSTM },
-        { name: "Pattern Detection", desc: Chart Pattern Detection },
-        { name: "Anomaly Detection", desc: Anomaly Detection }
+        { name: "LSTM Forecast", desc: "Price Forecasting with LSTM" },
+        { name: "Pattern Detection", desc: "Chart Pattern Detection" },
+        { name: "Anomaly Detection", desc: "Anomaly Detection" }
       ],
     },
   ];
 
   const grades = [
-    { label: A (Strong Buy), min: 85, color: "text-success", bg: "bg-success/10" },
-    { label: B (Buy), min: 70, color: "text-success", bg: "bg-success/10" },
-    { label: C (Hold), min: 55, color: "text-warning", bg: "bg-warning/10" },
-    { label: D (Sell), min: 40, color: "text-error", bg: "bg-error/10" },
-    { label: E (Strong Sell), min: 0, color: "text-error", bg: "bg-error/10" },
+    { label: "A (Strong Buy)", min: 85, color: "text-success", bg: "bg-success/10" },
+    { label: "B (Buy)", min: 70, color: "text-success", bg: "bg-success/10" },
+    { label: "C (Hold)", min: 55, color: "text-warning", bg: "bg-warning/10" },
+    { label: "D (Sell)", min: 40, color: "text-error", bg: "bg-error/10" },
+    { label: "E (Strong Sell)", min: 0, color: "text-error", bg: "bg-error/10" },
   ];
 
   useEffect(() => {

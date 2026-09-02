@@ -37,7 +37,6 @@ Handles external data ingestion, normalization, and storage:
 - **IngestionService**: Data ingestion pipeline orchestration
 - **MarketDataProcessing**: Data cleaning and normalization pipelines
 - **IntlApiClient**: International market APIs (NYSE, NASDAQ, etc.)
-- **CryptoApiClient**: Cryptocurrency exchange APIs
 - **DataValidationService**: Data integrity validation and cleansing
 - **FinancialDataIngestService**: Multi-source financial statements (CODAL, Yahoo Finance)
 - **StockFundamentalDataIngestionService**: Fundamental data for Iran/US/International markets
@@ -61,7 +60,6 @@ Implements machine learning models and pipelines:
 - **PortfolioOptimizationService**: Efficient frontier and risk-parity optimization
 - **TimeSeriesForecastingService**: ARIMA, LSTM, Prophet forecasting models
 - **CoefficientLearningService**: Dynamic coefficient adjustment based on market conditions
-- **CryptoMLService**: Cryptocurrency-specific ML models
 - **UserFilteredRecommendationService**: Personalized recommendations based on user preferences
 
 ### Tier 5: NLP Services (Natural Language Processing)
@@ -82,7 +80,6 @@ Handles user-related functionality:
 - **PreferenceService**: User customization and settings management
 - **NotificationService**: Multi-channel notifications (email, SMS, in-app)
 - **UserMarketSettingsService**: Market/index/industry selection preferences
-- **UserCryptoSettingsService**: Cryptocurrency selection and allocation preferences
 
 ### Tier 7: Specialized Services (Domain Expertise)
 Implements specialized financial analysis:
@@ -92,17 +89,6 @@ Implements specialized financial analysis:
 - **CorrelationService**: Cross-asset correlation analysis and pair trading
 - **CalendarService**: Market calendar integration (trading days, holidays, events)
 - **SectorFilterService**: Industry-based filtering and classification
-
-### Tier 8: Crypto Services (Cryptocurrency)
-Handles cryptocurrency-specific functionality:
-- **PriceService**: Real-time cryptocurrency price feeds from exchanges
-- **PortfolioService**: Cryptocurrency portfolio management and tracking
-- **CryptoIngestionService**: Exchange data ingestion and normalization
-- **CryptoMLService**: Cryptocurrency-specific ML analysis and prediction
-- **CustomCryptoSelectionService**: User-defined selection from top 300 cryptocurrencies
-- **CryptoMarketCapService**: Market cap-based filtering and categorization
-- **CryptoAnalysisService**: On-chain metrics and blockchain analysis
-- **ArbitrageService**: Cross-exchange price monitoring and arbitrage opportunities
 
 ### Tier 9: System Services (Operations & Infrastructure)
 Manages system operations and infrastructure:
@@ -133,7 +119,7 @@ Manages system operations and infrastructure:
 ## Data Flow
 
 ### Market Data Pipeline
-1. **Ingestion**: External APIs (BRS, crypto exchanges) → Data Services
+1. **Ingestion**: External APIs (BRS, international data providers) → Data Services
 2. **Validation**: DataValidationService checks data quality and integrity
 3. **Normalization**: MarketDataProcessing converts to unified format
 4. **Storage**: DatabaseService persists to PostgreSQL with proper indexing
@@ -291,10 +277,6 @@ BedaanWaves/
 │           │   ├── __init__.py
 │           │   ├── sector_analysis_service.py # SectorAnalysisService
 │           │   ├── ...                   # 4 more specialized services
-│           ├── crypto/           # Tier 8: Crypto services
-│           │   ├── __init__.py
-│           │   ├── price_service.py      # PriceService
-│           │   ├── ...                   # 7 more crypto services
 │           └── system/           # Tier 9: System services
 │               ├── __init__.py
 │               ├── scheduler_service.py  # SchedulerService
@@ -325,7 +307,6 @@ BedaanWaves/
 
 ### External Systems
 - **BRS API**: Tehran Stock Exchange real-time and historical data
-- **Crypto Exchanges**: Binance, Kraken, Coinbase, etc. for cryptocurrency data
 - **Financial APIs**: Yahoo Finance, Alpha Vantage for international data
 - **News APIs**: Multiple sources for market news and sentiment
 - **Email/SMS Providers**: Notification delivery systems

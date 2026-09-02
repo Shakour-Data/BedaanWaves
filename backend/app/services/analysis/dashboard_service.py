@@ -404,7 +404,7 @@ class DashboardService:
         # Get all active NASDAQ assets
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector, Asset.industry)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -422,7 +422,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -674,7 +674,7 @@ class DashboardService:
         # Get all active assets
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -691,7 +691,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -906,7 +906,7 @@ class DashboardService:
         """Get board/governance dashboard for all symbols."""
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -923,7 +923,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -1025,7 +1025,7 @@ class DashboardService:
         """Get AI/ML dashboard for all symbols."""
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -1042,7 +1042,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active == True, Asset.market == "NASDAQ"))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -1159,7 +1159,7 @@ class DashboardService:
         # Get all active assets with latest scores
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector, Asset.industry, Asset.market)
-            .where(Asset.active == True)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -1177,7 +1177,7 @@ class DashboardService:
         # Get latest ScoreHistory per asset using subquery to avoid parameter limits
         active_assets_subq = (
             select(Asset.id)
-            .where(Asset.active == True)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
         latest_sh_subq = (

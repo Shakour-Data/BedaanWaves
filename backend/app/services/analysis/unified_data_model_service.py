@@ -71,12 +71,12 @@ class UnifiedDataModelService(AnalysisService):
             "transaction_volume": SemanticTag(
                 metric_type=MetricType.FLOW,
                 base_unit="USD",
-                asset_class="crypto",
+                asset_class="stock",
             ),
             "circulating_supply": SemanticTag(
                 metric_type=MetricType.STOCK,
                 base_unit="units",
-                asset_class="crypto",
+                asset_class="stock",
             ),
             "shares_outstanding": SemanticTag(
                 metric_type=MetricType.STOCK,
@@ -93,15 +93,10 @@ class UnifiedDataModelService(AnalysisService):
                 base_unit="dimensionless",
                 asset_class="stock",
             ),
-            "nvt_ratio": SemanticTag(
-                metric_type=MetricType.RATIO,
-                base_unit="dimensionless",
-                asset_class="crypto",
-            ),
             "velocity": SemanticTag(
                 metric_type=MetricType.FLOW,
                 base_unit="transactions_per_unit",
-                asset_class="crypto",
+                asset_class="stock",
             ),
             "dividend_yield": SemanticTag(
                 metric_type=MetricType.RATIO,
@@ -114,8 +109,7 @@ class UnifiedDataModelService(AnalysisService):
         """Define metric algebra rules for cross-asset calculations."""
         self.metric_algebra = {
             "pe_equivalent": "market_cap / (revenue * price_per_transaction)",
-            "book_value_equivalent": "market_cap / hodl_index",
-            "price_to_book_crypto": "market_cap / circulating_supply / price",
+            "book_value_equivalent": "market_cap / book_value",
             "flow_to_stock_ratio": "transaction_volume / market_cap",
             "velocity_equivalent": "revenue / market_cap",
         }
@@ -129,14 +123,14 @@ class UnifiedDataModelService(AnalysisService):
         }
 
     async def _check_temporal_alignment(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Check if crypto and stock metrics are temporally aligned."""
-        crypto_quarter = data.get("crypto_quarter", "Q1")
+        """Check if quarterly stock metrics are temporally aligned."""
         stock_quarter = data.get("stock_quarter", "Q1")
-        aligned = crypto_quarter == stock_quarter
+        previous_quarter = data.get("previous_quarter", stock_quarter)
+        aligned = stock_quarter == previous_quarter
 
         return {
-            "crypto_quarter": crypto_quarter,
             "stock_quarter": stock_quarter,
+            "previous_quarter": previous_quarter,
             "aligned": aligned,
             "gap_days": 0 if aligned else 90,
         }

@@ -1,6 +1,6 @@
 # UML Level 3 — Service Decomposition (Domain Services)
 
-این سطح سرویس‌ها را به حوزه‌های Domain تقسیم می‌کند.
+This level splits the services into Domain areas.
 
 ## Diagram (PlantUML)
 ```plantuml
@@ -63,7 +63,6 @@ package "System" {
 @enduml
 ```
 
-## نکته‌ها
-- برخی routeها مثل `/market/live/*` مستقیماً به **BRS API** proxy می‌شوند.
-- برخی routeها مثل `/analysis/technical/{symbol}` روی داده‌های stored در **PostgreSQL** اجرا می‌شوند.
-
+## Notes
+- Some routes (e.g. `/market/live/*`) are proxied directly to the **BRS API**.
+- Some routes (e.g. `/analysis/technical/{symbol}`) run on data stored in **PostgreSQL**.

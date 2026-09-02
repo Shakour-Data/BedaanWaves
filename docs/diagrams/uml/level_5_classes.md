@@ -1,8 +1,8 @@
 # UML Level 5 — Core Domain Classes / Schemas
 
-این سطح کلاس‌ها/اسکیماهای کلیدی را دسته‌بندی می‌کند.
+This level categorizes the key classes/schemas.
 
-> توجه: برای دقت ۱۰۰٪ باید فایل‌های `app/models/models.py` و `app/schemas/schemas.py` خوانده شوند. در این مرحله بر اساس routeها و architecture موجود، موجودیت‌های اصلی infer شده‌اند.
+> Note: For 100% accuracy, the files `app/models/models.py` and `app/schemas/schemas.py` should be read. At this stage the main entities are inferred from the routes and existing architecture.
 
 ## Diagram (PlantUML)
 ```plantuml
@@ -100,7 +100,7 @@ Asset "1" -- "many" Notification : optional link
 ```
 
 ## Mapping to Routes
-- `/market/*` روی `Asset` و `PriceCandle`
-- `/analysis/*` به خصوص `PriceCandle` + `MLSignal`
-- `/portfolios/*` روی `Portfolio` و `Position`
-- `/notifications*` روی `Notification` (+ user_id via `get_route_user_id`)
+- `/market/*` operates on `Asset` and `PriceCandle`
+- `/analysis/*` primarily on `PriceCandle` + `MLSignal`
+- `/portfolios/*` operates on `Portfolio` and `Position`
+- `/notifications*` operates on `Notification` (+ user_id via `get_route_user_id`)

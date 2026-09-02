@@ -1,8 +1,8 @@
 # UML Level 3 — Service Decomposition (Domain Services)
 
-این سطح سرویس‌ها را به حوزه‌های Domain تقسیم می‌کند.
+This level splits the services into Domain areas.
 
-## حوزه‌ها
+## Domains
 - **Auth / User**
 - **Market / Data Access**
 - **Analysis**
@@ -76,6 +76,6 @@ package "System" {
 @enduml
 ```
 
-## نکته
-- برخی routeها (مثل `live/*`) مستقیم proxy به BRS API هستند و DB لازم ندارند.
-- برخی routeها (مثل `/analysis/technical/{symbol}`) از داده‌های stored در DB استفاده می‌کنند.
+## Notes
+- Some routes (e.g. `live/*`) are direct proxies to the BRS API and do not need the DB.
+- Some routes (e.g. `/analysis/technical/{symbol}`) use data stored in the DB.

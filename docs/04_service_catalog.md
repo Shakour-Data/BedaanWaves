@@ -31,7 +31,6 @@ Services are organized by:
 - **Tier 5**: 5 NLP Services (6/6 completed)
 - **Tier 6**: 6 User Services (8/8 completed)
 - **Tier 7**: 5 Specialized Services (5/7 completed)
-- **Tier 8**: 5 Crypto Services (3/5 completed)
 - **Tier 9**: 5 System Services (3/6 completed)
 
 ## Tier-by-Tier Service Inventory
@@ -63,7 +62,6 @@ Services are organized by:
 | **IngestionService** | `app.services.data.ingestion_service` |  No | LoggerService | Data ingestion pipeline orchestration |
 | **MarketDataProcessing** | `app.services.data.market_data_processing` |  No | LoggerService | Market data cleaning and validation |
 | **IntlApiClient** | `app.services.data.intl_api_client` |  Yes | LoggerService | International market APIs integration |
-| **CryptoApiClient** | `app.services.data.crypto_api_client` |  Yes | LoggerService | Cryptocurrency exchange APIs integration |
 | **DataValidationService** | `app.services.data.data_validation_service` |  No | LoggerService | Data integrity validation |
 | **FinancialDataIngestService** | `app.services.data.financial_data_ingest_service` |  No | LoggerService | Financial statements ingestion (CODAL, Yahoo, AlphaVantage) |
 | **StockFundamentalDataIngestionService** | `app.services.data.stock_fundamental_ingestion_service` |  No | LoggerService | Fundamental data pipeline (Iran/US/International) |
@@ -97,7 +95,6 @@ Services are organized by:
 | **PortfolioOptimizationService** | `app.services.ml.portfolio_optimization_service` |  Yes | LoggerService | Efficient frontier and risk-parity optimization |
 | **TimeSeriesForecastingService** | `app.services.ml.time_series_forecasting_service` |  No | LoggerService | ARIMA, LSTM, Prophet forecasting |
 | **CoefficientLearningService** | `app.services.ml.coefficient_learning_service` |  Yes | LoggerService | Dynamic coefficient adjustment |
-| **CryptoMLService** | `app.services.ml.crypto_ml_service` |  No | LoggerService | Cryptocurrency-specific ML models |
 | **UserFilteredRecommendationService** | `app.services.ml.user_filtered_recommendation_service` |  No | LoggerService | Personalized recommendations |
 
 **Implementation Status**: 9/9 (100%) Complete
@@ -128,7 +125,6 @@ Services are organized by:
 | **PreferenceService** | `app.services.user.preference_service` |  Yes | LoggerService | User customization and settings |
 | **NotificationService** | `app.services.user.notification_service` |  No | LoggerService | Multi-channel notifications |
 | **UserMarketSettingsService** | `app.services.user.user_market_settings_service` |  Yes | LoggerService | Market/index/industry selection preferences |
-| **UserCryptoSettingsService** | `app.services.user.user_crypto_settings_service` |  Yes | LoggerService | Cryptocurrency selection preferences |
 
 **Implementation Status**: 8/8 (100%) Complete
 **Characteristics**: Mixed lifecycle, production-ready
@@ -146,22 +142,6 @@ Services are organized by:
 
 **Implementation Status**: 5/7 (71%) Complete
 **Characteristics**: Mixed singleton/lifecycle, production-ready
-
-### Tier 8: Crypto Services (Cryptocurrency)
-
-| Service Name | Class Location | Singleton | Dependencies | Purpose |
-|-------------|----------------|-----------|--------------|---------|
-| **PriceService** | `app.services.crypto.price_service` |  Yes | LoggerService | Real-time crypto price feeds from exchanges |
-| **PortfolioService** | `app.services.crypto.portfolio_service` |  No | LoggerService | Cryptocurrency portfolio management |
-| **CryptoIngestionService** | `app.services.crypto.crypto_ingestion_service` |  No | LoggerService | Exchange data ingestion and normalization |
-| **CryptoMLService** | `app.services.crypto.crypto_ml_service` |  Yes | LoggerService | Cryptocurrency-specific ML analysis |
-| **CustomCryptoSelectionService** | `app.services.crypto.custom_crypto_selection_service` |  No | LoggerService | User-defined selection from top 300 crypto |
-| **CryptoMarketCapService** | `app.services.crypto.crypto_market_cap_service` |  No | LoggerService | Market cap-based filtering and categorization |
-| **CryptoAnalysisService** | `app.services.crypto.crypto_analysis_service` |  No | LoggerService | On-chain metrics analysis |
-| **ArbitrageService** | `app.services.crypto.arbitrage_service` |  No | LoggerService | Cross-exchange price monitoring |
-
-**Implementation Status**: 3/5 (60%) Complete
-**Characteristics**: All services in progress, some completed
 
 ### Tier 9: System Services (Operations & Infrastructure)
 
@@ -193,7 +173,6 @@ System Services → LoggerService, potentially other SystemServices
 
 ### External Service Dependencies
 - **BRS API**: BrsApiClient
-- **Crypto Exchanges**: CryptoApiClient
 - **International Markets**: IntlApiClient
 - **News Sources**: NewsService with external API clients
 - **ML Models**: Remote model endpoints, local model storage
@@ -219,8 +198,7 @@ System Services → LoggerService, potentially other SystemServices
 3. **Analysis Services**: Data availability, algorithm functionality
 4. **ML Services**: Model availability, training status
 5. **User Services**: Authentication, database access
-6. **Crypto Services**: Exchange connectivity, market data
-7. **System Services**: Background tasks, queue health, monitoring
+6. **System Services**: Background tasks, queue health, monitoring
 
 ## Performance & Scalability Considerations
 
@@ -333,8 +311,7 @@ External APIs → Data Services (Ingestion) → Database Services (Storage)
 ## Future Enhancements
 
 ### Planned Service Additions
-1. **Pending Crypto Services**: CryptoNewsService, ArbitrageService
-2. **Pending System Services**: BackupService, LoggingService, NotificationDispatcher
+1. **Pending System Services**: BackupService, LoggingService, NotificationDispatcher
 3. **Enhanced Monitoring**: Advanced metrics collection and alerting
 4. **Service Mesh**: Enhanced service-to-service communication
 5. **AI Integration**: LLM integration for analysis services

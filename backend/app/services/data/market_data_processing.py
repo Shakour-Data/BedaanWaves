@@ -406,7 +406,7 @@ class MarketDataProcessingService(DataService):
                 "volume_ma_7": float(row["volume_ma_7"]) if pd.notna(row["volume_ma_7"]) else None,
                 "volume_ratio": float(row["volume_ratio"]) if pd.notna(row["volume_ratio"]) else None,
                 "features": ml_features,
-                "source": "BINANCE",
+                "source": "NASDAQ",
                 "is_fresh": True,
                 "freshness_score": 100.0,
             }

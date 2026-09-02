@@ -321,7 +321,7 @@ class DataValidationService(CachedService):
             }
             
             # Check 1: Source identifier validation
-            valid_sources = ["BRS", "BINANCE", "COINBASE", "NASDAQ", "NYSE", "LSE", "HKEX"]
+            valid_sources = ["NASDAQ", "NYSE", "LSE", "HKEX"]
             source_check = {
                 "check": "source_identifier",
                 "passed": source_name.upper() in valid_sources,

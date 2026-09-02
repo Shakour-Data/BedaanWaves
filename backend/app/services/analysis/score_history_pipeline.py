@@ -106,7 +106,11 @@ class ScoreHistoryPipeline:
         async with async_session_maker() as session:
             asset_query = (
                 select(Asset.id, Asset.symbol, Asset.market, Asset.asset_class)
-                .where(and_(Asset.active == True, Asset.market == market))
+                .where(and_(
+                    Asset.active == True,
+                    Asset.market == market,
+                    Asset.asset_class.in_(["EQUITY", "ETF"]),
+                ))
                 .order_by(Asset.symbol.asc())
             )
             assets_result = await session.execute(asset_query)
@@ -433,7 +437,11 @@ class ScoreHistoryPipeline:
         async with async_session_maker() as session:
             asset_q = (
                 select(Asset.id, Asset.symbol, Asset.asset_class)
-                .where(and_(Asset.active == True, Asset.market == market))
+                .where(and_(
+                    Asset.active == True,
+                    Asset.market == market,
+                    Asset.asset_class.in_(["EQUITY", "ETF"]),
+                ))
             )
             assets = (await session.execute(asset_q)).all()
             equities = [a for a in assets if a.asset_class == "EQUITY"]

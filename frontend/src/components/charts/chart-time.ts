@@ -52,3 +52,22 @@ export function createOrdinalTickMarkFormatter(
     return "";
   };
 }
+
+export function createDateTickMarkFormatter(): TickMarkFormatter {
+  return (time, tickMarkType) => {
+    if (typeof time === "number") {
+      const date = new Date(time * 1000);
+      switch (tickMarkType) {
+        case 0:
+          return String(date.getFullYear());
+        case 1:
+          return date.toLocaleString("en-US", { month: "short" });
+        case 2:
+          return String(date.getDate());
+        default:
+          return date.toLocaleString("en-US", { month: "short", day: "numeric" });
+      }
+    }
+    return null;
+  };
+}

@@ -1,6 +1,6 @@
 # DFD Level 2 — Authentication & Access Control
 
-تفکیک جریان‌های داده مرتبط با JWT و propagation اطلاعات کاربر.
+Separation of data flows related to JWT and propagation of user information.
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -19,17 +19,16 @@ flowchart LR
 ```
 
 ## Data Flows
-- **JWT Access Token**: از FE به Middleware ارسال می‌شود.
+- **JWT Access Token**: Sent from FE to Middleware.
 - **AuthGuardMiddleware**:
   - JWT decode
-  - بررسی `type == access`
-  - ست کردن `request.state.user_id` و `request.state.username`
+  - Check `type == access`
+  - Set `request.state.user_id` and `request.state.username`
 - **get_route_user_id**:
-  - اگر `request.state.user_id` موجود باشد، همان را مصرف می‌کند
-  - در غیر این صورت (dev) از `settings.DEV_USER_ID` استفاده می‌کند
+  - If `request.state.user_id` is present, use it
+  - Otherwise (dev) fall back to `settings.DEV_USER_ID`
 
-## داده‌های کلیدی
+## Key Data
 - `Token(access_token, refresh_token)`
 - JWT payload: `{sub, user_id, type}`
-- User entity در جدول `users`
-
+- User entity in the `users` table

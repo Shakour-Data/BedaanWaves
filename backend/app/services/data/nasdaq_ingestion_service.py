@@ -593,8 +593,10 @@ class NasdaqIngestionService(DataService):
         symbols_to_process = [s for s in symbols if s not in symbols_with_data]
         self.logger.info(f"Symbols with existing data: {len(symbols_with_data)}, to process: {len(symbols_to_process)}")
 
-        # Ensure index asset exists
-        await self._ensure_asset("^IXIC", "Nasdaq Composite", "INDEX")
+        # Ensure index asset exists. Stored as EQUITY so the global
+        # ``asset_class IN ('EQUITY','ETF')`` filter surfaces it
+        # consistently with every other Nasdaq-listed instrument.
+        await self._ensure_asset("^IXIC", "Nasdaq Composite", "EQUITY")
 
         # Ingest macro first
         await self.ingest_macro_indicators()
