@@ -8,7 +8,6 @@ Services for data management and external API integration:
 - PortfolioService: Portfolio management
 - HistoryService: Historical data management
 - NewsService: News data integration
-- CryptoApiClient: Cryptocurrency market data
 - IntlApiClient: International stock exchange data
 - FinancialDataIngestService: Financial statements from multiple sources
 - StockFundamentalDataIngestionService: Stock fundamental data ingestion
@@ -28,14 +27,6 @@ from .market_service import MarketService
 from .portfolio_service import PortfolioService
 from .history_service import HistoryService
 from .news_service import NewsService
-# crypto_api_client is a planned service that has not been created yet.
-# Importing it eagerly breaks the entire app on startup, so we keep a
-# placeholder symbol here until the file lands. This makes the missing
-# module a soft import instead of a hard ModuleNotFoundError.
-try:
-    from .crypto_api_client import CryptoApiClient  # noqa: F401
-except ModuleNotFoundError:
-    CryptoApiClient = None
 from .intl_api_client import IntlApiClient
 from .financial_data_ingest_service import (
     FinancialDataIngestService,
@@ -60,7 +51,6 @@ __all__ = [
     "PortfolioService",
     "HistoryService",
     "NewsService",
-    "CryptoApiClient",
     "IntlApiClient",
     "FinancialDataIngestService",
     "StockFundamentalDataIngestionService",

@@ -131,89 +131,89 @@ export default function ScoringPage() {
   const dimensionDetails = [
     {
       id: "fundamental",
-      title: `${t("app.scoring.dimensions.fundamental", currentLang)} (25٪)`,
+      title: `${t("app.scoring.dimensions.fundamental", currentLang)} (25%)`,
       weight: 25,
       color: "bg-primary/10 border-primary/30",
       icon: "🏦",
       aspects: [
-        { name: "P/E Ratio", desc: currentLang === "fa" ? "نسبت قیمت به سود" : "Price-to-Earnings Ratio" },
-        { name: "ROE", desc: currentLang === "fa" ? "بازده حقوق صاحبان سهام" : "Return on Equity" },
-        { name: "Book Value", desc: currentLang === "fa" ? "ارزش دفتری در هر سهم" : "Book Value per Share" },
-        { name: "Revenue Growth", desc: currentLang === "fa" ? "رشد درآمدی سالانه" : "Annual Revenue Growth" },
-        { name: "Debt-to-Equity", desc: currentLang === "fa" ? "نسبت بدهی به حقوق صاحبان سهام" : "Debt-to-Equity Ratio" }
+        { name: "P/E Ratio", desc: Price-to-Earnings Ratio },
+        { name: "ROE", desc: Return on Equity },
+        { name: "Book Value", desc: Book Value per Share },
+        { name: "Revenue Growth", desc: Annual Revenue Growth },
+        { name: "Debt-to-Equity", desc: Debt-to-Equity Ratio }
       ],
     },
     {
       id: "technical",
-      title: `${t("app.scoring.dimensions.technical", currentLang)} (20٪)`,
+      title: `${t("app.scoring.dimensions.technical", currentLang)} (20%)`,
       weight: 20,
       color: "bg-success/10 border-success/30",
       icon: "📈",
       aspects: [
-        { name: "RSI", desc: currentLang === "fa" ? "شاخص قدرت نسبی" : "Relative Strength Index" },
-        { name: "MACD", desc: currentLang === "fa" ? "واگرایی و همگرایی میانگین متحرک" : "Moving Average Convergence Divergence" },
-        { name: "Moving Averages", desc: currentLang === "fa" ? "میانگین‌های متحرک 50 و 200 روزه" : "50 and 200-day Moving Averages" },
-        { name: "Bollinger Bands", desc: currentLang === "fa" ? "باندهای بولینگر" : "Bollinger Bands" },
-        { name: "Volume Profile", desc: currentLang === "fa" ? "پروفیل حجم معاملات" : "Volume Profile" }
+        { name: "RSI", desc: Relative Strength Index },
+        { name: "MACD", desc: Moving Average Convergence Divergence },
+        { name: "Moving Averages", desc: 50 and 200-day Moving Averages },
+        { name: "Bollinger Bands", desc: Bollinger Bands },
+        { name: "Volume Profile", desc: Volume Profile }
       ],
     },
     {
       id: "sentiment",
-      title: `${t("app.scoring.dimensions.sentiment", currentLang)} (15٪)`,
+      title: `${t("app.scoring.dimensions.sentiment", currentLang)} (15%)`,
       weight: 15,
       color: "bg-primary/10 border-primary/30",
       icon: "🎭",
       aspects: [
-        { name: "News Sentiment", desc: currentLang === "fa" ? "احساسات خبری" : "News Sentiment" },
-        { name: "Social Media", desc: currentLang === "fa" ? "احساسات شبکه‌های اجتماعی" : "Social Media Sentiment" },
-        { name: "Analyst Ratings", desc: currentLang === "fa" ? "امتیاز تحلیلگران" : "Analyst Ratings" }
+        { name: "News Sentiment", desc: News Sentiment },
+        { name: "Social Media", desc: Social Media Sentiment },
+        { name: "Analyst Ratings", desc: Analyst Ratings }
       ],
     },
     {
       id: "risk",
-      title: `${t("app.scoring.dimensions.risk", currentLang)} (20٪)`,
+      title: `${t("app.scoring.dimensions.risk", currentLang)} (20%)`,
       weight: 20,
       color: "bg-error/10 border-error/30",
       icon: "🛡️",
       aspects: [
-        { name: "Volatility", desc: currentLang === "fa" ? "نوسان قیمت" : "Price Volatility" },
-        { name: "VaR", desc: currentLang === "fa" ? "ارزش در معرض ریسک" : "Value at Risk" },
-        { name: "Sharpe Ratio", desc: currentLang === "fa" ? "ضریب شارپ" : "Sharpe Ratio" },
-        { name: "Max Drawdown", desc: currentLang === "fa" ? "بیشترین افت قیمت" : "Maximum Drawdown" }
+        { name: "Volatility", desc: Price Volatility },
+        { name: "VaR", desc: Value at Risk },
+        { name: "Sharpe Ratio", desc: Sharpe Ratio },
+        { name: "Max Drawdown", desc: Maximum Drawdown }
       ],
     },
     {
       id: "macro",
-      title: `${t("app.scoring.dimensions.macro", currentLang)} (10٪)`,
+      title: `${t("app.scoring.dimensions.macro", currentLang)} (10%)`,
       weight: 10,
       color: "bg-secondary/10 border-secondary/30",
       icon: "🌍",
       aspects: [
-        { name: "GDP Growth", desc: currentLang === "fa" ? "رشد تولید ناخالص داخلی" : "GDP Growth" },
-        { name: "Inflation", desc: currentLang === "fa" ? "نرخ تورم" : "Inflation Rate" },
-        { name: "Interest Rates", desc: currentLang === "fa" ? "نرخ بهره" : "Interest Rates" }
+        { name: "GDP Growth", desc: GDP Growth },
+        { name: "Inflation", desc: Inflation Rate },
+        { name: "Interest Rates", desc: Interest Rates }
       ],
     },
     {
       id: "ai",
-      title: `${t("app.scoring.dimensions.ai", currentLang)} (10٪)`,
+      title: `${t("app.scoring.dimensions.ai", currentLang)} (10%)`,
       weight: 10,
       color: "bg-primary/10 border-primary/30",
       icon: "🤖",
       aspects: [
-        { name: "LSTM Forecast", desc: currentLang === "fa" ? "پیش‌بینی قیمت با LSTM" : "Price Forecasting with LSTM" },
-        { name: "Pattern Detection", desc: currentLang === "fa" ? "تشکیل الگوهای نموداری" : "Chart Pattern Detection" },
-        { name: "Anomaly Detection", desc: currentLang === "fa" ? "تشخیص ناهنجاری‌ها" : "Anomaly Detection" }
+        { name: "LSTM Forecast", desc: Price Forecasting with LSTM },
+        { name: "Pattern Detection", desc: Chart Pattern Detection },
+        { name: "Anomaly Detection", desc: Anomaly Detection }
       ],
     },
   ];
 
   const grades = [
-    { label: currentLang === "fa" ? "A (خرید قوی)" : "A (Strong Buy)", min: 85, color: "text-success", bg: "bg-success/10" },
-    { label: currentLang === "fa" ? "B (خرید)" : "B (Buy)", min: 70, color: "text-success", bg: "bg-success/10" },
-    { label: currentLang === "fa" ? "C (نگهداری)" : "C (Hold)", min: 55, color: "text-warning", bg: "bg-warning/10" },
-    { label: currentLang === "fa" ? "D (فروش)" : "D (Sell)", min: 40, color: "text-error", bg: "bg-error/10" },
-    { label: currentLang === "fa" ? "E (فروش قوی)" : "E (Strong Sell)", min: 0, color: "text-error", bg: "bg-error/10" },
+    { label: A (Strong Buy), min: 85, color: "text-success", bg: "bg-success/10" },
+    { label: B (Buy), min: 70, color: "text-success", bg: "bg-success/10" },
+    { label: C (Hold), min: 55, color: "text-warning", bg: "bg-warning/10" },
+    { label: D (Sell), min: 40, color: "text-error", bg: "bg-error/10" },
+    { label: E (Strong Sell), min: 0, color: "text-error", bg: "bg-error/10" },
   ];
 
   useEffect(() => {

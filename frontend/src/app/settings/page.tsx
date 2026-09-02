@@ -85,10 +85,10 @@ export default function SettingsPage() {
   };
 
   const notificationTypes = [
-    { id: "email", label: false ? "ایمیل" : "Email", icon: "📧" },
-    { id: "push", label: false ? "پوش نوتیفیکیشن" : "Push Notifications", icon: "Alerts" },
-    { id: "sms", label: false ? "پیامک" : "SMS", icon: "📱" },
-    { id: "telegram", label: false ? "تلگرام" : "Telegram", icon: "✈️" }
+    { id: "email", label: "Email", icon: "📧" },
+    { id: "push", label: "Push Notifications", icon: "Alerts" },
+    { id: "sms", label: "SMS", icon: "📱" },
+    { id: "telegram", label: "Telegram", icon: "✈️" }
   ];
 
   if (loading && !marketData) {

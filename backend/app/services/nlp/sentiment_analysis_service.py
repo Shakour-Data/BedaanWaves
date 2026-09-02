@@ -146,7 +146,7 @@ class SentimentAnalysisService(AnalysisService):
         Aggregate sentiment for a symbol from multiple news items.
         
         Args:
-            symbol: Stock/crypto symbol
+            symbol: Stock symbol
             news_items: List of news with 'title' and 'summary' keys
             
         Returns:

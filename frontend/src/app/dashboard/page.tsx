@@ -14,6 +14,7 @@ import { useUXStore } from "@/store/useUXStore";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
+import { CoefficientChart } from "@/components/charts/CoefficientChart";
 import { DimensionDashboard } from "@/components/dashboard/DimensionDashboard";
 import { NewsDashboard } from "@/components/dashboard/NewsDashboard";
 import { BoardDashboard } from "@/components/dashboard/BoardDashboard";
@@ -31,6 +32,104 @@ const tabs: { id: Tab; label: string; shortcut: string }[] = [
   { id: "ai", label: "AI", shortcut: "A" },
 ];
 
+const DIMENSION_LABELS: Record<string, string> = {
+  fundamental: "Fundamental",
+  technical: "Technical",
+  sentiment: "Sentiment",
+  risk: "Risk",
+  macro: "Macro",
+  ai: "AI",
+};
+
+const DIMENSION_COLORS = [
+  "#2563EB",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#EC4899",
+];
+
+const COEFFICIENT_COLOR_BY_KEY: Record<string, string> = {
+  fundamental: "#2563EB",
+  technical: "#10B981",
+  sentiment: "#F59E0B",
+  risk: "#EF4444",
+  macro: "#8B5CF6",
+  ai: "#EC4899",
+};
+
+function CoefficientFilterableChart({
+  coefficients,
+  filter,
+  onFilterChange,
+}: {
+  coefficients: Array<{ key: string; label: string; weight: number }>;
+  filter: Set<string>;
+  onFilterChange: (next: Set<string>) => void;
+}) {
+  const toggle = (key: string) => {
+    const next = new Set(filter);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onFilterChange(next);
+  };
+  const visible = coefficients.filter((c) => !filter.has(c.key));
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {coefficients.map((c) => {
+          const hidden = filter.has(c.key);
+          return (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => toggle(c.key)}
+              aria-pressed={!hidden}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity",
+                hidden
+                  ? "border-[var(--color-border)] bg-[var(--color-background)] opacity-50"
+                  : "border-transparent bg-[var(--color-background)]"
+              )}
+            >
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: COEFFICIENT_COLOR_BY_KEY[c.key] ?? "#2563EB" }}
+              />
+              <span>{c.label}</span>
+              <span className="text-[var(--color-text-secondary)]">{(c.weight * 100).toFixed(0)}%</span>
+            </button>
+          );
+        })}
+        {filter.size > 0 && (
+          <button
+            type="button"
+            onClick={() => onFilterChange(new Set())}
+            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]"
+          >
+            Show all
+          </button>
+        )}
+      </div>
+      {visible.length === 0 ? (
+        <p className="py-6 text-center text-xs text-[var(--color-text-secondary)]">
+          All dimensions hidden — clear the filter to see the chart.
+        </p>
+      ) : (
+        <CoefficientChart
+          data={visible.map((c) => ({
+            key: c.key,
+            label: c.label,
+            weight: c.weight,
+          }))}
+          height={Math.max(200, visible.length * 40 + 60)}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,6 +143,7 @@ export default function DashboardPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [scoreTrend, setScoreTrend] = useState<ScoreTrendResponse | null>(null);
   const [scoreTrendLoading, setScoreTrendLoading] = useState(true);
+  const [coefficientFilter, setCoefficientFilter] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
@@ -281,65 +381,67 @@ export default function DashboardPage() {
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
                 </div>
               ) : scoreTrend && scoreTrend.series.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
                     <div className="mb-2">
-                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Score</h3>
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">Average overall score (0-100)</p>
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Overall Market Score Trend</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">Average overall score (0–100)</p>
                     </div>
                     <ScoreTrendChart
+                      showLegend
                       series={[{
                         key: "avg_score",
-                        label: "Score",
+                        label: "Overall Score",
                         color: "#2563EB",
                         data: scoreTrend.series.map((p) => ({ time: p.date, value: p.avg_score })),
                       }]}
                       height={220}
                     />
                   </div>
+
                   <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
                     <div className="mb-2">
-                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Score Changes</h3>
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">Day-over-day delta</p>
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Scores for All 6 Dimensions</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">
+                        Click a chip below to toggle a dimension on or off
+                      </p>
                     </div>
                     <ScoreTrendChart
-                      series={[{
-                        key: "score_change",
-                        label: "Score change",
-                        color: "#10B981",
-                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.score_change })),
-                      }]}
-                      height={220}
+                      showLegend
+                      series={(scoreTrend.dimensions ?? Object.keys(scoreTrend.series[0]?.avg_dimensions ?? {}))
+                        .map((dim, i) => ({
+                          key: dim,
+                          label: DIMENSION_LABELS[dim] ?? dim,
+                          color: DIMENSION_COLORS[i % DIMENSION_COLORS.length],
+                          data: scoreTrend.series.map((p) => ({
+                            time: p.date,
+                            value: p.avg_dimensions?.[dim] ?? 0,
+                          })),
+                        }))}
+                      height={240}
                     />
                   </div>
+
                   <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
                     <div className="mb-2">
-                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Technical Analysis Weight</h3>
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">Average technical dimension (0-100)</p>
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Score Changes for All 6 Dimensions</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">
+                        Day-over-day delta per dimension — toggle chips to filter
+                      </p>
                     </div>
                     <ScoreTrendChart
-                      series={[{
-                        key: "avg_technical",
-                        label: "Technical weight",
-                        color: "#F59E0B",
-                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.avg_technical })),
-                      }]}
-                      height={220}
-                    />
-                  </div>
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-                    <div className="mb-2">
-                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Technical Analysis Weight Changes</h3>
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">Day-over-day delta</p>
-                    </div>
-                    <ScoreTrendChart
-                      series={[{
-                        key: "technical_change",
-                        label: "Technical change",
-                        color: "#EF4444",
-                        data: scoreTrend.series.map((p) => ({ time: p.date, value: p.technical_change })),
-                      }]}
-                      height={220}
+                      showLegend
+                      series={(scoreTrend.dimensions ?? Object.keys(scoreTrend.series[0]?.dimension_changes ?? {}))
+                        .map((dim, i) => ({
+                          key: dim,
+                          label: `${DIMENSION_LABELS[dim] ?? dim} Δ`,
+                          color: DIMENSION_COLORS[i % DIMENSION_COLORS.length],
+                          data: scoreTrend.series.map((p) => ({
+                            time: p.date,
+                            value: p.dimension_changes?.[dim] ?? 0,
+                          })),
+                        }))}
+                      height={240}
                     />
                   </div>
                 </div>
@@ -347,6 +449,22 @@ export default function DashboardPage() {
                 <p className="text-center text-[var(--color-text-secondary)] py-8">No trend data available</p>
               )}
             </div>
+
+            {generalData?.coefficients && generalData.coefficients.length > 0 && (
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Dimension Coefficients</h2>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Static weights used to compute the overall score. Click any chip below to filter the bar chart.
+                  </p>
+                </div>
+                <CoefficientFilterableChart
+                  coefficients={generalData.coefficients}
+                  filter={coefficientFilter}
+                  onFilterChange={setCoefficientFilter}
+                />
+              </div>
+            )}
 
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">

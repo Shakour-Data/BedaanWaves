@@ -2,7 +2,7 @@
 Base API Client Interface - Unified Market Access Layer
 
 This module provides a unified interface for accessing different market data sources
-(Tehran Stock Exchange, Nasdaq, other international exchanges, crypto, forex)
+(Tehran Stock Exchange, Nasdaq, other international exchanges, forex)
 through a consistent API pattern.
 """
 
@@ -22,9 +22,8 @@ class MarketType:
     NASDAQ = "nasdaq"
     NYSE = "nyse"
     OTHER_COUNTRIES = "other_countries"
-    CRYPTO = "crypto"
     FOREX = "forex"
-    SUPPORTED = [TEHRAN, NASDAQ, NYSE, OTHER_COUNTRIES, CRYPTO, FOREX]
+    SUPPORTED = [TEHRAN, NASDAQ, NYSE, OTHER_COUNTRIES, FOREX]
 
 
 class ApiClient(ABC):

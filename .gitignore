@@ -121,6 +121,9 @@ check_board_data.py
 check_state.py
 test_fetch.py
 test_news_api.py
+scan_non_english.py
+scan_output.txt
+score_translate.py
 inspect_db.py
 inspect_schema.py
 inspect_values.py

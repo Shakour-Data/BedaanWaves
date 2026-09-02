@@ -364,11 +364,11 @@ class RankingService:
 
         for dim, score in dimension_scores.items():
             hierarchy_scores["level1_dimensions"].append(
-                {"name": dim, "score": score}
+                {"name": dim, "score": float(score)}
             )
 
         sub_dim_map = {
-            "fundamental": ["price_history", "ohlcv", "corporate_actions"],
+            "fundamental": ["valuation", "profitability", "growth", "liquidity", "efficiency", "corporate_actions"],
             "technical": ["moving_averages", "momentum", "volatility", "volume", "trend"],
             "sentiment": ["news_sentiment", "social_sentiment", "analyst_sentiment"],
             "risk": ["market_risk", "credit_risk", "operational_risk", "liquidity_risk"],
@@ -376,48 +376,27 @@ class RankingService:
             "ai": ["ml_prediction", "pattern_recognition", "anomaly_detection"],
         }
         for dim, sub_dims in sub_dim_map.items():
-            dim_score = dimension_scores.get(dim, 0)
+            dim_score = float(dimension_scores.get(dim, 50.0))
             for sub in sub_dims:
                 hierarchy_scores["level2_subdimensions"].append(
                     {
                         "parent": dim,
                         "name": sub,
-                        "score": round(dim_score / len(sub_dims), 2),
+                        "score": round(dim_score, 2),
                     }
                 )
 
         for dim, sub_dims in sub_dim_map.items():
-            dim_score = dimension_scores.get(dim, 0)
+            dim_score = float(dimension_scores.get(dim, 50.0))
             for sub in sub_dims:
                 for i in range(1, 3):
-                    aspect_score = round(dim_score / (len(sub_dims) * 2), 2)
                     hierarchy_scores["level3_aspects"].append(
                         {
                             "parent": sub,
                             "name": f"{sub}_aspect_{i}",
-                            "score": aspect_score,
+                            "score": round(dim_score, 2),
                         }
                     )
-
-        total_sub_aspects = 173
-        level3_count = len(hierarchy_scores["level3_aspects"])
-        base_count = total_sub_aspects // level3_count if level3_count else 0
-        remainder = total_sub_aspects % level3_count if level3_count else 0
-
-        sub_aspect_idx = 0
-        for idx, aspect in enumerate(hierarchy_scores["level3_aspects"]):
-            count = base_count + (1 if idx < remainder else 0)
-            for i in range(count):
-                if sub_aspect_idx >= total_sub_aspects:
-                    break
-                sub_aspect_idx += 1
-                hierarchy_scores["level4_subaspects"].append(
-                    {
-                        "parent": aspect["name"],
-                        "name": f"{aspect['name']}_detail_{i+1}",
-                        "score": aspect["score"],
-                    }
-                )
 
         return {
             "status": "success",

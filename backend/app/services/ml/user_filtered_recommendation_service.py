@@ -2,7 +2,7 @@
 User Filtered Recommendation Service - Tier 4 ML Service
 
 Provides personalized recommendations filtered by user preferences for
-countries, indices, industries, and cryptocurrencies.
+countries, indices, and industries.
 """
 
 from typing import Dict, List, Optional, Any
@@ -18,7 +18,7 @@ class UserFilteredRecommendationService(BaseService):
     User Filtered Recommendation Service.
     
     Generates personalized recommendations based on user-selected filters
-    (country, index, industry, crypto) and applies ML-based ranking.
+    (country, index, industry) and applies ML-based ranking.
     """
     
     def __init__(self,
@@ -41,7 +41,7 @@ class UserFilteredRecommendationService(BaseService):
         
         # Default recommendation parameters
         self.default_limit = 50
-        self.default_diversification = {"max_stocks_per_sector": 5, "max_crypto": 20}
+        self.default_diversification = {"max_stocks_per_sector": 5}
     
     async def initialize(self) -> None:
         """Initialize user filtered recommendation service."""
@@ -122,7 +122,6 @@ class UserFilteredRecommendationService(BaseService):
         countries = user_preferences.get("countries", [])
         indices = user_preferences.get("indices", [])
         industries = user_preferences.get("industries", [])
-        crypto = user_preferences.get("crypto", [])
         
         filtered = []
         
@@ -149,13 +148,6 @@ class UserFilteredRecommendationService(BaseService):
                 rec_industry = rec.get("industry", rec.get("sector", ""))
                 if rec_industry and rec_industry not in industries:
                     continue
-            
-            # Apply crypto filter
-            if crypto:
-                rec_symbol = rec.get("symbol", "").upper()
-                if rec.get("asset_class") == "cryptocurrency":
-                    if rec_symbol not in [c.upper() for c in crypto]:
-                        continue
             
             filtered.append(rec)
         
@@ -209,32 +201,24 @@ class UserFilteredRecommendationService(BaseService):
         sector_counts = {}
         index_counts = {}
         country_counts = {}
-        crypto_count = 0
         
         for rec in recommendations:
             asset_class = rec.get("asset_class", "")
             
             # Handle stocks
-            if asset_class != "cryptocurrency":
-                sector = rec.get("sector", rec.get("industry", "Other"))
-                index = rec.get("index", rec.get("market_index", "Other"))
-                country = rec.get("country", rec.get("country_code", "Other"))
-                
-                # Check diversification limits
-                sector_count = sector_counts.get(sector, 0)
-                max_sector = diversification_rules.get("max_stocks_per_sector", 5)
-                
-                if sector_count < max_sector:
-                    sector_counts[sector] = sector_count + 1
-                    index_counts[index] = index_counts.get(index, 0) + 1
-                    country_counts[country] = country_counts.get(country, 0) + 1
-                    diversified.append(rec)
-            else:
-                # Handle crypto
-                max_crypto = diversification_rules.get("max_crypto", 20)
-                if crypto_count < max_crypto:
-                    crypto_count += 1
-                    diversified.append(rec)
+            sector = rec.get("sector", rec.get("industry", "Other"))
+            index = rec.get("index", rec.get("market_index", "Other"))
+            country = rec.get("country", rec.get("country_code", "Other"))
+            
+            # Check diversification limits
+            sector_count = sector_counts.get(sector, 0)
+            max_sector = diversification_rules.get("max_stocks_per_sector", 5)
+            
+            if sector_count < max_sector:
+                sector_counts[sector] = sector_count + 1
+                index_counts[index] = index_counts.get(index, 0) + 1
+                country_counts[country] = country_counts.get(country, 0) + 1
+                diversified.append(rec)
         
         return diversified
     

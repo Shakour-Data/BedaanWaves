@@ -1,19 +1,18 @@
 # Diagrams Package (UML / BPMN / DFD)
 
-این فولدر شامل مستندات دیاگرام‌های سیستم **BedaanWaves** تا **۶ سطح (Level 1..6)** است.
+This folder contains diagram documentation for the **BedaanWaves** system across **6 levels (Level 1..6)**.
 
-## ساختار
+## Structure
 
-- `uml/` : دیاگرام‌های UML (ترجیح PlantUML)
-- `bpmn/` : دیاگرام‌های BPMN (ترجیح Mermaid)
-- `dfd/` : دیاگرام‌های DFD (ترجیح Mermaid)
+- `uml/` : UML diagrams (preferring PlantUML)
+- `bpmn/` : BPMN diagrams (preferring Mermaid)
+- `dfd/` : DFD diagrams (preferring Mermaid)
 
-## قواعد سطح‌بندی
+## Level Definitions
 
-- **Level 1**: نمای کلی (Context / Overview)
-- **Level 2**: جداسازی ماژول‌ها و جریان‌های دسترسی/اصلی
-- **Level 3**: تفکیک سرویس‌ها/ساب‌سیستم‌ها
-- **Level 4**: سناریوهای کلیدی (Sequence/Process)
-- **Level 5**: جزئیات داده/کلاس/اسکیماها
-- **Level 6**: End-to-End مسیرهای واقعی (از Request تا Response/Job)
-
+- **Level 1**: Overview (Context / Overview)
+- **Level 2**: Module separation and main access/data flows
+- **Level 3**: Service / subsystem breakdown
+- **Level 4**: Key scenarios (Sequence / Process)
+- **Level 5**: Data / class / schema details
+- **Level 6**: Real end-to-end paths (from Request to Response/Job)

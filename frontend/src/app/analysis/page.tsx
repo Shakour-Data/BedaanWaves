@@ -208,7 +208,7 @@ export default function AnalysisPage() {
                   },
                   { 
                     label: t("app.analysis.sentiment_labels.confidence", "en"), 
-                    value: `${(analysisData.sentiment.confidence * 100).toLocaleString(false ? "fa-IR" : "en-US", { maximumFractionDigits: 0 })}٪`, 
+                    value: `${(analysisData.sentiment.confidence * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}%`, 
                     score: null, 
                     color: "text-secondary" 
                   },

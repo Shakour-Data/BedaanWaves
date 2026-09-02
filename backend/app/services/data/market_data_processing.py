@@ -451,24 +451,3 @@ class MarketDataProcessingService(DataService):
         await session.commit()
 
         return len(snapshots)
-
-    # ------------------------------------------------------------------
-    # Utility: Batch Process All Assets
-    # ------------------------------------------------------------------
-    async def process_all_crypto_assets(
-        self,
-        session: Any,
-        intervals: Optional[List[str]] = None,
-        lookback_hours: int = 24,
-    ) -> int:
-        """Process all crypto assets in the database."""
-        stmt = select(Asset).where(Asset.market == "CRYPTO")
-        result = await session.execute(stmt)
-        assets = result.scalars().all()
-
-        total = 0
-        for asset in assets:
-            total += await self.process_raw_to_snapshots(
-                session, asset.id, intervals, lookback_hours
-            )
-        return total

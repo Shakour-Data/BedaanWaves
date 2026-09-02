@@ -1,7 +1,7 @@
 /**
  * dashboard-api.ts
  * ---------------------------------------------------------------------------
- * لایه‌ی دسترسی به داده برای داشبورد. داده‌های زنده را از بک‌اند دریافت می‌کند.
+ * Data access layer for the dashboard. Fetches live data from the backend.
  */
 
 import { apiClient } from "@/lib/api";
@@ -175,6 +175,7 @@ export interface GeneralDashboardResponse {
     count: number;
     distribution: { strong: number; neutral: number; weak: number };
   }>;
+  coefficients: Array<{ key: string; label: string; weight: number }>;
   symbols: Array<{
     symbol: string;
     name: string;
@@ -391,9 +392,10 @@ export async function fetchAiDashboard(): Promise<AiDashboardResponse> {
 export interface ScoreTrendPoint {
   date: string;
   avg_score: number;
-  avg_technical: number;
+  avg_dimensions: Record<string, number>;
   score_change: number;
   technical_change: number;
+  dimension_changes: Record<string, number>;
   symbol_count: number;
 }
 
@@ -402,6 +404,7 @@ export interface ScoreTrendResponse {
   days: number;
   market: string;
   count: number;
+  dimensions: string[];
   series: ScoreTrendPoint[];
   timestamp: string;
 }

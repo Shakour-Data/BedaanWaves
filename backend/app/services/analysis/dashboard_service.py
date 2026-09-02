@@ -1273,6 +1273,20 @@ class DashboardService:
 
         symbols_data.sort(key=lambda x: x["overall_score"], reverse=True)
 
+        # Canonical dimension weights/coefficients. These are the same static
+        # weights used by ScoringService.DIMENSION_WEIGHTS and exposed here so
+        # the General dashboard can render the "Coefficients" chart without an
+        # extra round-trip. The frontend renders them as a filterable bar
+        # chart per the dashboard spec.
+        coefficients = [
+            {"key": "fundamental", "label": "Fundamental", "weight": 0.25},
+            {"key": "technical",   "label": "Technical",   "weight": 0.20},
+            {"key": "sentiment",   "label": "Sentiment",   "weight": 0.15},
+            {"key": "risk",        "label": "Risk",        "weight": 0.20},
+            {"key": "macro",       "label": "Macro",       "weight": 0.10},
+            {"key": "ai",          "label": "AI",          "weight": 0.10},
+        ]
+
         return {
             "status": "success",
             "summary": {
@@ -1281,6 +1295,7 @@ class DashboardService:
                 "total_news": total_news,
             },
             "dimensions": dimension_summaries,
+            "coefficients": coefficients,
             "symbols": symbols_data[:100],
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],

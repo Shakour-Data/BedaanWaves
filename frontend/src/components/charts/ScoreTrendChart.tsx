@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart,
   LineSeries,
   ColorType,
   CrosshairMode,
   type IChartApi,
+  type ISeriesApi,
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 import { normalizeChartData, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
+import { cn } from "@/lib/cn";
 
 interface SeriesDef {
   key: string;
@@ -22,6 +24,8 @@ interface SeriesDef {
 interface ScoreTrendChartProps {
   series: SeriesDef[];
   height?: number;
+  showLegend?: boolean;
+  defaultHiddenKeys?: string[];
 }
 
 const PALETTE = [
@@ -49,12 +53,19 @@ const DARK = {
   border: "#333333",
 };
 
-export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) {
+export function ScoreTrendChart({
+  series,
+  height = 360,
+  showLegend = false,
+  defaultHiddenKeys = [],
+}: ScoreTrendChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRefs = useRef<unknown[]>([]);
+  const seriesRefs = useRef<ISeriesApi<"Line">[]>([]);
   const { theme } = useAppStore();
   const colors = theme === "dark" ? DARK : LIGHT;
+
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(defaultHiddenKeys));
 
   const visibleSeries = useMemo(
     () =>
@@ -105,8 +116,8 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
       },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
-        locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }),
+        locale: "en-US",
+        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }),
       },
       autoSize: false,
     });
@@ -118,6 +129,7 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
         color: s.color,
         lineWidth: 2,
         priceScaleId: "right",
+        visible: !hidden.has(s.key),
       });
       line.setData(s.data);
       seriesRefs.current.push(line);
@@ -136,10 +148,58 @@ export function ScoreTrendChart({ series, height = 360 }: ScoreTrendChartProps) 
       chartRef.current = null;
       seriesRefs.current = [];
     };
+    // ``hidden`` is intentionally omitted: we do NOT want to recreate the
+    // lightweight-charts instance every time a dimension is toggled. The
+    // separate effect below flips the per-series ``visible`` flag in place.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartSeries, colors, height]);
+
+  useEffect(() => {
+    seriesRefs.current.forEach((line, i) => {
+      const key = chartSeries.series[i]?.key;
+      if (!key) return;
+      line.applyOptions({ visible: !hidden.has(key) });
+    });
+  }, [hidden, chartSeries]);
+
+  const toggle = (key: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   return (
     <div className="w-full">
+      {showLegend && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {chartSeries.series.map((s) => {
+            const isHidden = hidden.has(s.key);
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => toggle(s.key)}
+                aria-pressed={!isHidden}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity",
+                  isHidden
+                    ? "border-[var(--color-border)] bg-[var(--color-background)] opacity-50"
+                    : "border-transparent bg-[var(--color-background)]"
+                )}
+              >
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span>{s.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div ref={containerRef} className="w-full" style={{ height }} />
     </div>
   );

@@ -60,8 +60,8 @@ export function LineChart({ data, height = 320, color = "#2563EB" }: LineChartPr
       timeScale: { borderColor: colors.border },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
-        locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) },
+        locale: "en-US",
+        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
       autoSize: false });
     chartRef.current = chart;
 

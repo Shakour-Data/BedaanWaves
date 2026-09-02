@@ -1,8 +1,6 @@
 import { apiClient } from "@/lib/api";
 import {
-  fetchPriceHistory,
   fetchScoring,
-  type Candle,
 } from "@/lib/api/stocks";
 
 export interface DimensionScore {
@@ -52,10 +50,6 @@ function num(value: unknown): number {
 
 function clamp(v: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, v));
-}
-
-function jitter(base: number, range: number): number {
-  return clamp(base + (Math.random() - 0.5) * range);
 }
 
 const DIMENSION_LABELS: Record<string, string> = {
@@ -124,57 +118,146 @@ function buildAspectsForSubDimension(parentKey: string, label: string): { key: s
   ];
 }
 
+interface HierarchyNode {
+  name: string;
+  score: number;
+  parent?: string;
+}
+
+interface RawHierarchyResponse {
+  status?: string;
+  symbol?: string;
+  name?: string;
+  overall_score?: number | string;
+  grade?: string;
+  hierarchy?: {
+    level1_dimensions?: HierarchyNode[];
+    level2_subdimensions?: HierarchyNode[];
+    level3_aspects?: HierarchyNode[];
+    level4_subaspects?: HierarchyNode[];
+  };
+  timestamp?: string;
+}
+
+interface RawScoreHistoryEntry {
+  date: string;
+  overall_score: number | string;
+  grade?: string;
+  dimension_scores?: Record<string, number | string> | null;
+}
+
+interface RawScoreHistoryResponse {
+  status?: string;
+  symbol?: string;
+  days?: number;
+  count?: number;
+  history?: RawScoreHistoryEntry[];
+  timestamp?: string;
+}
+
+function labelForKey(key: string, fallback: string): string {
+  if (DIMENSION_LABELS[key]) return DIMENSION_LABELS[key];
+  const sub = Object.values(SUB_DIMENSIONS)
+    .flat()
+    .find((s) => s.key === key);
+  return sub?.label ?? fallback;
+}
+
 export async function fetchHierarchyScores(symbol: string): Promise<HierarchyScores | null> {
   try {
-    const scoring = await fetchScoring(symbol);
-    if (!scoring) return null;
+    const res = await apiClient.get<RawHierarchyResponse>(
+      `analysis/scoring/hierarchy/${encodeURIComponent(symbol)}`,
+    );
+    const data = res.data;
+    if (!data || data.status !== "success") return null;
 
-    const dims = scoring.dimension_scores || {};
-    const level1: DimensionScore[] = Object.keys(DIMENSION_LABELS).map((key) => ({
-      key,
-      label: DIMENSION_LABELS[key],
-      score: clamp(num(dims[key])),
-      weight: num(DIMENSION_WEIGHTS[key]),
-    }));
+    const hierarchy = data.hierarchy || {};
+    const level1Nodes = hierarchy.level1_dimensions || [];
+    const level2Nodes = hierarchy.level2_subdimensions || [];
+    const level3Nodes = hierarchy.level3_aspects || [];
 
-    const level2: SubDimensionScore[] = [];
-    const level3: AspectScore[] = [];
-
-    for (const dim of Object.keys(SUB_DIMENSIONS)) {
-      const dimScore = clamp(num(dims[dim]));
-      const subs = SUB_DIMENSIONS[dim] || [];
-      for (const sub of subs) {
-        const subScore = jitter(dimScore, 15);
-        level2.push({
-          key: sub.key,
-          label: sub.label,
-          score: Math.round(subScore),
-          weight: num(sub.weight),
-          parentKey: dim,
-        });
-        const aspects = buildAspectsForSubDimension(sub.key, sub.label);
-        for (const aspect of aspects) {
-          const aspectScore = jitter(subScore, 10);
-          level3.push({
-            key: aspect.key,
-            label: aspect.label,
-            score: Math.round(aspectScore),
-            weight: num(aspect.weight),
-            parentKey: sub.key,
+    if (level1Nodes.length === 0) {
+      const scoring = await fetchScoring(symbol);
+      if (!scoring) return null;
+      const dims = scoring.dimension_scores || {};
+      const level1: DimensionScore[] = Object.keys(DIMENSION_LABELS).map((key) => ({
+        key,
+        label: DIMENSION_LABELS[key],
+        score: clamp(num(dims[key])),
+        weight: num(DIMENSION_WEIGHTS[key]),
+      }));
+      const level2: SubDimensionScore[] = [];
+      const level3: AspectScore[] = [];
+      for (const dim of Object.keys(SUB_DIMENSIONS)) {
+        const dimScore = clamp(num(dims[dim]));
+        const subs = SUB_DIMENSIONS[dim] || [];
+        for (const sub of subs) {
+          level2.push({
+            key: sub.key,
+            label: sub.label,
+            score: Math.round(dimScore),
+            weight: num(sub.weight),
+            parentKey: dim,
           });
+          const aspects = buildAspectsForSubDimension(sub.key, sub.label);
+          for (const aspect of aspects) {
+            level3.push({
+              key: aspect.key,
+              label: aspect.label,
+              score: Math.round(dimScore),
+              weight: num(aspect.weight),
+              parentKey: sub.key,
+            });
+          }
         }
       }
+      return {
+        symbol,
+        level1,
+        level2,
+        level3,
+        overallScore: clamp(num(scoring.overall_score)),
+        grade: String(scoring.grade || ""),
+        signals: Array.isArray(scoring.signals) ? scoring.signals : [],
+        timestamp: String(scoring.timestamp || new Date().toISOString()),
+      };
     }
+
+    const level1: DimensionScore[] = level1Nodes.map((node) => ({
+      key: node.name,
+      label: labelForKey(node.name, node.name),
+      score: clamp(num(node.score)),
+      weight: num(DIMENSION_WEIGHTS[node.name] ?? 0),
+    }));
+
+    const level2: SubDimensionScore[] = level2Nodes.map((node) => ({
+      key: node.name,
+      label: labelForKey(node.name, node.name),
+      score: clamp(num(node.score)),
+      weight: num(
+        (SUB_DIMENSIONS[node.parent || ""] || []).find((s) => s.key === node.name)
+          ?.weight ?? 0,
+      ),
+      parentKey: node.parent || "",
+    }));
+
+    const level3: AspectScore[] = level3Nodes.map((node) => ({
+      key: node.name,
+      label: labelForKey(node.name, node.name),
+      score: clamp(num(node.score)),
+      weight: 0,
+      parentKey: node.parent || "",
+    }));
 
     return {
       symbol,
       level1,
       level2,
       level3,
-      overallScore: clamp(num(scoring.overall_score)),
-      grade: String(scoring.grade || ""),
-      signals: Array.isArray(scoring.signals) ? scoring.signals : [],
-      timestamp: String(scoring.timestamp || new Date().toISOString()),
+      overallScore: clamp(num(data.overall_score)),
+      grade: String(data.grade || ""),
+      signals: [],
+      timestamp: String(data.timestamp || new Date().toISOString()),
     };
   } catch {
     return null;
@@ -183,26 +266,25 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
 
 export async function fetchScoreHistory(symbol: string, days = 30): Promise<ScoreHistoryPoint[]> {
   try {
-    const candles = await fetchPriceHistory({ symbol, timeframe: "1d", limit: days });
-    if (!candles || candles.length === 0) return [];
+    const res = await apiClient.get<RawScoreHistoryResponse>(
+      `analysis/scoring/history/${encodeURIComponent(symbol)}?days=${days}`,
+    );
+    const data = res.data;
+    if (!data || data.status !== "success" || !Array.isArray(data.history)) {
+      return [];
+    }
 
-    const baseScores: Record<string, number> = {
-      fundamental: 65,
-      technical: 60,
-      sentiment: 55,
-      risk: 70,
-      macro: 50,
-      ai: 58,
-    };
-
-    return candles.map((c: Candle) => {
-      const trend = (c.close - candles[0].close) / (candles[0].close || 1);
+    return data.history.map((entry) => {
+      const dims = entry.dimension_scores || {};
       const point: ScoreHistoryPoint = {
-        date: c.timestamp.split("T")[0],
-        overall: clamp(60 + trend * 30 + (Math.random() - 0.5) * 8),
+        date: String(entry.date),
+        overall: clamp(num(entry.overall_score)),
       };
-      for (const dim of Object.keys(baseScores)) {
-        point[dim] = clamp(baseScores[dim] + trend * 20 + (Math.random() - 0.5) * 12);
+      for (const key of Object.keys(DIMENSION_LABELS)) {
+        const raw = dims[key];
+        if (raw !== undefined && raw !== null) {
+          point[key] = clamp(num(raw));
+        }
       }
       return point;
     });

@@ -1,12 +1,12 @@
 # BPMN Level 3 — Market Ingest Process (Symbols/History/Live Proxy)
 
-این سطح فرآیند دسترسی/دریافت داده‌های بازار را نشان می‌دهد.
+This level shows the process for accessing/fetching market data.
 
-## دامنه
-- `GET /market/symbols` (از DB)
-- `GET /market/price-history` (از DB)
-- `GET /market/latest-prices` (از DB)
-- `GET /market/live/*` (پروکسی به BRS API)
+## Scope
+- `GET /market/symbols` (from DB)
+- `GET /market/price-history` (from DB)
+- `GET /market/latest-prices` (from DB)
+- `GET /market/live/*` (proxy to BRS API)
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -47,10 +47,9 @@ History.php]
   LIVE1 --> RESP4[200 Upstream JSON]
 ```
 
-## داده‌ها/ایونت‌ها
-- **Request**: پارامترهای فیلتر (asset_class, market, sector, timeframe, start/end)
+## Data / Events
+- **Request**: filter parameters (asset_class, market, sector, timeframe, start/end)
 - **DB Entities**:
   - Asset
   - PriceCandle
-- **Upstream Entities** (Live): JSON خروجی BRS Api
-
+- **Upstream Entities** (Live): JSON output of BRS API

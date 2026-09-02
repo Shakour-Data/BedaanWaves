@@ -917,9 +917,6 @@ class RawPerformanceScore(Base):
     # Market-specific target metrics
     target_price_change = Column(Numeric(10, 6))  # For all markets
     target_volume_change = Column(Numeric(10, 4))  # Volume change
-    
-    # Crypto-specific metrics
-    target_bitcoin_correlation = Column(Numeric(8, 6))  # BTC correlation
     target_market_sentiment = Column(Numeric(5, 2))  # Market sentiment score
     
     # Data quality flags

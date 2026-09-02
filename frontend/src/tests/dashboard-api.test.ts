@@ -44,6 +44,14 @@ describe('Dashboard API Service', () => {
             { symbol: 'ABC', name: 'ABC Corp', overall_score: 25 },
           ],
           symbols: [],
+          coefficients: [
+            { key: 'fundamental', label: 'Fundamental', weight: 0.25 },
+            { key: 'technical', label: 'Technical', weight: 0.20 },
+            { key: 'sentiment', label: 'Sentiment', weight: 0.15 },
+            { key: 'risk', label: 'Risk', weight: 0.20 },
+            { key: 'macro', label: 'Macro', weight: 0.10 },
+            { key: 'ai', label: 'AI', weight: 0.10 },
+          ],
           timestamp: '2023-01-01'
         }})
       }
@@ -111,10 +119,35 @@ describe('Dashboard API Service', () => {
           days: 30,
           market: 'NASDAQ',
           count: 3,
+          dimensions: ['fundamental', 'technical', 'sentiment', 'risk', 'macro', 'ai'],
           series: [
-            { date: '2026-08-01', avg_score: 54.76, avg_technical: 54.84, score_change: 0, technical_change: 0, symbol_count: 5600 },
-            { date: '2026-08-02', avg_score: 55.11, avg_technical: 55.00, score_change: 0.35, technical_change: 0.15, symbol_count: 5600 },
-            { date: '2026-08-03', avg_score: 55.51, avg_technical: 55.56, score_change: 0.40, technical_change: 0.56, symbol_count: 5600 },
+            {
+              date: '2026-08-01',
+              avg_score: 54.76,
+              avg_dimensions: { fundamental: 50, technical: 54.84, sentiment: 52, risk: 55, macro: 60, ai: 56 },
+              score_change: 0,
+              technical_change: 0,
+              dimension_changes: { fundamental: 0, technical: 0, sentiment: 0, risk: 0, macro: 0, ai: 0 },
+              symbol_count: 5600,
+            },
+            {
+              date: '2026-08-02',
+              avg_score: 55.11,
+              avg_dimensions: { fundamental: 51, technical: 55.0, sentiment: 53, risk: 56, macro: 60, ai: 57 },
+              score_change: 0.35,
+              technical_change: 0.16,
+              dimension_changes: { fundamental: 1, technical: 0.16, sentiment: 1, risk: 1, macro: 0, ai: 1 },
+              symbol_count: 5600,
+            },
+            {
+              date: '2026-08-03',
+              avg_score: 55.51,
+              avg_dimensions: { fundamental: 52, technical: 55.56, sentiment: 54, risk: 57, macro: 61, ai: 58 },
+              score_change: 0.40,
+              technical_change: 0.56,
+              dimension_changes: { fundamental: 1, technical: 0.56, sentiment: 1, risk: 1, macro: 1, ai: 1 },
+              symbol_count: 5600,
+            },
           ],
           timestamp: '2026-08-31T22:00:00Z',
         }})
@@ -128,8 +161,10 @@ describe('Dashboard API Service', () => {
     expect(trend.days).toBe(30)
     expect(trend.market).toBe('NASDAQ')
     expect(trend.series).toHaveLength(3)
+    expect(trend.dimensions).toHaveLength(6)
     expect(trend.series[0].avg_score).toBe(54.76)
     expect(trend.series[1].score_change).toBeCloseTo(0.35, 2)
-    expect(trend.series[2].avg_technical).toBe(55.56)
+    expect(trend.series[2].avg_dimensions.technical).toBe(55.56)
+    expect(trend.series[2].dimension_changes.technical).toBeCloseTo(0.56, 2)
   })
 })

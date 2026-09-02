@@ -100,8 +100,8 @@ export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: Ca
       timeScale: { borderColor: colors.border, timeVisible: INTRADAY.includes(timeframe) },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
-        locale: "fa-IR",
-        priceFormatter: (p: number) => p.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) },
+        locale: "en-US",
+        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
       autoSize: false });
     chartRef.current = chart;
 

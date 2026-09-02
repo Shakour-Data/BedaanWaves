@@ -7,13 +7,13 @@ test.describe('SSE Real-Time Updates', () => {
 
   test('should establish SSE connection and receive live updates', async ({ page }) => {
     await page.waitForTimeout(2000);
-    const liveIndicator = page.locator('text=live|text=زنده|text=connected|text=داده‌های زنده');
+    const liveIndicator = page.locator('text=live|text=connected');
     await expect(liveIndicator.first()).toBeVisible();
   });
 
   test('should update stock data in real-time via SSE', async ({ page }) => {
     await page.waitForTimeout(3000);
-    const statCards = page.locator('text=تغییر|text=change|text=درصد');
+    const statCards = page.locator('text=change');
     await expect(statCards.first()).toBeVisible();
   });
 
@@ -62,7 +62,7 @@ test.describe('Export Functionality', () => {
 
   test('should export fundamental analysis data', async ({ page }) => {
     await page.goto('/stocks/AAPL');
-    const exportButton = page.locator('button:has-text("Export"), button:has-text("خروجی")');
+    const exportButton = page.locator('button:has-text("Export")');
     if (await exportButton.count() > 0) {
       const downloadPromise = page.waitForEvent('download');
       await exportButton.first().click();
@@ -78,16 +78,16 @@ test.describe('GraphQL Integration', () => {
   });
 
   test('should execute GraphQL query and display results', async ({ page }) => {
-    const graphqlExplorer = page.locator('text=GraphQL|text=گراف کیووال|text=graphql');
+    const graphqlExplorer = page.locator('text=GraphQL|text=graphql');
     if (await graphqlExplorer.count() > 0) {
       await graphqlExplorer.first().click();
       await page.waitForTimeout(1000);
-      await expect(page.locator('text=stocks|text=نتایج|text=results').first()).toBeVisible();
+      await expect(page.locator('text=stocks|text=results').first()).toBeVisible();
     }
   });
 
   test('should handle GraphQL errors gracefully', async ({ page }) => {
-    const graphqlExplorer = page.locator('text=GraphQL|text=گراف کیووال|text=graphql');
+    const graphqlExplorer = page.locator('text=GraphQL|text=graphql');
     if (await graphqlExplorer.count() > 0) {
       await graphqlExplorer.first().click();
       await page.waitForTimeout(1000);

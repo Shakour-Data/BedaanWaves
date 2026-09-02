@@ -12,10 +12,6 @@ import json
 import asyncio
 from app.services.core.base_service import CachedService
 from app.services.data.brs_api_client import BrsApiClient
-try:
-    from app.services.data.crypto_api_client import CryptoApiClient
-except ModuleNotFoundError:
-    CryptoApiClient = None
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 from app.services.data.stock_service import StockService
@@ -35,7 +31,6 @@ class DataValidationService(CachedService):
     def __init__(self, 
                  service_name: str = "DataValidationService",
                  brs_client: Optional[BrsApiClient] = None,
-                 crypto_client: Optional[CryptoApiClient] = None,
                  intl_client: Optional[IntlApiClient] = None,
                  market_service: Optional[MarketService] = None,
                  stock_service: Optional[StockService] = None,
@@ -46,7 +41,6 @@ class DataValidationService(CachedService):
         Args:
             service_name: Service identifier
             brs_client: BRS API client instance
-            crypto_client: Crypto API client instance
             intl_client: International API client instance
             market_service: Market service instance
             stock_service: Stock service instance
@@ -54,7 +48,6 @@ class DataValidationService(CachedService):
         """
         super().__init__(service_name, logger=logger)
         self.brs_client = brs_client
-        self.crypto_client = crypto_client
         self.intl_client = intl_client
         self.market_service = market_service
         self.stock_service = stock_service
@@ -66,11 +59,6 @@ class DataValidationService(CachedService):
                 "clients": ["brs_client", "intl_client"],
                 "min_years": 3,
                 "authentication_required": True
-            },
-            "crypto": {
-                "clients": ["crypto_client"],
-                "min_years": 3,
-                "authentication_required": False
             },
             "market_indices": {
                 "clients": ["market_service"],
@@ -86,7 +74,6 @@ class DataValidationService(CachedService):
         # Validate service dependencies
         dependencies = {
             "BRS Client": self.brs_client,
-            "Crypto Client": self.crypto_client,
             "Intl Client": self.intl_client,
             "Market Service": self.market_service,
             "Stock Service": self.stock_service
@@ -216,7 +203,7 @@ class DataValidationService(CachedService):
         Validate that historical data meets minimum time requirement.
         
         Args:
-            source_type: Type of data source (stocks, crypto, market_indices)
+            source_type: Type of data source (stocks, market_indices)
             symbol: Asset symbol to validate
             min_years: Minimum years of data required
             
@@ -247,9 +234,6 @@ class DataValidationService(CachedService):
             data_points = []
             if source_type == "stocks" and self.stock_service:
                 data_points = await self.stock_service.get_history(symbol)
-            elif source_type == "crypto" and self.crypto_client:
-                # Get crypto historical data
-                pass  # Would implement crypto specific fetching
             elif source_type == "market_indices" and self.market_service:
                 # Get market index historical data
                 pass
@@ -458,17 +442,6 @@ class DataValidationService(CachedService):
                 except Exception as e:
                     self.logger.warning(f"Failed to get BRS data for {symbol}: {str(e)}")
             
-            # For crypto symbols, try crypto client
-            if symbol.upper() in ["BTC", "ETH", "BNB", "ADA", "SOL", "XRP", "DOT", "DOGE", "AVAX", "MATIC"]:
-                if self.crypto_client:
-                    try:
-                        crypto_data = await self.crypto_client.get_crypto_price(symbol)
-                        if crypto_data:
-                            source_data["CRYPTO_API"] = crypto_data
-                            consistency_result["sources_compared"].append("CRYPTO_API")
-                    except Exception as e:
-                        self.logger.warning(f"Failed to get crypto data for {symbol}: {str(e)}")
-            
             # Compare values from different sources
             if len(source_data) >= 2:
                 sources = list(source_data.keys())
@@ -541,12 +514,8 @@ class DataValidationService(CachedService):
             Complete validation report
         """
         if source_types is None:
-            # Determine applicable source types based on symbol
-            if symbol.upper() in ["BTC", "ETH", "BNB", "ADA", "SOL", "XRP", "DOT", "DOGE", "AVAX", "MATIC"]:
-                source_types = ["crypto"]
-            else:
-                # Assume stock for now - could be enhanced with symbol lookup
-                source_types = ["stocks"]
+            # Assume stock for now - could be enhanced with symbol lookup
+            source_types = ["stocks"]
         
         report = {
             "symbol": symbol,
@@ -607,13 +576,12 @@ class DataValidationService(CachedService):
         return report
 
 # Service registration function for dependency injection
-def get_data_validation_service(brs_client=None, crypto_client=None, intl_client=None,
+def get_data_validation_service(brs_client=None, intl_client=None,
                               market_service=None, stock_service=None, logger=None) -> DataValidationService:
     """Factory function to create DataValidationService instance."""
     return DataValidationService(
         service_name="DataValidationService",
         brs_client=brs_client,
-        crypto_client=crypto_client,
         intl_client=intl_client,
         market_service=market_service,
         stock_service=stock_service,

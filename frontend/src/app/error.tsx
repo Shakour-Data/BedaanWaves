@@ -13,7 +13,7 @@ export default function Error({
 }) {
   return (
     <main className="flex min-h-[60vh] items-center justify-center p-3">
-      <TarotCard title="خطا" className="w-full max-w-md text-center">
+      <TarotCard title="Error" className="w-full max-w-md text-center">
         <div className="flex flex-col items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-error/10 text-error">
             <AlertIcon className="h-8 w-8" />
