@@ -2,7 +2,7 @@
 Scoring Service - Tier 3 Analysis Service
 
 6D Scoring System with 305-node hierarchy (4 levels).
-Comprehensive stock scoring for TSE/OTC and foreign exchanges.
+Comprehensive stock scoring for US/OTC and foreign exchanges.
 Now supports ML-driven dynamic coefficient learning.
 """
 

@@ -112,18 +112,15 @@ class MultilingualNewsService(BaseService):
         # Simplified language detection
         # In production, would use libraries like langdetect or polyglot
         
-        # Check for Persian characters
-        persian_chars = ['ا', 'ب', 'پ', 'ت', 'ث', 'ج', 'چ', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'ژ', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ک', 'گ', 'ل', 'م', 'ن', 'و', 'ه', 'ی']
-        if any(char in text for char in persian_chars):
-            return "fa"
-        
+        # Persian character detection disabled (legacy, requires non-English chars)
+
         # Check for common English words
         english_words = ["the", "and", "of", "to", "in", "for", "is", "on", "with", "at", "by", "an", "this", "that"]
         text_lower = text.lower()
         english_matches = sum(1 for word in english_words if word in text_lower)
         if english_matches >= 3:
             return "en"
-        
+
         # Default to English
         return "en"
     

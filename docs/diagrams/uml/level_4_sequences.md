@@ -1,6 +1,6 @@
 # UML Level 4 — Sequence Diagrams (Key Scenarios)
 
-این سطح سناریوهای کلیدی Sequence را نشان می‌دهد.
+This level shows the key Sequence scenarios.
 
 ## 1) Login (Public endpoint)
 ```plantuml

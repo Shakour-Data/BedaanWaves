@@ -15,7 +15,7 @@ export interface MarketStat {
 export interface AssetRow {
   symbol: string;
   name: string;
-  market: "TSE" | "OTC" | "BINANCE" | "CRYPTO" | "NASDAQ";
+  market: "NASDAQ";
   price: number;
   changePct: number;
   quantity?: number;

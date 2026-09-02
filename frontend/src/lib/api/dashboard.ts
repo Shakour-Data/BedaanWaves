@@ -306,7 +306,7 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
       .map((item) => ({
         symbol: item.asset.symbol,
         name: item.asset.name,
-        market: item.asset.market as AssetRow["market"],
+        market: "NASDAQ" as const,
         price: pricesData[item.asset.symbol].price,
         changePct: pricesData[item.asset.symbol].change_pct }));
   } catch {

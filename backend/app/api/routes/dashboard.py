@@ -164,9 +164,8 @@ async def get_score_trend(
     Portfolio-level 30-day trend of the average overall score and the
     average technical-analysis weight, plus their day-over-day deltas.
 
-    Aggregates ``ScoreHistory`` rows for every active asset in the given
-    ``market`` (defaults to NASDAQ) and returns one data point per
-    trading day with:
+    Aggregates ``ScoreHistory`` rows for every active Nasdaq-listed
+    equity or ETF and returns one data point per trading day with:
 
     - ``avg_score``        - mean ``overall_score`` across all assets
     - ``avg_dimensions``   - dict of mean per-dimension scores for all 6
@@ -176,25 +175,40 @@ async def get_score_trend(
     - ``dimension_changes``- dict of per-dimension day-over-day deltas
     - ``symbol_count``     - number of assets that contributed to the day
 
+    The universe is hard-locked to Nasdaq equities + ETFs. Crypto,
+    forex, commodities, bonds, indexes, and any non-Nasdaq equity are
+    always excluded, regardless of the ``market`` argument.
+
     Args:
         days:   Lookback window in days (default 30, max 365).
-        market: Market filter (defaults to ``NASDAQ``). Pass ``null``
-                (or the literal string ``"ALL"``) to span every market.
+        market: Market filter (defaults to ``NASDAQ``). Anything other
+                than ``"NASDAQ"`` is rejected to keep the chart honest.
 
     Returns:
         Aggregated daily series for charting.
     """
     DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
+    if market is None or market.upper() != "NASDAQ":
+        raise HTTPException(
+            status_code=400,
+            detail="Only the NASDAQ market is supported by /dashboard/score-trend.",
+        )
     try:
         cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
 
-        # Build the market filter. We special-case ``ALL`` and ``None`` to mean
-        # "every active asset" (used by tests and internal debugging).
-        market_filter = Asset.market == market if market and market.upper() != "ALL" else Asset.market.isnot(None)
+        # The score trend is restricted to Nasdaq-listed equities + ETFs.
+        # Crypto, forex, commodities, bonds, indexes, and non-Nasdaq
+        # equities are never aggregated into the trend, even if they
+        # somehow have a ``ScoreHistory`` row.
+        market_filter = and_(
+            Asset.market == "NASDAQ",
+            Asset.asset_class.in_(["EQUITY", "ETF"]),
+        )
 
         # Build a per-dimension AVG() expression that pulls the value out of
         # the JSONB ``dimension_scores`` column. ``has_key`` is used so legacy
-        # rows that miss a particular dimension do not break the aggregate.
+        # rows that miss a particular dimension are excluded from the average
+        # (treated as NULL) instead of dragging the mean down to zero.
         dim_exprs = []
         for dim in DIMENSIONS:
             expr = func.coalesce(
@@ -204,7 +218,7 @@ async def get_score_trend(
                             ScoreHistory.dimension_scores.has_key(dim),
                             func.cast(ScoreHistory.dimension_scores[dim], Numeric(10, 4)),
                         ),
-                        else_=0,
+                        else_=None,
                     )
                 ),
                 0.0,

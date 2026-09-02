@@ -44,13 +44,6 @@ MESSAGES = {
         "password_too_short": "Password must be at least 8 characters long.",
         "token_missing": "No recovery token was provided. Please open the link from your email.",
     },
-    "fa": {
-        "request_sent": "اگر حساب کاربری با این ایمیل وجود داشته باشد، لینک بازیابی ارسال شده است.",
-        "token_invalid": "این لینک بازیابی منقضی شده یا معتبر نیست. لطفاً یک لینک جدید درخواست کنید.",
-        "password_updated": "رمز عبور شما بروزرسانی شد. اکنون می‌توانید وارد شوید.",
-        "password_too_short": "رمز عبور باید حداقل ۸ کاراکتر باشد.",
-        "token_missing": "توکن بازیابی ارائه نشده است. لطفاً از لینک ایمیل خود استفاده کنید.",
-    },
 }
 
 
@@ -61,7 +54,7 @@ def _msg(lang: str, key: str) -> str:
 @router.post("/password-reset/request", response_model=PasswordResetResponse)
 async def request_password_reset(
     data: PasswordResetRequest,
-    lang: str = Query("en", pattern="^(en|fa)$"),
+    lang: str = Query("en", pattern="^(en)$"),
 ):
     """Request a password-reset link.
 
@@ -86,7 +79,7 @@ async def request_password_reset(
 @router.post("/password-reset/verify", response_model=PasswordResetVerifyResponse)
 async def verify_reset_token_route(
     data: PasswordResetVerifyRequest,
-    lang: str = Query("en", pattern="^(en|fa)$"),
+    lang: str = Query("en", pattern="^(en)$"),
 ):
     """Verify that a recovery token is valid (not consumed, not expired)."""
     valid = await verify_reset_token(data.token)
@@ -99,7 +92,7 @@ async def verify_reset_token_route(
 @router.post("/password-reset/confirm", response_model=PasswordResetResponse)
 async def confirm_password_reset(
     data: PasswordResetConfirm,
-    lang: str = Query("en", pattern="^(en|fa)$"),
+    lang: str = Query("en", pattern="^(en)$"),
 ):
     """Consume a reset token and set a new password."""
     if not data.token:

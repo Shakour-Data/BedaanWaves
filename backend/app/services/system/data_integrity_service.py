@@ -187,8 +187,8 @@ class DataIntegrityService(BaseService):
         """Check historical data completeness for major assets."""
         # Test assets from each category
         test_assets = {
-            "stocks": ["AAPL", "MSFT", "GOOGL"],  # US stocks
-            "indices": ["SPX", "FTSE", "N225"]     # Major indices
+            "stocks": ["AAPL", "MSFT", "GOOGL"],
+            "indices": ["IXIC"]
         }
         
         results = {}

@@ -36,11 +36,16 @@ async def get_symbols(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[AssetResponse]:
     """
-    Get available trading symbols with filters
+    Get available trading symbols with filters.
+
+    Only instruments that participate in the formation of the Nasdaq index
+    are returned (asset_class in {EQUITY, ETF} and market == "NASDAQ").
+    The ``asset_class`` and ``market`` parameters, if supplied, are
+    validated against this restricted set.
 
     Args:
-        asset_class: Filter by asset class (EQUITY, CRYPTO, ETF)
-        market: Filter by market (NASDAQ, BINANCE, etc.)
+        asset_class: Filter by asset class (EQUITY, ETF)
+        market: Filter by market (NASDAQ only)
         sector: Filter by sector
         industry: Filter by industry group
         skip: Pagination skip
@@ -49,7 +54,15 @@ async def get_symbols(
     Returns:
         List of assets matching criteria
     """
-    query = select(Asset)
+    # Hard-cap the universe: only Nasdaq-listed equities and ETFs are
+    # ever returned from this endpoint, regardless of caller filters.
+    query = select(Asset).where(
+        and_(
+            Asset.active == True,
+            Asset.market == "NASDAQ",
+            Asset.asset_class.in_(["EQUITY", "ETF"]),
+        )
+    )
 
     if asset_class:
         query = query.where(Asset.asset_class == asset_class)
@@ -59,13 +72,12 @@ async def get_symbols(
         query = query.where(Asset.sector == sector)
     if industry:
         query = query.where(Asset.industry == industry)
-    
-    query = query.where(Asset.active == True)
+
     query = query.offset(skip).limit(limit)
-    
+
     result = await db.execute(query)
     assets = result.scalars().all()
-    
+
     logger.info(f"Retrieved {len(assets)} symbols")
     return assets
 
@@ -233,8 +245,9 @@ async def get_market_overview(
     """
     query = select(Asset).where(
         and_(
-            Asset.market == market,
+            Asset.market == "NASDAQ",
             Asset.active == True,
+            Asset.asset_class.in_(["EQUITY", "ETF"]),
         )
     )
     
@@ -301,6 +314,7 @@ async def nasdaq_dashboard(
             and_(
                 Asset.market == "NASDAQ",
                 Asset.active == True,
+                Asset.asset_class.in_(["EQUITY", "ETF"]),
             )
         )
         .group_by(
@@ -459,6 +473,7 @@ async def industry_ranking(
             and_(
                 Asset.market == "NASDAQ",
                 Asset.active == True,
+                Asset.asset_class.in_(["EQUITY", "ETF"]),
                 Asset.industry.isnot(None),
                 Candle.timeframe == "1d",
             )

@@ -1,6 +1,6 @@
 # DFD Level 1 — Context Diagram
 
-نمای کلی جریان داده‌ها (Data Flows) در سطح Context.
+Overview of Data Flows at the Context level.
 
 ## Diagram (Mermaid)
 ```mermaid

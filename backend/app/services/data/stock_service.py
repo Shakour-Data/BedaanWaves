@@ -31,11 +31,9 @@ class StockService(CachedService):
     def __init__(
         self,
         service_name: str = "StockService",
-        brs_client=None,
         cache_ttl_seconds: int = 3600,
     ):
         super().__init__(service_name, cache_ttl_seconds=cache_ttl_seconds)
-        self.brs_client = brs_client
     
     async def initialize(self) -> None:
         """Initialize stock service"""
@@ -51,47 +49,96 @@ class StockService(CachedService):
         return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
 
     def _fetch_yfinance_search(self, query: str) -> List[Dict[str, Any]]:
-        """Blocking call to yfinance for symbol suggestions."""
-        import yfinance as yf
-        try:
-            tickers = yf.Ticker(query).symbols if hasattr(yf.Ticker(query), "symbols") else []
-        except Exception:
-            tickers = []
+        """Blocking call to yfinance for symbol suggestions.
 
-        if not tickers:
+        Only instruments that participate in the formation of the Nasdaq
+        index (US-listed EQUITY / ETF on the NASDAQ exchange) are
+        returned. Crypto (CCC/CCN), forex (FOREX / CCS), futures
+        (CME/CBOT/NYMEX), and any other non-equity quoteType are filtered
+        out before we surface a hit to the API caller.
+        """
+        import yfinance as yf
+
+        # yfinance returns a ``quoteType`` per ticker that we can use to
+        # drop non-equity results before the network round-trip for the
+        # full ``info`` payload.
+        _ALLOWED_QUOTE_TYPES = {"EQUITY", "ETF"}
+        _BLOCKED_EXCHANGES = {
+            "CCC",  # crypto (CoinMarketCap style)
+            "CCN",  # crypto
+            "FOREX",
+            "CCS",  # crypto / currency
+            "CME",
+            "CBOT",
+            "NYMEX",
+            "COMEX",
+            "ICE",
+            "NYBOT",
+        }
+
+        def _search_yahoo() -> list:
+            import requests
             try:
-                import requests
                 url = "https://query1.finance.yahoo.com/v1/finance/search"
-                params = {"q": query, "quotesCount": 10, "newsCount": 0}
+                params = {"q": query, "quotesCount": 25, "newsCount": 0}
                 headers = {"User-Agent": "Mozilla/5.0"}
                 resp = requests.get(url, params=params, headers=headers, timeout=10)
                 if resp.status_code == 200:
-                    data = resp.json()
-                    tickers = [q.get("symbol") for q in data.get("quotes", []) if q.get("symbol")]
+                    return resp.json().get("quotes", [])
             except Exception:
-                tickers = []
+                return []
+            return []
 
-        results = []
-        for symbol in tickers[:20]:
+        # First try the yfinance helper, then fall back to the Yahoo
+        # Finance search endpoint which actually returns ``quoteType``
+        # metadata we can filter on.
+        try:
+            tickers_obj = yf.Ticker(query)
+            tickers = getattr(tickers_obj, "symbols", []) or []
+        except Exception:
+            tickers = []
+
+        quotes: List[Dict[str, Any]] = []
+        if tickers:
+            for t in tickers[:25]:
+                if isinstance(t, str):
+                    quotes.append({"symbol": t, "quoteType": "EQUITY"})
+                elif isinstance(t, dict):
+                    quotes.append(t)
+        if not quotes:
+            quotes = _search_yahoo()
+
+        results: List[Dict[str, Any]] = []
+        for quote in quotes[:25]:
+            symbol = quote.get("symbol")
+            if not symbol:
+                continue
+            quote_type = (quote.get("quoteType") or quote.get("typeDisp") or "").upper()
+            exchange = (quote.get("exchange") or "").upper()
+            if quote_type and quote_type not in _ALLOWED_QUOTE_TYPES:
+                continue
+            if exchange in _BLOCKED_EXCHANGES:
+                continue
             try:
                 info = yf.Ticker(symbol).info or {}
+                info_exchange = (info.get("exchange") or "").upper()
+                info_quote_type = (info.get("quoteType") or "").upper()
+                if info_quote_type and info_quote_type not in _ALLOWED_QUOTE_TYPES:
+                    continue
+                if info_exchange in _BLOCKED_EXCHANGES:
+                    continue
                 name = info.get("shortName") or info.get("longName") or symbol
-                exchange = info.get("exchange") or ""
                 results.append({
                     "symbol": symbol,
                     "name": name,
-                    "exchange": exchange,
-                    "type": "EQUITY",
+                    "exchange": info_exchange or exchange,
+                    "type": info_quote_type or "EQUITY",
                     "active": True,
                 })
             except Exception:
-                results.append({
-                    "symbol": symbol,
-                    "name": symbol,
-                    "exchange": "",
-                    "type": "EQUITY",
-                    "active": True,
-                })
+                # Without an info payload we cannot verify the type; skip
+                # rather than risk surfacing a non-Nasdaq result.
+                continue
         return results
 
     async def search(self, query: str) -> List[Dict[str, Any]]:

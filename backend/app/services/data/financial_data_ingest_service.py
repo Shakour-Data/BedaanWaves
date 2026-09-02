@@ -1,10 +1,8 @@
 """
 Financial Data Ingestion Service - Tier 2 Data Service
 
-Fetches and processes financial statements from multiple sources:
-- Iranian market (CODAL via BRS API)
-- US markets (Yahoo Finance, Alpha Vantage)
-- International markets (various APIs)
+Fetches and processes financial statements for instruments that participate
+in the formation of the Nasdaq index (Nasdaq-listed EQUITY and ETF).
 
 Optimized with caching, batching, and lazy loading for performance.
 """
@@ -22,22 +20,20 @@ from app.core.exceptions import (
     DataParsingException,
     FinancialDataException,
 )
-from .brs_api_client import BrsApiClient
 from .nasdaq_ingestion_service import NasdaqIngestionService
 from app.core.config import get_settings
 
 
 class MarketType(Enum):
+    """Internal routing enum for data ingestion providers.
+
+    Public-facing market filtering is restricted to ``NASDAQ`` (see
+    ``app.schemas.schemas.MarketEnum`` and ``app.api.routes.market``). The
+    ``US`` value is a routing key for US-based data providers; non-Nasdaq
+    instruments are never returned through user-facing endpoints.
+    """
     NASDAQ = "NASDAQ"
-    NYSE = "NYSE"
-    AMEX = "AMEX"
-    LSE = "LSE"
-    XETRA = "XETRA"
-    TSX = "TSX"
-    HKEX = "HKEX"
-    CRYPTO = "CRYPTO"
     US = "US"
-    INTERNATIONAL = "INTERNATIONAL"
 
 
 class FinancialStatementType(Enum):

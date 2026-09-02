@@ -41,8 +41,6 @@ watchlists_router = watchlists.router
 notifications_router = notifications.router
 specialized_router = specialized.router
 system_router = system.router
-# Crypto routes module was removed alongside the dropped crypto models.
-crypto_router = None
 symbols_router = symbols.router
 intl_router = intl.router
 live_router = live.router

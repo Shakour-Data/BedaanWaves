@@ -1,6 +1,6 @@
 # DFD Level 4 — Analysis & ML Flow
 
-جریان داده بین PriceCandle/Asset و سرویس‌های تحلیل/ML و سپس MLSignal.
+Data flow between PriceCandle/Asset and the analysis/ML services, then MLSignal.
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -46,11 +46,10 @@ flowchart TD
 ```
 
 ## Data Flows
-- ورودی تحلیل:
-  - `Asset` با `symbol`
-  - `PriceCandle` تایم‌فریم `1d` و بازه زمانی مشخص
-- خروجی‌ها:
-  - dict/metrics برای technical/momentum/volatility/risk
+- Analysis inputs:
+  - `Asset` by `symbol`
+  - `PriceCandle` with timeframe `1d` and a specified time range
+- Outputs:
+  - dict/metrics for technical/momentum/volatility/risk
   - scoring + hierarchy info
-  - `MLSignal` فعال و معتبر (valid_until >= now)
-
+  - active and valid `MLSignal` (valid_until >= now)

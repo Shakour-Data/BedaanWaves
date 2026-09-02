@@ -1,12 +1,12 @@
 # BPMN Level 6 — Notifications Process
 
-این سطح فرآیند اطلاع‌رسانی را بر اساس routeهای موجود نشان می‌دهد:
+This level shows the notification process based on the available routes:
 - `GET /notifications?unread_only&limit&offset`
 - `POST /notifications/{notification_id}/read`
 - `POST /notifications/read-all`
 - `DELETE /notifications/{notification_id}`
 
-> توجه: تولید notification (Triggerها) در کد route این فایل دیده نمی‌شود. اما روند “مدیریت وضعیت و نمایش” کاملاً از روی routes مشخص است.
+> Note: Notification generation (Triggers) is not visible in this file's route code. However, the "status management and display" flow is fully clear from the routes.
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -40,10 +40,9 @@ flowchart TD
   D1 --> FE
 ```
 
-## داده‌ها/ایونت‌ها
-- `NotificationResponse`: اطلاعات notification برای نمایش
-- عملیات‌های DB:
+## Data / Events
+- `NotificationResponse`: notification information for display
+- DB operations:
   - `mark_read(notification_id,user_id)`
   - `mark_all_read(user_id)`
   - `delete_notification(notification_id,user_id)`
-

@@ -1,8 +1,8 @@
 """
 Technical Analysis Service - Tier 3 Analysis Service
 
-50+ technical indicators and analysis. Pure Python implementations for TSE/OTC,
-foreign exchanges, and crypto. Optimized with caching for production use.
+50+ technical indicators and analysis. Pure Python implementations for Nasdaq and
+international exchanges. Optimized with caching for production use.
 """
 
 from typing import Any, Dict, List, Optional

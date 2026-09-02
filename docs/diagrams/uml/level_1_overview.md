@@ -1,12 +1,12 @@
 # UML Level 1 — Overview (Context / High-level)
 
-این سند یک نمای کلی از سیستم **BedaanWaves** ارائه می‌دهد. تمرکز: اجزای اصلی، مرزها، و ارتباط‌های مستقیم.
+This document provides an overview of the **BedaanWaves** system. Focus: main components, boundaries, and direct relationships.
 
-## اجزای اصلی
-- **Frontend (Next.js)**: رابط کاربری و ارسال درخواست‌ها به Backend
-- **Backend API (FastAPI)**: لایه‌ی گیت‌وی/مسیر‌یابی و منطق کسب‌وکار
-- **External APIs (BRS API)**: تامین‌کننده‌ی داده‌ی بازار سرمایه ایران
-- **PostgreSQL**: ذخیره‌ی داده‌های Assets/PriceCandles/MLSignals/Portfolios/… 
+## Main Components
+- **Frontend (Next.js)**: User interface and request submission to the Backend
+- **Backend API (FastAPI)**: Gateway/routing layer and business logic
+- **External APIs (BRS API)**: Source of Iranian capital market data
+- **PostgreSQL**: Stores Assets/PriceCandles/MLSignals/Portfolios/…
 
 ## Diagram (PlantUML)
 ```plantuml
@@ -36,17 +36,17 @@ end note
 @enduml
 ```
 
-## روابط و داده‌های کلیدی
-- Frontend درخواست را می‌فرستد -> Backend:
-  - auth guard (در صورت فعال بودن)
-  - سپس Router مناسب اجرا می‌شود
-- برای برخی endpointها Backend به **BRS API** درخواست می‌زند (Live Proxy / Stock Fetch)
-- در سایر endpointها Backend داده‌ها را از **PostgreSQL** می‌خواند/برمی‌گرداند یا برای محاسبات از آن استفاده می‌کند.
+## Key Relationships and Data
+- Frontend sends request -> Backend:
+  - auth guard (when enabled)
+  - then the appropriate Router runs
+- For some endpoints, the Backend calls the **BRS API** (Live Proxy / Stock Fetch)
+- For other endpoints, the Backend reads/returns data from **PostgreSQL** or uses it for calculations.
 
 ---
 
 ### Glossary
-- **Asset**: نماد بازار (stock/ETF/…)
-- **PriceCandle**: کندل‌های OHLCV در تایم‌فریم‌های مختلف (معمولاً daily)
-- **MLSignal**: نتیجه‌ی تحلیل/پیش‌بینی با اعتبار و زمان اعتبار
-- **Portfolio / Position**: داده‌های سبد کاربر و نگهداری دارایی‌ها
+- **Asset**: Market symbol (stock/ETF/…)
+- **PriceCandle**: OHLCV candles across various timeframes (usually daily)
+- **MLSignal**: Analysis/prediction result with validity and expiration time
+- **Portfolio / Position**: User portfolio data and asset holdings

@@ -24,7 +24,6 @@ from .core.database_service import DatabaseService
 from .core.health_checker import HealthChecker
 
 # Tier 2: Data Services
-from .data.brs_api_client import BrsApiClient
 from .data.stock_service import StockService
 from .data.market_service import MarketService
 from .data.portfolio_service import PortfolioService
@@ -91,7 +90,6 @@ __all__ = [
     "DatabaseService",
     "HealthChecker",
     # Tier 2
-    "BrsApiClient",
     "StockService",
     "MarketService",
     "PortfolioService",

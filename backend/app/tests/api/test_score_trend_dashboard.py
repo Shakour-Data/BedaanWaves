@@ -110,19 +110,23 @@ class TestScoreTrendDashboard(unittest.TestCase):
             ["fundamental", "technical", "sentiment", "risk", "macro", "ai"],
         )
 
-    def test_score_trend_all_market_accepted(self):
-        rows = [
-            _row("2026-09-01", 60.0, _dims(55.0, 58.0, 62.0, 70.0, 50.0, 65.0), symbol_count=10)
-        ]
-        response = self._run(
-            dashboard_routes.get_score_trend(
-                days=30, market="ALL", db=_make_session(rows)
-            )
-        )
+    def test_score_trend_rejects_non_nasdaq_market(self):
+        """Crypto, forex, and other non-Nasdaq markets are never aggregated.
 
-        self.assertEqual(response["status"], "success")
-        self.assertEqual(response["market"], "ALL")
-        self.assertEqual(response["count"], 1)
+        The endpoint used to accept the literal ``"ALL"`` value as an
+        escape hatch that returned every active asset (including crypto).
+        That behavior is gone — only ``"NASDAQ"`` (the default) is
+        accepted, and any other value must raise a 400.
+        """
+        from fastapi import HTTPException
+        for bad_market in ("ALL", "BINANCE", "NYSE", "CRYPTO", ""):
+            with self.assertRaises(HTTPException) as ctx:
+                self._run(
+                    dashboard_routes.get_score_trend(
+                        days=30, market=bad_market, db=_make_session([])
+                    )
+                )
+            self.assertEqual(ctx.exception.status_code, 400)
 
 
 if __name__ == "__main__":

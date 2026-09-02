@@ -11,7 +11,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
-import { normalizeChartData, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
+import { normalizeChartData, createOrdinalTickMarkFormatter, createDateTickMarkFormatter } from "@/components/charts/chart-time";
 import { cn } from "@/lib/cn";
 
 interface SeriesDef {
@@ -93,7 +93,7 @@ export function ScoreTrendChart({
     const hasOrdinal = chartSeries.ordinalLabels.size > 0;
     const timeScaleFormatter = hasOrdinal
       ? createOrdinalTickMarkFormatter(chartSeries.ordinalLabels)
-      : undefined;
+      : createDateTickMarkFormatter();
 
     const chart = createChart(container, {
       height,

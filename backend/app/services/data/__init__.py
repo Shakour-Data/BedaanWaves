@@ -2,7 +2,6 @@
 Tier 2: Data Services
 
 Services for data management and external API integration:
-- BrsApiClient: Tehran Stock Exchange API integration
 - StockService: Stock data management
 - MarketService: Market data aggregation
 - PortfolioService: Portfolio management
@@ -21,7 +20,6 @@ Services for data management and external API integration:
 - FetchRealNasdaqData: Real Nasdaq data fetcher
 """
 
-from .brs_api_client import BrsApiClient
 from .stock_service import StockService
 from .market_service import MarketService
 from .portfolio_service import PortfolioService
@@ -38,14 +36,13 @@ from .financial_data_ingest_service import (
 from .stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
 from .nasdaq_ingestion_service import NasdaqIngestionService
 from .symbol_service import SymbolService
-from .api_client import ApiClient, TehranApiClient, NasdaqApiClient
+from .api_client import ApiClient, NasdaqApiClient
 from .data_archival import DataArchivalService
 from .incremental_ingest import IncrementalFinancialDataIngestService
 from .market_data_processing import MarketDataProcessingService
 from .sec_edgar_client import SEDGARFinancialService
 
 __all__ = [
-    "BrsApiClient",
     "StockService",
     "MarketService",
     "PortfolioService",
@@ -57,7 +54,6 @@ __all__ = [
     "NasdaqIngestionService",
     "SymbolService",
     "ApiClient",
-    "TehranApiClient",
     "NasdaqApiClient",
     "DataArchivalService",
     "IncrementalFinancialDataIngestService",

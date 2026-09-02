@@ -366,7 +366,7 @@ export default function DashboardPage() {
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">30-Day Trend</h2>
                   <p className="text-xs text-[var(--color-text-secondary)]">
-                    Daily averages across {scoreTrend?.series?.[0]?.symbol_count?.toLocaleString() ?? "—"} NASDAQ symbols
+                    Daily averages across {scoreTrend?.series?.[0]?.symbol_count?.toLocaleString("en-US") ?? "—"} NASDAQ symbols
                     {scoreTrend?.market ? ` (${scoreTrend.market})` : ""}
                   </p>
                 </div>

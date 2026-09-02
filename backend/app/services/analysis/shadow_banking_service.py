@@ -98,16 +98,16 @@ class ShadowBankingMetricsService(AnalysisService):
             return {"error": str(e)}
 
     async def _structured_products_tracking(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Track structured product issuance: MBS, CDO, crypto-backed tokens."""
+        """Track structured product issuance: MBS, CDO, and tokenized assets."""
         mbs = data.get("mbs_issuance", 0)
         cdo = data.get("cdo_issuance", 0)
-        crypto_tokens = data.get("crypto_backed_tokens", 0)
+        tokenized_assets = data.get("tokenized_assets", 0)
 
-        total = mbs + cdo + crypto_tokens
+        total = mbs + cdo + tokenized_assets
         return {
             "mbs_issuance": mbs,
             "cdo_issuance": cdo,
-            "crypto_backed_tokens": crypto_tokens,
+            "tokenized_assets": tokenized_assets,
             "total_issuance": total,
             "trend": "increasing" if total > 500 else "stable",
         }

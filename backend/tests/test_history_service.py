@@ -32,22 +32,22 @@ class TestGetStockHistory:
             cache_ttl_seconds=86400, brs_client=brs_client
         )
         result = await service.get_stock_history(
-            "فملی", start_date="2025-01-01", end_date="2025-01-31", interval="daily"
+            "FAMILY", start_date="2025-01-01", end_date="2025-01-31", interval="daily"
         )
-        assert result == {"ticker": "فملی", "history": []}
+        assert result == {"ticker": "FAMILY", "history": []}
 
     async def test_cache_hit_returns_cached(self, brs_client):
         service = HistoryService(
             cache_ttl_seconds=86400, brs_client=brs_client
         )
-        await service.get_stock_history("خودرو", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
-        second = await service.get_stock_history("خودرو", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
-        assert second == {"ticker": "خودرو", "history": []}
+        await service.get_stock_history("KHODRO", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
+        second = await service.get_stock_history("KHODRO", start_date="2025-01-01", end_date="2025-01-31", interval="daily")
+        assert second == {"ticker": "KHODRO", "history": []}
 
     async def test_missing_client_raises(self):
         service = HistoryService(brs_client=None)
         with pytest.raises(RuntimeError, match="BRS client not initialized"):
-            await service.get_stock_history("فملی")
+            await service.get_stock_history("FAMILY")
 
 
 class TestGetPriceHistory:
@@ -55,8 +55,8 @@ class TestGetPriceHistory:
         service = HistoryService(
             cache_ttl_seconds=86400, brs_client=brs_client
         )
-        result = await service.get_price_history("فملی", days=7)
-        assert result == {"ticker": "فملی", "history": []}
+        result = await service.get_price_history("FAMILY", days=7)
+        assert result == {"ticker": "FAMILY", "history": []}
 
 
 class TestGetVolumeHistory:
@@ -69,7 +69,7 @@ class TestGetVolumeHistory:
                 ]
 
         service = HistoryService(brs_client=_ClientWithHistory())
-        result = await service.get_volume_history("فملی", days=7)
+        result = await service.get_volume_history("FAMILY", days=7)
         assert result == [
             {"date": "2025-01-01", "volume": 1000},
             {"date": "2025-01-02", "volume": 2000},
@@ -81,5 +81,5 @@ class TestStoreHistoricalData:
         service = HistoryService(db_service=None, brs_client=brs_client)
         with caplog.at_level("WARNING"):
             caplog.clear()
-            await service.store_historical_data("فملی", "2025-01-01", {"open": 100})
+            await service.store_historical_data("FAMILY", "2025-01-01", {"open": 100})
         assert "Database service not available" in caplog.text

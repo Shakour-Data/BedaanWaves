@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 from ..core import BaseService
 from app.core.config import get_settings
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from app.models.models import Asset, IntlPriceCandle, News
 
 
@@ -375,7 +375,13 @@ class SchedulerService(BaseService):
             async with async_session_maker() as session:
                 all_assets = await session.execute(
                     select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
-                    .where(Asset.active == True)
+                    .where(
+                        and_(
+                            Asset.active == True,
+                            Asset.market == "NASDAQ",
+                            Asset.asset_class.in_(["EQUITY", "ETF"]),
+                        )
+                    )
                     .limit(200)
                 )
                 assets = all_assets.fetchall()
@@ -488,7 +494,6 @@ asyncio.run(main())
         try:
             from app.db.base import async_session_maker
             from app.models.models import Asset, MLSignal, IntlPriceCandle
-            from sqlalchemy import select, func
             from decimal import Decimal
 
             async with async_session_maker() as session:
@@ -647,8 +652,14 @@ asyncio.run(main())
         try:
             async with async_session_maker() as session:
                 all_assets = await session.execute(
-                    select(Asset.id, Asset.symbol, Asset.asset_class)
-                    .where(Asset.active == True)
+                    select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
+                    .where(
+                        and_(
+                            Asset.active == True,
+                            Asset.market == "NASDAQ",
+                            Asset.asset_class.in_(["EQUITY", "ETF"]),
+                        )
+                    )
                     .limit(100)
                 )
                 assets = all_assets.fetchall()
@@ -883,11 +894,7 @@ asyncio.run(main())
             import yfinance as yf
 
             index_symbols = [
-                {"symbol": "^GSPC", "name": "S&P 500", "exchange": "NYSE", "country": "US"},
-                {"symbol": "^DJI", "name": "Dow Jones Industrial Average", "exchange": "NYSE", "country": "US"},
                 {"symbol": "^IXIC", "name": "NASDAQ Composite", "exchange": "NASDAQ", "country": "US"},
-                {"symbol": "^FTSE", "name": "FTSE 100", "exchange": "LSE", "country": "UK"},
-                {"symbol": "^N225", "name": "Nikkei 225", "exchange": "TSE", "country": "Japan"},
             ]
 
             for idx in index_symbols:

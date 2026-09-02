@@ -49,15 +49,15 @@ BATCH_SIZE = 1000
 # Base assets definition
 ASSETS = [
     # Tehran Stock Exchange
-    {"symbol": "KHC1", "name": "کاهید", "asset_class": "EQUITY", "market": "TSE",
+    {"symbol": "KHC1", "name": "Kahied", "asset_class": "EQUITY", "market": "TSE",
      "country_code": "IR", "currency": "IRR", "sector": "Banks"},
-    {"symbol": "FAZF1", "name": "فازف", "asset_class": "EQUITY", "market": "TSE",
+    {"symbol": "FAZF1", "name": "Fazf", "asset_class": "EQUITY", "market": "TSE",
      "country_code": "IR", "currency": "IRR", "sector": "Pharmaceuticals"},
-    {"symbol": "KHOD1", "name": "خود", "asset_class": "EQUITY", "market": "TSE",
+    {"symbol": "KHOD1", "name": "Khod", "asset_class": "EQUITY", "market": "TSE",
      "country_code": "IR", "currency": "IRR", "sector": "Automotive"},
-    {"symbol": "MELL1", "name": "ملت", "asset_class": "EQUITY", "market": "TSE",
+    {"symbol": "MELL1", "name": "Mellat", "asset_class": "EQUITY", "market": "TSE",
      "country_code": "IR", "currency": "IRR", "sector": "Banking"},
-    {"symbol": "SHAH1", "name": "شهید", "asset_class": "EQUITY", "market": "TSE",
+    {"symbol": "SHAH1", "name": "Shahid", "asset_class": "EQUITY", "market": "TSE",
      "country_code": "IR", "currency": "IRR", "sector": "Construction"},
     # NASDAQ
     {"symbol": "AAPL", "name": "Apple Inc.", "asset_class": "EQUITY", "market": "NASDAQ",

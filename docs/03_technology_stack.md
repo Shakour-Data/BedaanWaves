@@ -47,7 +47,7 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
   - Used for: Live market data, real-time alerts, collaborative features
   - Features: Bidirectional communication, connection broadcasting, room support
 - **HTTP Client**: HTTPX (async)
-  - Used for: External API calls (BRS, crypto exchanges, news APIs)
+  - Used for: External API calls (BRS, news APIs)
   - Features: HTTP/2 support, async/await, connection pooling
 
 ### Machine Learning & Data Science
@@ -308,19 +308,12 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
   - Data: Real-time quotes, historical data, financial statements, indices
   - Format: JSON/XML over HTTPS, rate limited (50K/day)
   - Authentication: API key in header
-- **Cryptocurrency Exchanges**: 
-  - Binance: REST + WebSocket APIs (spot, futures, options)
-  - Kraken: REST + WebSocket APIs (spot, futures, margin)
-  - Coinbase: REST + WebSocket APIs (spot, derivatives)
-  - KuCoin: REST + WebSocket APIs (spot, futures, margin)
-  - Data: OHLCV, order book, trades, funding rates, insurance funds
-  - Authentication: API key/secret pairs, HMAC signing
 - **International Markets**:
   - Yahoo Finance: Historical data, quotes, financials (unofficial API)
-  - Alpha Vantage: Technical indicators, forex, crypto (free tier available)
+  - Alpha Vantage: Technical indicators, forex (free tier available)
   - Twelve Data: Real-time + historical data, indicators (freemium)
   - IEX Cloud: Real-time & historical data, charts, news (tiered pricing)
-  - Finnhub: Real-time data, financials, forex, crypto (freemium)
+  - Finnhub: Real-time data, financials, forex (freemium)
   - Polygon.io: Real-time + historical data, options, forex (tiered pricing)
 
 ### News & Sentiment Providers

@@ -27,8 +27,16 @@ def _load(svc_cls):
 async def _build_universe(
     db: AsyncSession, market: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Build a stock universe from stored assets, latest candle, and latest signal."""
-    Candle = candle_model_for_market(market or "NASDAQ")
+    """Build a stock universe from stored assets, latest candle, and latest signal.
+
+    The universe is hard-locked to Nasdaq-listed equities and ETFs. The
+    ``market`` argument is accepted for backward compatibility but any
+    value other than ``"NASDAQ"`` is treated as ``"NASDAQ"``.
+    """
+    market = (market or "NASDAQ").upper()
+    if market != "NASDAQ":
+        market = "NASDAQ"
+    Candle = candle_model_for_market("NASDAQ")
     latest_ts = (
         select(
             Candle.asset_id,
@@ -41,7 +49,13 @@ async def _build_universe(
 
     query = (
         select(Asset, Candle)
-        .where(Asset.active == True)  # noqa: E712
+        .where(
+            and_(
+                Asset.active == True,  # noqa: E712
+                Asset.market == "NASDAQ",
+                Asset.asset_class.in_(["EQUITY", "ETF"]),
+            )
+        )
         .join(
             latest_ts,
             Asset.id == latest_ts.c.asset_id,
@@ -55,8 +69,6 @@ async def _build_universe(
             ),
         )
     )
-    if market:
-        query = query.where(Asset.market == market)
 
     result = await db.execute(query)
     rows = result.all()

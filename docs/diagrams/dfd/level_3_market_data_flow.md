@@ -1,6 +1,6 @@
 # DFD Level 3 — Market Data Flow (DB-backed & Live Proxy)
 
-این سطح جریان داده‌های بازار را در دو مسیر نشان می‌دهد:
+This level shows the market data flows across two paths:
 1) DB-backed endpoints (`/market/*`)
 2) Live proxy endpoints (`/market/live/*`)
 
@@ -27,14 +27,13 @@ flowchart TD
 ```
 
 ## Data Flows (DB-backed)
-- `Asset` خوانده می‌شود:
-  - فیلترها: `asset_class`, `market`, `sector`, `industry`, `active`
-- `PriceCandle` خوانده می‌شود:
-  - `timeframe` و بازه `timestamp`
-  - مرتب‌سازی و limit
+- `Asset` is read with:
+  - filters: `asset_class`, `market`, `sector`, `industry`, `active`
+- `PriceCandle` is read with:
+  - `timeframe` and a `timestamp` range
+  - sorting and limit
 
 ## Data Flows (Live Proxy)
-- `BrsApiClient` به BRS API درخواست می‌زند:
+- `BrsApiClient` calls BRS API for:
   - AllSymbols / Symbol / Candlestick / History / Transaction / Shareholder / Index / Codal ...
-- خروجی بدون پردازش سنگین (تقریباً pass-through) به کلاینت برمی‌گردد.
-
+- The output is returned to the client with minimal processing (almost pass-through).

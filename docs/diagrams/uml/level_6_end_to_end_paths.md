@@ -1,8 +1,8 @@
 # UML Level 6 — End-to-End Paths (Request → Middleware → Service → DB/Upstream)
 
-این سطح چند مسیر واقعی را از perspective UML تشریح می‌کند.
+This level describes several real paths from a UML perspective.
 
-## مسیر A: GET /api/v1/market/symbols
+## Path A: GET /api/v1/market/symbols
 ```plantuml
 @startuml
 actor Client
@@ -26,7 +26,7 @@ APP --> Client : 200 JSON
 @enduml
 ```
 
-## مسیر B: GET /api/v1/analysis/technical/{symbol}
+## Path B: GET /api/v1/analysis/technical/{symbol}
 ```plantuml
 @startuml
 actor Client
@@ -50,7 +50,7 @@ APP --> Client : 200
 @enduml
 ```
 
-## مسیر C: POST /api/v1/portfolios/{portfolio_id}/holdings
+## Path C: POST /api/v1/portfolios/{portfolio_id}/holdings
 ```plantuml
 @startuml
 actor User
@@ -76,7 +76,7 @@ end
 @enduml
 ```
 
-## مسیر D: GET /api/v1/market/live/history/{l18} (Upstream Proxy)
+## Path D: GET /api/v1/market/live/history/{l18} (Upstream Proxy)
 ```plantuml
 @startuml
 actor Client
@@ -93,7 +93,7 @@ R --> Client : 200 JSON
 @enduml
 ```
 
-## مسیر E: POST /api/v1/system/queue/jobs
+## Path E: POST /api/v1/system/queue/jobs
 ```plantuml
 @startuml
 actor Admin
@@ -110,7 +110,7 @@ R --> Admin : 200 {job_id,name}
 @enduml
 ```
 
-## مسیر F: GET /api/v1/analysis/signals/{symbol}
+## Path F: GET /api/v1/analysis/signals/{symbol}
 ```plantuml
 @startuml
 actor Client
@@ -126,4 +126,3 @@ DB --> R : MLSignal (valid)
 R --> Client : 200 MLSignalResponse
 @enduml
 ```
-

@@ -1,11 +1,11 @@
 """Database Models
 
-طرح دیتابیس BedaanWaves:
-- جداول کندل بر اساس بازار (ایران / بین‌الملل) به دلیل تقویم و
-  ساعت کاری متفاوت و تایم‌فریم‌های متفاوت.
-- جداول عمق بازار (مظنه برتر)، سهامداران عمده، شناور آزاد و جریان حقیقی/حقوقی
-  اختصاصی بازار ایران.
-- جداول بنیادی، خبری، ML و احراز هویت/امنیت.
+BedaanWaves database design:
+- Separate candle tables per market (Iran / International) due to different
+  calendars, trading hours, and timeframes.
+- Market depth tables (top quotes), major shareholders, free float, and
+  real/legal cash flow specific to the Iranian market.
+- Fundamental, news, ML, and authentication/security tables.
 """
 
 from sqlalchemy import (
@@ -79,10 +79,10 @@ class Asset(Base):
 
 
 # ===========================================================================
-# 2. کندل‌های قیمت — سه جدول مجزا بر اساس بازار
+# 2. Price candles — three separate tables per market
 # ===========================================================================
 class CandleMixin:
-    """ستون‌های مشترک کندل‌های OHLCV (برای سه جدول مجزا)."""
+    """Shared OHLCV candle columns (for three separate tables)."""
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
@@ -129,25 +129,25 @@ class CandleMixin:
 
 
 class IntlPriceCandle(CandleMixin, Base):
-    """کندل‌های بورس‌های خارج از ایران: 15m, 1h, 4h, 1d, 1w, 1M"""
+    """International exchange candles: 15m, 1h, 4h, 1d, 1w, 1M"""
     __tablename__ = "intl_price_candles"
 
 
 def candle_model_for_market(market: str):
-    """بازگرداندن مدل کندل مناسب بر اساس بازار."""
-    return IntlPriceCandle  # پیش‌فرض: بازارهای بین‌المللی (NASDAQ, NYSE, LSE, etc.)
+    """Return the appropriate candle model for the given market."""
+    return IntlPriceCandle  # default: international markets (NASDAQ, NYSE, LSE, etc.)
 
 
 # ===========================================================================
 # 3. Market Depth — 5 best levels (intl only)
 # ===========================================================================
 class OrderBookMixin:
-    """ستون‌های مشترک عمق بازار (۵ سطح برتر)."""
+    """Shared market depth columns (top 5 levels)."""
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
     snapshot_time = Column(DateTime, nullable=False, index=True)
-    rank = Column(Integer, nullable=False)  # 1..5 (بهترین مظنه)
+    rank = Column(Integer, nullable=False)  # 1..5 (top quote)
 
     bid_price = Column(Numeric(20, 8))
     bid_volume = Column(BigInteger)
@@ -170,12 +170,12 @@ class OrderBookMixin:
 
 
 class IntlOrderBook(OrderBookMixin, Base):
-    """عمق بازار بورس‌های خارجی (هر ۱۵ دقیقه، ۵ مظنه برتر)"""
+    """International market depth (every 15 minutes, top 5 quotes)"""
     __tablename__ = "intl_order_book"
 
 
 def order_book_model_for_market(market: str):
-    """بازگرداندن مدل عمق بازار مناسب بر اساس بازار."""
+    """Return the appropriate market depth model for the given market."""
     return IntlOrderBook
 
 
@@ -221,7 +221,7 @@ class MLSignal(Base):
 
 
 # ===========================================================================
-# 6. پورتفولیو و موضع‌ها
+# 6. Portfolios and positions
 # ===========================================================================
 class Portfolio(Base):
     """User Portfolio"""
@@ -288,7 +288,7 @@ class Position(Base):
 
 
 # ===========================================================================
-# 7. کاربران، احراز هویت و امنیت
+# 7. Users, authentication, and security
 # ===========================================================================
 class User(Base):
     """User Account"""
@@ -313,7 +313,7 @@ class User(Base):
 
 
 class RefreshToken(Base):
-    """توکن‌های تازه‌سازی برای نشست‌های کاربر"""
+    """Refresh tokens for user sessions"""
     __tablename__ = "refresh_tokens"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -351,7 +351,7 @@ class PasswordResetToken(Base):
 
 
 class AuditLog(Base):
-    """لاگ تغییرات حساس (ورود، تغییر پورتفولیو، دسترسی ادمین)"""
+    """Audit log of sensitive changes (login, portfolio updates, admin access)"""
     __tablename__ = "audit_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -406,7 +406,7 @@ class APILog(Base):
 
 
 # ===========================================================================
-# 8. لیست نظارت، اعلان‌ها و ترجیحات
+# 8. Watchlists, notifications, and preferences
 # ===========================================================================
 class Watchlist(Base):
     """User watchlist (collection of watched assets)"""
@@ -493,10 +493,10 @@ class UserPreference(Base):
 
 
 # ===========================================================================
-# 9. تقویم معاملاتی، رویدادهای شرکتی و مرجع
+# 9. Trading calendar, corporate events, and references
 # ===========================================================================
 class MarketSession(Base):
-    """تقویم و ساعت کاری هر بازار"""
+    """Trading calendar and hours for each market"""
     __tablename__ = "market_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -514,7 +514,7 @@ class MarketSession(Base):
 
 
 class CorporateEvent(Base):
-    """رویدادهای شرکتی (مجامع، افزایش سرمایه، تقسیم سود، توقف نماد)"""
+    """Corporate events (AGMs, capital increases, dividends, symbol suspensions)"""
     __tablename__ = "corporate_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -529,7 +529,7 @@ class CorporateEvent(Base):
 
 
 class Sector(Base):
-    """درخت بخش/صنعت (برای تحلیل بخشی)"""
+    """Sector/industry tree (for sector analysis)"""
     __tablename__ = "sectors"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -542,7 +542,7 @@ class Sector(Base):
 
 
 class CurrencyRate(Base):
-    """نرخ ارز برای تبدیل چندارزی"""
+    """Currency rates for multi-currency conversion"""
     __tablename__ = "currency_rates"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -558,7 +558,7 @@ class CurrencyRate(Base):
 
 
 class MacroIndicator(Base):
-    """شاخص‌های کلان اقتصادی (تورم، نرخ بهره، نفت و ...)"""
+    """Macro economic indicators (inflation, interest rates, oil, ...)"""
     __tablename__ = "macro_indicators"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -767,7 +767,7 @@ class RawMarketData(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
 
-    # Symbol in raw form (e.g. "BTCUSD", "BTCUSDT", "ETHUSDT")
+    # Symbol in raw form (e.g. "AAPL", "MSFT")
     raw_symbol = Column(String(50), nullable=False, index=True)
 
     # Market classification
@@ -854,7 +854,7 @@ class MarketDataSnapshot(Base):
     ml_features = Column("features", JSONB, server_default=sa.text("'{}'::jsonb"))
 
     # Source
-    source = Column(String(20), default="BRS")  # BRS, COINGECKO, BINANCE
+    source = Column(String(20), default="NASDAQ")  # NASDAQ, NYSE, etc.
 
     # Quality flag
     is_fresh = Column(Boolean, default=True, index=True)

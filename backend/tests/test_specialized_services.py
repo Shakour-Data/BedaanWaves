@@ -243,11 +243,11 @@ class TestCalendarService:
     async def test_add_and_get_events(self):
         svc = CalendarService()
         await svc.initialize()
-        svc.add_event({"date": "2026-07-15", "type": "DIVIDEND", "title": "Pay day", "symbol": "فملی"})
+        svc.add_event({"date": "2026-07-15", "type": "DIVIDEND", "title": "Pay day", "symbol": "FAMILY"})
         events = svc.get_events(day=date(2026, 7, 15))
         assert len(events) == 1
         assert events[0]["type"] == "DIVIDEND"
-        assert len(svc.get_events(symbol="فملی")) == 1
+        assert len(svc.get_events(symbol="FAMILY")) == 1
 
     async def test_events_in_range(self):
         svc = CalendarService()

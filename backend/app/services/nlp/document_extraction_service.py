@@ -19,15 +19,15 @@ class DocumentExtractionService(BaseService):
     - Financial metric extraction
     - Table data extraction
     - Multi-format support (text, HTML)
-    - Persian document support
+    - Persian document support (legacy)
     """
-    
+
     ENTITY_TYPES = {
-        "company": ["شرکت", "شرکت", "company", "corp", "inc", "ltd"],
-        "amount": ["ریال", "تومان", "million", "billion", "USD", "IRR"],
-        "date": ["تاریخ", "date", "year", "month", "day"],
-        "percentage": ["درصد", "percent", "%", "growth", "decline"],
-        "currency": ["تومان", "ریال", "USD", "EUR", "rial", "toman"],
+        "company": ["company", "corp", "inc", "ltd"],
+        "amount": ["million", "billion", "USD", "IRR"],
+        "date": ["date", "year", "month", "day"],
+        "percentage": ["percent", "%", "growth", "decline"],
+        "currency": ["USD", "EUR", "rial", "toman"],
     }
     
     def __init__(self, service_name: str = "DocumentExtractionService"):
@@ -156,7 +156,7 @@ class DocumentExtractionService(BaseService):
         
         patterns = {
             "revenue": r"revenue[:\s]+[\d,\.]+\s*(billion|million|B|M)?\s*(USD|IRR|toman)?",
-            "profit": r"(net profit|net income|سود خالص)[:\s]+[\d,\.]+\s*(billion|million|B|M)?",
+            "profit": r"(net profit|net income)[:\s]+[\d,\.]+\s*(billion|million|B|M)?",
             "eps": r"EPS[:\s]+[\d,\.]+",
             "pe_ratio": r"P/E[:\s]+[\d,\.]+",
             "market_cap": r"market cap[:\s]+[\d,\.]+\s*(billion|million|B|M)?",

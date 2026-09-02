@@ -2,7 +2,7 @@
 
 ## Project Summary
 
-BedaanWaves is a unified capital market analysis platform that consolidates 5 legacy projects (Bedaan4D-ML, Bedaan6D-project, Bedaan_4D_AI, CryptoAndStocks, .kilo) into a single, optimized system. The platform provides comprehensive market analysis covering stocks, cryptocurrencies, ETFs, and commodities with advanced ML/AI capabilities.
+BedaanWaves is a unified capital market analysis platform that consolidates 4 legacy projects (Bedaan4D-ML, Bedaan6D-project, Bedaan_4D_AI, .kilo) into a single, optimized system. The platform provides comprehensive market analysis covering stocks and ETFs with advanced ML/AI capabilities.
 
 **Status**: Production Ready (100% Implementation Complete)
 **Last Updated**: August 12, 2026
@@ -12,7 +12,7 @@ BedaanWaves is a unified capital market analysis platform that consolidates 5 le
 ## Key Features
 
 - **Unified Platform**: Single codebase replacing 5 legacy systems
-- **Multi-Asset Support**: Domestic (TSE), International, Cryptocurrency markets
+- **Multi-Asset Support**: Domestic (TSE) and International markets
 - **Advanced Analytics**: 6D scoring system with 305-node hierarchy
 - **ML/AI Capabilities**: Price prediction, pattern recognition, anomaly detection
 - **NLP Integration**: Persian sentiment analysis, news summarization, document extraction
@@ -31,7 +31,7 @@ BedaanWaves follows a layered 9-tier architecture:
 5. **Tier 5**: NLP Services (Sentiment, Summarization, Chatbot)
 6. **Tier 6**: User Services (Auth, Profile, Watchlist)
 7. **Tier 7**: Specialized Services (Sector, Screening, Comparison)
-8. **Tier 8**: Crypto Services (Price, Portfolio, ML, etc.)
+
 9. **Tier 9**: System Services (Scheduler, Metrics, Queue)
 
 ## Technology Stack

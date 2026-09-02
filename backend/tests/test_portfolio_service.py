@@ -56,12 +56,12 @@ class TestCRUD:
         service = PortfolioService()
         holding = await service.add_holding(
             portfolio_id=1,
-            stock_ticker="فملی",
+            stock_ticker="FAMILY",
             quantity=100,
             purchase_price=1234.5,
         )
         assert holding["portfolio_id"] == 1
-        assert holding["stock_ticker"] == "فملی"
+        assert holding["stock_ticker"] == "FAMILY"
         assert holding["quantity"] == 100
         assert holding["purchase_price"] == 1234.5
         assert "purchase_date" in holding
@@ -78,7 +78,7 @@ class TestCRUD:
 class TestCalculateValue:
     async def test_computes_total_value(self):
         service = PortfolioService()
-        current_prices = {"فملی": 1500.0, "خودرو": 2000.0}
+        current_prices = {"FAMILY": 1500.0, "KHODRO": 2000.0}
         result = await service.calculate_value(1, current_prices)
         assert "total_current_value" in result
         assert "total_purchase_value" in result

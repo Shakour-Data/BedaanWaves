@@ -77,6 +77,7 @@ class RankingService:
                 and_(
                     Asset.market == "NASDAQ",
                     Asset.active == True,
+                    Asset.asset_class.in_(["EQUITY", "ETF"]),
                 )
             )
             .order_by(Asset.symbol.asc())
