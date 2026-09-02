@@ -15,7 +15,7 @@ Sector and industry performance analysis across markets.
 - Performance attribution
 
 ### ScreeningService
-Advanced stock and crypto screening with customizable filters.
+Advanced stock screening with customizable filters.
 
 **Filter Categories:**
 - Fundamental (P/E, ROE, Debt/Equity)
@@ -59,10 +59,9 @@ Market calendar integration with corporate events.
 Multi-country data integration for global market coverage.
 
 **Markets Covered:**
-- Iran (TSE, OTC)
+- US (NASDAQ, NYSE)
 - US (NYSE, NASDAQ)
 - Europe, Asia, MENA
-- Cryptocurrency global
 
 ### SectorFilterService
 Industry-based filtering and sector-specific analysis.

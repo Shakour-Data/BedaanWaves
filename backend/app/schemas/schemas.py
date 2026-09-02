@@ -11,7 +11,7 @@ import uuid
 # Enums
 # Only instruments that participate in the formation of the Nasdaq index
 # are allowed. Crypto, forex, commodities, bonds, and non-Nasdaq equities
-# (NYSE, TSE, etc.) are intentionally excluded.
+# (NYSE, etc.) are intentionally excluded.
 class AssetClassEnum(str, Enum):
     EQUITY = "EQUITY"
     ETF = "ETF"
@@ -94,7 +94,7 @@ class PriceCandleBase(BaseModel):
 
 class PriceCandleCreate(PriceCandleBase):
     asset_id: uuid.UUID
-    source: str = "BRS"
+    source: str = "YFINANCE"
     data_quality: str = "CONFIRMED"
 
 

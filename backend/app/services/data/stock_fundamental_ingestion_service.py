@@ -2,7 +2,7 @@
 Stock Fundamental Data Ingestion Service - Extension for stock fundamental analysis
 
 Specifically designed for ingesting fundamental data for stocks from various sources
-including CODAL (Iran), Yahoo Finance (US/international), and other APIs.
+including Yahoo Finance (US/international), and other APIs.
 """
 
 from typing import Any, Dict, List, Optional
@@ -27,10 +27,9 @@ class StockFundamentalDataIngestionService(DataService):
     def __init__(
         self,
         service_name: str = "StockFundamentalDataIngestionService",
-        brs_client: Optional[Any] = None,
     ):
         super().__init__(service_name)
-        self.financial_ingest_service = FinancialDataIngestService(brs_client=brs_client)
+        self.financial_ingest_service = FinancialDataIngestService()
         self.settings = get_settings()
     
     async def initialize(self) -> None:
@@ -137,9 +136,6 @@ class StockFundamentalDataIngestionService(DataService):
         Returns:
             MarketType enum value
         """
-        persian_chars = set('abcdefgh')
-        if any(c in persian_chars for c in symbol):
-            return MarketType.IRAN
         if len(symbol) <= 5 and symbol.isalpha() and symbol.isupper():
             return MarketType.US
         return MarketType.US

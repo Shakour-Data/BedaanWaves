@@ -49,12 +49,12 @@ class TestAnalyze:
             "lows": lows,
             "volumes": volumes,
             "ticker": "TEST",
-            "market": "TSE",
+            "market": "NASDAQ",
             "current_price": prices[-1],
         })
 
         assert result["ticker"] == "TEST"
-        assert result["market"] == "TSE"
+        assert result["market"] == "NASDAQ"
         assert "indicators" in result
         assert "sma_20" in result["indicators"]
         assert "ema_12" in result["indicators"]

@@ -1,7 +1,7 @@
 # BedaanWaves - ML Services Documentation
 
 ## Overview
-BedaanWaves Machine Learning Services provide advanced analytics, price prediction, pattern recognition, and anomaly detection across multiple asset classes including stocks, cryptocurrencies, and traditional markets.
+BedaanWaves Machine Learning Services provide advanced analytics, price prediction, pattern recognition, and anomaly detection across multiple asset classes including stocks and traditional markets.
 
 ## ML Service Tiers
 
@@ -31,7 +31,7 @@ BedaanWaves Machine Learning Services provide advanced analytics, price predicti
 
 ### 5. PortfolioOptimizationService
 - **Purpose**: Efficient frontier optimization and portfolio rebalancing
-- **Assets**: Multi-asset support (stocks, crypto, ETFs)
+- **Assets**: Multi-asset support (stocks, ETFs)
 - **Constraints**: Risk limits, sector caps, concentration limits
 - **Endpoints**: `/api/v1/portfolio/optimization`
 
@@ -45,29 +45,7 @@ BedaanWaves Machine Learning Services provide advanced analytics, price predicti
 - **Features**: Adaptive weighting based on market regimes
 - **Endpoints**: `/api/v1/ml/coefficients`
 
-### 8. CryptoMLService
-- **Purpose**: Crypto-specific ML models and on-chain metric analysis
-- **Features**: Volume analysis, whale movement detection, exchange arbitrage
-- **Endpoints**: `/api/v1/crypto/ml`
-
-## Architecture
-
-```
-ML Pipeline → Data Ingestion → Feature Engineering → Model Training → 
-Prediction → Signal Generation → Risk Assessment → Alerting
-```
-
-## Key Metrics Tracked
-- Model accuracy (F1 score, RMSE, MAE)
-- Prediction latency
-- Signal frequency
-- Model drift detection
-- Retraining intervals
-
-## Supported Models
-- **Classical**: ARIMA, SARIMA, Exponential Smoothing
-- **Deep Learning**: LSTM, GRU, Transformers
-- **Ensemble**: Random Forest, XGBoost, LightGBM
+### 8. TimeSeriesForecastingService
 - **Probabilistic**: Bayesian ensembles, Quantile regression
 
 ## Configuration

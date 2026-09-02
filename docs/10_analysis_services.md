@@ -269,7 +269,7 @@ dashboard = await service.get_dashboard({
 **File**: `app/services/analysis/fundamental_service.py`
 
 ### Purpose
-Provides fundamental analysis with 20+ financial ratios supporting Iran, US, and International markets. Computes profitability, valuation, leverage, liquidity, and efficiency metrics.
+Provides fundamental analysis with 20+ financial ratios supporting US and International markets. Computes profitability, valuation, leverage, liquidity, and efficiency metrics.
 
 ### Ratio Categories
 
@@ -320,7 +320,7 @@ Provides fundamental analysis with 20+ financial ratios supporting Iran, US, and
 | **Working Capital** | `Current Assets - Current Liabilities` | Operational efficiency |
 
 ### Regional Support
-- **Iran Market**: TSE financial statements (CODAL integration)
+- **US Market**: SEC filings, Yahoo Finance, Alpha Vantage
 - **US Market**: SEC filings, Yahoo Finance, Alpha Vantage
 - **International Markets**: Global financial data providers
 
@@ -591,7 +591,7 @@ signals = await momentum_service.generate_signals({
 ```python
 # Rank assets by momentum
 rankings = await momentum_service.rank_assets({
-    "universe": "sp500",  # or "crypto100", "etf_universe"
+    "universe": "sp500",  # or "etf_universe"
     "method": "12-1",  # 12-month minus 1-month
     "top_n": 20,
     "min_price": 10,

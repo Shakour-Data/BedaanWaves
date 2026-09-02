@@ -75,114 +75,33 @@ class FinancialDataProvider(ABC):
         pass
 
 
-class BrsFinancialDataProvider(FinancialDataProvider):
-    """Financial data provider for Iranian market via BRS API / CODAL"""
-    
-    def __init__(self, brs_client: BrsApiClient):
-        self.brs_client = brs_client
-    
-    async def fetch_financial_statements(
-        self,
-        symbol: str,
-        statement_types: List[FinancialStatementType],
-        periods: Optional[List[str]] = None
-    ) -> List[FinancialStatement]:
-        statements = []
-        
-        # CODAL categories: 1=Annual financial, 3=Monthly performance
-        category_map = {
-            FinancialStatementType.INCOME: 1,
-            FinancialStatementType.BALANCE_SHEET: 1,
-            FinancialStatementType.CASH_FLOW: 1,
-        }
-        
-        for stmt_type in statement_types:
-            category = category_map.get(stmt_type, 1)
-            try:
-                codal_data = await self.brs_client.get_codal(l18=symbol, category=category)
-                
-                for announcement in codal_data.get("announcements", []):
-                    parsed = self._parse_codal_announcement(announcement, stmt_type)
-                    if parsed:
-                        statements.append(parsed)
-                        
-            except DataProviderException:
-                raise
-            except Exception as exc:
-                raise DataProviderException(
-                    f"Failed to fetch financial statements for {symbol}: {exc}"
-                ) from exc
-        
-        return statements
-    
-    def _parse_codal_announcement(
-        self,
-        announcement: Dict[str, Any],
-        stmt_type: FinancialStatementType
-    ) -> Optional[FinancialStatement]:
-        """Parse CODAL announcement into standardized financial statement."""
-        try:
-            fiscal_year = announcement.get("fiscal_year")
-            if fiscal_year is not None:
-                fiscal_year = int(fiscal_year)
-            
-            publish_date = announcement.get("publish_date")
-            as_of_date = None
-            if publish_date:
-                as_of_date = datetime.fromisoformat(publish_date)
-            
-            return FinancialStatement(
-                asset_id=announcement.get("symbol", ""),
-                symbol=announcement.get("symbol", ""),
-                market=MarketType.IRAN,
-                statement_type=stmt_type,
-                period=announcement.get("period", ""),
-                fiscal_year=fiscal_year or 0,
-                fiscal_quarter=announcement.get("fiscal_quarter"),
-                data=announcement.get("financial_data", {}),
-                source="CODAL",
-                fetched_at=datetime.now(timezone.utc),
-                as_of=as_of_date,
-            )
-        except (ValueError, TypeError) as exc:
-            raise DataParsingException(
-                f"Failed to parse CODAL announcement: {exc}"
-            ) from exc
-    
-    async def get_supported_markets(self) -> List[MarketType]:
-        return [MarketType.IRAN]
-
-
 class YahooFinanceProvider(FinancialDataProvider):
-    """Financial data provider for US and international markets via Yahoo Finance"""
-    
+    """Financial data provider for Nasdaq-listed instruments via Yahoo Finance"""
+
     def __init__(self):
         self.base_url = "https://query1.finance.yahoo.com/v10/finance"
         self.settings = get_settings()
-    
+
     async def fetch_financial_statements(
         self,
         symbol: str,
         statement_types: List[FinancialStatementType],
         periods: Optional[List[str]] = None
     ) -> List[FinancialStatement]:
-        # This would integrate with Yahoo Finance API
-        # For now, return empty list - implementation would use yfinance or similar
         return []
-    
+
     async def get_supported_markets(self) -> List[MarketType]:
-        return [MarketType.US, MarketType.INTERNATIONAL]
+        return [MarketType.US, MarketType.NASDAQ]
 
 
 class AlphaVantageProvider(FinancialDataProvider):
     """Financial data provider via Alpha Vantage API"""
-    
+
     def __init__(self):
         self.base_url = "https://www.alphavantage.co/query"
         self.settings = get_settings()
-        # Use getattr with default None for optional API key
         self.api_key = getattr(self.settings, 'ALPHA_VANTAGE_API_KEY', None)
-    
+
     async def fetch_financial_statements(
         self,
         symbol: str,
@@ -191,13 +110,10 @@ class AlphaVantageProvider(FinancialDataProvider):
     ) -> List[FinancialStatement]:
         if not self.api_key:
             return []
-        
-        # This would integrate with Alpha Vantage API
-        # For now, return empty list
         return []
-    
+
     async def get_supported_markets(self) -> List[MarketType]:
-        return [MarketType.US, MarketType.INTERNATIONAL]
+        return [MarketType.US, MarketType.NASDAQ]
 
 
 class FinancialDataIngestService(DataService):
@@ -214,11 +130,9 @@ class FinancialDataIngestService(DataService):
     def __init__(
         self,
         service_name: str = "FinancialDataIngestService",
-        brs_client: Optional[BrsApiClient] = None,
         max_concurrent_requests: int = 10,
     ):
         super().__init__(service_name)
-        self.brs_client = brs_client
         self.max_concurrent = max_concurrent_requests
         self._providers: Dict[MarketType, FinancialDataProvider] = {}
         self._provider_cache = {}
@@ -227,24 +141,17 @@ class FinancialDataIngestService(DataService):
 
     def _register_providers(self) -> None:
         """Register default data providers"""
-        if self.brs_client:
-            self._providers[MarketType.IRAN] = BrsFinancialDataProvider(self.brs_client)
-
         self._providers[MarketType.US] = YahooFinanceProvider()
-        self._providers[MarketType.INTERNATIONAL] = AlphaVantageProvider()
+        self._providers[MarketType.NASDAQ] = AlphaVantageProvider()
 
     def register_provider(self, market: MarketType, provider: FinancialDataProvider) -> None:
         """Register a custom data provider"""
         self._providers[market] = provider
 
     async def initialize(self) -> None:
-        if self.brs_client:
-            await self.brs_client.initialize()
         self.logger.info("FinancialDataIngestService initialized")
 
     async def shutdown(self) -> None:
-        if self.brs_client:
-            await self.brs_client.shutdown()
         self.logger.info("FinancialDataIngestService shutdown")
 
     _result_cache: Dict[str, Any] = {}

@@ -369,7 +369,7 @@ Retrieve available trading symbols with metadata.
     {
       "id": "uuid",
       "symbol": "FSPD",
-      "name": "فولاد",
+      "name": "Foolad",
       "asset_class": "EQUITY",
       "market": "TSE",
       "sector": "Metals & Mining",

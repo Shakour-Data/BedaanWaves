@@ -43,7 +43,6 @@ async def save_market_preferences(
 async def get_countries():
     """Get list of supported countries/regions."""
     return [
-        {"id": "ir", "name": "Iran", "flag": "🇮🇷", "region": "Middle East"},
         {"id": "us", "name": "USA", "flag": "🇺🇸", "region": "North America"},
         {"id": "eu", "name": "Europe", "flag": "🇪🇺", "region": "Europe"},
         {"id": "as", "name": "Asia", "flag": "🌏", "region": "Asia Pacific"}

@@ -38,7 +38,7 @@ Automated news article summarization with financial focus.
 PDF and document processing for financial reports and disclosures.
 
 **Capabilities:**
-- CODAL disclosure parsing
+- SEC filing parsing
 - Annual report extraction
 - Financial table extraction
 - OCR for scanned documents

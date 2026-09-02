@@ -41,9 +41,7 @@ class UserMarketSettingsService(BaseService):
         
         # Default market settings
         self.default_settings = {
-            "countries": ["Iran"],
-            "indices": ["TEPIX", "TEDPIX"],
-            "industries": [],
+                                    "industries": [],
             "regions": ["Middle East"],
             "exchanges": [],
             "currencies": ["IRR"]
@@ -51,14 +49,13 @@ class UserMarketSettingsService(BaseService):
         
         # Available options (would typically come from database/cache)
         self.available_countries = [
-            "Iran", "USA", "UK", "Germany", "France", "Japan", "China", 
+            "USA", "UK", "Germany", "France", "Japan", "China", 
             "Korea", "India", "Brazil", "Canada", "Australia", "Russia",
             "Turkey", "Saudi Arabia", "UAE", "Singapore", "Switzerland"
         ]
         
         self.available_indices = {
-            "Iran": ["TEPIX", "TEDPIX", "IFX", "IRTEC"],
-            "USA": ["SPX", "DJI", "IXIC", "RUT"],
+                        "USA": ["SPX", "DJI", "IXIC", "RUT"],
             "UK": ["FTSE", "FTSE250"],
             "Germany": ["GDAXI", "MDX"],
             "France": ["FCHI", "SBF120"],

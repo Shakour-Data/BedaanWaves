@@ -104,15 +104,7 @@ ML_MODEL_RETRAIN_INTERVAL=86400
 
 ### 7. Data Ingestion Configuration
 ```env
-BRS_API_URL=https://api.brsapi.ir
-BRS_API_KEY=your-brs-api-key
-BRS_API_TIMEOUT=30
-BRS_RATE_LIMIT_MAX_DAILY=50000
-BRS_RATE_LIMIT_MAX_WINDOW=300
-BRS_RATE_LIMIT_WINDOW_SECONDS=300
-
 INTERNATIONAL_API_KEY=your-alpha-vantage-key
-CRYPTO_API_KEY=your-coinbase-key
 NEWS_API_KEY=your-news-api-key
 ```
 

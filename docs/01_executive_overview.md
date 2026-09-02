@@ -12,7 +12,7 @@ BedaanWaves is a unified capital market analysis platform that consolidates 4 le
 ## Key Features
 
 - **Unified Platform**: Single codebase replacing 5 legacy systems
-- **Multi-Asset Support**: Domestic (TSE) and International markets
+- **Multi-Asset Support**: Domestic (NASDAQ) and International markets
 - **Advanced Analytics**: 6D scoring system with 305-node hierarchy
 - **ML/AI Capabilities**: Price prediction, pattern recognition, anomaly detection
 - **NLP Integration**: Persian sentiment analysis, news summarization, document extraction

@@ -1,9 +1,9 @@
 """Calendar Service - Tier 7 Specialized Service
 
-Provides Tehran Stock Exchange (TSE) trading-day awareness and a simple
+Provides trading-day awareness and a simple
 corporate-events calendar.
 
-TSE trading calendar: Saturday-Thursday, Friday is the weekend. This is a
+Trading calendar: Saturday-Thursday, Friday is the weekend. This is a
 lightweight, dependency-free implementation (no external holiday feed).
 """
 
@@ -17,7 +17,7 @@ class CalendarService(BaseService):
 
     def __init__(self, service_name: str = "CalendarService", weekend_days: Optional[List[int]] = None):
         super().__init__(service_name)
-        # 4 = Friday (TSE weekend); allow override for other markets.
+        # 4 = Friday (weekend); allow override for other markets.
         self.weekend_days = set(weekend_days if weekend_days is not None else [4])
         self._events: Dict[str, List[Dict[str, Any]]] = {}
 

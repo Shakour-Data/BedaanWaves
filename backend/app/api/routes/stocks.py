@@ -10,7 +10,6 @@ import logging
 
 from app.services.data.stock_service import StockService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
-from app.api.routes.live import get_brs_client
 from app.core.config import get_settings
 from app.services.core.dependency_container import get_global_container
 

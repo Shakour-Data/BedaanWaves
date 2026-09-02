@@ -49,7 +49,7 @@ This document details the complete database schema for the BedaanWaves platform,
 | is_active | BOOLEAN | DEFAULT TRUE | Account activation status |
 | is_verified | BOOLEAN | DEFAULT FALSE | Email verification status |
 | preferred_language | VARCHAR(10) | DEFAULT 'en' | UI language preference |
-| timezone | VARCHAR(50) | DEFAULT 'Asia/Tehran' | User timezone |
+| timezone | VARCHAR(50) | DEFAULT 'America/New_York' | User timezone |
 
 **Indexes**:
 - Primary: user_id
@@ -158,7 +158,7 @@ This document details the complete database schema for the BedaanWaves platform,
 
 | Column Name | Data Type | Constraints | Description |
 |-------------|-----------|-------------|-------------|
-| symbol | VARCHAR(20) | PK, NOT NULL | Index symbol (e.g., SPX, TEPIX) |
+| symbol | VARCHAR(20) | PK, NOT NULL | Index symbol (e.g., SPX, VIX) |
 | name | VARCHAR(255) | NOT NULL | Full index name |
 | description | TEXT | NULLABLE | Index methodology description |
 | calculation_method | VARCHAR(50) | NOT NULL | Price-weighted, market-cap weighted, etc. |
