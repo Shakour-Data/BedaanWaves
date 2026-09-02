@@ -8,7 +8,6 @@ Services for user management:
 - NotificationService: Notification delivery
 - WatchlistService: Watchlist management
 - UserMarketSettingsService: User market settings
-- UserCryptoSettingsService: User crypto settings
 """
 
 from .auth_service import (
@@ -28,7 +27,6 @@ from .preference_service import PreferenceService
 from .notification_service import NotificationService
 from .watchlist_service import WatchlistService
 from .user_market_settings_service import UserMarketSettingsService
-from .user_crypto_settings_service import UserCryptoSettingsService
 
 __all__ = [
     "hash_password",
@@ -46,5 +44,4 @@ __all__ = [
     "NotificationService",
     "WatchlistService",
     "UserMarketSettingsService",
-    "UserCryptoSettingsService",
 ]

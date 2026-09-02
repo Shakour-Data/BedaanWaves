@@ -6,18 +6,18 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "BedaanWaves | Market Analysis Platform",
   description:
-    "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals.",
+    "Comprehensive market analysis platform with real-time data, technical analysis, and fundamentals.",
   openGraph: {
     title: "BedaanWaves | Market Analysis Platform",
     description:
-      "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals.",
+      "Comprehensive market analysis platform with real-time data, technical analysis, and fundamentals.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "BedaanWaves | Market Analysis Platform",
     description:
-      "Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals.",
+      "Comprehensive market analysis platform with real-time data, technical analysis, and fundamentals.",
   },
 };
 

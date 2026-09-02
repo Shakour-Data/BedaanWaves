@@ -6,7 +6,6 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { NewSidebar } from "./NewSidebar";
 import { NewTopbar } from "./NewTopbar";
 import { Spinner } from "@/components/ui/Spinner";
-import { cn } from "@/lib/cn";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 
 interface NewDashboardShellProps {
@@ -46,16 +45,13 @@ export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboard
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <NewSidebar />
 
-      <div className="flex flex-1 flex-col lg:ml-64">
+      <div className="flex flex-1 flex-col min-w-0 lg:ml-64">
         <NewTopbar title={title} />
 
-        <main className={cn(
-          "flex-1 p-4 lg:p-6",
-          "min-h-[calc(100vh-4rem)]"
-        )}>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <div className="w-full max-w-[90rem]">
             {breadcrumbs && breadcrumbs.length > 0 && (
               <Breadcrumbs items={breadcrumbs} />

@@ -67,28 +67,6 @@ describe('Dashboard API Service', () => {
           }
         }})
       }
-      if (url.includes('analysis/signals-summary')) {
-        if (!url.includes('signal_type')) {
-          return Promise.resolve({ data: {
-            status: 'success',
-            timestamp: '2023-01-01',
-            total_signals: 5,
-            summary: { BUY: 2, SELL: 1, HOLD: 1 },
-            average_confidence: { BUY: 0.8, SELL: 0.7, HOLD: 0.6 }
-          }})
-        }
-      }
-      if (url.includes('analysis/signals')) {
-        return Promise.resolve({ data: {
-          status: 'success',
-          timestamp: '2023-01-01',
-          data: [
-            { symbol: 'AAPL', name: 'Apple', signal_type: 'BUY', confidence: 0.8, model: 'ML', generated_at: '2023-01-01' },
-            { symbol: 'MSFT', name: 'Microsoft', signal_type: 'SELL', confidence: 0.7, model: 'ML', generated_at: '2023-01-01' },
-            { symbol: 'GOOGL', name: 'Google', signal_type: 'HOLD', confidence: 0.6, model: 'ML', generated_at: '2023-01-01' },
-          ]
-        }})
-      }
       if (url.includes('news/market')) {
         return Promise.resolve({ data: {
           status: 'success',
@@ -102,10 +80,9 @@ describe('Dashboard API Service', () => {
     const result = await fetchDashboardData()
 
     expect(result.live).toBe(true)
-    expect(result.marketStats).toHaveLength(4)
+    expect(result.marketStats).toHaveLength(3)
     expect(result.topMovers.length).toBeGreaterThan(0)
     expect(result.watchlist).toHaveLength(1)
-    expect(result.signals).toHaveLength(3)
     expect(result.news).toHaveLength(1)
   })
 
@@ -119,12 +96,10 @@ describe('Dashboard API Service', () => {
     expect(Array.isArray(result.marketStats)).toBe(true)
     expect(Array.isArray(result.topMovers)).toBe(true)
     expect(Array.isArray(result.watchlist)).toBe(true)
-    expect(Array.isArray(result.signals)).toBe(true)
     expect(Array.isArray(result.news)).toBe(true)
     expect(result.marketStats).toHaveLength(0)
     expect(result.topMovers).toHaveLength(0)
     expect(result.watchlist).toHaveLength(0)
-    expect(result.signals).toHaveLength(0)
     expect(result.news).toHaveLength(0)
   })
 

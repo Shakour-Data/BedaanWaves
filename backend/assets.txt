@@ -1,1 +1,1 @@
-1 فولاد EQUITY\n2 فملی EQUITY\n3 شستا EQUITY\n4 خودرو EQUITY\n5 وبملت EQUITY\n6 شپنا EQUITY\n7 فارس EQUITY\n8 ونوک EQUITY\n9 BTC CRYPTO\n10 ETH CRYPTO\nTotal assets: 10\n
+1 فولاد EQUITY\n2 فملی EQUITY\n3 شستا EQUITY\n4 خودرو EQUITY\n5 وبملت EQUITY\n6 شپنا EQUITY\n7 فارس EQUITY\n8 ونوک EQUITY\nTotal assets: 8\n

@@ -37,6 +37,10 @@
 }
 
 @layer base {
+  :root {
+    --main-tab-height: 9.5rem;
+  }
+
   .dark {
     --color-primary: #3B82F6;
     --color-primary-hover: #60A5FA;
@@ -64,12 +68,22 @@
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.2);
   }
 
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 90, 156, 0.4) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgba(59, 130, 246, 0.4) transparent;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
   }
 }
 
@@ -79,6 +93,12 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 90, 156, 0.4) transparent;
+}
+
+.dark html {
+  scrollbar-color: rgba(59, 130, 246, 0.4) transparent;
 }
 
 :focus-visible {
@@ -87,18 +107,25 @@ html {
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: rgba(0, 90, 156, 0.4);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-secondary);
+  background: rgba(0, 90, 156, 0.7);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.4);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
 }
 
 .container-grid {

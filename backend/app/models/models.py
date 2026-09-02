@@ -1,7 +1,7 @@
 """Database Models
 
 طرح دیتابیس BedaanWaves:
-- سه جدول کندل مجزا بر اساس بازار (ایران / بین‌الملل / رمزارز) به دلیل تقویم و
+- جداول کندل بر اساس بازار (ایران / بین‌الملل) به دلیل تقویم و
   ساعت کاری متفاوت و تایم‌فریم‌های متفاوت.
 - جداول عمق بازار (مظنه برتر)، سهامداران عمده، شناور آزاد و جریان حقیقی/حقوقی
   اختصاصی بازار ایران.
@@ -25,7 +25,6 @@ from app.db.base import Base
 # ---------------------------------------------------------------------------
 # Market categorization (for selecting correct candle/orderbook table)
 # ---------------------------------------------------------------------------
-CRYPTO_MARKETS = {"BINANCE", "KRAKEN", "COINBASE"}
 INTL_MARKETS = {"NYSE", "NASDAQ", "LSE", "XETRA", "FWB", "HKEX"}
 
 
@@ -41,8 +40,8 @@ class Asset(Base):
     name = Column(String(255), nullable=False)
 
     # Classification
-    asset_class = Column(String(20), nullable=False, index=True)  # EQUITY, ETF, CRYPTO, etc.
-    market = Column(String(20), nullable=False, index=True)  # NASDAQ, NYSE, BINANCE, etc.
+    asset_class = Column(String(20), nullable=False, index=True)  # EQUITY, ETF, etc.
+    market = Column(String(20), nullable=False, index=True)  # NASDAQ, NYSE, etc.
 
     # Hierarchy
     sector = Column(String(100))
@@ -134,20 +133,13 @@ class IntlPriceCandle(CandleMixin, Base):
     __tablename__ = "intl_price_candles"
 
 
-class CryptoPriceCandle(CandleMixin, Base):
-    """کندل‌های رمزارز (۲۴/۷): 5m, 15m, 1h, 4h, 1d, 1w, 1M"""
-    __tablename__ = "crypto_price_candles"
-
-
 def candle_model_for_market(market: str):
     """بازگرداندن مدل کندل مناسب بر اساس بازار."""
-    if market in CRYPTO_MARKETS:
-        return CryptoPriceCandle
     return IntlPriceCandle  # پیش‌فرض: بازارهای بین‌المللی (NASDAQ, NYSE, LSE, etc.)
 
 
 # ===========================================================================
-# 3. Market Depth — 5 best levels (intl & crypto only)
+# 3. Market Depth — 5 best levels (intl only)
 # ===========================================================================
 class OrderBookMixin:
     """ستون‌های مشترک عمق بازار (۵ سطح برتر)."""
@@ -182,15 +174,8 @@ class IntlOrderBook(OrderBookMixin, Base):
     __tablename__ = "intl_order_book"
 
 
-class CryptoOrderBook(OrderBookMixin, Base):
-    """عمق بازار رمزارز (هر ۱۵ دقیقه، ۵ مظنه برتر)"""
-    __tablename__ = "crypto_order_book"
-
-
 def order_book_model_for_market(market: str):
     """بازگرداندن مدل عمق بازار مناسب بر اساس بازار."""
-    if market in CRYPTO_MARKETS:
-        return CryptoOrderBook
     return IntlOrderBook
 
 
@@ -587,7 +572,7 @@ class MacroIndicator(Base):
 
 
 # ===========================================================================
-# 10. Financial Statements & Fundamental Ratios (NASDAQ + Crypto)
+# 10. Financial Statements & Fundamental Ratios (NASDAQ)
 # ===========================================================================
 class FinancialStatement(Base):
     """Financial statements (balance sheet / income / cash flow) for all markets."""
@@ -773,10 +758,10 @@ class ScreeningResult(Base):
 
 
 # ===========================================================================
-# 14. داده‌های خام بازار (Raw Market Data) — Crypto & International
+# 14. داده‌های خام بازار (Raw Market Data) — International
 # ===========================================================================
 class RawMarketData(Base):
-    """ذخیره داده‌های خام از سرویس‌های خارجی (Crypto, International)"""
+    """ذخیره داده‌های خام از سرویس‌های خارجی (International)"""
     __tablename__ = "raw_market_data"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -786,8 +771,8 @@ class RawMarketData(Base):
     raw_symbol = Column(String(50), nullable=False, index=True)
 
     # Market classification
-    market = Column(String(20), nullable=False, index=True)  # CRYPTO, INTL
-    exchange = Column(String(50))  # BINANCE, COINBASE, KRAKEN, NYSE, etc.
+    market = Column(String(20), nullable=False, index=True)  # INTL
+    exchange = Column(String(50))  # NYSE, etc.
 
     # Data type
     data_type = Column(String(30), nullable=False, index=True)  # PRICE, VOLUME, DEPTH, ORDERBOOK
@@ -818,7 +803,7 @@ class RawMarketData(Base):
         Index('idx_raw_market_type', 'market', 'data_type'),
         Index('idx_raw_ingested', 'ingested_at'),
         CheckConstraint("data_quality IN ('RAW', 'VALIDATED')", name='chk_raw_data_quality'),
-        CheckConstraint("market IN ('CRYPTO', 'INTL')", name='chk_raw_market_type'),
+        CheckConstraint("market IN ('INTL')", name='chk_raw_market_type'),
         CheckConstraint('volume >= 0', name='chk_raw_volume_non_negative'),
     )
 
@@ -891,46 +876,7 @@ class MarketDataSnapshot(Base):
 
 
 # ===========================================================================
-# 16. سیگنال‌ها و پیش‌بینی‌های کریپتو (Crypto MLSignals)
-# ===========================================================================
-class CryptoMLSignal(Base):
-    """ML سیگنال‌های مخصوص دارایی‌های کریپتو"""
-    __tablename__ = "crypto_ml_signals"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-    snapshot_id = Column(UUID(as_uuid=True), ForeignKey("market_data_snapshots.id"), nullable=True, index=True)
-
-    confidence = Column(Numeric(5, 2), nullable=False)
-
-    expected_return = Column(Numeric(8, 2))
-    expected_volatility = Column(Numeric(8, 2))
-    risk_score = Column(Numeric(5, 2))
-
-    # Which model produced this record
-    model_name = Column(String(100))
-    model_version = Column(String(50), index=True)
-
-    # Features used
-    features_used = Column(JSONB, default={})
-    technical_indicators = Column(JSONB, default={})
-
-    generated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    valid_from = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    valid_until = Column(DateTime(timezone=True), nullable=False)
-    is_active = Column(Boolean, default=True, index=True)
-
-    asset = relationship("Asset")
-    snapshot = relationship("MarketDataSnapshot")
-
-    __table_args__ = (
-        Index('idx_crypto_signal_active', 'asset_id', 'is_active', 'valid_until'),
-        Index('idx_crypto_signal_model', 'model_version'),
-    )
-
-
-# ===========================================================================
-# 17. Coefficient Learning Pipeline - Raw Performance Data
+# 15. Coefficient Learning Pipeline - Raw Performance Data
 # ===========================================================================
 class RawPerformanceScore(Base):
     """Raw performance data for ML coefficient learning.
@@ -948,10 +894,10 @@ class RawPerformanceScore(Base):
     # Asset reference
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
     
-    # Market classification (NASDAQ, NYSE, CRYPTO, etc.)
+    # Market classification (NASDAQ, NYSE, etc.)
     market = Column(String(20), nullable=False, index=True)
     
-    # Exchange identifier (NASDAQ, NYSE, BINANCE, etc.)
+    # Exchange identifier (NASDAQ, NYSE, etc.)
     exchange = Column(String(50), nullable=False, index=True)
     
     # Performance context/metadata
@@ -1200,72 +1146,6 @@ class UserMarketConfig(Base):
 
 
 # ===========================================================================
-# 19. User Crypto Settings (Custom Selection from Top 300)
-# ===========================================================================
-class UserCryptoSetting(Base):
-    """User cryptocurrency settings for custom selection."""
-    __tablename__ = "user_crypto_settings"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-
-    # Selection fields
-    selected_cryptos = Column(JSONB, default=[])
-    excluded_cryptos = Column(JSONB, default=[])
-    custom_watchlist = Column(JSONB, default=[])
-
-    # Exchange and filters
-    exchange_source = Column(String(50), default="binance")
-    min_volume_24h = Column(Numeric(20, 8), default=1000000)
-    min_market_cap = Column(Numeric(20, 8), default=50000000)
-    price_change_filter = Column(String(20), default="all")
-
-    # Metadata
-    last_validated = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    validation_hash = Column(String(64))
-    is_default = Column(Boolean, default=False)
-
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-
-    __table_args__ = (
-        UniqueConstraint('user_id', name='uix_user_crypto_settings'),
-        Index('idx_crypto_settings_user', 'user_id'),
-    )
-
-
-class UserCryptoConfig(Base):
-    """User crypto configuration for specific filtering scenarios."""
-    __tablename__ = "user_crypto_configs"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-
-    config_name = Column(String(100), nullable=False)
-    included_symbols = Column(JSONB, default=[])
-    excluded_symbols = Column(JSONB, default=[])
-
-    # Exchange and filters
-    exchange_source = Column(String(50), default="binance")
-    min_volume_24h = Column(Numeric(20, 8))
-    min_market_cap = Column(Numeric(20, 8))
-    price_range = Column(JSONB)
-    change_filter = Column(JSONB)
-
-    # Metadata
-    last_calc = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    is_default = Column(Boolean, default=False)
-
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-
-    __table_args__ = (
-        UniqueConstraint('user_id', 'config_name', name='uix_user_crypto_config'),
-        Index('idx_crypto_config_user', 'user_id'),
-    )
-
-
-# ===========================================================================
 # 20. User Filtered Scoring Results
 # ===========================================================================
 class UserScoringResult(Base):
@@ -1411,35 +1291,6 @@ class HistoricalDataImportLog(Base):
     __table_args__ = (
         Index('idx_import_batch', 'import_batch_id'),
         Index('idx_import_status', 'import_status'),
-    )
-
-
-# ===========================================================================
-# 24. Cryptocurrencies Master List
-# ===========================================================================
-class Cryptocurrency(Base):
-    """Cryptocurrency master list."""
-    __tablename__ = "cryptocurrencies"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    symbol = Column(String(20), nullable=False, unique=True, index=True)
-    name = Column(String(200), nullable=False)
-    exchange = Column(String(50))
-    market_cap = Column(Numeric(20, 8))
-    volume_24h = Column(Numeric(20, 8))
-    price_usd = Column(Numeric(20, 8))
-    price_change_24h = Column(Numeric(10, 6))
-    price_change_7d = Column(Numeric(10, 6))
-    market_cap_rank = Column(Integer)
-    circulating_supply = Column(Numeric(20, 8))
-    max_supply = Column(Numeric(20, 8))
-    last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    extra_data = Column(JSONB)
-
-    __table_args__ = (
-        Index('idx_crypto_symbol', 'symbol'),
-        Index('idx_crypto_market_cap_rank', 'market_cap_rank'),
-        Index('idx_crypto_market_cap', 'market_cap'),
     )
 
 

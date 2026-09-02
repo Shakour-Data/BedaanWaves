@@ -28,7 +28,14 @@ from .market_service import MarketService
 from .portfolio_service import PortfolioService
 from .history_service import HistoryService
 from .news_service import NewsService
-from .crypto_api_client import CryptoApiClient
+# crypto_api_client is a planned service that has not been created yet.
+# Importing it eagerly breaks the entire app on startup, so we keep a
+# placeholder symbol here until the file lands. This makes the missing
+# module a soft import instead of a hard ModuleNotFoundError.
+try:
+    from .crypto_api_client import CryptoApiClient  # noqa: F401
+except ModuleNotFoundError:
+    CryptoApiClient = None
 from .intl_api_client import IntlApiClient
 from .financial_data_ingest_service import (
     FinancialDataIngestService,

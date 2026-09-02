@@ -11,7 +11,10 @@ import asyncio
 from app.services.core.base_service import BaseService
 from app.services.analysis.scoring_service import ScoringService
 from app.services.data.stock_service import StockService
-from app.services.data.crypto_api_client import CryptoApiClient
+try:
+    from app.services.data.crypto_api_client import CryptoApiClient
+except ModuleNotFoundError:
+    CryptoApiClient = None
 from app.services.data.market_service import MarketService
 import logging
 

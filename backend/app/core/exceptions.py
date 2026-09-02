@@ -121,16 +121,6 @@ class TechnicalAnalysisException(AnalysisException):
     pass
 
 
-class CryptoException(BedaanWavesDomainException):
-    """Base exception for cryptocurrency operations."""
-    pass
-
-
-class CryptoDataException(CryptoException):
-    """Raised when crypto data operations fail."""
-    pass
-
-
 class NotificationException(BedaanWavesDomainException):
     """Raised when notification delivery fails."""
     pass

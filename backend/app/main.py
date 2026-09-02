@@ -48,7 +48,6 @@ from app.services.ml.coefficient_learning_service import CoefficientLearningServ
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.data.market_hours_service import MarketHoursService
-from app.services.crypto.crypto_ingestion_service import CryptoIngestionService
 from app.services.data.ingestion_service import IntelligentIngestionService
 from app.services.data.news_service import NewsService
 from app.services.core.dependency_container import DependencyContainer, set_global_container
@@ -69,7 +68,6 @@ from app.api.routes import (
     notifications_router,
     specialized_router,
     system_router,
-    crypto_router,
     intl_router,
     live_router,
     live_sse_router,
@@ -295,14 +293,12 @@ async def lifespan(app: FastAPI):
 
         # Data services
         nasdaq_svc = NasdaqIngestionService()
-        crypto_svc = CryptoIngestionService()
         ingest_svc = IntelligentIngestionService()
         news_svc = NewsService()
         market_hours_svc = MarketHoursService()
         realtime_market_svc = RealTimeMarketDataService(cache_service=cache_svc)
         container.register_instance("nasdaq_service", nasdaq_svc)
         container.register_instance("nasdaq_ingestion_service", nasdaq_svc)
-        container.register_instance("crypto_ingestion_service", crypto_svc)
         container.register_instance("data_ingest_service", ingest_svc)
         container.register_instance("news_service", news_svc)
         container.register_instance("market_hours_service", market_hours_svc)
@@ -326,7 +322,6 @@ async def lifespan(app: FastAPI):
             cache_service=cache_svc,
             nasdaq_service=nasdaq_svc,
             data_ingest_service=ingest_svc,
-            crypto_ingest_service=crypto_svc,
             data_integrity_service=container.get("data_integrity_service"),
             ml_training_service=coefficient_svc,
             backup_service=backup_svc,
@@ -357,7 +352,6 @@ async def lifespan(app: FastAPI):
         app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
         app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
         app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
-        app.include_router(crypto_router, prefix="/api/v1/crypto", tags=["crypto"])
         app.include_router(intl_router, prefix="/api/v1/intl", tags=["intl"])
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])

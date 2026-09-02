@@ -1,78 +1,13 @@
 """
 Unit tests for fundamental ratio calculations.
-Tests both crypto and stock fundamental analysis services.
+Tests stock fundamental analysis services.
 """
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
 
-from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
-
-
-class TestCryptoFundamentalRatios(unittest.TestCase):
-    """Test cases for crypto fundamental ratio calculations."""
-
-    def setUp(self):
-        self.service = CryptoFundamentalAnalysisService(
-            service_name="TestCryptoService"
-        )
-
-    def test_liquidity_ratio_calculation(self):
-        """Test liquidity ratio computation."""
-        result = self.service._calculate_liquidity_ratio(100000000.0, 1000000000.0)
-        self.assertAlmostEqual(result, 0.1, places=5)
-
-    def test_supply_ratio_calculation(self):
-        """Test supply ratio computation."""
-        result = self.service._calculate_supply_ratio(800000000.0, 1000000000.0)
-        self.assertAlmostEqual(result, 0.8, places=5)
-
-    def test_liquidity_assessment_high(self):
-        """Test liquidity assessment classification - High."""
-        assessment = self.service._assess_liquidity(0.06)
-        self.assertEqual(assessment, "High Liquidity")
-
-    def test_liquidity_assessment_moderate(self):
-        """Test liquidity assessment classification - Moderate."""
-        assessment = self.service._assess_liquidity(0.02)
-        self.assertEqual(assessment, "Moderate Liquidity")
-
-    def test_liquidity_assessment_low(self):
-        """Test liquidity assessment classification - Low."""
-        assessment = self.service._assess_liquidity(0.005)
-        self.assertEqual(assessment, "Low Liquidity")
-
-    def test_volatility_assessment_high(self):
-        """Test volatility assessment classification - High."""
-        assessment = self.service._assess_volatility(7.5)
-        self.assertEqual(assessment, "High Volatility")
-
-    def test_volatility_assessment_moderate(self):
-        """Test volatility assessment classification - Moderate."""
-        assessment = self.service._assess_volatility(3.0)
-        self.assertEqual(assessment, "Moderate Volatility")
-
-    def test_volatility_assessment_low(self):
-        """Test volatility assessment classification - Low."""
-        assessment = self.service._assess_volatility(0.5)
-        self.assertEqual(assessment, "Low Volatility")
-
-    def test_edge_case_zero_market_cap(self):
-        """Test edge case with zero market cap."""
-        ratio = self.service._calculate_liquidity_ratio(100.0, 0.0)
-        self.assertEqual(ratio, 0.0)
-
-    def test_edge_case_zero_volume(self):
-        """Test edge case with zero volume."""
-        ratio = self.service._calculate_liquidity_ratio(0.0, 1000000000.0)
-        self.assertEqual(ratio, 0.0)
-
-    def test_edge_case_negative_price_change(self):
-        """Test volatility assessment with negative price change."""
-        assessment = self.service._assess_volatility(-6.5)
-        self.assertEqual(assessment, "High Volatility")
 
 
 class TestStockFundamentalRatios(unittest.TestCase):
@@ -212,38 +147,6 @@ class TestStockFundamentalRatios(unittest.TestCase):
         }
         asset_turnover = self.service._calc_asset_turnover(financials)
         self.assertEqual(asset_turnover, 2.0)
-
-
-class TestCryptoFundamentalAnalysis(unittest.IsolatedAsyncioTestCase):
-    """Integration tests for crypto fundamental analysis."""
-
-    async def test_analyze_with_mock_data(self):
-        """Test analysis with mock market data."""
-        service = CryptoFundamentalAnalysisService(service_name="TestService")
-        
-        mock_client = MagicMock()
-        mock_client.initialize = AsyncMock()
-        mock_client.shutdown = AsyncMock()
-        mock_client.get_market_data = AsyncMock(return_value={
-            "market_data": {
-                "current_price": {"usd": 50000.0},
-                "market_cap": {"usd": 1000000000000.0},
-                "total_volume": {"usd": 25000000000.0},
-                "circulating_supply": 19000000.0,
-                "total_supply": 21000000.0,
-                "price_change_percentage_24h": 3.5,
-                "market_cap_change_percentage_24h": 3.2,
-            }
-        })
-        
-        service.crypto_client = mock_client
-        result = await service.analyze({"symbol": "bitcoin"})
-        
-        self.assertEqual(result["ticker"], "bitcoin")
-        self.assertAlmostEqual(result["price_usd"], 50000.0)
-        self.assertAlmostEqual(result["market_cap_usd"], 1000000000000.0)
-        self.assertIn("assessment", result)
-        self.assertEqual(result["assessment"]["liquidity"], "Moderate Liquidity")
 
 
 class TestStockFundamentalAnalysis(unittest.IsolatedAsyncioTestCase):

@@ -54,7 +54,7 @@ const steps = [
   {
     number: "03",
     title: "Start Analyzing",
-    description: "Access AI-powered scores, real-time charts, and actionable trading signals instantly.",
+    description: "Access AI-powered scores and real-time charts instantly.",
   },
 ];
 
@@ -62,7 +62,7 @@ const stats = [
   { value: "5,000+", label: "Stocks Tracked", sub: "NASDAQ & Global Exchanges" },
   { value: "99.9%", label: "Platform Uptime", sub: "Enterprise-grade reliability" },
   { value: "<50ms", label: "Data Latency", sub: "Real-time streaming" },
-  { value: "24/7", label: "Market Monitoring", sub: "Never miss a signal" },
+  { value: "24/7", label: "Market Monitoring", sub: "Continuous tracking" },
 ];
 
 const testimonials = [
@@ -119,7 +119,7 @@ export default function HomePage() {
 
               <p className="mx-auto mb-10 max-w-2xl text-lg text-[var(--color-text-secondary)] sm:text-xl">
                 Professional-grade market analysis platform with AI-powered scoring,
-                real-time data, advanced technical analysis, and actionable trading signals
+                real-time data, and advanced technical analysis
                 for informed decisions.
               </p>
 

@@ -52,7 +52,7 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-border bg-background/95 backdrop-blur-xl">
+      <header className="z-30 h-16 shrink-0 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="flex h-full items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <Button

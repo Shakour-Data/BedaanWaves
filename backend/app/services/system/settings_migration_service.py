@@ -73,8 +73,7 @@ class SettingsMigrationService(BaseService):
                 "add_fields": {
                     "countries": [],
                     "indices": [],
-                    "industries": [],
-                    "crypto": []
+                    "industries": []
                 }
             }
         }
@@ -300,11 +299,6 @@ class SettingsMigrationService(BaseService):
         if "industries" in settings:
             if not isinstance(settings["industries"], list):
                 errors.append("industries must be a list")
-        
-        # Validate crypto
-        if "crypto" in settings:
-            if not isinstance(settings["crypto"], list):
-                errors.append("crypto must be a list")
         
         # Validate numeric fields
         numeric_fields = ["portfolio_value", "risk_tolerance"]

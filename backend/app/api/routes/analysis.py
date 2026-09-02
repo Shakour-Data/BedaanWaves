@@ -16,7 +16,6 @@ from app.services.analysis.fundamental_service import FundamentalAnalysisService
 from app.services.analysis.momentum_service import MomentumService
 from app.services.analysis.volatility_service import VolatilityService
 from app.services.analysis.scoring_service import ScoringService
-from app.services.analysis.crypto_fundamental_service import CryptoFundamentalAnalysisService
 from app.services.analysis.ranking_service import RankingService
 from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
 from app.services.data.news_service import NewsService
@@ -345,7 +344,7 @@ async def risk_analysis(
 
     Computes daily returns from the stored daily candles (market='NASDAQ') and runs
     the RiskAnalysisService (volatility, VaR 95/99, CVaR, Sharpe, Sortino,
-    max drawdown). Crypto / international feeds are intentionally excluded.
+    max drawdown). International feeds are intentionally excluded.
 
     Args:
         symbol: Stock symbol (e.g. AAPL, MSFT)
@@ -853,35 +852,6 @@ async def batch_fundamental_analysis(
     }
 
 
-@router.get("/fundamental/crypto/{crypto_id}", response_model=dict)
-async def crypto_fundamental_analysis(
-    crypto_id: str,
-    db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """
-    Perform fundamental analysis for a cryptocurrency.
-    
-    Path parameter:
-        crypto_id: CoinGecko crypto ID (e.g., 'bitcoin', 'ethereum')
-        
-    Returns:
-        Fundamental analysis for the cryptocurrency
-    """
-    try:
-        service = CryptoFundamentalAnalysisService()
-        await service.initialize()
-        result = await service.analyze({"ticker": crypto_id, "use_cache": True})
-        
-        return {
-            "status": "success",
-            "crypto_id": crypto_id,
-            "fundamental": result,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
-
-
 @router.get("/fundamentals/health", response_model=dict)
 async def fundamental_analysis_health() -> dict:
     """Health check for fundamental analysis services."""
@@ -889,7 +859,6 @@ async def fundamental_analysis_health() -> dict:
         "status": "healthy",
         "services": {
             "fundamental_analysis": True,
-            "crypto_fundamental": True,
             "stock_fundamental_ingestion": True,
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),

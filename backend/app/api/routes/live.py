@@ -44,7 +44,7 @@ async def _not_available() -> Any:
     raise HTTPException(
         status_code=501,
         detail="TSE/BRS live streaming endpoints have been removed. "
-               "NASDAQ + Crypto data is available via /api/v1/market/* endpoints.",
+               "NASDAQ data is available via /api/v1/market/* endpoints.",
     )
 
 

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { Badge } from "@/components/ui/Badge";
 import { ChangeBadge } from "@/components/dashboard/StatCard";
 import { StatBox } from "@/components/dashboard/StatBox";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
@@ -18,7 +17,6 @@ import {
   fetchScoring,
   fetchFundamental,
   fetchRisk,
-  fetchSentiment,
   type Asset,
   type Candle,
   type LatestPrice,
@@ -27,7 +25,7 @@ import {
 
 import { t } from "@/lib/i18n";
 
-type Tab = "overview" | "signals" | "risk" | "history";
+type Tab = "overview" | "risk" | "history";
 
 export default function StockDetailPage() {
   const params = useParams<{ symbol: string }>();
@@ -42,7 +40,6 @@ export default function StockDetailPage() {
   const [scoring, setScoring] = useState<Record<string, unknown> | null>(null);
   const [fundamental, setFundamental] = useState<Record<string, unknown> | null>(null);
   const [risk, setRisk] = useState<Record<string, unknown> | null>(null);
-  const [sentiment, setSentiment] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<string>("90");
@@ -63,8 +60,7 @@ export default function StockDetailPage() {
           fetchScoring(symbol),
         ];
 
-        if (activeTab === "signals") requests.push(fetchSentiment(symbol));
-        else if (activeTab === "risk") requests.push(fetchRisk(symbol), fetchFundamental(symbol));
+        if (activeTab === "risk") requests.push(fetchRisk(symbol), fetchFundamental(symbol));
 
         const results = await Promise.all(requests);
         if (cancelled) return;
@@ -72,8 +68,7 @@ export default function StockDetailPage() {
         setAsset(results[1] as Asset | null);
         setLatest(results[2] as LatestPrice | null);
         setScoring(results[3] as Record<string, unknown>);
-        if (activeTab === "signals") setSentiment(results[4] as Record<string, unknown>);
-        else if (activeTab === "risk") { setRisk(results[4] as Record<string, unknown>); setFundamental(results[5] as Record<string, unknown>); }
+        if (activeTab === "risk") { setRisk(results[4] as Record<string, unknown>); setFundamental(results[5] as Record<string, unknown>); }
       } catch (e: unknown) {
         if (!cancelled) {
           const message = e instanceof Error ? e.message : t("app.stocks.detail.error_title", "en");
@@ -126,7 +121,6 @@ export default function StockDetailPage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "overview", label: "Overview" },
-    { key: "signals", label: "Signals" },
     { key: "risk", label: "Risk" },
     { key: "history", label: "Historical Data" },
   ];
@@ -247,13 +241,6 @@ export default function StockDetailPage() {
                     ))}
                   </div>
                 </div>
-                {scoring.signals && Array.isArray(scoring.signals) && (scoring.signals as string[]).length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-border/40">
-                    {(scoring.signals as string[]).map((sig: string, i: number) => (
-                      <Badge key={i} variant="error" size="sm">{sig.replace("_", " ")}</Badge>
-                    ))}
-                  </div>
-                )}
                 <div className="mt-4 pt-4 border-t border-border/40">
                   <Link href={`/stocks/${symbol}/scoring`} className="inline-flex items-center gap-2 rounded-lg bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/20">
                     {t("app.scoring.title", "en")} →
@@ -261,41 +248,6 @@ export default function StockDetailPage() {
                 </div>
               </TarotCard>
             ) : null}
-          </div>
-        )}
-
-        {activeTab === "signals" && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {typeof sentiment?.overall_sentiment !== "undefined" && sentiment.overall_sentiment !== null && (
-              <TarotCard title="Market Sentiment">
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl font-bold">{String(sentiment.overall_sentiment)}</span>
-                  {Boolean(sentiment.sentiment_score) && (
-                    <span className="text-sm text-muted-foreground">Score: {String(sentiment.sentiment_score)}/10</span>
-                  )}
-                </div>
-                {Boolean(sentiment.sentiment_signals) && Array.isArray(sentiment.sentiment_signals) && (sentiment.sentiment_signals as string[]).length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {(sentiment.sentiment_signals as string[]).map((sig: string, i: number) => (
-                      <Badge key={i} variant="info" size="sm">{String(sig).replace("_", " ")}</Badge>
-                    ))}
-                  </div>
-                )}
-              </TarotCard>
-            )}
-            {Array.isArray(scoring?.signals) && (scoring.signals as string[]).length > 0 ? (
-              <TarotCard title="Trading Signals">
-                <div className="flex flex-wrap gap-2">
-                  {(scoring.signals as string[]).map((sig: string, i: number) => (
-                    <Badge key={i} variant="info" size="sm">{String(sig).replace("_", " ")}</Badge>
-                  ))}
-                </div>
-              </TarotCard>
-            ) : (
-              <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-12 text-center">
-                <p className="text-sm text-[var(--color-text-secondary)]">No signals available for this stock yet. Check back later.</p>
-              </div>
-            )}
           </div>
         )}
 

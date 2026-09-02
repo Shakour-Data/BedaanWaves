@@ -5,13 +5,12 @@
  */
 
 import { apiClient } from "@/lib/api";
-import type { AssetRow, MarketStat, SignalRow, NewsItem } from "@/lib/dashboard-data";
+import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 
 export interface DashboardData {
   marketStats: MarketStat[];
   topMovers: AssetRow[];
   watchlist: AssetRow[];
-  signals: SignalRow[];
   news: NewsItem[];
   live: boolean;
 }
@@ -168,7 +167,14 @@ export interface GeneralDashboardResponse {
     total_signals: number;
     total_news: number;
   };
-  dimensions: Record<string, { avg_score: number; count: number }>;
+  dimensions: Record<string, {
+    avg_score: number;
+    min_score: number;
+    max_score: number;
+    stdev: number;
+    count: number;
+    distribution: { strong: number; neutral: number; weak: number };
+  }>;
   symbols: Array<{
     symbol: string;
     name: string;
@@ -199,14 +205,6 @@ interface MarketOverviewResponse {
   total_assets: number;
   sectors: Record<string, number>;
   timestamp: string;
-}
-
-interface SignalsSummaryResponse {
-  status: string;
-  timestamp: string;
-  total_signals: number;
-  summary: Record<string, number>;
-  average_confidence: Record<string, number>;
 }
 
 interface NewsResponse {
@@ -254,10 +252,8 @@ async function fetchMarketStats(generalPromise: Promise<GeneralDashboardResponse
   if (general?.status === "success") {
     const top = general.top_performers?.[0];
     const totalSymbols = general.summary?.total_symbols ?? 0;
-    const totalSignals = general.summary?.total_signals ?? 0;
     stats.push(
       { label: "Active Symbols", value: totalSymbols.toLocaleString("en-US"), changePct: 0 },
-      { label: "Active Signals", value: totalSignals.toLocaleString("en-US"), changePct: 0 },
       { label: "Top Scorer", value: top ? `${top.symbol} ${top.overall_score?.toFixed(1) ?? "0"}` : "—", changePct: 0 },
       { label: "Lowest Scorer", value: general.bottom_performers?.[0] ? `${general.bottom_performers[0].symbol} ${general.bottom_performers[0].overall_score?.toFixed(1) ?? "0"}` : "—", changePct: 0 },
     );
@@ -317,31 +313,6 @@ async function fetchWatchlist(): Promise<AssetRow[]> {
   }
 }
 
-interface SignalsListResponse {
-  status: string;
-  data: Array<{
-    symbol: string;
-    name: string;
-    signal_type: string;
-    confidence: number;
-    model: string;
-    generated_at: string;
-  }>;
-}
-
-async function fetchSignals(): Promise<SignalRow[]> {
-  const res = await apiClient.get<SignalsListResponse>("analysis/signals?min_confidence=0.6&limit=10");
-  const data = res.data;
-  if (data.status !== "success") return [];
-
-  return (data.data ?? []).map((s) => ({
-    symbol: s.symbol,
-    type: s.signal_type as SignalRow["type"],
-    confidence: s.confidence,
-    model: s.model,
-  }));
-}
-
 async function fetchNews(): Promise<NewsItem[]> {
   const res = await apiClient.get<NewsResponse>("news/market?limit=10");
   const data = res.data;
@@ -362,17 +333,15 @@ export async function fetchDashboardData(generalOverride?: GeneralDashboardRespo
     fetchMarketStats(generalPromise),
     fetchTopMovers(generalPromise),
     fetchWatchlist(),
-    fetchSignals(),
     fetchNews(),
   ]);
 
   const marketStats = results[0].status === "fulfilled" ? results[0].value : [];
   const topMovers = results[1].status === "fulfilled" ? results[1].value : [];
   const watchlist = results[2].status === "fulfilled" ? results[2].value : [];
-  const signals = results[3].status === "fulfilled" ? results[3].value : [];
-  const news = results[4].status === "fulfilled" ? results[4].value : [];
+  const news = results[3].status === "fulfilled" ? results[3].value : [];
 
-  const live = [marketStats, topMovers, watchlist, signals, news].some(
+  const live = [marketStats, topMovers, watchlist, news].some(
     (d) => Array.isArray(d) ? d.length > 0 : true
   );
 
@@ -380,7 +349,6 @@ export async function fetchDashboardData(generalOverride?: GeneralDashboardRespo
     marketStats,
     topMovers,
     watchlist,
-    signals,
     news,
     live };
 }

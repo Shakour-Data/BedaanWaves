@@ -9,20 +9,6 @@ import { useUXStore } from "@/store/useUXStore";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 
-function SignalBadge({ type }: { type: string | null }) {
-  if (!type) return <span className="text-xs text-[var(--color-text-secondary)]">No signal</span>;
-  const isBuy = type.includes("BUY");
-  const isSell = type.includes("SELL");
-  const colorClass = isBuy ? "bg-[var(--color-success)]/20 text-[var(--color-success)]" :
-    isSell ? "bg-[var(--color-error)]/20 text-[var(--color-error)]" :
-    "bg-[var(--color-warning)]/20 text-[var(--color-warning)]";
-  return (
-    <span className={cn("px-2 py-1 rounded text-xs font-bold", colorClass)}>
-      {type.replace(/_/g, " ")}
-    </span>
-  );
-}
-
 export function AiDashboard() {
   const [data, setData] = useState<AiDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,7 +82,7 @@ export function AiDashboard() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">AI Dashboard</h1>
         <p className="mt-1 text-[var(--color-text-secondary)]">
-          ML predictions and signals for {data.summary.total_symbols.toLocaleString()} symbols
+          ML predictions for {data.summary.total_symbols.toLocaleString()} symbols
         </p>
       </div>
 
@@ -126,7 +112,7 @@ export function AiDashboard() {
           </p>
         </div>
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <p className="text-sm font-medium text-[var(--color-text-secondary)]">Active Signals</p>
+          <p className="text-sm font-medium text-[var(--color-text-secondary)]">Scored Symbols</p>
           <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">
             {data.summary.total_signals.toLocaleString()}
           </p>
@@ -149,7 +135,7 @@ export function AiDashboard() {
           />
         </div>
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Signal Confidence</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">AI Confidence</h2>
           <ScoreTrendChart
             series={[
               {
@@ -182,7 +168,6 @@ export function AiDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <SignalBadge type={s.signal_type} />
                   <span className="text-xs text-[var(--color-text-secondary)]">
                     {s.confidence > 0 ? `${s.confidence.toFixed(0)}%` : "—"}
                   </span>
@@ -208,7 +193,6 @@ export function AiDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <SignalBadge type={s.signal_type} />
                   <span className="text-xs text-[var(--color-text-secondary)]">
                     {s.confidence > 0 ? `${s.confidence.toFixed(0)}%` : "—"}
                   </span>
@@ -221,7 +205,7 @@ export function AiDashboard() {
 
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
         <div className="p-6 border-b border-[var(--color-border)]">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">All AI Scores & Signals</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">All AI Scores</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -230,7 +214,6 @@ export function AiDashboard() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Symbol</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">AI Score</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Signal</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Confidence</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Expected Return</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Risk Score</th>
@@ -254,9 +237,6 @@ export function AiDashboard() {
                     )}>
                       {s.score.toFixed(1)}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <SignalBadge type={s.signal_type} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-[var(--color-text-secondary)]">
                     {s.confidence.toFixed(0)}%

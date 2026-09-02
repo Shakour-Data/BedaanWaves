@@ -12,7 +12,10 @@ import json
 import asyncio
 from app.services.core.base_service import CachedService
 from app.services.data.brs_api_client import BrsApiClient
-from app.services.data.crypto_api_client import CryptoApiClient
+try:
+    from app.services.data.crypto_api_client import CryptoApiClient
+except ModuleNotFoundError:
+    CryptoApiClient = None
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 from app.services.data.stock_service import StockService

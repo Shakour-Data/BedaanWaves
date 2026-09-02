@@ -15,7 +15,6 @@ from . import (
     watchlists,
     notifications,
     system,
-    crypto,
     specialized,
     health,
     symbols,
@@ -42,7 +41,8 @@ watchlists_router = watchlists.router
 notifications_router = notifications.router
 specialized_router = specialized.router
 system_router = system.router
-crypto_router = crypto.router
+# Crypto routes module was removed alongside the dropped crypto models.
+crypto_router = None
 symbols_router = symbols.router
 intl_router = intl.router
 live_router = live.router
@@ -58,18 +58,18 @@ dashboard_router = dashboard.router
 __all__ = [
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "live_sse", "users", "watchlists", "notifications",
-    "system", "crypto", "specialized", "health", "symbols", "intl", "settings", "ranking", "password_reset",
+    "system", "specialized", "health", "symbols", "intl", "settings", "ranking", "password_reset",
     "market_data", "data_health", "dashboard",
     "auth_router", "stocks_router", "market_router", "analysis_router",
     "portfolio_router", "history_router", "news_router", "ml_router",
     "users_router", "watchlists_router", "notifications_router",
-    "specialized_router", "system_router", "crypto_router",
+    "specialized_router", "system_router",
     "symbols_router", "intl_router", "live_router", "live_sse_router", "health_router",
     "settings_router", "ranking_router", "password_reset_router",
     "market_data_router", "data_health_router", "dashboard_router",
     # Module references
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "live_sse", "users", "watchlists", "notifications",
-    "system", "crypto", "specialized", "health", "symbols", "intl",
+    "system", "specialized", "health", "symbols", "intl",
     "ranking", "password_reset", "market_data", "data_health", "dashboard",
 ]

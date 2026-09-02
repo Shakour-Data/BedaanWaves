@@ -18,14 +18,14 @@ const documentationSections = [
 ];
 
 const frontendPages = [
-  { name: "Dashboard", path: "/dashboard", description: "Main market overview with indices and signals", status: "Live API" },
+  { name: "Dashboard", path: "/dashboard", description: "Main market overview with indices and stocks", status: "Live API" },
   { name: "Stocks", path: "/stocks", description: "Stock list with search and filters", status: "Live API" },
-  { name: "Stock Detail", path: "/stocks/[symbol]", description: "Candlestick chart, scoring, and signals", status: "Live API" },
+  { name: "Stock Detail", path: "/stocks/[symbol]", description: "Candlestick chart and scoring", status: "Live API" },
   { name: "Scoring", path: "/scoring", description: "6-dimensional AI scoring overview", status: "Live API" },
   { name: "Analysis", path: "/analysis", description: "Risk analysis and fundamentals", status: "Live API" },
   { name: "Portfolio", path: "/portfolio", description: "User portfolio tracking", status: "Live API" },
   { name: "News", path: "/news", description: "Market news aggregation", status: "Live API" },
-  { name: "Alerts", path: "/alerts", description: "Price and signal alerts", status: "Live API" },
+  { name: "Alerts", path: "/alerts", description: "Price alerts", status: "Live API" },
   { name: "Ranking", path: "/ranking", description: "NASDAQ stock ranking table", status: "Live API" },
   { name: "Settings", path: "/settings", description: "Market preferences and notifications", status: "Live API" },
   { name: "Profile", path: "/settings/profile", description: "User profile management", status: "Live API" },
@@ -40,7 +40,6 @@ const coreTables = [
   { name: "assets", rows: 4500, columns: 18 },
   { name: "price_history", rows: 2400000, columns: 8 },
   { name: "scoring_results", rows: 89000, columns: 15 },
-  { name: "signals", rows: 34000, columns: 10 },
   { name: "user_portfolios", rows: 5600, columns: 9 },
 ];
 
@@ -48,7 +47,6 @@ const uiComponents = [
   { name: "StockSearchBar", type: "Component", description: "Accessible combobox with fuzzy search and keyboard navigation" },
   { name: "CandlestickChart", type: "Component", description: "OHLCV candlestick chart with volume histogram" },
   { name: "StatCard", type: "Component", description: "Dashboard metric card with change badge" },
-  { name: "SignalList", type: "Component", description: "Trading signal list with confidence scores" },
   { name: "NewSidebar", type: "Layout", description: "Responsive navigation sidebar with active state" },
   { name: "NewTopbar", type: "Layout", description: "Fixed header with search, notifications, and user menu" },
   { name: "Button", type: "Primitive", description: "Unified button with 5 variants and 3 sizes" },
