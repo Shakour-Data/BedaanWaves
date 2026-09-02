@@ -616,10 +616,10 @@ class FundamentalRatio(Base):
 
 
 # ===========================================================================
-# 10.5. رهبری و هیئت مدیره شرکت‌ها (Board / Leadership)
+# 10.5. Company board / leadership
 # ===========================================================================
 class CompanyLeadership(Base):
-    """اعضای هیئت مدیره و مدیران شرکت‌ها"""
+    """Board members and company officers"""
     __tablename__ = "company_leadership"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -639,10 +639,10 @@ class CompanyLeadership(Base):
 
 
 # ===========================================================================
-# 11. خبر و NLP
+# 11. News and NLP
 # ===========================================================================
 class News(Base):
-    """آیتم‌های خبری"""
+    """News items"""
     __tablename__ = "news"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -660,7 +660,7 @@ class News(Base):
 
 
 class NewsSentiment(Base):
-    """نتایج تحلیل احساسات (Sentimenet Analysis) خبرها"""
+    """News sentiment analysis results"""
     __tablename__ = "news_sentiment"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -674,7 +674,7 @@ class NewsSentiment(Base):
 
 
 class NewsSummary(Base):
-    """خلاصه‌های تولیدشده از خبرها"""
+    """Generated news summaries"""
     __tablename__ = "news_summaries"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -685,10 +685,10 @@ class NewsSummary(Base):
 
 
 # ===========================================================================
-# 12. ML / پیش‌بینی / ناهنجاری
+# 12. ML / prediction / anomaly detection
 # ===========================================================================
 class MLModel(Base):
-    """نسخه‌ها و متادیتای مدل‌های ML"""
+    """ML model versions and metadata"""
     __tablename__ = "ml_models"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -704,7 +704,7 @@ class MLModel(Base):
 
 
 class MLPrediction(Base):
-    """خروجی پیش‌بینی سری‌زمانی / مدل‌ها"""
+    """Time-series / model prediction outputs"""
     __tablename__ = "ml_predictions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -725,7 +725,7 @@ class MLPrediction(Base):
 
 
 class Anomaly(Base):
-    """نتایج تشخیص ناهنجاری"""
+    """Anomaly detection results"""
     __tablename__ = "anomalies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
