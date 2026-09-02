@@ -600,7 +600,7 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
       </div>
 
       {subDimensions.length > 0 && (
-        <div className="sticky z-20">
+        <div className="sticky top-[var(--main-tab-height)] z-20 -mx-4 lg:-mx-6 px-4 lg:px-6 bg-background/80 backdrop-blur-xl">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-[var(--color-border)]">
             <button
               onClick={() => onSubChange(null)}

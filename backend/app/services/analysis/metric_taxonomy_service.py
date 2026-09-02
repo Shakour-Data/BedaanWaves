@@ -13,10 +13,7 @@ class MetricTaxonomyService(BaseService):
     def __init__(self, service_name: str = "MetricTaxonomyService"):
         super().__init__(service_name)
         self.taxonomy: Dict[str, Any] = {}
-        self.mappings: Dict[str, Dict[str, str]] = {
-            "crypto_to_stock": {},
-            "stock_to_crypto": {}
-        }
+        self.mappings: Dict[str, Dict[str, str]] = {}
 
     async def initialize(self) -> None:
         """Load taxonomy mappings from configuration."""
@@ -48,7 +45,7 @@ class MetricTaxonomyService(BaseService):
         self.logger.info("MetricTaxonomyService initialized")
 
     async def _load_mappings(self) -> None:
-        """Load predefined mappings between crypto and stock metrics."""
+        """Load predefined mappings between metrics."""
         mapping_path = Path(__file__).parent.parent.parent / "docs" / "analysis" / "metric_taxonomy.json"
         try:
             if mapping_path.exists():
@@ -63,37 +60,17 @@ class MetricTaxonomyService(BaseService):
             await self._initialize_default_mappings()
 
     async def _initialize_default_mappings(self) -> None:
-        """Set up default mappings between crypto and stock metrics."""
+        """Set up default mappings between metrics."""
         self.mappings = {
-            "crypto_to_stock": {
-                "market_cap": "market_cap",
-                "volume_24h": "trading_volume",
-                "circulating_supply": "shares_outstanding",
-                "price": "price",
-                "velocity": "velocity",
-                "hash_rate": "hash_rate",
-                "nvt_ratio": "pe_ratio",  # Network Value to Transactions = Price/Earnings proxy
-                "mvrv_ratio": "pb_ratio",  # Market Value to Realized Value = Price/Book proxy
-            },
-            "stock_to_crypto": {
-                "market_cap": "market_cap",
-                "trading_volume": "volume_24h",
-                "shares_outstanding": "circulating_supply",
-                "price": "price",
-                "pe_ratio": "nvt_ratio",
-                "pb_ratio": "mvrv_ratio",
-                "dividend_yield": "token_velocity",
-            }
+            "market_cap": "market_cap",
+            "volume_24h": "trading_volume",
+            "circulating_supply": "shares_outstanding",
+            "price": "price",
+            "velocity": "velocity",
+            "nvt_ratio": "pe_ratio",
+            "mvrv_ratio": "pb_ratio",
         }
         self.logger.info("Initialized default metric mappings")
-
-    def map_crypto_to_stock_metric(self, crypto_metric: str) -> Optional[str]:
-        """Map a crypto metric to its stock equivalent."""
-        return self.mappings["crypto_to_stock"].get(crypto_metric)
-
-    def map_stock_to_crypto_metric(self, stock_metric: str) -> Optional[str]:
-        """Map a stock metric to its crypto equivalent."""
-        return self.mappings["stock_to_crypto"].get(stock_metric)
 
     def get_metric_type(self, metric_name: str) -> Optional[str]:
         """Get the semantic type of a metric."""
@@ -102,34 +79,34 @@ class MetricTaxonomyService(BaseService):
                 return metric_type
         return None
 
-    def validate_mapping(self, crypto_metric: str, stock_metric: str) -> bool:
-        """Validate that a crypto-stock metric mapping is semantically consistent."""
-        crypto_type = self.get_metric_type(crypto_metric)
-        stock_type = self.get_metric_type(stock_metric)
-        return crypto_type == stock_type
+    def validate_mapping(self, source_metric: str, target_metric: str) -> bool:
+        """Validate that a metric mapping is semantically consistent."""
+        source_type = self.get_metric_type(source_metric)
+        target_type = self.get_metric_type(target_metric)
+        return source_type == target_type
 
     async def normalize_cross_asset(
         self,
-        crypto_data: Dict[str, float],
-        stock_data: Dict[str, float]
+        source_data: Dict[str, float],
+        target_data: Dict[str, float]
     ) -> Dict[str, Any]:
-        """Normalize crypto and stock data for cross-asset comparison."""
+        """Normalize data for cross-asset comparison."""
         normalized = {
-            "crypto": {},
-            "stock": {},
+            "source": {},
+            "target": {},
             "comparisons": {}
         }
 
-        for metric, value in crypto_data.items():
-            mapped = self.map_crypto_to_stock_metric(metric)
+        for metric, value in source_data.items():
+            mapped = self.mappings.get(metric)
             if mapped:
-                normalized["crypto"][metric] = value
+                normalized["source"][metric] = value
                 normalized["comparisons"][f"{metric}_to_{mapped}"] = value
 
-        for metric, value in stock_data.items():
-            mapped = self.map_stock_to_crypto_metric(metric)
+        for metric, value in target_data.items():
+            mapped = self.mappings.get(metric)
             if mapped:
-                normalized["stock"][metric] = value
+                normalized["target"][metric] = value
                 normalized["comparisons"][f"{metric}_to_{mapped}"] = value
 
         return normalized

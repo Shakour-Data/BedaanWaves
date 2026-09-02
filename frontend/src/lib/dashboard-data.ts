@@ -22,13 +22,6 @@ export interface AssetRow {
   avg_price?: number;
 }
 
-export interface SignalRow {
-  symbol: string;
-  type: "BUY" | "SELL" | "HOLD" | "STRONG_BUY" | "STRONG_SELL";
-  confidence: number;
-  model: string;
-}
-
 export interface NewsItem {
   title: string;
   source: string;

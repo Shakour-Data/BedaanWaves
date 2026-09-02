@@ -88,12 +88,12 @@ export function Modal() {
       <div
         ref={contentRef}
         className={cn(
-          "w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl",
+          "w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl",
           "animate-in zoom-in-95 fade-in duration-200"
         )}
       >
         {(modal.title || modal.description) && (
-          <div className="border-b border-[var(--color-border)] p-6">
+          <div className="shrink-0 border-b border-[var(--color-border)] p-6">
             {modal.title && (
               <h2 id="modal-title" className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {modal.title}
@@ -106,11 +106,11 @@ export function Modal() {
             )}
           </div>
         )}
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           {modal.content}
         </div>
         {(modal.primaryAction || modal.secondaryAction) && (
-          <div className="flex items-center justify-end gap-3 border-t border-[var(--color-border)] p-6">
+          <div className="shrink-0 flex items-center justify-end gap-3 border-t border-[var(--color-border)] p-6">
             {modal.secondaryAction && (
               <button
                 type="button"

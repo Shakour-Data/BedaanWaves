@@ -26,7 +26,7 @@ async def _stream_removed() -> AsyncGenerator[str, None]:
     """Stream a single message indicating the endpoint was removed."""
     yield await _sse_format("info", {
         "message": "TSE/BRS SSE streams have been removed. "
-                    "NASDAQ + Crypto data is available via standard OHLCV endpoints."
+                    "NASDAQ data is available via standard OHLCV endpoints."
     })
 
 

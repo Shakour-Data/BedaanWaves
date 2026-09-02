@@ -46,6 +46,5 @@ async def get_countries():
         {"id": "ir", "name": "Iran", "flag": "🇮🇷", "region": "Middle East"},
         {"id": "us", "name": "USA", "flag": "🇺🇸", "region": "North America"},
         {"id": "eu", "name": "Europe", "flag": "🇪🇺", "region": "Europe"},
-        {"id": "as", "name": "Asia", "flag": "🌏", "region": "Asia Pacific"},
-        {"id": "crypto", "name": "Cryptocurrency", "flag": "₿", "region": "Digital"}
+        {"id": "as", "name": "Asia", "flag": "🌏", "region": "Asia Pacific"}
     ]

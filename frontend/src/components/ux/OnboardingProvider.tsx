@@ -25,7 +25,7 @@ const STEPS = [
     target: "[data-watchlist]",
     title: "Build your watchlist",
     content:
-      "Add stocks to your watchlist for quick access. Click any stock in your list to see detailed signals and risk metrics.",
+      "Add stocks to your watchlist for quick access. Click any stock in your list to see detailed scoring and risk metrics.",
     placement: "left" as const,
   },
 ];

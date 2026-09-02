@@ -2,7 +2,7 @@
 Scoring Service - Tier 3 Analysis Service
 
 6D Scoring System with 305-node hierarchy (4 levels).
-Comprehensive stock scoring for TSE/OTC, foreign exchanges, and crypto.
+Comprehensive stock scoring for TSE/OTC and foreign exchanges.
 Now supports ML-driven dynamic coefficient learning.
 """
 
@@ -373,25 +373,14 @@ class ScoringService(AnalysisService):
                 if "roe" in key:
                     return self._score_roe_global(value)
         
-        elif market in ("BINANCE", "KRAKEN", "COINBASE", "CRYPTO"):
-            if dimension == "technical":
-                if "rsi" in key:
-                    return self._score_rsi_crypto(value)
-                if "volatility" in key:
-                    return self._score_volatility_crypto(value)
-            if dimension == "risk":
-                if "volatility" in key:
-                    return self._score_risk_crypto(value)
-        
         # Default generic normalization
         return min(100.0, max(0.0, float(value)))
     
     # ... (remaining scoring helper methods unchanged from original)
-    # These are: _score_rsi_tse, _score_rsi_global, _score_rsi_crypto,
+    # These are: _score_rsi_tse, _score_rsi_global,
     # _score_macd_tse, _score_macd_global, _score_volume_tse,
     # _score_pe_tse, _score_pe_global, _score_roe_tse, _score_roe_global,
-    # _score_volatility_crypto, _score_risk_crypto, _assign_grade,
-    # _generate_signals, score_multiple, rank_stocks, get_hierarchy_info
+    # _assign_grade, _generate_signals, score_multiple, rank_stocks, get_hierarchy_info
     
     def _score_rsi_tse(self, rsi: float) -> float:
         if rsi > 70:
@@ -405,13 +394,6 @@ class ScoringService(AnalysisService):
             return max(0, 100 - (rsi - 75) * 2.5)
         elif rsi < 25:
             return max(0, 100 - (25 - rsi) * 2.5)
-        return 50 + (rsi - 50) * 0.5
-    
-    def _score_rsi_crypto(self, rsi: float) -> float:
-        if rsi > 80:
-            return max(0, 100 - (rsi - 80) * 3)
-        elif rsi < 20:
-            return max(0, 100 - (20 - rsi) * 3)
         return 50 + (rsi - 50) * 0.5
     
     def _score_macd_tse(self, macd: float) -> float:
@@ -456,26 +438,6 @@ class ScoringService(AnalysisService):
     
     def _score_roe_global(self, roe: float) -> float:
         return min(100, max(0, roe * 2))
-    
-    def _score_volatility_crypto(self, vol: float) -> float:
-        if vol > 0.8:
-            return 20
-        elif vol > 0.5:
-            return 40
-        elif vol > 0.2:
-            return 60
-        else:
-            return 80
-    
-    def _score_risk_crypto(self, vol: float) -> float:
-        if vol > 1.0:
-            return 10
-        elif vol > 0.6:
-            return 30
-        elif vol > 0.3:
-            return 50
-        else:
-            return 70
     
     def _assign_grade(self, score: float) -> str:
         if score >= 85:

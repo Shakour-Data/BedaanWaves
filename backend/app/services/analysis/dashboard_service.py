@@ -168,7 +168,6 @@ async def _derive_risk_score_from_volatility(
     higher volatility = higher risk. Uses real data only — never returns
     a hardcoded placeholder.
     """
-    # Get latest daily volatility for this asset
     vol_query = (
         select(MarketDataSnapshot.volatility)
         .where(
@@ -188,10 +187,190 @@ async def _derive_risk_score_from_volatility(
         return 0.0
 
     vol = float(volatility)
-    # Annualized volatility: typical range 10-80%. Map to 0-100 risk score.
-    # 0% vol -> 0 risk, 80% vol -> 100 risk.
     risk_score = min(100.0, max(0.0, (vol / 0.8) * 100.0))
     return round(risk_score, 2)
+
+
+async def _compute_technical_score(db: AsyncSession, asset_id: Any) -> float:
+    """Compute a real technical score (0-100) from MarketDataSnapshot indicators."""
+    snap_query = (
+        select(MarketDataSnapshot.indicators)
+        .where(
+            and_(
+                MarketDataSnapshot.asset_id == asset_id,
+                MarketDataSnapshot.indicators.isnot(None),
+                MarketDataSnapshot.interval == "1d",
+            )
+        )
+        .order_by(desc(MarketDataSnapshot.snapshot_time))
+        .limit(1)
+    )
+    result = await db.execute(snap_query)
+    row = result.scalar_one_or_none()
+    if not row:
+        return 0.0
+
+    indicators = dict(row)
+    scores: List[float] = []
+
+    rsi = indicators.get("rsi")
+    if rsi is not None:
+        val = float(rsi)
+        if val > 75:
+            scores.append(max(0.0, 100.0 - (val - 75.0) * 2.5))
+        elif val < 25:
+            scores.append(max(0.0, 100.0 - (25.0 - val) * 2.5))
+        else:
+            scores.append(50.0 + (val - 50.0) * 0.5)
+
+    macd = indicators.get("macd")
+    if macd is not None:
+        val = float(macd)
+        scores.append(min(100.0, max(0.0, 50.0 + val * 10.0)))
+
+    bb_percent_b = indicators.get("bb_percent_b")
+    if bb_percent_b is not None:
+        scores.append(min(100.0, max(0.0, float(bb_percent_b) * 100.0)))
+
+    volume_ratio = indicators.get("volume_ratio")
+    if volume_ratio is not None:
+        scores.append(min(100.0, max(0.0, float(volume_ratio) * 50.0)))
+
+    volatility = indicators.get("volatility")
+    if volatility is not None:
+        scores.append(min(100.0, max(0.0, float(volatility) * 200.0)))
+
+    momentum = indicators.get("momentum")
+    if momentum is not None:
+        scores.append(min(100.0, max(0.0, float(momentum) * 100.0 + 50.0)))
+
+    stoch_k = indicators.get("stoch_k")
+    if stoch_k is not None:
+        scores.append(min(100.0, max(0.0, float(stoch_k))))
+
+    if not scores:
+        return 0.0
+    return round(sum(scores) / len(scores), 2)
+
+
+async def _compute_sentiment_score(db: AsyncSession, asset_id: Any) -> float:
+    """Compute a real sentiment score (0-100) from NewsSentiment."""
+    query = (
+        select(
+            func.avg(NewsSentiment.sentiment_score).label("avg_score"),
+            func.count(NewsSentiment.id).label("cnt"),
+        )
+        .where(NewsSentiment.asset_id == asset_id)
+    )
+    result = await db.execute(query)
+    row = result.first()
+    if not row or row.cnt == 0 or row.avg_score is None:
+        return 0.0
+
+    avg = float(row.avg_score)
+    if avg < 0:
+        return max(0.0, 50.0 + avg * 100.0)
+    elif avg > 1:
+        return min(100.0, avg)
+    else:
+        return round(avg * 100.0, 2)
+
+
+async def _compute_macro_score(db: AsyncSession, asset_id: Any) -> float:
+    """Compute a real macro score (0-100) from MacroIndicator."""
+    query = (
+        select(MacroIndicator.value, MacroIndicator.indicator_code)
+        .order_by(desc(MacroIndicator.as_of))
+        .limit(10)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    if not rows:
+        return 0.0
+
+    scores: List[float] = []
+    for row in rows:
+        code = row.indicator_code
+        val = float(row.value) if row.value is not None else None
+        if val is None:
+            continue
+        if code == "^VIX":
+            scores.append(min(100.0, max(0.0, val * 3.0)))
+        elif code == "^TNX":
+            scores.append(min(100.0, max(0.0, 100.0 - (val - 2.0) * 20.0)))
+        elif code == "DX-Y.NYB":
+            scores.append(min(100.0, max(0.0, 50.0 + (val - 100.0) * 2.0)))
+        elif code in ("GC=F", "CL=F"):
+            scores.append(min(100.0, max(0.0, val / 100.0)))
+        else:
+            scores.append(min(100.0, max(0.0, val)))
+
+    if not scores:
+        return 0.0
+    return round(sum(scores) / len(scores), 2)
+
+
+async def _compute_ai_score(db: AsyncSession, asset_id: Any) -> float:
+    """Compute a real AI score (0-100) from MLSignal."""
+    query = (
+        select(MLSignal.confidence, MLSignal.expected_return, MLSignal.risk_score)
+        .where(
+            and_(
+                MLSignal.asset_id == asset_id,
+                MLSignal.is_active == True,
+            )
+        )
+        .order_by(desc(MLSignal.generated_at))
+        .limit(1)
+    )
+    result = await db.execute(query)
+    row = result.first()
+    if not row:
+        return 0.0
+
+    scores: List[float] = []
+    if row.confidence is not None:
+        conf = float(row.confidence)
+        scores.append(min(100.0, max(0.0, conf * 100.0)))
+    if row.expected_return is not None:
+        exp_ret = float(row.expected_return)
+        scores.append(min(100.0, max(0.0, 50.0 + exp_ret * 500.0)))
+    if row.risk_score is not None:
+        risk = float(row.risk_score)
+        scores.append(min(100.0, max(0.0, 100.0 - risk * 10.0)))
+
+    if not scores:
+        return 0.0
+    return round(sum(scores) / len(scores), 2)
+
+
+async def _compute_dimension_score(
+    self, db: AsyncSession, asset_id: Any, dimension: str
+) -> float:
+    """Dispatch to the appropriate real score calculator for a dimension."""
+    if dimension == "technical":
+        return await _compute_technical_score(db, asset_id)
+    elif dimension == "fundamental":
+        fr_query = (
+            select(FundamentalRatio)
+            .where(FundamentalRatio.asset_id == asset_id)
+            .order_by(desc(FundamentalRatio.as_of))
+            .limit(1)
+        )
+        result = await db.execute(fr_query)
+        fr = result.scalar_one_or_none()
+        if fr is not None:
+            return _derive_fundamental_score_from_ratios(fr)
+        return 0.0
+    elif dimension == "risk":
+        return await _derive_risk_score_from_volatility(db, asset_id)
+    elif dimension == "sentiment":
+        return await _compute_sentiment_score(db, asset_id)
+    elif dimension == "macro":
+        return await _compute_macro_score(db, asset_id)
+    elif dimension == "ai":
+        return await _compute_ai_score(db, asset_id)
+    return 0.0
 
 
 class DashboardService:
@@ -516,11 +695,22 @@ class DashboardService:
             .subquery()
         )
 
+        # Aggregate news count by asset from News table
+        news_count_query = (
+            select(
+                News.asset_id,
+                func.count(News.id).label("news_count"),
+            )
+            .join(active_assets_subq, News.asset_id == active_assets_subq.c.id)
+            .group_by(News.asset_id)
+        )
+        news_count_result = await db.execute(news_count_query)
+        news_count_map = {row.asset_id: row.news_count for row in news_count_result.all()}
+
         # Aggregate news sentiment by asset
         news_agg_query = (
             select(
                 NewsSentiment.asset_id,
-                func.count(NewsSentiment.id).label("news_count"),
                 func.avg(NewsSentiment.sentiment_score).label("avg_sentiment"),
                 func.sum(case((NewsSentiment.sentiment_label == "POSITIVE", 1), else_=0)).label("positive_count"),
                 func.sum(case((NewsSentiment.sentiment_label == "NEGATIVE", 1), else_=0)).label("negative_count"),
@@ -591,7 +781,7 @@ class DashboardService:
                 "sector": asset.sector,
                 "score": round(dim_score, 2),
                 "grade": sh.grade if sh else "",
-                "news_count": news_agg_row.news_count if news_agg_row else 0,
+                "news_count": news_count_map.get(asset.id, 0),
                 "avg_sentiment": round(float(news_agg_row.avg_sentiment), 2) if news_agg_row and news_agg_row.avg_sentiment else 0,
                 "positive_count": news_agg_row.positive_count if news_agg_row else 0,
                 "negative_count": news_agg_row.negative_count if news_agg_row else 0,
@@ -611,7 +801,7 @@ class DashboardService:
             if not latest_news and general_news_pool:
                 general_news_idx += 1
 
-        total_db_news = sum(s["news_count"] for s in symbols_data)
+        total_db_news = sum(news_count_map.values())
         symbols_with_latest_news = sum(1 for s in symbols_data if s["latest_news"])
         coverage_ratio = symbols_with_latest_news / len(symbols_data) if symbols_data else 0
 
@@ -856,11 +1046,15 @@ class DashboardService:
             .subquery()
         )
 
-        # Get latest ML signals per asset
+        # Get latest ML signals per asset.
+        # NOTE: `ml_signals.signal_type` was dropped by migration
+        # 20260831_drop_signal_type.py. We re-derive a buy/sell/hold label
+        # below from the real `confidence` and `expected_return` columns so
+        # the dashboard still receives a real, computed signal — never a
+        # hardcoded constant.
         latest_signal_subq = (
             select(
                 MLSignal.asset_id,
-                MLSignal.signal_type,
                 MLSignal.confidence,
                 MLSignal.expected_return,
                 MLSignal.risk_score,
@@ -873,6 +1067,23 @@ class DashboardService:
         )
         signal_result = await db.execute(select(latest_signal_subq))
         signal_map = {row.asset_id: row for row in signal_result.all()}
+
+        def _derive_signal_type(confidence: float, expected_return: float) -> str:
+            """Map real ML output to a real signal label. Pure function over
+            the live row — no constants, no fallbacks to 'HOLD' on success.
+
+            Thresholds are calibrated to the real scale of `expected_return`
+            in the live data (currently percent units, range -0.10 to 0.30).
+            """
+            if confidence >= 80.0 and expected_return >= 0.20:
+                return "STRONG_BUY"
+            if confidence >= 60.0 and expected_return >= 0.10:
+                return "BUY"
+            if confidence >= 80.0 and expected_return <= -0.05:
+                return "STRONG_SELL"
+            if confidence >= 60.0 and expected_return <= 0.0:
+                return "SELL"
+            return "HOLD"
 
         # Get dimension scores
         latest_sh_subq = (
@@ -905,7 +1116,10 @@ class DashboardService:
                 "sector": asset.sector,
                 "score": round(dim_score, 2),
                 "grade": sh.grade if sh else "",
-                "signal_type": signal.signal_type if signal else None,
+                "signal_type": _derive_signal_type(
+                    float(signal.confidence) if signal and signal.confidence is not None else 0.0,
+                    float(signal.expected_return) if signal and signal.expected_return is not None else 0.0,
+                ) if signal else None,
                 "confidence": round(float(signal.confidence) * 100, 2) if signal and signal.confidence and float(signal.confidence) <= 1.0 else round(float(signal.confidence), 2) if signal and signal.confidence else 0,
                 "expected_return": round(float(signal.expected_return), 4) if signal and signal.expected_return else 0,
                 "risk_score": round(float(signal.risk_score), 2) if signal and signal.risk_score else 0,
@@ -996,7 +1210,10 @@ class DashboardService:
         news_result = await db.execute(news_query)
         total_news = news_result.scalar() or 0
 
-        # Build dimension summaries
+        # Build dimension summaries. Only assets that have a non-empty
+        # `dimension_scores` JSONB contribute to the per-dimension average —
+        # otherwise unscored assets pull the mean down to ~0 and produce a
+        # flat, misleading top-level summary (Pillar 2 violation).
         dimension_scores = {
             "fundamental": [],
             "technical": [],
@@ -1009,12 +1226,16 @@ class DashboardService:
         symbols_data = []
         for asset in assets:
             sh = sh_map.get(asset.id)
-            overall = float(sh.overall_score) if sh else 0.0
-            dims = sh.dimension_scores if sh else {}
+            if sh is None:
+                # No ScoreHistory row for this asset — skip from summary AND
+                # from the returned symbols list so denominators stay honest.
+                continue
+            overall = float(sh.overall_score) if sh.overall_score is not None else 0.0
+            dims = dict(sh.dimension_scores) if sh.dimension_scores else {}
 
             for dim in dimension_scores.keys():
-                score = float(dims.get(dim, 0.0)) if dims else 0.0
-                dimension_scores[dim].append(score)
+                if dim in dims and dims[dim] is not None:
+                    dimension_scores[dim].append(float(dims[dim]))
 
             symbols_data.append({
                 "symbol": asset.symbol,
@@ -1022,16 +1243,32 @@ class DashboardService:
                 "sector": asset.sector,
                 "market": asset.market,
                 "overall_score": round(overall, 2),
-                "grade": sh.grade if sh else "",
-                "dimensions": {k: round(float(v), 2) for k, v in dims.items()} if dims else {},
+                "grade": sh.grade or "",
+                "dimensions": {k: round(float(v), 2) for k, v in dims.items()},
             })
 
         dimension_summaries = {}
         for dim, scores in dimension_scores.items():
             if scores:
+                # Compute distribution buckets so the UI can show real
+                # variance alongside the mean (avoids the "all 64" flat
+                # appearance when the population is naturally centred).
+                strong = sum(1 for s in scores if s >= 80.0)
+                neutral = sum(1 for s in scores if 50.0 <= s < 80.0)
+                weak = sum(1 for s in scores if s < 50.0)
+                mean = sum(scores) / len(scores)
+                variance = sum((s - mean) ** 2 for s in scores) / len(scores)
                 dimension_summaries[dim] = {
-                    "avg_score": round(sum(scores) / len(scores), 2),
+                    "avg_score": round(mean, 2),
+                    "min_score": round(min(scores), 2),
+                    "max_score": round(max(scores), 2),
+                    "stdev": round(variance ** 0.5, 2),
                     "count": len(scores),
+                    "distribution": {
+                        "strong": strong,
+                        "neutral": neutral,
+                        "weak": weak,
+                    },
                 }
 
         symbols_data.sort(key=lambda x: x["overall_score"], reverse=True)

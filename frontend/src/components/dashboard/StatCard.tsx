@@ -19,12 +19,12 @@ export function StatCard({ stat }: { stat: MarketStat }) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-surface p-4 shadow-sm transition-all duration-200 hover:shadow-md"
+        "rounded-xl border border-border bg-surface p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
       )}
     >
-      <span className="text-sm text-muted-foreground">{stat.label}</span>
-      <span className="mt-1 block text-xl font-bold text-foreground">{stat.value}</span>
-      <div className="mt-2">
+      <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
+      <span className="mt-2 block text-2xl font-bold text-foreground tabular-nums">{stat.value}</span>
+      <div className="mt-3">
         {stat.changePct !== undefined ? <ChangeBadge value={stat.changePct} /> : null}
       </div>
     </div>

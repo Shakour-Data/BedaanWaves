@@ -10,7 +10,7 @@ async def check_data():
     output_lines = []
     async for session in get_async_session():
         tables = ['price_candles', 'intl_price_candles', 
-                  'crypto_price_candles', 'raw_market_data', 'market_data_snapshots',
+                  'raw_market_data', 'market_data_snapshots',
                   'ml_signals', 'financial_statements', 'news_articles']
         output_lines.append('Database Tables Check:')
         for table_name in tables:

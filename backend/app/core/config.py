@@ -4,7 +4,6 @@ Application Configuration - BedaanWaves Unified Platform
 This configuration consolidates settings from:
 - Bedaan4D-ML backend
 - Bedaan6D-project frontend
-- CryptoAndStocks multi-asset
 - Bedaan_4D_AI analysis
 """
 from pydantic_settings import BaseSettings
@@ -195,12 +194,6 @@ class Settings(BaseSettings):
     NEWS_API_KEY: Optional[str] = None
     NEWS_REFRESH_INTERVAL_MINUTES: int = 30
     NLP_MODEL: str = "bert-base-uncased"
-    
-    # Cryptocurrency APIs
-    CRYPTO_ENABLED: bool = True
-    COINGECKO_API_BASE_URL: str = "https://api.coingecko.com/api/v3"
-    BINANCE_API_BASE_URL: str = "https://api.binance.com/api/v3"
-    CRYPTO_REFRESH_INTERVAL_MINUTES: int = 5
     
     # ============================================================
     # MACHINE LEARNING CONFIGURATION (Bedaan4D-ML)

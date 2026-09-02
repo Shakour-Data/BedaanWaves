@@ -266,7 +266,7 @@ async def nasdaq_dashboard(
 
     Returns total symbols, average daily change, and top 5 gainers / losers
     from the latest stored daily candles using a single window-function query.
-    Crypto / other markets are excluded by the market='NASDAQ' filter.
+    Other markets are excluded by the market='NASDAQ' filter.
 
     Returns:
         NASDAQ market overview snapshot
@@ -433,7 +433,7 @@ async def industry_ranking(
 
     Ranks NASDAQ industries by the average daily change of their
     constituent symbols using a single window-function query over daily candles.
-    Only market='NASDAQ' symbols are considered; crypto / other markets are excluded.
+    Only market='NASDAQ' symbols are considered; other markets are excluded.
 
     Returns:
         Industries ranked by average change %, each with member count

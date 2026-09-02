@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard, fetchScoreTrend } from "@/lib/api/dashboard";
-import type { AssetRow, MarketStat, SignalRow, NewsItem } from "@/lib/dashboard-data";
+import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
@@ -41,7 +41,6 @@ export default function DashboardPage() {
   const [generalData, setGeneralData] = useState<GeneralDashboardResponse | null>(null);
   const [marketStats, setMarketStats] = useState<MarketStat[]>([]);
   const [topStocks, setTopStocks] = useState<AssetRow[]>([]);
-  const [signals, setSignals] = useState<SignalRow[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [scoreTrend, setScoreTrend] = useState<ScoreTrendResponse | null>(null);
   const [scoreTrendLoading, setScoreTrendLoading] = useState(true);
@@ -76,7 +75,6 @@ export default function DashboardPage() {
         return acc;
       }, []);
       setTopStocks(uniqueTop.slice(0, 5));
-      setSignals(dashboardData.signals);
       setNews(dashboardData.news);
       setGeneralData(general);
     } catch (err) {
@@ -223,26 +221,40 @@ export default function DashboardPage() {
                   <SpiderChart data={spiderData} size={280} color="#2563EB" onLabelClick={handleDimensionClick} />
                   <div className="flex-1 min-w-[200px]">
                     <div className="space-y-3">
-                      {Object.entries(generalData.dimensions).map(([key, val]) => (
-                        <button
-                          key={key}
-                          onClick={() => handleDimensionClick(key)}
-                          className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-[var(--color-background)]"
-                        >
-                          <span className="capitalize text-sm font-medium text-[var(--color-text-secondary)]">{key}</span>
-                          <div className="flex items-center gap-3">
-                            <div className="h-2 w-32 rounded-full bg-[var(--color-border)] overflow-hidden">
-                              <div
-                                className="h-full bg-[var(--color-primary)] transition-all"
-                                style={{ width: `${Math.min(val.avg_score, 100)}%` }}
-                              />
+                      {Object.entries(generalData.dimensions).map(([key, val]) => {
+                        const d = val.distribution ?? { strong: 0, neutral: 0, weak: 0 };
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => handleDimensionClick(key)}
+                            className="flex w-full flex-col gap-1 rounded-lg p-2 transition-colors hover:bg-[var(--color-background)]"
+                          >
+                            <div className="flex w-full items-center justify-between">
+                              <span className="capitalize text-sm font-medium text-[var(--color-text-secondary)]">{key}</span>
+                              <div className="flex items-center gap-3">
+                                <div className="h-2 w-32 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                  <div
+                                    className="h-full bg-[var(--color-primary)] transition-all"
+                                    style={{ width: `${Math.min(val.avg_score, 100)}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm font-bold text-[var(--color-text-primary)] w-12 text-right">
+                                  {val.avg_score.toFixed(1)}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-sm font-bold text-[var(--color-text-primary)] w-12 text-right">
-                              {val.avg_score.toFixed(1)}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
+                            <div className="flex w-full items-center gap-2 pl-1 text-[10px] text-[var(--color-text-secondary)]">
+                              <span title="range">range {val.min_score?.toFixed(0) ?? "—"}–{val.max_score?.toFixed(0) ?? "—"}</span>
+                              <span title="standard deviation">±{(val.stdev ?? 0).toFixed(1)}</span>
+                              <span className="ml-auto flex items-center gap-1">
+                                <span className="rounded bg-[var(--color-success)]/15 text-[var(--color-success)] px-1.5 py-0.5">{d.strong} strong</span>
+                                <span className="rounded bg-[var(--color-warning)]/15 text-[var(--color-warning)] px-1.5 py-0.5">{d.neutral} neutral</span>
+                                <span className="rounded bg-[var(--color-error)]/15 text-[var(--color-error)] px-1.5 py-0.5">{d.weak} weak</span>
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -387,52 +399,24 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Trading Signals</h2>
-                {signals.length > 0 ? (
-                  <div className="space-y-3">
-                    {signals.slice(0, 5).map((signal, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-background)]">
-                        <div className="flex items-center gap-3">
-                          <span className={cn(
-                            "px-2 py-1 rounded text-xs font-bold",
-                            signal.type === "BUY" || signal.type === "STRONG_BUY" ? "bg-[var(--color-success)]/20 text-[var(--color-success)]" :
-                            signal.type === "SELL" || signal.type === "STRONG_SELL" ? "bg-[var(--color-error)]/20 text-[var(--color-error)]" :
-                            "bg-[var(--color-warning)]/20 text-[var(--color-warning)]"
-                          )}>
-                            {signal.type}
-                          </span>
-                          <span className="font-medium text-[var(--color-text-primary)]">{signal.symbol}</span>
-                        </div>
-                        <span className="text-sm text-[var(--color-text-secondary)]">{signal.confidence}%</span>
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Market News</h2>
+              {news.length > 0 ? (
+                <div className="space-y-3">
+                  {news.slice(0, 5).map((item, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-[var(--color-background)]">
+                      <p className="font-medium text-[var(--color-text-primary)] text-sm">{item.title}</p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-secondary)]">
+                        <span>{item.source}</span>
+                        <span>•</span>
+                        <span>{item.time}</span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-[var(--color-text-secondary)] py-8">No active signals</p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Market News</h2>
-                {news.length > 0 ? (
-                  <div className="space-y-3">
-                    {news.slice(0, 5).map((item, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-[var(--color-background)]">
-                        <p className="font-medium text-[var(--color-text-primary)] text-sm">{item.title}</p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-secondary)]">
-                          <span>{item.source}</span>
-                          <span>•</span>
-                          <span>{item.time}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-[var(--color-text-secondary)] py-8">No news available</p>
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-[var(--color-text-secondary)] py-8">No news available</p>
+              )}
             </div>
           </div>
         );
@@ -462,7 +446,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="px-4 lg:px-6 pt-4 pb-2">
           <div className="mb-3">
             <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Dashboards</h1>

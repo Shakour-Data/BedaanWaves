@@ -48,10 +48,6 @@ test.describe('Dashboard', () => {
     await expect(page.locator('table, .overflow-x-auto')).toBeVisible();
   });
 
-  test('should display signal list', async ({ page }) => {
-    await expect(page.locator('text=سیگنال|text=Signal')).toBeVisible();
-  });
-
   test('should display news feed', async ({ page }) => {
     await expect(page.locator('text=اخبار|text=News')).toBeVisible();
   });

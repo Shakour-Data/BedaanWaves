@@ -59,7 +59,6 @@
       "live_disconnected": "Displaying sample data (no server connection)",
       "top_movers": "Top Movers",
       "watchlist": "Watchlist",
-      "ai_signals": "AI Signals",
       "latest_news": "Latest News"
     },
     "portfolio": {
@@ -162,7 +161,7 @@
           "steps": [
             "Fetch historical price/volume data (minimum 20 periods)",
             "Calculate indicators (RSI, MACD, moving averages, Bollinger Bands)",
-            "Generate trading signals based on indicator crossovers and thresholds"
+            "Summarize indicator readings and trend direction"
           ]
         },
         "fundamental": {
@@ -308,11 +307,9 @@
         "scoring": "6D Review",
         "sentiment": "Market Sentiment"
       },
-      "top_signals": "Top Signals",
       "top_movers": "Top Movers",
       "technical_charts": "Technical Charts",
       "fundamental_indicators": "Key Fundamental Indicators ({symbol})",
-      "no_signals": "No signals found",
       "no_data": "No data found",
       "fundamental_not_found": "Fundamental data not found for this symbol",
       "overall_score": "Final Score",
@@ -355,7 +352,7 @@
     },
     "home": {
       "hero_title": "BedaanWaves - Nasdaq Market Analysis Platform",
-      "hero_desc": "Comprehensive market analysis and AI trading platform focused on Nasdaq Composite index and its constituents. 5 years of historical data, fundamentals, and AI signals.",
+      "hero_desc": "Comprehensive market analysis and AI trading platform focused on Nasdaq Composite index and its constituents. 5 years of historical data and fundamentals.",
       "features_title": "Key Features",
       "view_stocks": "View Nasdaq Stocks",
       "features": {
@@ -368,7 +365,7 @@
           "desc": "Quarterly financial statements, ratios, and key metrics for US equities"
         },
         "ai": {
-          "title": "AI-Powered Signals",
+          "title": "AI-Powered Scoring",
           "desc": "Machine learning predictions and technical analysis for informed decisions"
         }
       }

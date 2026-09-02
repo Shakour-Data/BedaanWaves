@@ -2,7 +2,6 @@
 
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { SignalList } from "@/components/dashboard/SignalList";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
@@ -12,7 +11,7 @@ import {
   fetchSentiment, 
   fetchScoring 
 } from "@/lib/api/stocks";
-import type { AssetRow, SignalRow } from "@/lib/dashboard-data";
+import type { AssetRow } from "@/lib/dashboard-data";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -20,7 +19,6 @@ import { useAuthStore } from "@/store/useAuthStore";
 export default function AnalysisPage() {
   
   const [activeTab, setActiveTab] = useState("technical");
-  const [topSignals, setTopSignals] = useState<SignalRow[]>([]);
   const [topMovers, setTopMovers] = useState<AssetRow[]>([]);
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -38,31 +36,10 @@ export default function AnalysisPage() {
     async function loadAnalysisData() {
       setLoading(true);
       try {
-        const summaryRes = await apiClient.get<any>("/analysis/signals-summary?min_confidence=0.6");
         const performersRes = await apiClient.get<any>("/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ");
         const symbolsRes = await apiClient.get<any[]>("/market/symbols?market=NASDAQ&limit=50");
 
         if (!active) return;
-
-        // Process signals
-        const signals: SignalRow[] = [];
-        if (summaryRes.data?.status === "success") {
-          const signalTypes = Object.entries(summaryRes.data?.summary ?? {})
-            .filter(([, count]) => Number(count) > 0)
-            .sort(([, a], [, b]) => Number(b) - Number(a));
-
-          for (const [type, count] of signalTypes) {
-            const typeSymbols = ((summaryRes.data as any)?.sample_symbols || {} as Record<string, string[]>)[type] || [];
-            for (const symbol of typeSymbols.slice(0, 3)) {
-              signals.push({
-                symbol,
-                type: type as SignalRow["type"],
-                confidence: summaryRes.data.average_confidence?.[type] ?? 50,
-                model: "ML" });
-            }
-          }
-        }
-        setTopSignals(signals.slice(0, 5));
 
         const symbolMap = new Map(symbolsRes.data.map((s: any) => [s.symbol, s.name]));
         const movers: AssetRow[] = (performersRes.data.data ?? []).map((p: any) => ({
@@ -126,15 +103,6 @@ export default function AnalysisPage() {
             </button>
           ))}
         </div>
-
-        {/* Signal Analysis */}
-        <TarotCard icon="📡" title={t("app.analysis.top_signals", "en")}>
-          {topSignals.length > 0 ? (
-            <SignalList signals={topSignals} />
-          ) : (
-            <p className="text-muted-foreground py-4 text-center">{t("app.analysis.no_signals", "en")}</p>
-          )}
-        </TarotCard>
 
         {/* Top Movers */}
         <TarotCard icon="🚀" title={t("app.analysis.top_movers", "en")}>

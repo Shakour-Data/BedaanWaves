@@ -11,7 +11,6 @@ import asyncio
 from app.services.core.base_service import BaseService
 from app.services.data.data_validation_service import DataValidationService
 from app.services.data.brs_api_client import BrsApiClient
-from app.services.data.crypto_api_client import CryptoApiClient
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 import logging
@@ -32,7 +31,6 @@ class DataIntegrityService(BaseService):
                  service_name: str = "DataIntegrityService",
                  validation_service: Optional[DataValidationService] = None,
                  brs_client: Optional[BrsApiClient] = None,
-                 crypto_client: Optional[CryptoApiClient] = None,
                  intl_client: Optional[IntlApiClient] = None,
                  market_service: Optional[MarketService] = None,
                  logger: Optional[logging.Logger] = None):
@@ -43,7 +41,6 @@ class DataIntegrityService(BaseService):
             service_name: Service identifier
             validation_service: Data validation service instance
             brs_client: BRS API client instance
-            crypto_client: Crypto API client instance
             intl_client: International API client instance
             market_service: Market data service instance
             logger: Optional logger instance
@@ -51,12 +48,10 @@ class DataIntegrityService(BaseService):
         super().__init__(service_name, logger=logger)
         self.validation_service = validation_service or DataValidationService(
             brs_client=brs_client,
-            crypto_client=crypto_client,
             intl_client=intl_client,
             market_service=market_service
         )
         self.brs_client = brs_client
-        self.crypto_client = crypto_client
         self.intl_client = intl_client
         self.market_service = market_service
         
@@ -159,7 +154,6 @@ class DataIntegrityService(BaseService):
         """Check availability of all data sources."""
         sources = [
             ("BRS", self.brs_client),
-            ("Crypto", self.crypto_client),
             ("International", self.intl_client),
             ("Market", self.market_service)
         ]
@@ -194,7 +188,6 @@ class DataIntegrityService(BaseService):
         # Test assets from each category
         test_assets = {
             "stocks": ["AAPL", "MSFT", "GOOGL"],  # US stocks
-            "crypto": ["BTC", "ETH", "BNB"],       # Major cryptos
             "indices": ["SPX", "FTSE", "N225"]     # Major indices
         }
         
@@ -234,10 +227,7 @@ class DataIntegrityService(BaseService):
     async def _check_cross_source_consistency(self) -> Dict[str, Any]:
         """Check consistency between data sources."""
         # Test symbols available in multiple sources
-        test_pairs = [
-            ("BTC", ["crypto"]),  # Available in crypto sources
-            # Note: In practice, would need symbols that exist in multiple sources
-        ]
+        test_pairs = []
         
         results = {}
         consistent_count = 0
@@ -287,8 +277,6 @@ class DataIntegrityService(BaseService):
         
         # Test recent data for major assets
         test_cases = [
-            ("BTC", "crypto"),
-            ("ETH", "crypto"),
             ("SPX", "indices"),
             ("AAPL", "stocks")
         ]
@@ -297,9 +285,7 @@ class DataIntegrityService(BaseService):
             total_checks += 1
             try:
                 # Get latest data timestamp
-                if asset_type == "crypto" and self.crypto_client:
-                    data = await self.crypto_client.get_crypto_price(symbol)
-                elif asset_type == "stocks" and self.stock_service:
+                if asset_type == "stocks" and self.stock_service:
                     data = await self.stock_service.get_stock(symbol)
                 elif asset_type == "indices" and self.market_service:
                     # Simplified - would use actual index data
@@ -586,7 +572,6 @@ class DataIntegrityService(BaseService):
 # Factory function for dependency injection
 def get_data_integrity_service(validation_service=None,
                                brs_client=None,
-                               crypto_client=None,
                                intl_client=None,
                                market_service=None,
                                logger=None) -> DataIntegrityService:
@@ -595,7 +580,6 @@ def get_data_integrity_service(validation_service=None,
         service_name="DataIntegrityService",
         validation_service=validation_service,
         brs_client=brs_client,
-        crypto_client=crypto_client,
         intl_client=intl_client,
         market_service=market_service,
         logger=logger

@@ -29,7 +29,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 </span>
               </div>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                Comprehensive market analysis platform with real-time data, technical analysis, fundamentals, and AI signals.
+                Comprehensive market analysis platform with real-time data, technical analysis, and fundamentals.
               </p>
             </div>
             <div>

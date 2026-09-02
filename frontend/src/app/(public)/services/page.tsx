@@ -19,7 +19,7 @@ const services = [
     title: "AI-Powered Scoring",
     description:
       "Advanced machine learning models analyze multiple data points to generate actionable stock scores. Our AI evaluates fundamentals, technicals, and market sentiment.",
-    features: ["Multi-factor scoring", "Sentiment analysis", "Predictive signals"],
+    features: ["Multi-factor scoring", "Sentiment analysis", "Pattern recognition"],
   },
   {
     icon: "📈",
@@ -39,8 +39,8 @@ const services = [
     icon: "🔔",
     title: "Smart Alerts",
     description:
-      "Set custom alerts for price movements, volume spikes, technical signals, and news events. Never miss a trading opportunity.",
-    features: ["Price alerts", "Signal alerts", "News alerts"],
+      "Set custom alerts for price movements, volume spikes, and news events. Never miss a trading opportunity.",
+    features: ["Price alerts", "Volume alerts", "News alerts"],
   },
   {
     icon: "📰",

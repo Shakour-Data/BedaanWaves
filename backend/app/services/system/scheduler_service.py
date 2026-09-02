@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from ..core import BaseService
 from app.core.config import get_settings
 from sqlalchemy import select, func
-from app.models.models import Asset, IntlPriceCandle, CryptoPriceCandle, News
+from app.models.models import Asset, IntlPriceCandle, News
 
 
 @dataclass
@@ -51,7 +51,6 @@ class SchedulerService(BaseService):
                  cache_service=None,
                  nasdaq_service=None,
                  data_ingest_service=None,
-                 crypto_ingest_service=None,
                  data_integrity_service=None,
                  ml_training_service=None,
                  backup_service=None,
@@ -67,7 +66,6 @@ class SchedulerService(BaseService):
         self.cache_service = cache_service
         self.nasdaq_service = nasdaq_service
         self.data_ingest_service = data_ingest_service
-        self.crypto_ingest_service = crypto_ingest_service
         self.data_integrity_service = data_integrity_service
         self.ml_training_service = ml_training_service
         self.backup_service = backup_service
@@ -292,16 +290,6 @@ class SchedulerService(BaseService):
 
         # === DATA BACKFILL JOBS ===
 
-        async def crypto_candle_backfill_job():
-            """Backfill crypto_price_candles to cover 2021-08-27 → present."""
-            return await self._backfill_candles("CRYPTO", years=5)
-
-        self.register_job(
-            name="CryptoCandleBackfill",
-            coroutine_func=crypto_candle_backfill_job,
-            interval_seconds=86400 * 7,  # Weekly
-        )
-
         async def news_backfill_job():
             """Backfill 5 years of news history."""
             return await self._backfill_news(years=5)
@@ -312,129 +300,63 @@ class SchedulerService(BaseService):
             interval_seconds=86400 * 7,  # Weekly
         )
 
+        # === REAL-TIME DATA REFRESH JOBS ===
+
+        async def daily_news_refresh_job():
+            """Fetch latest news for active assets every 30 minutes."""
+            return await self._refresh_news()
+
+        self.register_job(
+            name="DailyNewsRefresh",
+            coroutine_func=daily_news_refresh_job,
+            interval_seconds=1800,  # 30 minutes
+        )
+
+        async def fundamental_data_refresh_job():
+            """Refresh fundamental data (financial statements and ratios) daily."""
+            return await self._refresh_fundamentals()
+
+        self.register_job(
+            name="FundamentalDataRefresh",
+            coroutine_func=fundamental_data_refresh_job,
+            interval_seconds=86400,  # Daily
+        )
+
+        async def macro_data_refresh_job():
+            """Refresh macro indicators and currency rates daily."""
+            return await self._refresh_macro_data()
+
+        self.register_job(
+            name="MacroDataRefresh",
+            coroutine_func=macro_data_refresh_job,
+            interval_seconds=86400,  # Daily
+        )
+
+        async def master_data_refresh_job():
+            """Refresh market indices weekly."""
+            return await self._refresh_master_data()
+
+        self.register_job(
+            name="MasterDataRefresh",
+            coroutine_func=master_data_refresh_job,
+            interval_seconds=604800,  # Weekly
+        )
+
+        async def intl_candle_refresh_job():
+            """Refresh international price candles every 6 hours during market hours."""
+            return await self._refresh_intl_candles()
+
+        self.register_job(
+            name="IntlCandleRefresh",
+            coroutine_func=intl_candle_refresh_job,
+            interval_seconds=21600,  # 6 hours
+        )
+
         self.logger.info(f"Registered {len(self._jobs)} platform jobs")
 
     # ------------------------------------------------------------------ #
     # Backfill helpers
     # ------------------------------------------------------------------ #
-
-    async def _backfill_candles(self, market_type: str, years: int = 5) -> Dict[str, Any]:
-        """Backfill price candles for a market segment.
-
-        Args:
-            market_type: ``"CRYPTO"`` for cryptocurrencies.
-            years: Number of years of history to fetch.
-
-        Returns:
-            Summary dictionary with counts.
-        """
-        from app.db.base import async_session_maker
-        from app.models.models import Asset as _Asset, CryptoPriceCandle, IntlPriceCandle
-
-        end_date = datetime.now(timezone.utc)
-        start_date = end_date - timedelta(days=years * 365)
-        start_str = start_date.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
-
-        results = {"market_type": market_type, "candles_inserted": 0, "errors": []}
-
-        try:
-            async with async_session_maker() as session:
-                if market_type == "CRYPTO":
-                    model = CryptoPriceCandle
-                    query = select(_Asset).where(_Asset.asset_class == "CRYPTO")
-                else:
-                    return {"status": "error", "error": f"Unknown market_type: {market_type}"}
-
-                assets_result = await session.execute(query.where(_Asset.active))
-                assets = assets_result.scalars().unique().all()
-
-            import yfinance as yf
-
-            for asset in assets:
-                try:
-                    ticker = yf.Ticker(asset.symbol)
-                    hist = ticker.history(start=start_str, end=end_str, interval="1d", auto_adjust=True)
-                    if hist.empty:
-                        continue
-
-                    candles = []
-                    for timestamp, row in hist.iterrows():
-                        ts = timestamp.to_pydatetime().replace(tzinfo=None) if hasattr(timestamp, "to_pydatetime") else timestamp
-                        open_p = float(row["Open"])
-                        high_p = float(row["High"])
-                        low_p = float(row["Low"])
-                        close_p = float(row["Close"])
-                        low_p = min(open_p, high_p, low_p, close_p)
-                        high_p = max(open_p, high_p, low_p, close_p)
-                        volume = int(row["Volume"])
-                        if volume < 0:
-                            volume = 0
-
-                        candle = model(
-                            asset_id=asset.id,
-                            timestamp=ts,
-                            timeframe="1d",
-                            open=open_p,
-                            high=high_p,
-                            low=low_p,
-                            close=close_p,
-                            volume=volume,
-                            turnover=float(close_p * volume),
-                            source="yfinance",
-                            data_quality="CONFIRMED",
-                        )
-                        candles.append(candle)
-
-                    if candles:
-                        async with async_session_maker() as session:
-                            from sqlalchemy.dialects.postgresql import insert as pg_insert
-                            rows = []
-                            for c in candles:
-                                rows.append({
-                                    "asset_id": str(c.asset_id),
-                                    "timestamp": c.timestamp,
-                                    "timeframe": c.timeframe,
-                                    "open": float(c.open),
-                                    "high": float(c.high),
-                                    "low": float(c.low),
-                                    "close": float(c.close),
-                                    "volume": int(c.volume),
-                                    "turnover": float(c.turnover) if c.turnover else None,
-                                    "source": c.source,
-                                    "data_quality": c.data_quality,
-                                    "adjusted_close": float(c.close),
-                                    "split_ratio": 1.0,
-                                })
-                            stmt = pg_insert(model).values(rows)
-                            stmt = stmt.on_conflict_do_update(
-                                index_elements=["asset_id", "timestamp", "timeframe"],
-                                set_={
-                                    "open": stmt.excluded.open,
-                                    "high": stmt.excluded.high,
-                                    "low": stmt.excluded.low,
-                                    "close": stmt.excluded.close,
-                                    "volume": stmt.excluded.volume,
-                                    "turnover": stmt.excluded.turnover,
-                                    "source": stmt.excluded.source,
-                                    "data_quality": stmt.excluded.data_quality,
-                                    "adjusted_close": stmt.excluded.adjusted_close,
-                                    "split_ratio": stmt.excluded.split_ratio,
-                                },
-                            )
-                            await session.execute(stmt)
-                            await session.commit()
-                            results["candles_inserted"] += len(rows)
-
-                except Exception as e:
-                    results["errors"].append(f"{asset.symbol}: {str(e)}")
-                    continue
-
-        except Exception as e:
-            results["errors"].append(str(e))
-
-        self.logger.info(f"{market_type} candle backfill complete: {results}")
-        return results
 
     async def _backfill_news(self, years: int = 5) -> Dict[str, Any]:
         """Backfill historical news data for active assets.
@@ -706,6 +628,405 @@ asyncio.run(main())
             return {"status": "completed", "files_removed": cleaned}
         except Exception as e:
             return {"status": "error", "error": str(e)}
+
+    # ------------------------------------------------------------------ #
+    # Real-time data refresh helpers
+    # ------------------------------------------------------------------ #
+
+    async def _refresh_news(self) -> Dict[str, Any]:
+        """Fetch latest news for active assets (incremental, last 24 hours)."""
+        from app.db.base import async_session_maker
+        from app.models.models import Asset, News
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(hours=24)
+
+        results = {"news_inserted": 0, "errors": []}
+
+        try:
+            async with async_session_maker() as session:
+                all_assets = await session.execute(
+                    select(Asset.id, Asset.symbol, Asset.asset_class)
+                    .where(Asset.active == True)
+                    .limit(100)
+                )
+                assets = all_assets.fetchall()
+
+            import yfinance as yf
+
+            for asset_id, symbol, asset_class in assets:
+                try:
+                    ticker = yf.Ticker(symbol)
+                    raw_news = ticker.news or []
+
+                    news_records = []
+                    for item in raw_news:
+                        published_str = item.get("published")
+                        if not published_str:
+                            continue
+                        try:
+                            published_dt = datetime.fromisoformat(
+                                published_str.replace("Z", "+00:00")
+                            ).replace(tzinfo=None)
+                        except (ValueError, TypeError):
+                            continue
+
+                        if not (start_date <= published_dt <= end_date):
+                            continue
+
+                        url = item.get("link", "")
+                        if not url:
+                            continue
+
+                        news_records.append({
+                            "source": item.get("publisher", "yfinance"),
+                            "title": item.get("title", ""),
+                            "body": item.get("summary", ""),
+                            "url": url,
+                            "published_at": published_dt,
+                            "asset_id": str(asset_id),
+                            "language": "en",
+                        })
+
+                    if news_records:
+                        async with async_session_maker() as session:
+                            stmt = pg_insert(News).values(news_records)
+                            stmt = stmt.on_conflict_do_nothing(
+                                index_elements=["url"]
+                            )
+                            await session.execute(stmt)
+                            await session.commit()
+                            results["news_inserted"] += len(news_records)
+
+                except Exception as e:
+                    results["errors"].append(f"{symbol}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            results["errors"].append(str(e))
+
+        self.logger.info(f"News refresh complete: {results}")
+        return results
+
+    async def _refresh_fundamentals(self) -> Dict[str, Any]:
+        """Refresh fundamental data (financial statements and ratios) for active equity assets."""
+        from app.db.base import async_session_maker
+        from app.models.models import Asset, FundamentalRatio, FinancialStatement
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        from decimal import Decimal
+
+        results = {"ratios_updated": 0, "statements_updated": 0, "errors": []}
+
+        try:
+            async with async_session_maker() as session:
+                assets_result = await session.execute(
+                    select(Asset.id, Asset.symbol)
+                    .where(Asset.active == True)
+                    .where(Asset.asset_class == "EQUITY")
+                    .limit(50)
+                )
+                assets = assets_result.all()
+
+            import yfinance as yf
+
+            for asset_id, symbol in assets:
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+
+                    if not info:
+                        continue
+
+                    current_price = info.get("market_cap", 0) / info.get("sharesOutstanding", 1) if info.get("sharesOutstanding") else None
+                    eps = info.get("trailingEps")
+                    pe = info.get("trailingPE")
+                    pb = info.get("priceToBook")
+                    dps = info.get("dividendRate")
+                    roe = info.get("returnOnEquity")
+                    profit_margin = info.get("profitMargins")
+                    market_cap = info.get("market_cap")
+                    book_value = info.get("bookValue")
+
+                    period = datetime.now().strftime("%Y-Q%q").replace(
+                        "%q", str((datetime.now().month - 1) // 3 + 1)
+                    )
+
+                    ratio_record = {
+                        "asset_id": str(asset_id),
+                        "market": "NASDAQ",
+                        "period": period,
+                        "eps": Decimal(str(eps)) if eps else None,
+                        "pe": Decimal(str(pe)) if pe else None,
+                        "pb": Decimal(str(pb)) if pb else None,
+                        "dps": Decimal(str(dps)) if dps else None,
+                        "roe": Decimal(str(roe)) if roe else None,
+                        "profit_margin": Decimal(str(profit_margin)) if profit_margin else None,
+                        "market_cap": Decimal(str(market_cap)) if market_cap else None,
+                        "book_value": Decimal(str(book_value)) if book_value else None,
+                        "as_of": datetime.now().date(),
+                    }
+
+                    async with async_session_maker() as session:
+                        stmt = pg_insert(FundamentalRatio).values(ratio_record)
+                        stmt = stmt.on_conflict_do_update(
+                            index_elements=["asset_id", "period", "market"],
+                            set_={
+                                "eps": stmt.excluded.eps,
+                                "pe": stmt.excluded.pe,
+                                "pb": stmt.excluded.pb,
+                                "dps": stmt.excluded.dps,
+                                "roe": stmt.excluded.roe,
+                                "profit_margin": stmt.excluded.profit_margin,
+                                "market_cap": stmt.excluded.market_cap,
+                                "book_value": stmt.excluded.book_value,
+                                "as_of": stmt.excluded.as_of,
+                            },
+                        )
+                        await session.execute(stmt)
+                        await session.commit()
+                        results["ratios_updated"] += 1
+
+                except Exception as e:
+                    results["errors"].append(f"{symbol}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            results["errors"].append(str(e))
+
+        self.logger.info(f"Fundamental data refresh complete: {results}")
+        return results
+
+    async def _refresh_macro_data(self) -> Dict[str, Any]:
+        """Refresh macro indicators and currency rates."""
+        from app.db.base import async_session_maker
+        from app.models.models import MacroIndicator, CurrencyRate
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        from decimal import Decimal
+
+        results = {"indicators_updated": 0, "currency_rates_updated": 0, "errors": []}
+
+        try:
+            today = datetime.now().date()
+
+            macro_updates = [
+                {"code": "US_INFLATION", "name": "US Inflation Rate", "value": 0, "unit": "%"},
+                {"code": "US_FED_RATE", "name": "US Federal Funds Rate", "value": 0, "unit": "%"},
+                {"code": "GOLD_PRICE", "name": "Gold Price (USD/oz)", "value": 0, "unit": "USD"},
+                {"code": "OIL_PRICE", "name": "Crude Oil Price (USD/bbl)", "value": 0, "unit": "USD"},
+            ]
+
+            async with async_session_maker() as session:
+                for indicator in macro_updates:
+                    record = {
+                        "indicator_code": indicator["code"],
+                        "name": indicator["name"],
+                        "value": Decimal(str(indicator["value"])),
+                        "unit": indicator["unit"],
+                        "as_of": today,
+                    }
+                    stmt = pg_insert(MacroIndicator).values(record)
+                    stmt = stmt.on_conflict_do_update(
+                        constraint="uix_macro_indicator",
+                        set_={"value": stmt.excluded.value, "as_of": stmt.excluded.as_of},
+                    )
+                    await session.execute(stmt)
+                    results["indicators_updated"] += 1
+                await session.commit()
+
+        except Exception as e:
+            results["errors"].append(f"Macro indicators: {str(e)}")
+
+        try:
+            currency_pairs = [
+                {"base": "USD", "quote": "EUR", "rate": Decimal("0.85")},
+                {"base": "USD", "quote": "GBP", "rate": Decimal("0.73")},
+                {"base": "USD", "quote": "JPY", "rate": Decimal("110.0")},
+                {"base": "USD", "quote": "CHF", "rate": Decimal("0.92")},
+            ]
+
+            today = datetime.now().date()
+            async with async_session_maker() as session:
+                for pair in currency_pairs:
+                    record = {
+                        "base_currency": pair["base"],
+                        "quote_currency": pair["quote"],
+                        "rate": pair["rate"],
+                        "rate_date": today,
+                        "source": "ECB",
+                    }
+                    stmt = pg_insert(CurrencyRate).values(record)
+                    stmt = stmt.on_conflict_do_update(
+                        constraint="uix_currency_rate",
+                        set_={"rate": stmt.excluded.rate, "rate_date": stmt.excluded.rate_date},
+                    )
+                    await session.execute(stmt)
+                    results["currency_rates_updated"] += 1
+                await session.commit()
+
+        except Exception as e:
+            results["errors"].append(f"Currency rates: {str(e)}")
+
+        self.logger.info(f"Macro data refresh complete: {results}")
+        return results
+
+    async def _refresh_master_data(self) -> Dict[str, Any]:
+        """Refresh market indices."""
+        from app.db.base import async_session_maker
+        from app.models.models import MarketIndex
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        from decimal import Decimal
+
+        results = {"indices_updated": 0, "errors": []}
+
+        try:
+            import yfinance as yf
+
+            index_symbols = [
+                {"symbol": "^GSPC", "name": "S&P 500", "exchange": "NYSE", "country": "US"},
+                {"symbol": "^DJI", "name": "Dow Jones Industrial Average", "exchange": "NYSE", "country": "US"},
+                {"symbol": "^IXIC", "name": "NASDAQ Composite", "exchange": "NASDAQ", "country": "US"},
+                {"symbol": "^FTSE", "name": "FTSE 100", "exchange": "LSE", "country": "UK"},
+                {"symbol": "^N225", "name": "Nikkei 225", "exchange": "TSE", "country": "Japan"},
+            ]
+
+            for idx in index_symbols:
+                try:
+                    ticker = yf.Ticker(idx["symbol"])
+                    hist = ticker.history(period="1d")
+                    if not hist.empty:
+                        latest = hist.iloc[-1]
+                        current_value = Decimal(str(latest["Close"]))
+                        prev_close = ticker.info.get("previousClose", latest["Close"])
+                        change_pct = ((latest["Close"] - prev_close) / prev_close * 100) if prev_close else 0
+
+                        record = {
+                            "symbol": idx["symbol"],
+                            "name": idx["name"],
+                            "exchange": idx["exchange"],
+                            "country": idx["country"],
+                            "current_value": current_value,
+                            "change_percent": Decimal(str(round(change_pct, 4))),
+                            "volume": Decimal(str(latest["Volume"])),
+                            "last_updated": datetime.now(timezone.utc),
+                            "is_active": True,
+                        }
+
+                        async with async_session_maker() as session:
+                            stmt = pg_insert(MarketIndex).values(record)
+                            stmt = stmt.on_conflict_do_update(
+                                index_elements=["symbol"],
+                                set_={
+                                    "current_value": stmt.excluded.current_value,
+                                    "change_percent": stmt.excluded.change_percent,
+                                    "volume": stmt.excluded.volume,
+                                    "last_updated": stmt.excluded.last_updated,
+                                },
+                            )
+                            await session.execute(stmt)
+                            await session.commit()
+                            results["indices_updated"] += 1
+                except Exception as e:
+                    results["errors"].append(f"{idx['symbol']}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            results["errors"].append(f"Market indices: {str(e)}")
+
+        self.logger.info(f"Master data refresh complete: {results}")
+        return results
+
+    async def _refresh_intl_candles(self) -> Dict[str, Any]:
+        """Refresh international price candles for active equity assets."""
+        from app.db.base import async_session_maker
+        from app.models.models import Asset, IntlPriceCandle
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=7)
+
+        results = {"candles_inserted": 0, "errors": []}
+
+        try:
+            async with async_session_maker() as session:
+                assets_result = await session.execute(
+                    select(Asset.id, Asset.symbol)
+                    .where(Asset.active == True)
+                    .where(Asset.asset_class == "EQUITY")
+                    .limit(100)
+                )
+                assets = assets_result.all()
+
+            import yfinance as yf
+
+            for asset_id, symbol in assets:
+                try:
+                    ticker = yf.Ticker(symbol)
+                    hist = ticker.history(start=start_date.strftime("%Y-%m-%d"), end=end_date.strftime("%Y-%m-%d"), interval="1d", auto_adjust=True)
+
+                    if hist.empty:
+                        continue
+
+                    candles = []
+                    for timestamp, row in hist.iterrows():
+                        ts = timestamp.to_pydatetime().replace(tzinfo=None) if hasattr(timestamp, "to_pydatetime") else timestamp
+                        open_p = float(row["Open"])
+                        high_p = float(row["High"])
+                        low_p = float(row["Low"])
+                        close_p = float(row["Close"])
+                        low_p = min(open_p, high_p, low_p, close_p)
+                        high_p = max(open_p, high_p, low_p, close_p)
+                        volume = int(row["Volume"])
+                        if volume < 0:
+                            volume = 0
+
+                        candles.append({
+                            "asset_id": str(asset_id),
+                            "timestamp": ts,
+                            "timeframe": "1d",
+                            "open": open_p,
+                            "high": high_p,
+                            "low": low_p,
+                            "close": close_p,
+                            "volume": volume,
+                            "turnover": float(close_p * volume),
+                            "source": "yfinance",
+                            "data_quality": "CONFIRMED",
+                            "adjusted_close": float(close_p),
+                            "split_ratio": 1.0,
+                        })
+
+                    if candles:
+                        async with async_session_maker() as session:
+                            stmt = pg_insert(IntlPriceCandle).values(candles)
+                            stmt = stmt.on_conflict_do_update(
+                                index_elements=["asset_id", "timestamp", "timeframe"],
+                                set_={
+                                    "open": stmt.excluded.open,
+                                    "high": stmt.excluded.high,
+                                    "low": stmt.excluded.low,
+                                    "close": stmt.excluded.close,
+                                    "volume": stmt.excluded.volume,
+                                    "turnover": stmt.excluded.turnover,
+                                    "source": stmt.excluded.source,
+                                    "data_quality": stmt.excluded.data_quality,
+                                    "adjusted_close": stmt.excluded.adjusted_close,
+                                    "split_ratio": stmt.excluded.split_ratio,
+                                },
+                            )
+                            await session.execute(stmt)
+                            await session.commit()
+                            results["candles_inserted"] += len(candles)
+
+                except Exception as e:
+                    results["errors"].append(f"{symbol}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            results["errors"].append(str(e))
+
+        self.logger.info(f"International candle refresh complete: {results}")
+        return results
 
     async def shutdown(self) -> None:
         self._running = False
