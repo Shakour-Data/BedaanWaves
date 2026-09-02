@@ -24,37 +24,37 @@ describe('AssetTable', () => {
     render(<AssetTable rows={mockAssets} />)
 
     // Check headers are present
-    expect(screen.getByText('نماد')).not.toBeNull()
-    expect(screen.getByText('نام')).not.toBeNull()
-    expect(screen.getByText('بازار')).not.toBeNull()
-    expect(screen.getByText('قیمت')).not.toBeNull()
-    expect(screen.getByText('تغییر')).not.toBeNull()
+    expect(screen.getByText('Symbol')).not.toBeNull()
+    expect(screen.getByText('Name')).not.toBeNull()
+    expect(screen.getByText('Market')).not.toBeNull()
+    expect(screen.getByText('Price')).not.toBeNull()
+    expect(screen.getByText('Change')).not.toBeNull()
 
     // Check asset data is rendered
     expect(screen.getByText('AAPL')).not.toBeNull()
     expect(screen.getByText('Apple Inc.')).not.toBeNull()
     expect(screen.getAllByText('NASDAQ')).toHaveLength(2)
 
-    const priceElement = screen.getByText(/۱۵۰/)
+    const priceElement = screen.getByText(/150/)
     expect(priceElement).not.toBeNull()
 
-    const changeElement = screen.getByText(/2\.50٪/)
+    const changeElement = screen.getByText(/2\.50%/)
     expect(changeElement).not.toBeNull()
 
     expect(screen.getByText('MSFT')).not.toBeNull()
     expect(screen.getByText('Microsoft')).not.toBeNull()
 
-    const priceElement2 = screen.getByText(/۳۸۰/)
+    const priceElement2 = screen.getByText(/380/)
     expect(priceElement2).not.toBeNull()
 
-    const changeElement2 = screen.getByText(/1\.20٪/)
+    const changeElement2 = screen.getByText(/1\.20%/)
     expect(changeElement2).not.toBeNull()
   })
 
   it('handles empty assets array', () => {
     render(<AssetTable rows={[]} />)
 
-    expect(screen.getByText('نماد')).not.toBeNull()
+    expect(screen.getByText('Symbol')).not.toBeNull()
     // tbody should be empty
     const tbodyRows = screen.getAllByRole('row')
     // Should only have header row

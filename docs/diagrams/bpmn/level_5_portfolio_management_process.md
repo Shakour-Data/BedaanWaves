@@ -1,6 +1,6 @@
 # BPMN Level 5 — Portfolio Management Process
 
-این سطح فرآیندهای پورتفولیو/هولدینگ را مطابق routeهای فعلی نشان می‌دهد:
+This level shows the portfolio/holding processes based on the current routes:
 - `POST /portfolios/` (create)
 - `GET /portfolios/` / `GET /portfolios/{id}`
 - `PUT /portfolios/{id}`
@@ -54,8 +54,7 @@ flowchart TD
   DELH --> FE
 ```
 
-## داده‌ها/ایونت‌ها
+## Data / Events
 - `PortfolioCreate/PortfolioUpdate`
 - `PositionCreate/PositionResponse`
-- کنترل خطا: پرتاب `404 Portfolio not found` یا `400 Holding already exists`
-
+- Error handling: throw `404 Portfolio not found` or `400 Holding already exists`

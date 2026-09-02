@@ -1,10 +1,10 @@
 /**
  * stocks.ts
  * ---------------------------------------------------------------------------
- * لایه‌ی دسترسی به داده‌ی «سهام» (symbols, price-history, latest-prices).
- * این endpointها روی پایگاهِ seed شده‌ی بک‌اند داده‌ی واقعی برمی‌گردانند.
- * مقادیر عددی ممکن است به‌صورت رشته (Decimal) یا عدد سریالایز شوند؛ به همین
- * دلیل همه‌جا با `num()` به عدد تبدیل می‌شوند.
+ * Data access layer for "stocks" (symbols, price-history, latest-prices).
+ * These endpoints return real data from the seeded backend database.
+ * Numeric values may be serialized as strings (Decimal) or numbers; for that
+ * reason `num()` is used everywhere to convert to a number.
  */
 
 import { apiClient } from "@/lib/api";
@@ -15,7 +15,7 @@ export type AssetClass = "EQUITY" | "ETF";
 export type Market = "NASDAQ";
 export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w" | "1M";
 
-/** پاسخِ `GET /market/symbols` */
+/** Response of `GET /market/symbols` */
 export interface Asset {
   id: string;
   symbol: string;
@@ -31,7 +31,7 @@ export interface Asset {
   updated_at: string;
 }
 
-/** یک کندلِ OHLCV پس از نرمال‌سازی به `number` */
+/** A single OHLCV candle normalized to `number` */
 export interface Candle {
   timestamp: string;
   timeframe: Timeframe;
@@ -44,7 +44,7 @@ export interface Candle {
   transactions: number | null;
 }
 
-/** آمار لحظه‌ای یک نماد از `GET /market/latest-prices` */
+/** Real-time stats for a symbol from `GET /market/latest-prices` */
 export interface LatestPrice {
   symbol: string;
   price: number;
@@ -101,7 +101,7 @@ export interface FetchSymbolsParams {
   limit?: number;
 }
 
-/** فهرست نمادهای قابل معامله (با فیلترهای اختیاری). */
+/** List of tradable symbols (with optional filters). */
 export async function fetchSymbols(params: FetchSymbolsParams = {}): Promise<Asset[]> {
   const qs = new URLSearchParams();
   if (params.assetClass) qs.set("asset_class", params.assetClass);
@@ -113,7 +113,7 @@ export async function fetchSymbols(params: FetchSymbolsParams = {}): Promise<Ass
   return res.data;
 }
 
-/** مشخصات یک نماد بر اساس symbol (از فهرست symbols). */
+/** Properties of a symbol by symbol (from the symbols list). */
 export async function fetchAsset(symbol: string): Promise<Asset | null> {
   try {
     const all = await fetchSymbols({ limit: 1000 });
@@ -130,7 +130,7 @@ export interface FetchPriceHistoryParams {
   limit?: number;
 }
 
-/** تاریخچه‌ی OHLCV یک نماد (مرتب‌شده صعودی بر اساس زمان). */
+/** OHLCV history of a symbol (sorted ascending by time). */
 export async function fetchPriceHistory({
   symbol,
   timeframe = "1d",
@@ -153,7 +153,7 @@ export async function fetchPriceHistory({
     transactions: c.transactions ?? null }));
 }
 
-/** آخرین قیمت‌ها برای چند نماد. */
+/** Latest prices for multiple symbols. */
 export async function fetchLatestPrices(symbols: string[]): Promise<Record<string, LatestPrice>> {
   if (symbols.length === 0) return {};
   const qs = symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&");
@@ -172,7 +172,7 @@ export async function fetchLatestPrices(symbols: string[]): Promise<Record<strin
   return out;
 }
 
-/** آخرین قیمتِ یک نماد. */
+/** Latest price of a single symbol. */
 export async function fetchLatestPrice(symbol: string): Promise<LatestPrice | null> {
   try {
     const map = await fetchLatestPrices([symbol]);
@@ -182,7 +182,7 @@ export async function fetchLatestPrice(symbol: string): Promise<LatestPrice | nu
   }
 }
 
-/** امتیازدهی ۶ بعدی یک نماد. */
+/** 6-dimensional scoring of a symbol. */
 export async function fetchScoring(symbol: string): Promise<any | null> {
   try {
     const res = await apiClient.get<any>(`analysis/scoring/${encodeURIComponent(symbol)}`);
@@ -192,7 +192,7 @@ export async function fetchScoring(symbol: string): Promise<any | null> {
   }
 }
 
-/** تحلیل بنیادی یک نماد. */
+/** Fundamental analysis of a symbol. */
 export async function fetchFundamental(symbol: string): Promise<any | null> {
   try {
     const res = await apiClient.get<any>(`analysis/fundamental/${encodeURIComponent(symbol)}`);
@@ -202,7 +202,7 @@ export async function fetchFundamental(symbol: string): Promise<any | null> {
   }
 }
 
-/** تحلیل تکنیکال یک نماد. */
+/** Technical analysis of a symbol. */
 export async function fetchTechnical(symbol: string): Promise<any | null> {
   try {
     const res = await apiClient.get<any>(`analysis/technical/${encodeURIComponent(symbol)}`);
@@ -212,7 +212,7 @@ export async function fetchTechnical(symbol: string): Promise<any | null> {
   }
 }
 
-/** تحلیل ریسک یک نماد. */
+/** Risk analysis of a symbol. */
 export async function fetchRisk(symbol: string): Promise<any | null> {
   try {
     const res = await apiClient.get<any>(`analysis/risk/${encodeURIComponent(symbol)}`);
@@ -222,7 +222,7 @@ export async function fetchRisk(symbol: string): Promise<any | null> {
   }
 }
 
-/** تحلیل احساسات یک نماد. */
+/** Sentiment analysis of a symbol. */
 export async function fetchSentiment(symbol: string): Promise<any | null> {
   try {
     const res = await apiClient.get<any>(`analysis/sentiment/${encodeURIComponent(symbol)}`);

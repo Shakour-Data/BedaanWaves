@@ -169,10 +169,11 @@ async def get_score_trend(
     trading day with:
 
     - ``avg_score``        - mean ``overall_score`` across all assets
-    - ``avg_technical``    - mean of the ``technical`` value inside
-                             ``dimension_scores`` JSONB (or 0 if missing)
+    - ``avg_dimensions``   - dict of mean per-dimension scores for all 6
+                             dimensions (``fundamental``, ``technical``,
+                             ``sentiment``, ``risk``, ``macro``, ``ai``)
     - ``score_change``     - ``avg_score[t] - avg_score[t-1]``
-    - ``technical_change`` - ``avg_technical[t] - avg_technical[t-1]``
+    - ``dimension_changes``- dict of per-dimension day-over-day deltas
     - ``symbol_count``     - number of assets that contributed to the day
 
     Args:
@@ -183,6 +184,7 @@ async def get_score_trend(
     Returns:
         Aggregated daily series for charting.
     """
+    DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
     try:
         cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
 
@@ -190,25 +192,32 @@ async def get_score_trend(
         # "every active asset" (used by tests and internal debugging).
         market_filter = Asset.market == market if market and market.upper() != "ALL" else Asset.market.isnot(None)
 
-        # A single GROUP BY date query does the heavy lifting on the database
-        # side. ``coalesce`` makes the technical aggregation NULL-safe because
-        # some legacy rows may not have a ``technical`` key in dimension_scores.
-        technical_expr = func.coalesce(
-            func.avg(
-                case(
-                    (ScoreHistory.dimension_scores.has_key("technical"),
-                     func.cast(ScoreHistory.dimension_scores["technical"], Numeric(10, 4))),
-                    else_=0,
-                )
-            ),
-            0.0,
-        ).label("avg_technical")
+        # Build a per-dimension AVG() expression that pulls the value out of
+        # the JSONB ``dimension_scores`` column. ``has_key`` is used so legacy
+        # rows that miss a particular dimension do not break the aggregate.
+        dim_exprs = []
+        for dim in DIMENSIONS:
+            expr = func.coalesce(
+                func.avg(
+                    case(
+                        (
+                            ScoreHistory.dimension_scores.has_key(dim),
+                            func.cast(ScoreHistory.dimension_scores[dim], Numeric(10, 4)),
+                        ),
+                        else_=0,
+                    )
+                ),
+                0.0,
+            ).label(f"avg_{dim}")
+            dim_exprs.append(expr)
 
+        # ``overall_score`` is aliased to avg_score for backward compatibility
+        # with the original 2-field payload.
         query = (
             select(
                 ScoreHistory.date.label("date"),
                 func.avg(ScoreHistory.overall_score).label("avg_score"),
-                technical_expr,
+                *dim_exprs,
                 func.count(func.distinct(ScoreHistory.asset_id)).label("symbol_count"),
             )
             .join(Asset, Asset.id == ScoreHistory.asset_id)
@@ -228,11 +237,15 @@ async def get_score_trend(
 
         series = []
         for row in rows:
+            avg_dims = {
+                dim: round(float(getattr(row, f"avg_{dim}") or 0.0), 4)
+                for dim in DIMENSIONS
+            }
             series.append(
                 {
                     "date": row.date.isoformat(),
                     "avg_score": round(float(row.avg_score or 0.0), 4),
-                    "avg_technical": round(float(row.avg_technical or 0.0), 4),
+                    "avg_dimensions": avg_dims,
                     "symbol_count": int(row.symbol_count or 0),
                 }
             )
@@ -243,16 +256,26 @@ async def get_score_trend(
             if i == 0:
                 point["score_change"] = 0.0
                 point["technical_change"] = 0.0
+                point["dimension_changes"] = {dim: 0.0 for dim in DIMENSIONS}
             else:
                 prev = series[i - 1]
                 point["score_change"] = round(point["avg_score"] - prev["avg_score"], 4)
-                point["technical_change"] = round(point["avg_technical"] - prev["avg_technical"], 4)
+                prev_tech = prev["avg_dimensions"]["technical"]
+                curr_tech = point["avg_dimensions"]["technical"]
+                point["technical_change"] = round(curr_tech - prev_tech, 4)
+                point["dimension_changes"] = {
+                    dim: round(
+                        point["avg_dimensions"][dim] - prev["avg_dimensions"][dim], 4
+                    )
+                    for dim in DIMENSIONS
+                }
 
         return {
             "status": "success",
             "days": days,
             "market": market,
             "count": len(series),
+            "dimensions": list(DIMENSIONS),
             "series": series,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }

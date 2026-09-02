@@ -5,7 +5,6 @@ Fundamental financial analysis and ratio calculations for global markets:
 - Iranian market (via CODAL/BRS API)
 - US markets (via Yahoo Finance, Alpha Vantage)
 - International markets (via various providers)
-- Cryptocurrencies (via CoinGecko, on-chain data)
 """
 
 from typing import Any, Dict, List, Optional

@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from datetime import timezone, datetime
-from typing import List
+from typing import List, Any, Dict
 import logging
 
 from app.db.base import get_async_session
 from app.models.models import Asset, MLSignal, candle_model_for_market, MacroIndicator
 from app.schemas.schemas import MLSignalResponse
 from app.services.analysis.technical_service import TechnicalAnalysisService
+from app.services.analysis.technical_indicators import compute_all_indicators, Candle as IndicatorCandle
 from app.services.analysis.risk_service import RiskAnalysisService
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
 from app.services.analysis.momentum_service import MomentumService
@@ -653,21 +654,51 @@ async def get_symbol_scoring(
     macro_data = {m.indicator_code: float(m.value) for m in macros}
 
     # Assemble analysis data
+    technical_data: Dict[str, Any] = {"current_price": prices[-1]}
+    if len(candles) >= 20:
+        indicator_candles = [
+            IndicatorCandle(
+                open=float(c.open),
+                high=float(c.high),
+                low=float(c.low),
+                close=float(c.close),
+                volume=float(c.volume) if c.volume else 0.0,
+            )
+            for c in candles
+        ]
+        indicators = compute_all_indicators(indicator_candles)
+        for key in ("rsi", "macd", "macd_histogram", "bb_percent_b", "volume_ratio",
+                    "volatility", "momentum", "stoch_k", "atr",
+                    "price_vs_sma20", "price_vs_sma50"):
+            if key in indicators and indicators[key] is not None:
+                technical_data[key] = float(indicators[key])
+
+    risk_data: Dict[str, Any] = {}
+    if "volatility" in technical_data:
+        risk_data["volatility"] = technical_data["volatility"]
+    if "atr" in technical_data and prices[-1] > 0:
+        risk_data["atr_ratio"] = technical_data["atr"] / prices[-1]
+
+    sentiment_data: Dict[str, Any] = {}
+    try:
+        news_service_local = NewsService()
+        await news_service_local.initialize()
+        news_items = await news_service_local.get_stock_news(asset.symbol, limit=10)
+        await news_service_local.shutdown()
+        if news_items:
+            positive = sum(1 for n in news_items if getattr(n, "sentiment", None) and float(getattr(n, "sentiment", 0) or 0) > 0.2)
+            negative = sum(1 for n in news_items if getattr(n, "sentiment", None) and float(getattr(n, "sentiment", 0) or 0) < -0.2)
+            sentiment_data["news_sentiment"] = round((positive - negative) / max(len(news_items), 1), 4)
+    except Exception:
+        pass
+
     scoring_input = {
         "ticker": asset.symbol,
         "market": asset.market,
         "fundamental": financials,
-        "technical": {
-            "current_price": prices[-1],
-            "rsi": 50, # Placeholder
-            "macd": 0,
-        },
-        "risk": {
-            "volatility": 0.2,
-        },
-        "sentiment": {
-            "news_sentiment": 0.6,
-        },
+        "technical": technical_data,
+        "risk": risk_data,
+        "sentiment": sentiment_data,
         "macro": macro_data,
         "ai": {
             "confidence": latest_signal.confidence if latest_signal else 50,

@@ -1,12 +1,12 @@
 # BPMN Level 4 — Analysis / Scoring / Signal Generation Process
 
-این سطح فرآیند تولید سیگنال‌ها را با توجه به routeهای تحلیل نشان می‌دهد:
+This level shows the signal generation process based on the analysis routes:
 - `/analysis/technical/{symbol}`
 - `/analysis/momentum/{symbol}`
 - `/analysis/volatility/{symbol}`
 - `/analysis/risk/{symbol}`
 - `/analysis/scoring` (6D scoring)
-- `/analysis/signals/{symbol}` (خواندن latest active MLSignal از DB)
+- `/analysis/signals/{symbol}` (reads the latest active MLSignal from the DB)
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -44,10 +44,9 @@ PriceCandles/Indicators input)]
   SCOREH --> FE
 ```
 
-## داده‌ها/ایونت‌ها
-- ورودی‌ها: لیست قیمت‌ها/بازده‌ها از `PriceCandle` (timeframe='1d')
-- خروجی‌ها:
+## Data / Events
+- Inputs: list of prices/returns from `PriceCandle` (timeframe='1d')
+- Outputs:
   - indicators/momentum/volatility/risk dict
   - scoring results + hierarchy
-  - `MLSignal` از جدول `ml_signals` (active + valid_until)
-
+  - `MLSignal` from the `ml_signals` table (active + valid_until)

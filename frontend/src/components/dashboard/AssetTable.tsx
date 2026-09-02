@@ -39,7 +39,7 @@ export function AssetTable({ rows }: { rows: AssetRow[] }) {
                   {MARKET_LABEL[r.market] ?? r.market}
                 </Badge>
               </td>
-              <td className="px-4 py-3 text-right">{r.price.toLocaleString("fa-IR")}</td>
+              <td className="px-4 py-3 text-right">{r.price.toLocaleString("en-US")}</td>
               <td className="px-4 py-3 text-right">
                 <ChangeBadge value={r.changePct} />
               </td>

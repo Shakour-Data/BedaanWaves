@@ -56,7 +56,7 @@ export default function AlertsPage() {
         // Build notification history
         const notifications = notificationsRes.data || [];
         const history = notifications
-          .filter((n: any) => n.type === "ALERT" || n.title?.includes("هشدار") || n.title?.includes("Alert"))
+          .filter((n: any) => n.type === "ALERT" || n.title?.includes("Alert"))
           .slice(0, 10)
           .map((n: any) => ({
             time: formatTimeAgo(n.created_at),

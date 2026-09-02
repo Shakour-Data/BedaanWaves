@@ -1,6 +1,6 @@
 # BPMN Level 2 — Authentication Process (Register/Login/Refresh)
 
-این سطح فرآیند احراز هویت را (در حد فرآیندهای API موجود) نشان می‌دهد.
+This level shows the authentication process (limited to the existing API processes).
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -43,9 +43,8 @@ flowchart TD
   end
 ```
 
-## داده‌ها/ایونت‌ها
+## Data / Events
 - `RegisterRequest`: username, email, full_name, password
 - `LoginRequest`: username, password
 - `Token`: access_token, refresh_token
 - JWT payload: `{sub, user_id, type}`
-

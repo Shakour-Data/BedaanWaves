@@ -80,7 +80,7 @@ export default function ProfilePage() {
               <p className="text-muted-foreground font-mono">{user?.email || "user@example.com"}</p>
               <div className="mt-3 flex gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-error/10 text-error border border-error/20">
-                  {t("app.settings.profile.member_since", "en").replace("{date}", "۱۴۰۲/۰۱/۰۱")}
+                  {t("app.settings.profile.member_since", "en").replace("{date}", "2023/01/01")}
                 </span>
               </div>
             </div>
@@ -111,7 +111,7 @@ export default function ProfilePage() {
 
             <div>
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.joined_date", "en")}</div>
-              <span className="text-sm font-medium">۱۴۰۲/۰۱/۰۱</span>
+              <span className="text-sm font-medium">2023/01/01</span>
             </div>
           </div>
         </Card>
@@ -141,7 +141,7 @@ export default function ProfilePage() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
-                    placeholder={false ? "رمز عبور فعلی" : "Current Password"}
+                    placeholder="Current Password"
                   />
                   <button
                     type="button"

@@ -81,7 +81,7 @@ export default function NewsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="Search" title={false ? "فیلترها" : "Filters"}>
+<TarotCard icon="Search" title="Filters">
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedSource(null)}
@@ -90,7 +90,7 @@ export default function NewsPage() {
                    selectedSource === null ? "bg-error text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
                 )}
               >
-                {false ? "همه اخبار" : "All News"}
+                All News
               </button>
               {sources.map((source) => (
                 <button
@@ -108,17 +108,17 @@ export default function NewsPage() {
           </TarotCard>
 
           {/* Trending Topics */}
-          <TarotCard icon="🔥" title={false ? "موضوعات داغ" : "Trending Topics"}>
+          <TarotCard icon="🔥" title="Trending Topics">
             <div className="space-y-2">
               {topTopics.map((topic, i) => (
                 <div key={i} className="flex items-center justify-between font-medium text-sm">
                   <span className="flex-1">{topic.topic}</span>
-                  <span className="text-xs text-muted-foreground">{topic.count} {false ? "خبر" : "news"}</span>
+                  <span className="text-xs text-muted-foreground">{topic.count} news</span>
                 </div>
               ))}
               {topTopics.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  {false ? "موضوع داغی یافت نشد" : "No trending topics found"}
+                  No trending topics found
                 </p>
               )}
             </div>
@@ -130,8 +130,8 @@ export default function NewsPage() {
           <TarotCard 
             icon="📰" 
             title={selectedSource 
-              ? (false ? `اخبار از ${selectedSource}` : `News from ${selectedSource}`) 
-              : (false ? "همه اخبار" : "All News")
+              ? `News from ${selectedSource}` 
+              : "All News"
             }
           >
             <NewsList items={filteredNews} />

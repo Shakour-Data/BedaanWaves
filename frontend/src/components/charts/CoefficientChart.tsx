@@ -75,7 +75,7 @@ export function CoefficientChart({ data, height = 360 }: CoefficientChartProps) 
       },
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
-        locale: "fa-IR",
+        locale: "en-US",
         priceFormatter: (p: number) => `${(p * 100).toFixed(1)}%`,
       },
       autoSize: false,

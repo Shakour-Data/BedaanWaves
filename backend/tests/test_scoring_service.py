@@ -36,14 +36,13 @@ class TestScoringServiceInitialization:
 
 
 class TestAnalyze:
-    async def test_empty_data_returns_zero_scores(self):
+    async def test_empty_data_returns_neutral_scores(self):
         service = ScoringService()
         await service.initialize()
         result = await service.analyze({"ticker": "TEST"})
         assert result["ticker"] == "TEST"
-        assert result["overall_score"] == 0.0
-        assert result["grade"] == "E_STRONG_SELL"
-        assert all(v == 0.0 for v in result["dimension_scores"].values())
+        assert result["overall_score"] == 50.0
+        assert all(v == 50.0 for v in result["dimension_scores"].values())
 
     async def test_full_scoring_returns_grade(self):
         service = ScoringService()
@@ -73,10 +72,10 @@ class TestAnalyze:
 
 
 class TestScoreDimension:
-    async def test_empty_dimension_returns_zero(self):
+    async def test_empty_dimension_returns_neutral(self):
         service = ScoringService()
         score = await service._score_dimension("technical", {}, "TSE")
-        assert score == 0.0
+        assert score == 50.0
 
     async def test_numeric_values_are_normalized(self):
         service = ScoringService()

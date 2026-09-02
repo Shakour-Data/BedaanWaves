@@ -156,7 +156,7 @@ export default function PortfolioPage() {
               <p className="text-sm font-medium z-10">{t("app.portfolio.coming_soon", "en")}</p>
               <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="text-xs px-3 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
-                  {false ? "در حال توسعه..." : "Under Development..."}
+                  "Under Development..."
                 </span>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function PortfolioPage() {
               <p className="text-sm font-medium z-10">{t("app.portfolio.coming_soon", "en")}</p>
               <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="text-xs px-3 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
-                  {false ? "در حال توسعه..." : "Under Development..."}
+                  "Under Development..."
                 </span>
               </div>
             </div>

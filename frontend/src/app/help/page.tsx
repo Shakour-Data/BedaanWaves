@@ -166,7 +166,7 @@ export default function HelpPage() {
                             {page.description}
                           </td>
                           <td className="p-3">
-                            <Badge variant={page.status === "Live API" ? "success" : page.status === "Needs sync" || page.status === "نیاز به همگام‌سازی" ? "warning" : "info"}>
+                            <Badge variant={page.status === "Live API" ? "success" : page.status === "Needs sync" ? "warning" : "info"}>
                               {page.status}
                             </Badge>
                           </td>

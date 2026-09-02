@@ -31,8 +31,8 @@ describe("toTimestamp", () => {
 
   it("treats non-date strings as ordinal labels", () => {
     const labels = new Map<number, string>();
-    expect(toTimestamp("تهلاک", 5, labels)).toBe(5);
-    expect(labels.get(5)).toBe("تهلاک");
+    expect(toTimestamp("Hello", 5, labels)).toBe(5);
+    expect(labels.get(5)).toBe("Hello");
   });
 });
 
@@ -69,12 +69,12 @@ describe("createOrdinalTickMarkFormatter", () => {
       [1, "AAPL"],
     ]);
     const formatter = createOrdinalTickMarkFormatter(labels);
-    expect(formatter(0, 0, "fa-IR")).toBe("ACONW");
-    expect(formatter(1, 1, "fa-IR")).toBe("AAPL");
+    expect(formatter(0, 0, "en-US")).toBe("ACONW");
+    expect(formatter(1, 1, "en-US")).toBe("AAPL");
   });
 
   it("returns an empty string for ticks without a registered label", () => {
     const formatter = createOrdinalTickMarkFormatter(new Map());
-    expect(formatter(42, 0, "fa-IR")).toBe("");
+    expect(formatter(42, 0, "en-US")).toBe("");
   });
 });

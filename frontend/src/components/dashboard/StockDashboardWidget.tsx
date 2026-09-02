@@ -46,7 +46,7 @@ export function StockDashboardWidget() {
     try {
       const timestamp = new Date().toISOString();
       const filename = `stock-data-${timestamp}.${format}`;
-      
+
       const dataToExport = symbols.map((symbol) => {
         const price = prices[symbol.symbol];
         return {
@@ -57,7 +57,7 @@ export function StockDashboardWidget() {
           change_pct: price ? price.change_pct : 0,
           volume: price ? price.volume : 0 };
       });
-      
+
       exportData(dataToExport, { filename, format, includeHeaders: true });
     } catch (err) {
       // Handle error
@@ -66,36 +66,36 @@ export function StockDashboardWidget() {
 
   return (
     <Card
-      title="داشبورد بازار"
-      subtitle={loading && symbols.length === 0 ? 'در حال دریافت داده‌ها...' : loading ? 'در حال به‌روزرسانی...' : 'بازار زنده'}
+      title="Market Dashboard"
+      subtitle={loading && symbols.length === 0 ? 'Fetching data...' : loading ? 'Updating...' : 'Live Market'}
       footer={
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="text-xs text-muted-foreground">
-            آخرین به‌روزرسانی: {new Date().toLocaleTimeString('fa-IR')}
+            Last updated: {new Date().toLocaleTimeString('en-US')}
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button 
-              onClick={() => handleExport('csv')} 
-              variant="outline" 
-              size="sm" 
+            <Button
+              onClick={() => handleExport('csv')}
+              variant="outline"
+              size="sm"
               className="flex-1"
               disabled={symbols.length === 0}
             >
               CSV
             </Button>
-            <Button 
-              onClick={() => handleExport('xlsx')} 
-              variant="outline" 
-              size="sm" 
+            <Button
+              onClick={() => handleExport('xlsx')}
+              variant="outline"
+              size="sm"
               className="flex-1"
               disabled={symbols.length === 0}
             >
               Excel
             </Button>
-            <Button 
-              onClick={() => handleExport('json')} 
-              variant="outline" 
-              size="sm" 
+            <Button
+              onClick={() => handleExport('json')}
+              variant="outline"
+              size="sm"
               className="flex-1"
               disabled={symbols.length === 0}
             >
@@ -107,7 +107,7 @@ export function StockDashboardWidget() {
     >
       {error && (
         <div className="mb-4 p-4 rounded-xl border border-error/20 bg-error/5 text-error text-sm">
-          خطا: {error}
+          Error: {error}
         </div>
       )}
 
@@ -120,7 +120,7 @@ export function StockDashboardWidget() {
             ))
           : symbols.map((symbol) => {
               const price = prices[symbol.symbol];
-              const displayPrice = price ? price.price.toLocaleString("fa-IR") : '--';
+              const displayPrice = price ? price.price.toLocaleString("en-US") : '--';
               const changePct = price ? price.change_pct : 0;
 
               return (
@@ -133,8 +133,8 @@ export function StockDashboardWidget() {
                     </div>
                   </div>
                   <div className="mt-4 pt-3 border-t border-border/60 text-[10px] text-muted-foreground space-y-1">
-                    <p>حجم: {price ? price.volume.toLocaleString("fa-IR") : 'نامشخص'}</p>
-                    <p>نام: {symbol.name}</p>
+                    <p>Volume: {price ? price.volume.toLocaleString("en-US") : 'Unknown'}</p>
+                    <p>Name: {symbol.name}</p>
                   </div>
                 </Card>
               );

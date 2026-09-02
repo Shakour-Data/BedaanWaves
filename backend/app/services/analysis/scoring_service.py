@@ -329,16 +329,16 @@ class ScoringService(AnalysisService):
     ) -> float:
         """Score a 6D dimension using market-aware logic."""
         if not data:
-            return 0.0
-        
+            return 50.0
+
         scores = []
         for key, value in data.items():
             if isinstance(value, (int, float)):
                 normalized = self._normalize_score(value, key, dimension, market)
                 scores.append(normalized)
-        
+
         if not scores:
-            return 0.0
+            return 50.0
         return round(sum(scores) / len(scores), 2)
     
     def _normalize_score(
