@@ -81,14 +81,14 @@ end
 @startuml
 actor Client
 participant "market/live router" as R
-participant "BrsApiClient" as BRS
-participant "BRS API" as UP
+participant "YahooFinanceClient" as YF
+participant "Yahoo Finance API" as UP
 
 Client -> R : GET /api/v1/market/live/history/{l18}
-R -> BRS : get_history(l18)
-BRS -> UP : History.php request
-UP --> BRS : upstream JSON
-BRS --> R : payload
+R -> YF : get_history(l18)
+YF -> UP : API request
+UP --> YF : upstream JSON
+YF --> R : payload
 R --> Client : 200 JSON
 @enduml
 ```

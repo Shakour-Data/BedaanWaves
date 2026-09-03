@@ -17,14 +17,13 @@ BedaanWaves is a unified capital market analysis platform consolidating 5 legacy
 | **Backend (FastAPI)** |  Complete | API layer with 16 routers, 42+ services |
 | **Database (PostgreSQL)** |  Complete | Unified schema with Alembic migrations |
 | **Tier 1 Core Services** |  Complete | DI, Config, Logging, Cache, DB, Health |
-| **Tier 2 Data Services** |  Complete | BRS API, Stock, Market, Portfolio, History, News |
+| **Tier 2 Data Services** |  Complete | Yahoo Finance, Stock, Market, Portfolio, History, News |
 | **Tier 3 Analysis Services** |  Complete | Scoring, Technical, Fundamental, Risk, Momentum, Volatility |
-| **Tier 4 ML Services** |  Complete | Prediction, Pattern Recognition, Anomaly, Recommendation, Portfolio Optimization, Time-Series Forecasting + CoefficientLearning + CryptoML |
+| **Tier 4 ML Services** |  Complete | Prediction, Pattern Recognition, Anomaly, Recommendation, Portfolio Optimization, Time-Series Forecasting + CoefficientLearning |
 | **Tier 5 NLP Services** |  Complete | Sentiment, News Summarization, Document Extraction, Chatbot, Search |
 | **Tier 6 User Services** |  Complete | Auth, Authorization, UserProfile, Watchlist, Preference, Notification |
 | **Tier 7 Specialized** |  Complete | Sector, Screening, Comparison, Correlation, Calendar |
-| **Tier 8 Crypto Services** |  3/5 | Price , Portfolio , ML , News , Arbitrage  |
-| **Tier 9 System Services** |  3/6 | Scheduler , Metrics , Queue , Backup , Logging , Dispatcher  |
+| **Tier 9 System Services** |  3/6 | Scheduler , Metrics , Queue , Backup , Logging , Dispatcher |
 | **Frontend (Next.js)** |  Pending | Next.js 16+ (planned) |
 
 ---
@@ -48,7 +47,6 @@ BedaanWaves/
 │   │   ├── nlp/                     # Tier 5: Sentiment, Search, News Summarization, Chatbot, Doc Extraction
 │   │   ├── user/                    # Tier 6: Auth, AuthZ, UserProfile, Watchlist, Preference, Notification
 │   │   ├── specialized/             # Tier 7: Sector, Screening, Comparison, Correlation, Calendar
-│   │   ├── crypto/                  # Tier 8: Price, Portfolio, ML, Ingestion
 │   │   └── system/                  # Tier 9: Scheduler, Metrics, Queue
 │   ├── models/                      # SQLAlchemy models (Asset, PriceCandle, etc.)
 │   ├── schemas/                     # Pydantic schemas
@@ -82,7 +80,7 @@ The INTEGRATION_FRAMEWORK.md and ARCHITECTURE_DETAILS.md are **historical planni
 
 ### 2. Service Location
 - **Planned**: `backend/services/` with subdirectories
-- **Actual**: `backend/app/services/` with subdirectories (data, analysis, ml, crypto, system, user, specialized, nlp)
+- **Actual**: `backend/app/services/` with subdirectories (data, analysis, ml, system, user, specialized, nlp)
 
 ### 3. Dependency Management
 - **Planned**: Manual service instantiation in main.py
@@ -96,11 +94,7 @@ The INTEGRATION_FRAMEWORK.md and ARCHITECTURE_DETAILS.md are **historical planni
 - **Planned**: Basic FastAPI middleware
 - **Actual**: AuthGuardMiddleware, CorrelationIdMiddleware, RateLimitMiddleware, GZipMiddleware
 
-### 6. Cryptocurrency
-- **Planned**: Separate providers for Binance, Kraken, Coinbase
-- **Actual**: CryptoIngestionService + CryptoMLService already integrated, pending CryptoNewsService and ArbitrageService
-
-### 7. Database Migrations
+### 6. Database Migrations
 - **Planned**: Alembic migrations not yet implemented
 - **Actual**: Alembic configured in `backend/database/alembic/` with versioned migrations
 

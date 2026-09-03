@@ -41,7 +41,6 @@ This document outlines a comprehensive plan for upgrading the criticality level 
 |-------|-------|--------|------|-------------|
 | Rotate `DATABASE_URL` / database password | ⬜ Not done | P0 | DevOps | New password in Vault/Secrets Manager, `.env` updated |
 | Rotate JWT `SECRET_KEY` | ⬜ Not done | P0 | Backend | Old tokens invalidated, users forced to log out |
-| Rotate `BRS_API_KEY` | ⬜ Not done | P0 | Data Team | New key in BRS service, connection test successful |
 | Remove secrets from Git history | ⬜ Not done | P0 | DevOps | `git-filter-repo` or `bfg` executed, force-push with caution |
 | Add `trufflehog` / `git-secrets` to CI | ⬜ Not done | P0 | DevOps | Pipeline fails if secret is found |
 
@@ -140,7 +139,6 @@ class AuditMixin:
 |-------|-----------------|------------------|---------------|--------|
 | `ir_price_candles` | > 100M rows/year | Range (Monthly) | `timestamp` | P1 |
 | `intl_price_candles` | > 50M rows/year | Range (Monthly) | `timestamp` | P1 |
-| `crypto_price_candles` | > 200M rows/year | Range (Weekly) | `timestamp` | P0 |
 | `ir_order_book` | > 50M rows/year | Range (Monthly) | `snapshot_time` | P1 |
 | `ir_retail_institutional` | > 30M rows/year | Range (Monthly) | `snapshot_time` | P1 |
 | `api_logs` | > 10M rows/month | Range (Daily) | `created_at` | P2 |
@@ -283,7 +281,7 @@ jobs:
 | `ml_predictions` / `anomalies` | 1 year | Partition Drop | P2 |
 | `price_candles` / `order_book` | 10 years (historical analysis) | Tiered Storage (TimescaleDB / Hypertable) | P3 |
 
-### 6.3 GDPR / Iranian Data Privacy Law Compliance
+### 6.3 GDPR / Data Privacy Law Compliance
 
 | Requirement | Implementation | Status |
 |--------|-------------|-------|
@@ -299,17 +297,17 @@ jobs:
 ### 7.1 TimescaleDB / Hypertables for Time-Series Data
 
 ```sql
--- If TimescaleDB is available:
-SELECT create_hypertable('crypto_price_candles', 'timestamp', 
-    chunk_time_interval => INTERVAL '1 week',
+-- Example: TimescaleDB hypertable for price candles
+SELECT create_hypertable('ir_price_candles', 'timestamp', 
+    chunk_time_interval => INTERVAL '1 month',
     if_not_exists => TRUE);
 
 -- Compression for old chunks
-ALTER TABLE crypto_price_candles SET (
+ALTER TABLE ir_price_candles SET (
     timescaledb.compress,
     timescaledb.compress_segmentby = 'asset_id, timeframe'
 );
-SELECT add_compression_policy('crypto_price_candles', INTERVAL '30 days');
+SELECT add_compression_policy('ir_price_candles', INTERVAL '30 days');
 ```
 
 ### 7.2 Materialized Views for Dashboards
@@ -387,7 +385,7 @@ class AssetFactory(SQLAlchemyModelFactory):
     symbol = factory.Sequence(lambda n: f"TEST{n:04d}")
     name = factory.Faker("company")
     asset_class = "EQUITY"
-    market = "TSE"
+    market = "NASDAQ"
     active = True
 
 class UserFactory(SQLAlchemyModelFactory):

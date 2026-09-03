@@ -2,7 +2,7 @@
 
 > ️ **HISTORICAL DOCUMENT** — This file was created July 9, 2026 for planning purposes. The actual BedaanWaves implementation has progressed significantly. The project has a **No Docker policy** — all services run directly on the local machine. For current implementation status, see [README_INTEGRATION.md](README_INTEGRATION.md) and [AGENTS.md](../AGENTS.md).
 
-**Project Portfolio Analysis**: Bedaan4D-ML, Bedaan6D-project, Bedaan_4D_AI, CryptoAndStocks
+**Project Portfolio Analysis**: Bedaan4D-ML, Bedaan6D-project, Bedaan_4D_AI
 
 **Document Version**: 1.0  
 **Last Updated**: July 2026  
@@ -23,16 +23,15 @@
 
 ## Executive Summary
 
-Your portfolio comprises four complementary projects focused on financial market analysis and AI-driven insights:
+Your portfolio comprises three complementary projects focused on financial market analysis and AI-driven insights:
 
 | Project | Tech Stack | Primary Purpose | Current Status |
 |---------|-----------|-----------------|-----------------|
-| **Bedaan4D-ML** | Python, PostgreSQL/SQLite, BRS API | Market data acquisition, ML analysis | Backend core system |
+| **Bedaan4D-ML** | Python, PostgreSQL/SQLite, Yahoo Finance API | Market data acquisition, ML analysis | Backend core system |
 | **Bedaan6D-project** | Next.js, TypeScript, Prisma, PostgreSQL | UI/Dashboard, Real-time analytics | Frontend framework |
 | **Bedaan_4D_AI** | AI/ML data processing | Data enrichment, 4D/6D analysis | Data transformation |
-| **CryptoAndStocks** | Financial intelligence | Multi-asset analysis | Nascent module |
 
-**Integration Vision**: Create a unified platform that seamlessly combines real-time market data acquisition, advanced ML analysis, multi-asset support (stocks, crypto, ETFs), and an intuitive analytics dashboard with AI-powered insights.
+**Integration Vision**: Create a unified platform that seamlessly combines real-time market data acquisition, advanced ML analysis, multi-asset support (stocks, ETFs), and an intuitive analytics dashboard with AI-powered insights.
 
 ---
 
@@ -63,7 +62,7 @@ ARCHITECTURE.md
 │   ├── Data Acquisition Layer (Bedaan4D-ML)
 │   ├── Analysis Layer (Bedaan_4D_AI)
 │   ├── Presentation Layer (Bedaan6D-project)
-│   └── Extensions (CryptoAndStocks)
+│   └── Extensions
 ├── Data Models
 │   ├── Unified schema definition
 │   ├── Cross-service relationships
@@ -116,7 +115,7 @@ Create `docs/DATA_FLOW.md` with:
 ```
 Market Data Flow Diagram:
 
-BRS API → Data Acquisition (Bedaan4D-ML)
+Yahoo Finance API → Data Acquisition (Bedaan4D-ML)
     ↓
 Data Validation & Storage (PostgreSQL)
     ↓
@@ -148,7 +147,7 @@ Create `docs/APIs.md` with OpenAPI specifications:
   GET:
     description: List available symbols with metadata
     parameters:
-      - type: string (stock|crypto|etf)
+      - type: string (stock|etf)
       - limit: integer
     response:
       - symbol: string
@@ -200,7 +199,7 @@ Bedaan4D-ML (Core Backend)
 │   ├── psycopg2 (Database)
 │   └── pandas (Data processing)
 └── External APIs:
-    └── BRS API
+    └── Yahoo Finance API
 
 Bedaan_4D_AI (Analysis Engine)
 ├── Bedaan4D-ML (data source)
@@ -245,8 +244,8 @@ DATABASE_TIMEOUT=30
 ## API Configuration
 API_PORT=3000
 API_HOST=0.0.0.0
-BRS_API_KEY=<secret>
-BRS_API_BASE_URL=https://api.brsapi.ir
+YAHOO_FINANCE_API_KEY=<secret>
+YAHOO_FINANCE_BASE_URL=https://query1.finance.yahoo.com
 
 ## Frontend Configuration
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
@@ -279,7 +278,7 @@ Database Maintenance
 - Restore Procedure: [detailed steps]
 
 API Rate Limiting
-- BRS API: 1000 requests/hour
+- Yahoo Finance API: 1000 requests/hour
 - Internal Cache: TTL 5 minutes for symbol list
 - Fallback Strategy: Serve stale cache if API unavailable
 
@@ -325,11 +324,6 @@ Performance Monitoring
 -  ML processing capability
 - ️ Minimal documentation
 - ️ Integration points unclear
-
-**CryptoAndStocks** (Expansion)
-- ️ Early stage
-- ️ Unclear architecture
--  Potential for multi-asset support
 
 ### Integration Challenges
 
@@ -434,7 +428,7 @@ CREATE SCHEMA IF NOT EXISTS bedaan_unified;
 -- Create view for backward compatibility
 CREATE VIEW bedaan4d_ml.stocks AS
 SELECT * FROM bedaan_unified.symbols
-WHERE market = 'TSE';
+WHERE market = 'NASDAQ';
 ```
 
 **Deliverables**:
@@ -493,7 +487,7 @@ import axios, { AxiosInstance } from 'axios';
 export interface Symbol {
   symbol: string;
   name: string;
-  market: 'TSE' | 'OTC' | 'ETF' | 'CRYPTO';
+  market: 'NASDAQ' | 'OTC' | 'ETF';
   sector: string;
   active: boolean;
 }
@@ -802,60 +796,7 @@ class ModelMonitor:
 - [ ] Model versioning
 - [ ] Automated rollback logic
 
-### Phase 2d: Multi-Asset Support (Weeks 13-16)
-
-**Objective**: Extend to crypto, commodities, and global markets
-
-#### Week 13-14: Crypto Integration
-
-```python
-# backend/sources/crypto_provider.py
-from abc import ABC, abstractmethod
-from enum import Enum
-
-class CryptoExchange(str, Enum):
-    BINANCE = "BINANCE"
-    KRAKEN = "KRAKEN"
-    COINBASE = "COINBASE"
-
-class CryptoProvider(ABC):
-    @abstractmethod
-    async def get_symbols(self) -> List[str]:
-        pass
-
-    @abstractmethod
-    async def get_price_history(
-        self, 
-        symbol: str, 
-        interval: str
-    ) -> List[Candle]:
-        pass
-
-class BinanceProvider(CryptoProvider):
-    def __init__(self, api_key: str, api_secret: str):
-        self.client = Client(api_key, api_secret)
-
-    async def get_symbols(self) -> List[str]:
-        """Fetch available trading pairs"""
-        # Implementation
-
-    async def get_price_history(
-        self, 
-        symbol: str, 
-        interval: str
-    ) -> List[Candle]:
-        """Fetch OHLCV data"""
-        # Implementation
-```
-
-**Deliverables**:
-- [ ] Crypto data provider interface
-- [ ] Multi-exchange support
-- [ ] Data normalization
-- [ ] Price aggregation
-- [ ] Volume analysis
-
-#### Week 15-16: Portfolio & Risk Management
+### Week 15-16: Portfolio & Risk Management
 
 ```python
 # backend/portfolio/portfolio_manager.py
@@ -876,7 +817,7 @@ class Position(Base):
     quantity = Column(Float)
     entry_price = Column(Float)
     current_price = Column(Float)
-    market = Column(String)  # TSE, CRYPTO, etc.
+    market = Column(String)  # NASDAQ, etc.
 
 class PortfolioAnalyzer:
     def calculate_allocation(self, portfolio: Portfolio) -> dict:
@@ -970,8 +911,8 @@ class PortfolioAnalyzer:
     │
     ├─ ┌──────────────────────────────┐
     ├─▶│ Data Providers               │
-    │  │ - BRS API (Domestic Markets) │
-    │  │ - Crypto Exchanges           │
+    │  │ - Yahoo Finance API (US Markets) │
+     │  │ - Exchange APIs               │
     │  │ - International APIs         │
     │  └──────────────────────────────┘
     │
@@ -993,8 +934,8 @@ CREATE TABLE assets (
     id UUID PRIMARY KEY,
     symbol VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
-    asset_class VARCHAR(20) NOT NULL,  -- EQUITY, CRYPTO, ETF, COMMODITY
-    market VARCHAR(20) NOT NULL,        -- TSE, OTC, BINANCE, NYSE
+    asset_class VARCHAR(20) NOT NULL,  -- EQUITY, ETF, BOND
+    market VARCHAR(20) NOT NULL,        -- NASDAQ, OTC, NYSE
     sector VARCHAR(100),
     sub_sector VARCHAR(100),
     country_code VARCHAR(2),
@@ -1150,8 +1091,8 @@ Service Decomposition:
    │   ├── Data normalization
    │   └── Storage in database
    ├── External Dependencies:
-   │   ├── BRS API
-   │   ├── Crypto exchanges (Binance, Kraken)
+    │   ├── Yahoo Finance API
+    │   ├── International exchanges (NYSE, NASDAQ)
    │   └── International market APIs
    └── Port: 3001
 
@@ -1215,9 +1156,9 @@ default_args = {
 with DAG('market_data_pipeline', default_args=default_args) as dag:
     
     # 1. Data Acquisition
-    fetch_brs_data = PythonOperator(
-        task_id='fetch_brs_data',
-        python_callable=fetch_brs_market_data,
+    fetch_yahoo_data = PythonOperator(
+        task_id='fetch_yahoo_data',
+        python_callable=fetch_yahoo_market_data,
         retries=3
     )
     
@@ -1248,7 +1189,7 @@ with DAG('market_data_pipeline', default_args=default_args) as dag:
     )
     
     # Define dependencies
-    fetch_brs_data >> validate_data >> store_data >> [generate_signals, send_alerts]
+    fetch_yahoo_data >> validate_data >> store_data >> [generate_signals, send_alerts]
 ```
 
 ### 3.3.3 Caching Strategy
@@ -1623,7 +1564,7 @@ export function useMarketStream(symbols: string[]) {
 | **Foundation** | Weeks 1-4 | API layer, unified schema, integration tests | Planning |
 | **Frontend Integration** | Weeks 5-8 | Component refactoring, API connection, real-time | Planning |
 | **ML Integration** | Weeks 9-12 | Signal generation, analytics, monitoring | Planning |
-| **Multi-Asset Support** | Weeks 13-16 | Crypto, portfolio, risk management | Planning |
+| **Multi-Asset Support** | Weeks 13-16 | Portfolio, risk management | Planning |
 | **Optimization & Hardening** | Weeks 17-20 | Performance tuning, security, documentation | Planning |
 
 ## Critical Path
@@ -1642,8 +1583,6 @@ Week 7-8: Real-time Updates
 Week 9-10: ML Signal Generation
     ↓
 Week 11-12: Analytics Dashboard & Monitoring
-    ↓
-Week 13-14: Crypto Integration
     ↓
 Week 15-16: Portfolio & Risk Management
 ```

@@ -413,7 +413,7 @@
         </div>
         <div class="card">
           <h3>3. WBS (Work Breakdown Structure)</h3>
-          <p>Work breakdown structure across 9 levels and 120 deliverables including: Tier 1 Core Services (6), Tier 2 Data Services (13), Tier 3 Analysis Services (7), Tier 4 ML Services (9), Tier 5 NLP Services (6), Tier 6 User Services (8), Tier 7 Specialized Services (7), Tier 8 Crypto Services (8), Tier 9 System Services (8).</p>
+          <p>Work breakdown structure across 9 levels and 120 deliverables including: Tier 1 Core Services (6), Tier 2 Data Services (13), Tier 3 Analysis Services (7), Tier 4 ML Services (9), Tier 5 NLP Services (6), Tier 6 User Services (8), Tier 7 Specialized Services (7), Tier 9 System Services (8).</p>
           <p>Each work package includes ID, Title, Description, Owner, Estimated Effort (weeks), Dependencies, Status.</p>
         </div>
         <div class="card">
@@ -474,7 +474,7 @@ actor "User" as U
 rectangle "Frontend (Next.js)" as FE
 rectangle "Backend API (FastAPI)" as BE
 database "PostgreSQL" as DB
-cloud "BRS API" as BRS
+cloud "Yahoo Finance API" as YF
 
 U --> FE : HTTP requests
 FE --> BE : REST / API v1/*
@@ -615,16 +615,15 @@ St -> P : cancel
 
         <div id="uml-6" class="tab-content">
           <h4>Component Diagram</h4>
-          <p>Module structure and dependencies: Core Services (6), Data Services (13), Analysis Services (7), ML Services (9), NLP Services (6), User Services (8), Specialized Services (7), Crypto Services (8), System Services (8).</p>
+          <p>Module structure and dependencies: Core Services (6), Data Services (13), Analysis Services (7), ML Services (9), NLP Services (6), User Services (8), Specialized Services (7), System Services (8).</p>
           <div class="diagram-code">
 @startuml
 skinparam componentStyle rectangle
 package "Core Services" { [DependencyContainer] }
-package "Data Services" { [BrsApiClient] [StockService] }
+package "Data Services" { [YahooFinanceClient] [StockService] }
 package "Analysis Services" { [ScoringService] [TechnicalAnalysisService] }
 package "ML Services" { [PredictionService] [PatternRecognitionService] }
 package "User Services" { [AuthService] [UserProfileService] }
-package "Crypto Services" { [PriceService] [CryptoPortfolioService] }
 package "System Services" { [SchedulerService] [MetricsService] }
 
 [DependencyContainer] --> [All Services]
@@ -666,7 +665,7 @@ backend --> redis
 
         <div id="uml-8" class="tab-content">
           <h4>Package Diagram</h4>
-          <p>Class group organization: app/services/ (core, data, analysis, ml, nlp, user, specialized, crypto, system), app/models/, app/schemas/, app/api/routes/, core/ (config, di container).</p>
+          <p>Class group organization: app/services/ (core, data, analysis, ml, nlp, user, specialized, system), app/models/, app/schemas/, app/api/routes/, core/ (config, di container).</p>
           <div class="diagram-code">
 @startuml
 skinparam packageStyle rect
@@ -679,7 +678,6 @@ package "app/" {
     package "nlp/" { }
     package "user/" { }
     package "specialized/" { }
-    package "crypto/" { }
     package "system/" { }
   }
   package "api/" {
@@ -711,14 +709,14 @@ class Database {
   +query()
   +save()
 }
-class BRS_API {
+class YahooFinanceAPI {
   +fetch()
 }
 
 FastAPI_Router <|-- Service_Layer
 Service_Layer --> Database : uses
-Service_Layer --> BRS_API : calls
-BRS_API --> Service_Layer : returns data
+Service_Layer --> YahooFinanceAPI : calls
+YahooFinanceAPI --> Service_Layer : returns data
 @enduml
           </div>
         </div>
@@ -747,10 +745,10 @@ flowchart LR
   BE -->|Responses / JSON| U
   BE -->|Read/Write SQL| DB[(PostgreSQL)]
   DB -->|Query Results| BE
-  BE -->|Upstream data fetch| BRS[BRS API (brsapi.ir)]
-  BRS -->|Upstream JSON payload| BE
+  BE -->|Upstream data fetch| YF[Yahoo Finance API]
+  YF -->|Upstream JSON payload| BE
         </div>
-        <p>Data Flows: Client → Backend: request path `/api/v1/*`, query params, JWT header | Backend → PostgreSQL: SQL queries | Backend → BRS API: live proxy calls | Backend → Client: response objects</p>
+        <p>Data Flows: Client → Backend: request path `/api/v1/*`, query params, JWT header | Backend → PostgreSQL: SQL queries | Backend → Yahoo Finance API: live proxy calls | Backend → Client: response objects</p>
       </div>
 
       <div id="dfd-1" class="tab-content">
@@ -778,11 +776,11 @@ flowchart LR
   DB -->|Asset + PriceCandle| MK
   MK --> FE
   FE -->|GET /market/live/*| L[Market Live Router]
-  L -->|HTTP upstream| BRS[BRS API]
-  BRS -->|upstream JSON| L
+  L -->|HTTP upstream| YF[Yahoo Finance API]
+  YF -->|upstream JSON| L
   L --> FE
         </div>
-        <p>Data Flows (DB-backed): Asset reading with filters (asset_class, market, sector, industry, active), PriceCandle reading with timeframe and timestamp sorting. Data Flows (Live Proxy): BrsApiClient to BRS API: AllSymbols/Symbol/Candlestick/History/Transaction/Shareholder/Index/Codal...</p>
+        <p>Data Flows (DB-backed): Asset reading with filters (asset_class, market, sector, industry, active), PriceCandle reading with timeframe and timestamp sorting. Data Flows (Live Proxy): YahooFinanceClient to Yahoo Finance API: AllSymbols/Symbol/Candlestick/History...</p>
       </div>
 
       <div id="dfd-3" class="tab-content">
@@ -938,10 +936,10 @@ flowchart TD
   %% Path D: GET /market/live/history
   pathD[Path D: GET /market/live/history/{l18}]
   Client --> R4[market/live router]
-  R4 --> BRS[BrsApiClient]
-  BRS --> UP[BRS API]
-  UP --> BRS
-  BRS --> R4
+  R4 --> YF[YahooFinanceClient]
+  YF --> UP[Yahoo Finance API]
+  UP --> YF
+  YF --> R4
   R4 --> Client
         </div>
         <p>End-to-End paths from Request → Middleware → Service → DB/Upstream covering all major API endpoints</p>
@@ -978,7 +976,7 @@ flowchart TD
 
   AUTH --> DB[(PostgreSQL users)]
   MK --> DB
-  LIVE --> BRS[BRS API brsapi.ir]
+  LIVE --> YF[Yahoo Finance API]
   AN --> DB
   ML --> DB
   PO --> DB
@@ -1058,8 +1056,8 @@ flowchart TD
 
   subgraph LiveFlow[Live Proxy Flow]
     R4 --> LIVE1[market/live router /history/{l18}]
-    LIVE1 --> BRS[BRS API brsapi.ir History.php]
-    BRS --> LIVE1
+    LIVE1 --> YF[Yahoo Finance API]
+    YF --> LIVE1
   end
 
   MKT1 --> RESP1[200 Response]
@@ -1067,7 +1065,7 @@ flowchart TD
   MKT3 --> RESP3[200 Response]
   LIVE1 --> RESP4[200 Upstream JSON]
         </div>
-        <p>Key Data/Events: Request parameters (asset_class, market, sector, industry, timeframe, start/end), DB Entities: Asset, PriceCandle, Upstream Entities (Live): JSON output from BRS API</p>
+        <p>Key Data/Events: Request parameters (asset_class, market, sector, industry, timeframe, start/end), DB Entities: Asset, PriceCandle, Upstream Entities (Live): JSON output from Yahoo Finance API</p>
       </div>
 
       <div id="bpmn-4" class="tab-content">
@@ -1201,7 +1199,7 @@ flowchart TD
 
       <div id="arch-layered" class="tab-content active">
         <h4>Layered Architecture</h4>
-        <p>Presentation, Business, Data, and Integration layers: Frontend (Next.js/React) → API Gateway (FastAPI) → Core Services → Data Services (PostgreSQL/Redis) → External APIs (BRS, Crypto, Intl) → Database.</p>
+        <p>Presentation, Business, Data, and Integration layers: Frontend (Next.js/React) → API Gateway (FastAPI) → Core Services → Data Services (PostgreSQL/Redis) → External APIs (BRS, Intl) → Database.</p>
         <div class="diagram-code">
 graph TD
     A[User Layer] --> B[Frontend Layer]
@@ -1312,7 +1310,7 @@ graph TD
 
     <!-- Section 3: Executables & Environment -->
     <section class="section" id="section-3">
-      <h2>بخش ۳: کد، محیط و محصولات اجرایی
+      <h2>Section 3: Code, Environment, and Executables
         <span class="tag">Executables & Environment</span>
       </h2>
       <div class="cards-grid">
@@ -1340,15 +1338,15 @@ graph TD
         <div class="card">
           <h3>5. API Documentation</h3>
           <p>OpenAPI (Swagger) specification at /api/v1/docs endpoint, Postman Collection with sample requests/responses for all 50+ endpoints.</p>
-          <p>Key endpoints documented: GET /api/v1/market/symbols, GET /api/v1/market/price-history, GET /api/v1/analysis/technical/{symbol}, GET /api/v1/analysis/signals/{symbol}, GET /api/v1/portfolios, POST /api/v1/portfolios/{id}/holdings, GET /api/v1/auth/login, POST /api/v1/auth/register, GET /api/v1/crypto/prices.</p>
+          <p>Key endpoints documented: GET /api/v1/market/symbols, GET /api/v1/market/price-history, GET /api/v1/analysis/technical/{symbol}, GET /api/v1/analysis/signals/{symbol}, GET /api/v1/portfolios, POST /api/v1/portfolios/{id}/holdings, GET /api/v1/auth/login, POST /api/v1/auth/register.</p>
         </div>
         <div class="card">
-          <h3>۶. مستندات معماری ذخیره‌سازی و پشتیبان‌گیری</h3>
+          <h3>6. Storage and Backup Architecture Documentation</h3>
           <p>Backup Strategy: Weekly full database dump, Daily incremental transaction log backups, Point-in-Time Recovery enabled for last 30 days, Geographic replication to secondary region.</p>
           <p>Recovery Procedures: Point-in-Time Recovery to specific timestamp, Table-level recovery if needed, Disaster Recovery failover to secondary site within RTO/RPO.</p>
         </div>
         <div class="card">
-          <h3>۷. الگوی لاگ‌گیری و مانیتورینگ</h3>
+          <h3>7. Logging and Monitoring Pattern</h3>
           <p>Structured JSON logging with structured context, Correlation ID on every response (X-Correlation-ID header), Request logging with correlation IDs via CorrelationIdMiddleware, Metrics collection via MetricsService, Health monitoring via HealthChecker service.</p>
           <p>Dashboard: Grafana dashboards for API latency, Database query performance, Memory/CPU usage, Error rates, Signal generation metrics. Alerts: Email/SMS push notifications for critical issues.</p>
         </div>
@@ -1357,11 +1355,11 @@ graph TD
 
     <!-- Section 4: Delivery Checklist -->
     <section class="section" id="section-4">
-      <h2>بخش ۴: لیست تحویل نهایی (Delivery Checklist)</h2>
+      <h2>Section 4: Final Delivery Checklist</h2>
       <div class="cards-grid">
         <div class="card">
-          <h3>۱. نسخه‌بندی (Versioning)</h3>
-          <p>جدول تغییرات (Release Notes) برای هر نسخه:</p>
+          <h3>1. Versioning</h3>
+          <p>Change log (Release Notes) for each version:</p>
           <table>
             <thead>
               <tr>
@@ -1381,7 +1379,7 @@ graph TD
               <tr>
                 <td>v1.1.0</td>
                 <td>2026-08-10</td>
-                <tdd>Crypto services added, ML improvements</td>
+                <tdd>ML improvements</td>
                 <td> In Progress</td>
               </tr>
               <tr>
@@ -1394,11 +1392,11 @@ graph TD
           </table>
         </div>
         <div class="card">
-          <h3>۲. گواهی‌های امنیتی</h3>
+          <h3>2. Security Certificates</h3>
           <p>SSL Certificate: Let's Encrypt or self-signed for production HTTPS, Security Headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options), OWASP Top 10 compliance verified, JWT Best Practices (short-lived access tokens, refresh token rotation, secure flag).</p>
         </div>
         <div class="card">
-          <h3>۳. لیست ریسک‌های باقی‌مانده (Known Issues)</h3>
+          <h3>3. Remaining Risk List (Known Issues)</h3>
           <table>
             <thead>
               <tr>
@@ -1427,8 +1425,8 @@ graph TD
           </table>
         </div>
         <div class="card">
-          <h3>۴. مستندات انتقال دانش (Knowledge Transfer)</h3>
-          <p>單次 (1-on-1) session charts: Key architecture decisions, Service registration in DependencyContainer, .env configuration, API endpoint patterns.</p>
+          <h3>4. Knowledge Transfer Documentation</h3>
+          <p>One-on-one (1-on-1) session charts: Key architecture decisions, Service registration in DependencyContainer, .env configuration, API endpoint patterns.</p>
           <p>Quick Troubleshooting Guide: Common issues (DB connection failures, Redis cache misses, JWT authentication errors, ML model loading errors), Quick fix commands, Performance tuning settings, Debug procedures.</p>
           <p>Team handover document: Service responsibilities, Data flow diagrams, Deployment procedures, Monitoring setup, On-call procedures.</p>
         </div>
@@ -1439,8 +1437,8 @@ graph TD
     <footer class="main">
       <div style="max-width: 1600px; margin: 0 auto; padding: 2rem; border-top: 1px solid var(--border); color: var(--muted);">
         <p>BedaanWaves Documentation Portal</p>
-        <p>آخرین بروزرسانی: ۲۰۲۶-۰۸-۱۶</p>
-        <p>مرحله: تکمیل ۱۰۰٪ — سیستم Production Ready</p>
+        <p>Last updated: 2026-08-16</p>
+        <p>Status: 100% complete — Production Ready System</p>
       </div>
     </footer>
   </div>

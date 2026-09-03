@@ -8,15 +8,15 @@ Tier 2 Data Services handle external data acquisition, normalization, storage, a
 **Service Count**: 13 services
 **Location**: `backend/app/services/data/`
 
-## BrsApiClient (Tehran Stock Exchange API)
+## YahooFinanceClient (NASDAQ API)
 
-**File**: `app/services/data/brs_api_client.py`
+**File**: `app/services/data/yahoo_finance_client.py`
 
 ### Purpose
-Integration with the Tehran Stock Exchange (TSE) API for retrieving market data, stock information, and financial data from Iran's primary stock exchange.
+Integration with the NASDAQ API for retrieving market data, stock information, and financial data from US markets.
 
 ### Key Features
-- RESTful API integration with BRS endpoints
+- RESTful API integration with Yahoo Finance endpoints
 - Symbol list retrieval and search
 - Historical price data with OHLCV format
 - Financial statement data extraction
@@ -34,11 +34,11 @@ Integration with the Tehran Stock Exchange (TSE) API for retrieving market data,
 | `/search` | Search symbols | query, exchange |
 
 ### Authentication
-- API key in header: `X-API-Key: <your-brs-api-key>`
+  - API key in header: `X-API-Key: <your-yahoo-finance-key>`
 - Rate limit: 50,000 requests per 300 seconds (configurable)
 
 ### Data Normalization
-Raw BRS data is normalized to the unified schema:
+Raw Yahoo Finance data is normalized to the unified schema:
 ```python
 # Example: Normalize price candle
 candle = {
@@ -51,22 +51,22 @@ candle = {
     "close": Decimal(close_price),
     "volume": int(volume),
     "turnover": Decimal(turnover),
-    "source": "BRS_API"
+    "source": "YAHOO_FINANCE"
 }
 ```
 
 ### Usage
 ```python
-from app.services.data.brs_api_client import BrsApiClient
+from app.services.data.yahoo_finance_client import YahooFinanceClient
 
-client = BrsApiClient(
-    api_key="your-brs-api-key",
-    base_url="https://api.brsapi.ir",
+client = YahooFinanceClient(
+    api_key="your-yahoo-finance-key",
+    base_url="https://api.yahoofinance.com",
     timeout=30
 )
 
 # Get symbols
-symbols = await client.get_symbols(market="TSE", active_only=True)
+symbols = await client.get_symbols(market="NASDAQ", active_only=True)
 
 # Get historical data
 history = await client.get_historical_data(
@@ -108,11 +108,11 @@ Manages stock data operations including CRUD operations, symbol management, and 
 ```python
 # Create or update symbol
 stock = await stock_service.create_or_update({
-    "symbol": "FSPD",
-    "name": "Financial Service PD",
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
     "asset_class": "EQUITY",
-    "market": "TSE",
-    "sector": "Banking",
+    "market": "NASDAQ",
+    "sector": "Technology",
     "is_active": True
 })
 
@@ -148,11 +148,11 @@ service = StockService()
 
 # Add new stock to database
 await service.create_or_update({
-    "symbol": "ICHB",
-    "name": "Iran Khodro",
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
     "asset_class": "EQUITY",
-    "market": "TSE",
-    "sector": "Automotive"
+    "market": "NASDAQ",
+    "sector": "Technology"
 })
 
 # Search for stocks
@@ -191,11 +191,11 @@ Aggregates market-wide data including indices, sector performance, market statis
 
 ### Market Index Calculation
 ```python
-# Example: Calculate TSE 30 index
-def calculate_tse30(symbols):
-    """Calculate weighted index from 30 largest companies"""
-    weights = get_market_cap_weights(symbols[:30])
-    prices = [get_latest_price(s) for s in symbols[:30]]
+# Example: Calculate NASDAQ 100 index
+def calculate_nasdaq100(symbols):
+    """Calculate weighted index from 100 largest companies"""
+    weights = get_market_cap_weights(symbols[:100])
+    prices = [get_latest_price(s) for s in symbols[:100]]
     index_value = sum(w * p for w, p in zip(weights, prices)) / sum(weights)
     return index_value
 ```
@@ -205,7 +205,7 @@ def calculate_tse30(symbols):
 # Calculate sector performance
 sector_stats = await market_service.get_sector_performance({
     "timeframe": "1d",
-    "market": "TSE"
+    "market": "NASDAQ"
 })
 
 # Returns: {sector: {"return_pct": 2.3, "change": 56.7, "count": 12}}
@@ -215,7 +215,7 @@ sector_stats = await market_service.get_sector_performance({
 ```python
 # Get market overview
 overview = await market_service.get_overview({
-    "market": "TSE",
+    "market": "NASDAQ",
     "timeframe": "1d"
 })
 
@@ -235,14 +235,14 @@ from app.services.data.market_service import MarketService
 
 service = MarketService()
 
-# Get TSE overview
-overview = await service.get_overview(market="TSE")
+# Get NASDAQ overview
+overview = await service.get_overview(market="NASDAQ")
 
 # Sector performance
-sector = await service.get_sector_performance(market="TSE", timeframe="1w")
+sector = await service.get_sector_performance(market="NASDAQ", timeframe="1w")
 
 # Market indices
-indices = await service.get_indices(market="TSE", index_types=["TSE30", "TSE100"])
+indices = await service.get_indices(market="NASDAQ", index_types=["NASDAQ100", "S&P_500"])
 ```
 
 ### Key Methods
@@ -489,7 +489,7 @@ Integrates with news APIs for market news aggregation, sentiment analysis, and c
 ### News Sources Integration
 | Source | Type | Coverage |
 |--------|------|----------|
-| BRS News | Iranian market | TSE-listed companies |
+| Yahoo Finance News | US market | NASDAQ-listed companies |
 | Financial APIs | Global | International markets |
 | RSS Feeds | Configurable | Custom sources |
 | Social Media | Twitter/X | Market sentiment |
@@ -596,8 +596,8 @@ Orchestrates data ingestion pipelines from multiple external sources into the un
 ```python
 # Example: Daily ingestion pipeline
 pipeline_steps = [
-    {"source": "brs", "task": "fetch_symbols"},
-    {"source": "brs", "task": "fetch_price_data"},
+    {"source": "yahoo", "task": "fetch_symbols"},
+    {"source": "yahoo", "task": "fetch_price_data"},
     {"source": "yahoo", "task": "fetch_fundamentals"},
     {"source": "news", "task": "fetch_market_news"},
     {"source": "processing", "task": "normalize_and_store"}
@@ -642,9 +642,9 @@ service = IngestionService()
 
 # Run single pipeline step
 result = await service.run_step({
-    "source": "brs",
+    "source": "yahoo",
     "task": "fetch_price_data",
-    "symbols": ["FSPD", "ICHB", "MTR"],
+    "symbols": ["AAPL", "MSFT", "GOOGL"],
     "timeframe": "1d",
     "start_date": "2024-01-01"
 })
@@ -720,8 +720,8 @@ validation_rules = {
 ```python
 # Normalize data from different sources
 normalized = await market_data_processing.normalize({
-    "source": "brs",
-    "data": raw_brs_data,
+    "source": "yahoo",
+    "data": raw_yahoo_data,
     "target_schema": "bedaanwaves"
 })
 
@@ -840,14 +840,14 @@ conversion = await intl_client.get_conversion({
 # Supported currencies
 currencies = await intl_client.get_supported_currencies()
 
-# Returns: ["USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "IRR", "Toman", ...]
+# Returns: ["USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", ...]
 ```
 
 ### Cross-Market Symbol Lookup
 ```python
 # Find international equivalent
 equivalent = await intl_client.find_equivalent({
-    "symbol": "FSPD",  # TSE symbol
+    "symbol": "AAPL",  # NASDAQ symbol
     "target_markets": ["NYSE", "NASDAQ", "LSE"]
 })
 
@@ -970,7 +970,7 @@ report = await data_validation_service.run_validation({
 # Detect data drift between sources
 drift = await data_validation_service.detect_drift({
     "table": "price_candles",
-    "source_a": "brs_api",
+    "source_a": "yahoo_finance",
     "source_b": "yahoo_finance",
     "timeframe": "1d",
     "comparison_period": "30d"
@@ -1034,11 +1034,11 @@ drift = await service.detect_drift({
 **File**: `app/services/data/financial_data_ingest_service.py`
 
 ### Purpose
-Ingests financial statements from multiple sources including CODAL (Iran), Yahoo Finance, and Alpha Vantage. Normalizes and stores financial metrics for fundamental analysis.
+Ingests financial statements from multiple sources including SEC EDGAR (US), Yahoo Finance, and Alpha Vantage. Normalizes and stores financial metrics for fundamental analysis.
 
 ### Key Features
 - Multi-source financial data ingestion
-- CODAL API (Iranian financial disclosures) integration
+- SEC EDGAR (US financial disclosures) integration
 - Yahoo Finance financial statements
 - Alpha Vantage financial data
 - Financial ratio calculation and storage
@@ -1049,35 +1049,35 @@ Ingests financial statements from multiple sources including CODAL (Iran), Yahoo
 ### Source Integration
 | Source | Data Type | Coverage |
 |--------|-----------|----------|
-| CODAL | Iranian financial statements | TSE-listed companies |
+| SEC EDGAR | US financial statements | NASDAQ-listed companies |
 | Yahoo Finance | Income statement, balance sheet | Global stocks |
 | Alpha Vantage | Financial ratios, key metrics | International |
 
-### CODAL Integration (Iran)
+### SEC EDGAR Integration (US)
 ```python
-# Fetch from CODAL API
-financial_data = await ingest_service.fetch_codal_data({
-    "company_code": "0123456789",  # TSE company code
+# Fetch from SEC EDGAR API
+financial_data = await ingest_service.fetch_sec_edgar_data({
+    "company_code": "0000320193",  # SEC CIK
     "report_type": "yearly",  # yearly, quarterly, semi_annual
     "year": 2024
 })
 
-# Example CODAL response structure
+# Example SEC EDGAR response structure
 {
-    "company_name": "Bank Melli Iran",
+    "company_name": "Apple Inc.",
     "report_period": "2024-03-20",
     "financials": {
-        "total_assets": 125000000000000,  # Rials
-        "total_equity": 45000000000000,
-        "net_income": 18000000000000,
-        "total_liabilities": 80000000000000,
-        "revenue": 35000000000000
+        "total_assets": 350000000000,  # USD
+        "total_equity": 150000000000,
+        "net_income": 97000000000,
+        "total_liabilities": 200000000000,
+        "revenue": 383000000000
     },
     "ratios": {
-        "roe": 0.04,  # 4%
-        "roa": 0.0144,
-        "current_ratio": 1.25,
-        "debt_to_equity": 1.78
+        "roe": 1.26,  # 126%
+        "roa": 0.28,
+        "current_ratio": 0.86,
+        "debt_to_equity": 1.32
     }
 }
 ```
@@ -1098,8 +1098,8 @@ financial_data = await ingest_service.fetch_yahoo_finance({
 ```python
 # Normalize to unified schema
 normalized = await ingest_service.normalize({
-    "source": "codal",
-    "data": raw_codal_data,
+    "source": "sec_edgar",
+    "data": raw_sec_edgar_data,
     "company_id": company_uuid,
     "financial_year": 2024
 })
@@ -1117,7 +1117,7 @@ normalized = await ingest_service.normalize({
 #     "current_ratio": Decimal("1.25"),
 #     "debt_to_equity": Decimal("1.78")
 #   },
-#   "source": "CODAL",
+#   "source": "SEC_EDGAR",
 #   "ingested_at": "2024-08-17T10:00:00Z"
 # }
 ```
@@ -1141,8 +1141,8 @@ ratios = await ingest_service.calculate_ratios({
 ```python
 # Daily ingestion schedule
 await ingest_service.schedule_daily({
-    "sources": ["codal", "yahoo", "alpha_vantage"],
-    "companies": ["all_tse_listed"],  # or specific list
+    "sources": ["sec_edgar", "yahoo", "alpha_vantage"],
+    "companies": ["all_nasdaq_listed"],  # or specific list
     "time": "02:00",  # 2 AM daily
     "force": False  # Skip if already ingested today
 })
@@ -1154,9 +1154,9 @@ from app.services.data.financial_data_ingest_service import FinancialDataIngestS
 
 service = FinancialDataIngestService()
 
-# Ingest CODAL data for specific company
-result = await service.ingest_codal({
-    "company_code": "0123456789",
+# Ingest SEC EDGAR data for specific company
+result = await service.ingest_sec_edgar({
+    "company_code": "0000320193",
     "report_type": "yearly",
     "year": 2024
 })
@@ -1178,7 +1178,7 @@ data = await service.get_latest({
 ### Key Methods
 | Method | Description |
 |--------|-------------|
-| `ingest_codal(company_code, report_type, year)` | Ingest from CODAL API |
+| `ingest_sec_edgar(company_code, report_type, year)` | Ingest from SEC EDGAR |
 | `ingest_yahoo_finance(symbol, statements, period)` | Ingest from Yahoo Finance |
 | `ingest_alpha_vantage(symbol, function)` | Ingest from Alpha Vantage |
 | `normalize(source, data, company_id)` | Normalize to unified schema |
@@ -1193,29 +1193,28 @@ data = await service.get_latest({
 **File**: `app.services.data.stock_fundamental_ingestion_service.py`
 
 ### Purpose
-Stock fundamental data pipeline for Iran/US/International markets. Specialized pipeline for comprehensive fundamental analysis data across multiple market regions.
+Stock fundamental data pipeline for US/International markets. Specialized pipeline for comprehensive fundamental analysis data across multiple market regions.
 
 ### Key Features
 - Region-specific fundamental data pipelines
-- Iran market (TSE) fundamental data
-- US market (NYSE/NASDAQ) fundamental data
+  - US market (NASDAQ) fundamental data
 - International market fundamental data
 - Multi-currency support
 - Fundamental ratio standardization
 - Comparative analysis across regions
 - Scheduled pipeline execution
 
-### Iran Market Pipeline (TSE)
+### Market Data Refresh Pipeline
 ```python
-# Iran fundamental data ingestion
-result = await fundamental_service.ingest_iran_fundamentals({
-    "company_codes": ["0123456789", "0987654321"],  # TSE codes
+# US market fundamental data ingestion
+result = await fundamental_service.ingest_us_fundamentals({
+    "symbols": ["0123456789", "0987654321"],  # Company tickers
     "report_types": ["yearly", "quarterly"],
     "years": [2023, 2024],
     "force": False
 })
 
-# Returns processed fundamental data for Iranian companies
+# Returns processed fundamental data for companies
 ```
 
 ### US Market Pipeline
@@ -1243,7 +1242,7 @@ result = await fundamental_service.ingest_international_fundamentals({
 # Standardize ratios across regions
 standardized = await fundamental_service.standardize_ratios({
     "data": raw_fundamental_data,
-    "region": "iran",  # "iran", "us", "international"
+    "region": "us",  # "us", "international"
     "target_standards": ["us Gaap", "ifrs"]
 })
 
@@ -1257,8 +1256,8 @@ standardized = await fundamental_service.standardize_ratios({
 ```python
 # Compare companies across regions
 comparison = await fundamental_service.compare_across_regions({
-    "iran_companies": ["bank_melli", "mellat"],
     "us_companies": ["jpmorgan", "bank_of_america"],
+    "international_companies": ["sie.de", "asml.as"]
     "metrics": ["roe", "roa", "current_ratio", "growth_rate"],
     "currency_conversion": True
 })
@@ -1272,13 +1271,6 @@ from app.services.data.stock_fundamental_ingestion_service import StockFundament
 
 service = StockFundamentalDataIngestionService()
 
-# Ingest Iran fundamentals
-result = await service.ingest_iran_fundamentals({
-    "company_codes": ["0123456789"],
-    "report_types": ["yearly"],
-    "year": 2024
-})
-
 # Ingest US fundamentals
 result = await service.ingest_us_fundamentals({
     "symbols": ["AAPL", "MSFT"],
@@ -1290,14 +1282,13 @@ result = await service.ingest_us_fundamentals({
 data = await service.get_fundamental_data({
     "company_id": company_uuid,
     "metric": "roe",
-    "region": "iran",
+    "region": "us",
     "year": 2024
 })
 
 # Cross-region comparison
 comparison = await service.compare_across_regions({
-    "iran_companies": ["melli"],
-    "us_companies": ["jpmorgan"],
+    "us_companies": ["jpmorgan", "bank_of_america"],
     "metrics": ["roe", "current_ratio"]
 })
 ```
@@ -1305,11 +1296,10 @@ comparison = await service.compare_across_regions({
 ### Key Methods
 | Method | Description |
 |--------|-------------|
-| `ingest_iran_fundamentals(company_codes, report_types, years)` | Ingest Iran TSE fundamentals |
-| `ingest_us_fundamentals(symbols, sources, force)` | Ingest US market fundamentals |
+  | `ingest_us_fundamentals(symbols, sources, force)` | Ingest US market fundamentals |
 | `ingest_international_fundamentals(symbols, exchanges, currencies)` | Ingest international fundamentals |
 | `standardize_ratios(data, region, target_standards)` | Standardize financial ratios |
-| `compare_across_regions(iran_companies, us_companies, metrics)` | Cross-region comparison |
+  | `compare_across_regions(us_companies, international_companies, metrics)` | Cross-region comparison |
 | `get_fundamental_data(company_id, metric, region, year)` | Get fundamental data |
 
 ---

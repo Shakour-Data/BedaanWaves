@@ -17,7 +17,7 @@
 - [x] HealthChecker (System monitoring)
 
 ### Tier 2: Data Services (Completed - 6 services, 930 LOC)
-- [x] BrsApiClient (Tehran Stock Exchange API)
+- [x] YahooFinanceClient (NASDAQ API)
 - [x] StockService (Stock data management)
 - [x] MarketService (Market data aggregation)
 - [x] PortfolioService (Portfolio operations)
@@ -60,14 +60,7 @@
 - [x] ScreeningService (flexible universe filtering)
 - [x] ComparisonService (cross-symbol metric comparison)
 - [x] CorrelationService (return correlation matrix & pair detection)
-- [x] CalendarService (TSE trading days & corporate events)
-
-### Tier 8: Crypto Services (Completed - 5 services)
-- [x] CryptoPriceService (`app/services/crypto/price_service.py`)
-- [x] CryptoPortfolioService (`app/services/crypto/portfolio_service.py`)
-- [x] CryptoAnalysisService (blockchain analysis / ML)
-- [x] CryptoNewsService (`app/services/crypto/news_service.py`)
-- [x] ArbitrageService (`app/services/crypto/arbitrage_service.py`)
+- [x] CalendarService (NASDAQ trading days & corporate events)
 
 ### Tier 9: System Services (Completed - 6 services)
 - [x] BackupService (`app/services/system/backup_service.py`)
@@ -103,7 +96,7 @@
 - [x] Dashboard layout
   - **App Shell**: `components/layout/Sidebar.tsx`, `Topbar.tsx`, `DashboardShell.tsx` (RTL, responsive, dark-mode)
   - **Dashboard Widgets**: market stats, top movers, watchlist, ML signals, news (`components/dashboard/*`, `app/dashboard/*`)
-  - **Backend Integration**: `lib/api/dashboard.ts` fetches live data from `/market/tse-dashboard` & `/market/latest-prices` with mock fallback
+  - **Backend Integration**: `lib/api/dashboard.ts` fetches live data from `/market/nasdaq-dashboard` & `/market/latest-prices` with mock fallback
   - **Tooling Fixes**: ESLint flat config repaired; `@tailwindcss/postcss` dependency added; design tokens + dark theme in `globals.css`
 - [x] Stock detail pages (`app/stocks/page.tsx`, `app/stocks/[symbol]/page.tsx`, `layout.tsx`)
 - [x] Portfolio management pages (`app/portfolio/page.tsx` - connected to API)
@@ -117,7 +110,7 @@
 
 ## Testing
 - [x] Unit tests for Tier 1 services (7 test modules: base, cache, config, database, dependency_container, health_checker, logger)
-- [x] Unit tests for Tier 2 services (6 test modules: brs_api_client, history, stock, portfolio, news, market)
+- [x] Unit tests for Tier 2 services (6 test modules: yahoo_finance_client, history, stock, portfolio, news, market)
 - [x] Unit tests for Tier 3 services (6 test modules: technical, scoring, risk, fundamental, volatility, momentum - 174 tests)
 - [ ] Unit tests for Tier 4 (ML) services (no test modules yet)
 - [~] Unit tests for Tier 5-9 services (Tier 6 modules exist but failing; Tier 7 covered - 24 tests in `test_specialized_services.py`; Tier 5/8/9 missing)

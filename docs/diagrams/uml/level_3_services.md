@@ -17,7 +17,7 @@ package "Auth / User" {
 }
 
 package "Market / Data Access" {
-  [BrsApiClient] as BRS_CLIENT
+  [YahooFinanceClient] as YF_CLIENT
   [StockService] as STOCK_S
   [MarketService] as MARKET_S
   [HistoryService] as HISTORY_S
@@ -59,10 +59,10 @@ package "System" {
 [Market / Data Access] --> [PostgreSQL] : assets + price_candles
 [ML] --> [PostgreSQL] : candles -> features -> results
 
-[Market / Data Access] --> [BRS API] : upstream requests
+  [Market / Data Access] --> [Yahoo Finance API] : upstream requests
 @enduml
 ```
 
 ## Notes
-- Some routes (e.g. `/market/live/*`) are proxied directly to the **BRS API**.
+- Some routes (e.g. `/market/live/*`) are proxied directly to the **Yahoo Finance API**.
 - Some routes (e.g. `/analysis/technical/{symbol}`) run on data stored in **PostgreSQL**.

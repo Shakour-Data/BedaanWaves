@@ -28,7 +28,7 @@ Provides fundamental infrastructure that all other services depend on:
 
 ### Tier 2: Data Services (Data Acquisition & Management)
 Handles external data ingestion, normalization, and storage:
-- **BrsApiClient**: Tehran Stock Exchange API integration
+ - **YahooFinanceClient**: NASDAQ market data API integration
 - **StockService**: Stock data management and operations
 - **MarketService**: Market-wide data aggregation and analysis
 - **PortfolioService**: Portfolio creation, modification, tracking
@@ -38,8 +38,8 @@ Handles external data ingestion, normalization, and storage:
 - **MarketDataProcessing**: Data cleaning and normalization pipelines
 - **IntlApiClient**: International market APIs (NYSE, NASDAQ, etc.)
 - **DataValidationService**: Data integrity validation and cleansing
-- **FinancialDataIngestService**: Multi-source financial statements (CODAL, Yahoo Finance)
-- **StockFundamentalDataIngestionService**: Fundamental data for Iran/US/International markets
+ - **FinancialDataIngestService**: Multi-source financial statements (Yahoo Finance, Alpha Vantage)
+ - **StockFundamentalDataIngestionService**: Fundamental data for US/International markets
 
 ### Tier 3: Analysis Services (Business Logic)
 Implements core financial analysis algorithms:
@@ -64,7 +64,7 @@ Implements machine learning models and pipelines:
 
 ### Tier 5: NLP Services (Natural Language Processing)
 Processes textual data for insights:
-- **SentimentAnalysisService**: Persian and multi-language sentiment analysis
+- **SentimentAnalysisService**: English and multi-language sentiment analysis
 - **NewsSummarizationService**: Automatic text summarization of news articles
 - **DocumentExtractionService**: PDF and document text extraction
 - **ChatbotService**: Conversational AI for user assistance
@@ -119,7 +119,7 @@ Manages system operations and infrastructure:
 ## Data Flow
 
 ### Market Data Pipeline
-1. **Ingestion**: External APIs (BRS, international data providers) → Data Services
+1. **Ingestion**: External APIs (Yahoo Finance, international data providers) → Data Services
 2. **Validation**: DataValidationService checks data quality and integrity
 3. **Normalization**: MarketDataProcessing converts to unified format
 4. **Storage**: DatabaseService persists to PostgreSQL with proper indexing
@@ -253,7 +253,7 @@ BedaanWaves/
 │           │   └── database_service.py   # Tier 1 DatabaseService
 │           ├── data/             # Tier 2: Data services
 │           │   ├── __init__.py
-│           │   ├── brs_api_client.py     # BrsApiClient
+│   │   ├── yahoo_finance_client.py  # Yahoo Finance API client
 │           │   ├── stock_service.py      # StockService
 │           │   ├── ...                   # 11 more data services
 │           ├── analysis/         # Tier 3: Analysis services
@@ -306,7 +306,7 @@ BedaanWaves/
 ## Integration Points
 
 ### External Systems
-- **BRS API**: Tehran Stock Exchange real-time and historical data
+ - **Yahoo Finance API**: NASDAQ real-time and historical data
 - **Financial APIs**: Yahoo Finance, Alpha Vantage for international data
 - **News APIs**: Multiple sources for market news and sentiment
 - **Email/SMS Providers**: Notification delivery systems

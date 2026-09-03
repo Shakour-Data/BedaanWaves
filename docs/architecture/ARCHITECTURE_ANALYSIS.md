@@ -1,8 +1,8 @@
-﻿# OldFils Projects - Complete Architectural Analysis
+# OldFils Projects - Complete Architectural Analysis
 
 **Analysis Date:** July 29, 2026 (Updated)  
 **Analyst:** Kilo Software Engineer  
-**Scope:** 5 Projects → Unified BedaanWaves Platform  
+**Scope:** 5 Projects ? Unified BedaanWaves Platform  
 **Status:** Phase 1-3 Implementation Complete (~85%)
 
 ---
@@ -15,7 +15,6 @@ The OldFils collection contains 5 sophisticated financial intelligence projects:
 2. **Bedaan_4D_AI** - Data archive (SQLite databases)
 3. **Bedaan4D-ML** - Python backend with FastAPI and 50+ services
 4. **Bedaan6D-project** - React/Next.js frontend with magic design system
-5. **CryptoAndStocks** - Full-stack crypto dashboard
 
 **Key Statistics:**
 - 500+ Python files (Backend)
@@ -35,7 +34,6 @@ The OldFils collection contains 5 sophisticated financial intelligence projects:
 | Bedaan_4D_AI | Data archive | Database | SQLite | Archive |
 | Bedaan4D-ML | Backend API | Backend | Python 3.10+ | Production |
 | Bedaan6D-project | Stock UI | Frontend | TypeScript/React | Production |
-| CryptoAndStocks | Crypto Dashboard | Full-Stack | TS/Python | Production |
 
 
 # PART 1: PROJECT ANALYSIS
@@ -79,15 +77,15 @@ Central configuration point for Kilo development environment integration.
 ### Structure
 \\\
 data/
-  ├── TechAnalysis.db      (Technical analysis data)
-  └── tse_data.db          (Tehran Stock Exchange data)
+  +-- TechAnalysis.db      (Technical analysis data)
+  +-- market_data.db      (Market data storage)
 database/
-  └── init_aras.sql        (Initial schema)
+  +-- init_aras.sql        (Initial schema)
 \\\
 
 ### Database Inventory
 - **TechAnalysis.db**: Technical indicators and calculations
-- **tse_data.db**: TSE market data and quotes
+- **market_data.db**: Market data and quotes
 - **Aras Schema**: Initialized database structure
 
 ### Purpose
@@ -122,7 +120,8 @@ Archive of historical financial data for backup and reference.
 - \pp_factory.py\ - FastAPI application factory (391 lines)
 - \main.py\ - Application startup
 - \server.py\ - Server configuration
-- \un.py\ - Runner script
+- \
+un.py\ - Runner script
 
 #### Layer 2: Middleware Stack
 1. CORS Middleware - Cross-origin requests
@@ -169,7 +168,7 @@ GET    /system/health              # System status
 #### Layer 4: Services (50+ Services)
 
 **Data Services:**
-1. \SimpleBRSClient\ - BrsApi.ir integration
+1. \YahooFinanceClient\ - Yahoo Finance API integration
 2. \StockService\ (1379 lines) - Stock data management
 3. \MarketService\ - Market-wide analysis
 4. \PortfolioService\ - Portfolio operations
@@ -249,26 +248,21 @@ GET    /system/health              # System status
 
 #### Layer 7: External Integrations
 
-1. **BRS API** (BrsApi.ir)
-   - Stock data
-   - Market data
-   - Real-time quotes
+ 1. **Yahoo Finance API** (finance.yahoo.com)
+    - Stock data
+    - Market data
+    - Real-time quotes
 
-2. **Codal API**
-   - Financial disclosures
-   - Company announcements
-   - Fundamental data
-
-3. **News APIs**
+ 2. **News APIs**
    - News articles
    - News search
    - News archives
 
-4. **Email Service**
+ 3. **Email Service**
    - Alert notifications
    - Report delivery
 
-5. **SMS Provider**
+ 4. **SMS Provider**
    - High-priority alerts
 
 ### Technology Stack
@@ -325,13 +319,13 @@ risk_score (20%)
 macro_score (10%)
 ai_score (10%)
 
-final_score = Σ(weight × score)
+final_score = S(weight � score)
 normalized to 1-100
 \\\
 
 #### ML Coefficient Learning
 \\\
-coefficient_t = 0.8 × coefficient_t-1 + 0.2 × performance
+coefficient_t = 0.8 � coefficient_t-1 + 0.2 � performance
 performance = correlation with actual returns
 ensemble: Random Forest, XGBoost, LightGBM, NN, SVM
 \\\
@@ -383,85 +377,85 @@ The frontend implements a sophisticated design system based on:
 
 \\\
 src/
-├── app/                          # Next.js App Router
-│   ├── api/
-│   │   ├── hierarchy/
-│   │   ├── symbols/
-│   │   └── scores/
-│   ├── layout.tsx               # Root layout
-│   ├── page.tsx                 # Home page
-│   ├── error.tsx                # Error boundary
-│   └── globals.css              # Global styles
++-- app/                          # Next.js App Router
+�   +-- api/
+�   �   +-- hierarchy/
+�   �   +-- symbols/
+�   �   +-- scores/
+�   +-- layout.tsx               # Root layout
+�   +-- page.tsx                 # Home page
+�   +-- error.tsx                # Error boundary
+�   +-- globals.css              # Global styles
 
-├── components/                  # React components
-│   ├── magic/                  # Magic system
-│   │   ├── MagicButton.tsx
-│   │   ├── MagicCard.tsx
-│   │   ├── MagicForm.tsx
-│   │   ├── MagicGrid.tsx
-│   │   └── MagicTypography.tsx
-│   ├── ui/                     # shadcn/ui (40+ components)
-│   │   ├── accordion.tsx
-│   │   ├── alert.tsx
-│   │   ├── button.tsx
-│   │   ├── card.tsx
-│   │   ├── dialog.tsx
-│   │   ├── dropdown-menu.tsx
-│   │   ├── form.tsx
-│   │   ├── input.tsx
-│   │   ├── tabs.tsx
-│   │   └── ... (30+ more)
-│   └── pages/                  # Page components
-│       ├── DashboardTab.tsx
-│       ├── CompaniesTab.tsx
-│       ├── HierarchyExplorer.tsx
-│       └── ...
++-- components/                  # React components
+�   +-- magic/                  # Magic system
+�   �   +-- MagicButton.tsx
+�   �   +-- MagicCard.tsx
+�   �   +-- MagicForm.tsx
+�   �   +-- MagicGrid.tsx
+�   �   +-- MagicTypography.tsx
+�   +-- ui/                     # shadcn/ui (40+ components)
+�   �   +-- accordion.tsx
+�   �   +-- alert.tsx
+�   �   +-- button.tsx
+�   �   +-- card.tsx
+�   �   +-- dialog.tsx
+�   �   +-- dropdown-menu.tsx
+�   �   +-- form.tsx
+�   �   +-- input.tsx
+�   �   +-- tabs.tsx
+�   �   +-- ... (30+ more)
+�   +-- pages/                  # Page components
+�       +-- DashboardTab.tsx
+�       +-- CompaniesTab.tsx
+�       +-- HierarchyExplorer.tsx
+�       +-- ...
 
-├── contexts/                    # React Context
-│   └── MagicContext.tsx        # Magic system state
++-- contexts/                    # React Context
+�   +-- MagicContext.tsx        # Magic system state
 
-├── hooks/                       # Custom hooks
-│   ├── use-mobile.ts           # Mobile detection
-│   └── use-magic-api.ts        # API management
++-- hooks/                       # Custom hooks
+�   +-- use-mobile.ts           # Mobile detection
+�   +-- use-magic-api.ts        # API management
 
-├── lib/                         # Utilities
-│   ├── design-tokens.ts        # Design tokens
-│   ├── utils.ts                # Helpers
-│   ├── hierarchy.ts            # Hierarchy logic
-│   ├── scoring.ts              # Scoring calculations
-│   ├── persian.ts              # Persian utilities
-│   ├── references.ts           # References
-│   └── prisma.ts               # Prisma setup
++-- lib/                         # Utilities
+�   +-- design-tokens.ts        # Design tokens
+�   +-- utils.ts                # Helpers
+�   +-- hierarchy.ts            # Hierarchy logic
+�   +-- scoring.ts              # Scoring calculations
+�   +-- persian.ts              # Persian utilities
+�   +-- references.ts           # References
+�   +-- prisma.ts               # Prisma setup
 
-├── services/                    # API services
-│   ├── magic-api.ts            # API client
-│   ├── symbol-service.ts       # Symbol management
-│   ├── scoring-service.ts      # Scoring logic
-│   ├── hierarchy-service.ts    # Hierarchy logic
-│   ├── history-service.ts      # History management
-│   └── todo-service.ts         # Todo management
++-- services/                    # API services
+�   +-- magic-api.ts            # API client
+�   +-- symbol-service.ts       # Symbol management
+�   +-- scoring-service.ts      # Scoring logic
+�   +-- hierarchy-service.ts    # Hierarchy logic
+�   +-- history-service.ts      # History management
+�   +-- todo-service.ts         # Todo management
 
-├── stores/                      # State (Zustand)
-│   ├── magicStore.ts           # Magic system state
-│   └── __tests__/
++-- stores/                      # State (Zustand)
+�   +-- magicStore.ts           # Magic system state
+�   +-- __tests__/
 
-├── test/                        # Tests
-│   ├── api-routes.test.ts
-│   ├── components/
-│   ├── services/
-│   └── ...
++-- test/                        # Tests
+�   +-- api-routes.test.ts
+�   +-- components/
+�   +-- services/
+�   +-- ...
 
-├── prisma/
-│   ├── schema.prisma           # Database schema
-│   └── seed.ts                 # Seed data
++-- prisma/
+�   +-- schema.prisma           # Database schema
+�   +-- seed.ts                 # Seed data
 
-├── package.json                 # Dependencies
-├── tsconfig.json                # TypeScript config
-├── next.config.js               # Next.js config
-├── tailwind.config.ts           # Tailwind config
-├── vitest.config.ts             # Vitest config
-├── playwright.config.ts         # Playwright config
-└── eslint.config.js             # ESLint config
++-- package.json                 # Dependencies
++-- tsconfig.json                # TypeScript config
++-- next.config.js               # Next.js config
++-- tailwind.config.ts           # Tailwind config
++-- vitest.config.ts             # Vitest config
++-- playwright.config.ts         # Playwright config
++-- eslint.config.js             # ESLint config
 \\\
 
 ### Technology Stack
@@ -602,217 +596,29 @@ Tables defined in \prisma/schema.prisma\:
 
 ---
 
-## Project 5: CryptoAndStocks - Full-Stack Application
-
-### Location
-\E:\Shakour\BedaanProjects\OldFils\CryptoAndStocks\financeintel-source\
-
-### Core Statistics
-- **Components:** 60+
-- **API Routes:** 8 major categories
-- **Hierarchy Nodes:** 305
-- **Coins:** 200+
-- **Services:** 20+
-
-### Architecture - 4-Level Hierarchy
-
-\\\
-Dimensions (12)
-├── Fundamental
-├── Technical
-├── Sentiment
-├── Macro-Economic
-├── Risk
-├── Behavioral Finance
-└── ... (6 more)
-
-Sub-Dimensions (40)
-│ ├─ Analysis aspects
-│ └─ Component metrics
-
-Aspects (80)
-│ └─ Specific metrics
-
-Sub-Aspects (173)
-  └─ Granular indicators
-
-Total: 305 hierarchy nodes
-\\\
-
-
-### Deployment Architecture
-
-#### Frontend Deployment
-- Build: npm run build -> Next.js standalone
-- Runtime: Node.js or Bun
-- Port: 3005 (dev), 3000 (production)
-- Deployment: Direct process execution
-- Hosting: Cloud (AWS, GCP, Azure)
-
-#### Backend Deployment
-- Run: uvicorn main:app --workers 4
-- Port: 8000
-- Reverse Proxy: Nginx/Caddy
-- Deployment: Direct process execution
-- Hosting: Cloud or on-premise
-
-#### Database
-- PostgreSQL: Managed service or self-hosted
-- Redis: Managed cache or self-hosted cluster
-- Backups: Daily automated
-- Replication: Primary-replica setup
-
----
-
-## KEY BUSINESS LOGIC
-
-### 1. Six-Dimensional (6D) Scoring System
-
-Final Score = 100 × (
-  0.25 × Fundamental_Score +
-  0.20 × Technical_Score +
-  0.15 × Sentiment_Score +
-  0.20 × Risk_Score +
-  0.10 × Macro_Score +
-  0.10 × AI_Score
-)
-
-Score Range: 0-100
-Update Frequency: Daily (after market close)
-Hierarchy Levels: 4 (305 total nodes)
-
-### 2. Dynamic ML Coefficient System
-
-Coefficient learning:
-coefficient_t = α × coefficient_t-1 + β × performance
-where:
-  α = 0.8 (smoothing/momentum)
-  β = 0.2 (learning rate)
-  performance = correlation with actual returns
-
-Ensemble models:
-predictions = 0.2 × RandomForest +
-             0.2 × XGBoost +
-             0.2 × LightGBM +
-             0.2 × NeuralNetwork +
-             0.2 × SVM
-
-Update frequency: Daily after market close
-
-### 3. Technical Analysis Pipeline
-
-Raw OHLCV Data
-  ↓
-Calculate 50+ Indicators
-  ├─ Trend: SMA, EMA, TEMA, ADX
-  ├─ Momentum: RSI, MACD, Stochastic, CCI
-  ├─ Volatility: BB, ATR, KAMA
-  ├─ Volume: OBV, CMF, VPTK
-  └─ Support/Resistance: Fib, Pivot Points
-  ↓
-Aggregate into scores
-  ↓
-Generate signals (Buy/Sell/Hold)
-
-### 4. Sentiment Analysis Pipeline
-
-News Article
-  ↓
-Persian NLP Processing
-  ├─ Tokenization (Hazm)
-  ├─ POS tagging
-  └─ Named entity extraction
-  ↓
-Sentiment Classification
-  ├─ Positive: +1 to +0.5
-  ├─ Neutral: -0.5 to +0.5
-  └─ Negative: -1 to -0.5
-  ↓
-Impact Scoring
-  ├─ Source weight
-  ├─ Recency decay
-  └─ Relevance boost
-  ↓
-Store with metadata
-  ↓
-Update sentiment score
-
-### 5. Alert System
-
-Triggers:
-├─ Price Change: ±X% threshold
-├─ Score Change: ±X points
-├─ Volatility: Spike detection
-├─ Volume: Unusual activity
-├─ Technical: Pattern formation
-├─ Fundamental: Data change
-├─ Sentiment: Shift >50%
-└─ Anomaly: ML detection
-
-Delivery Channels:
-├─ Push notification (App)
-├─ Email (Detailed analysis)
-├─ SMS (High priority only)
-├─ In-app message
-└─ Dashboard highlight
-
-### 6. Portfolio Optimization
-
-Optimization Problem:
-  
-Minimize: Portfolio_Risk
-Subject to:
-  ├─ Σ(w_i) = 1 (full invested)
-  ├─ w_i ≥ 0 (long-only)
-  ├─ w_i ≤ max_allocation
-  └─ Correlation constraints
-
-Risk Metrics:
-├─ Variance (σ²)
-├─ VaR (Value at Risk)
-├─ Sharpe Ratio
-└─ Sortino Ratio
-
-Rebalancing:
-├─ Monthly default
-├─ Event-triggered
-└─ Threshold-based
-
----
-
-## INTEGRATION POINTS
-
 ### Data Flow Between Projects
 
 External APIs
-  ├─ BRS API (Iran stocks)
-  ├─ CoinGecko API (Crypto)
-  ├─ Binance API (Crypto)
-  └─ News APIs (Multiple)
-  ↓
+  +- Yahoo Finance API (US stocks)
+  +- News APIs (Multiple)
+  ?
 Bedaan4D-ML (Backend)
-  ├─ Data Collection
-  ├─ Validation
-  ├─ Transformation
-  ├─ ML Processing
-  └─ Score Calculation
-  ↓
+  +- Data Collection
+  +- Validation
+  +- Transformation
+  +- ML Processing
+  +- Score Calculation
+  ?
 PostgreSQL/Redis
-  ├─ Primary data store
-  ├─ Cache layer
-  └─ Historical backup
-  ↓
+  +- Primary data store
+  +- Cache layer
+  +- Historical backup
+  ?
 Bedaan6D-project (Frontend)
-  ├─ Display scores
-  ├─ Show charts
-  ├─ Manage portfolio
-  └─ Receive alerts
-  ↓
-CryptoAndStocks (Full-Stack)
-  ├─ Crypto-specific UI
-  ├─ Behavioral analysis
-  ├─ Macro indicators
-  └─ Custom hierarchy
+  +- Display scores
+  +- Show charts
+  +- Manage portfolio
+  +- Receive alerts
 
 ---
 
@@ -848,12 +654,12 @@ The OldFils project suite has been consolidated into BedaanWaves, a unified fina
  Full Stack: Data to dashboard pipeline (backend implemented, frontend pending)
  Scalability: Async processing, Redis caching, connection pooling
  Rich Analysis: 50+ technical indicators, sentiment NLP, macro metrics
- Multi-Market: Stock (Iran/TSE) + Crypto (Binance/Kraken)
+  Multi-Market: US Stocks (NASDAQ/NYSE) + International Exchanges
  User Experience: Planned modern React UI, real-time updates, responsive design
  Enterprise Ready: Error handling, monitoring, audit logging, backups
 
 **Current Implementation Status:**
-- **Backend**: 42+ services implemented across 9 tiers (Tiers 1-7 complete, Tier 8 3/5, Tier 9 3/6)
+- **Backend**: 42+ services implemented across 9 tiers (Tiers 1-7 complete, Tier 9 3/6)
 - **API**: 16 routers with 50+ endpoints, OpenAPI documentation
 - **Database**: PostgreSQL with Alembic migrations, unified schema
 - **Frontend**: Pending (Next.js 16+ planned)

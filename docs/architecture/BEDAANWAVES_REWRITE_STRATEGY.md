@@ -43,7 +43,6 @@
 | Data Archive | Bedaan_4D_AI | Historical data reference |
 | Backend Core | Bedaan4D-ML | APIs, services, ML, NLP |
 | Stock Frontend | Bedaan6D-project | UI, design system |
-| Crypto System | CryptoAndStocks | Multi-asset support |
 
 ---
 
@@ -119,11 +118,10 @@ BedaanWaves/
 6. **HealthChecker** - System health
 
 ### Tier 2: Data Services (Access)
-7. **BrsApiClient** - Tehran Stock Exchange API
-8. **CodalApiClient** - Financial disclosures
+7. **YahooFinanceClient** - NASDAQ market data API
+8. **SecEdgarClient** - Financial disclosures
 9. **NewsApiClient** - News aggregation
-10. **CryptoApiClient** - Cryptocurrency data
-11. **StockService** - Stock data management
+10. **StockService** - Stock data management
 12. **MarketService** - Market-wide analysis
 13. **PortfolioService** - Portfolio operations
 14. **HistoryService** - Time-series data
@@ -166,16 +164,6 @@ BedaanWaves/
 41. **PortfolioOptimizationService** - Portfolio optimization
 42. **RegressionAnalysisService** - Statistical regression
 43. **CorrelationService** - Correlation analysis
-### Tier 8: Crypto Services (Multi-Asset)
-
-- **CryptoPriceService** - Cryptocurrency price tracking and market data ( Implemented)
-- **CryptoPortfolioService** - Crypto portfolio management with analytics ( Implemented)
-- **CryptoAnalysisService** - Cryptocurrency market analysis ( Pending)
-- **ChainAnalysisService** - Blockchain transaction analysis ( Pending)
-- **DeFiService** - DeFi protocol analysis ( Pending)
-- **TransactionService** - On-chain transaction processing ( Pending)
-- **WalletService** - Wallet monitoring and anomaly detection ( Pending)
-
 ### Tier 9: System Services (Operations)
 49. **DataRecoveryService** - Data recovery
 50. **BackupService** - Backup management
@@ -191,7 +179,7 @@ BedaanWaves/
 ### Primary Tables (PostgreSQL)
 
 #### Assets
-- `assets` - Stock/crypto universe
+- `assets` - Stock universe
 - `symbols` - Symbol metadata
 - `exchanges` - Exchange information
 

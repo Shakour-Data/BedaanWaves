@@ -10,7 +10,7 @@ The Methodology page explains the analytical frameworks, scoring systems, and ri
 4. **Risk Models**: Value at Risk, Sharpe Ratio, and stress testing methodologies
 5. **ML Models**: Descriptions of prediction models with accuracy metrics and limitations
 6. **Sentiment Analysis**: NLP approach for news sentiment classification
-7. **Data Sources**: Documentation of all data providers (NASDAQ API, Yahoo Finance, Alpha Vantage, CoinGecko, etc.)
+7. **Data Sources**: Documentation of all data providers (NASDAQ API, Yahoo Finance, Alpha Vantage, etc.)
 8. **Weighting System**: Dynamic coefficient learning for adaptive scoring
 
 ## Technical Details

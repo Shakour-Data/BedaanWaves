@@ -47,7 +47,7 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
   - Used for: Live market data, real-time alerts, collaborative features
   - Features: Bidirectional communication, connection broadcasting, room support
 - **HTTP Client**: HTTPX (async)
-  - Used for: External API calls (BRS, news APIs)
+  - Used for: External API calls (Yahoo Finance, news APIs)
   - Features: HTTP/2 support, async/await, connection pooling
 
 ### Machine Learning & Data Science
@@ -77,8 +77,8 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
   - Used for: Risk assessment, probabilistic forecasting, scenario analysis
 
 ### Natural Language Processing
-- **NLP Framework**: spaCy 3.5+, Hazm 0.5+ (Persian-specific)
-  - Selected for: Industrial-strength NLP, Persian language support
+- **NLP Framework**: spaCy 3.5+
+  - Selected for: Industrial-strength NLP, English language support
   - Used for: Tokenization, named entity recognition, sentiment analysis
 - **Transformer Models**: Hugging Face Transformers 4.30+
   - Selected for: State-of-the-art NLP, multilingual support
@@ -304,10 +304,10 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
 ## External Integrations
 
 ### Market Data Providers
-- **Tehran Stock Exchange**: BRS API (https://Api.BrsApi.ir)
+- **NASDAQ**: Yahoo Finance (https://finance.yahoo.com)
   - Data: Real-time quotes, historical data, financial statements, indices
-  - Format: JSON/XML over HTTPS, rate limited (50K/day)
-  - Authentication: API key in header
+  - Format: JSON over HTTPS, rate limited
+  - Authentication: API key (optional for some endpoints)
 - **International Markets**:
   - Yahoo Finance: Historical data, quotes, financials (unofficial API)
   - Alpha Vantage: Technical indicators, forex (free tier available)
@@ -320,9 +320,6 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
 - **Financial News**: 
   - Reuters: Business & financial news (paid API)
   - Bloomberg: Market-moving news (terminal subscription required)
-  - Farsnews: Iranian financial news (RSS/web scraping)
-  - IRNA: Islamic Republic News Agency (official source)
-  - Tasnim: News agency (selective coverage)
 - **General News**:
   - Google News: Aggregated news (unofficial API)
   - NewsAPI.org: Global news sources (tiered pricing)
@@ -357,10 +354,9 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
   - S&P Global Market Intelligence: Financial data and analytics
   - Moody's Analytics: Risk, compliance, and financial analysis
   - Bloomberg Terminal: Financial software, data, and news
-- **Regulatory APIs** (Iran-specific):
-  - Codal: Company financial disclosures and reports
-  - SEBON: Securities regulator data and statistics
-  - TSE: Official exchange data and announcements
+ - **Regulatory APIs** (US-specific):
+  - SEC: Company financial disclosures and reports
+  - NASDAQ: Official exchange data and announcements
 - **Tax & Accounting** (planned):
   - Avalara: Tax calculation and compliance
   - QuickBooks Online: Accounting API (small business focus)

@@ -169,6 +169,27 @@ class SchedulerService(BaseService):
             interval_seconds=86400,
         )
 
+        async def market_score_trend_recompute_job():
+            from app.services.analysis.market_score_trend_service import (
+                MarketScoreTrendService,
+            )
+            service = MarketScoreTrendService()
+            await service.initialize()
+            try:
+                result = await service.compute_and_persist(market="NASDAQ")
+                return result
+            except Exception as e:
+                logger.error(f"MarketScoreTrendRecompute failed: {e}")
+                return {"status": "error", "error": str(e)}
+            finally:
+                await service.shutdown()
+
+        self.register_job(
+            name="MarketScoreTrendRecompute",
+            coroutine_func=market_score_trend_recompute_job,
+            interval_seconds=86400,
+        )
+
         # === SYSTEM MAINTENANCE JOBS ===
 
         async def metrics_aggregation_job():

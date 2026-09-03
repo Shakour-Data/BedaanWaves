@@ -5,7 +5,7 @@ This document provides an overview of the **BedaanWaves** system. Focus: main co
 ## Main Components
 - **Frontend (Next.js)**: User interface and request submission to the Backend
 - **Backend API (FastAPI)**: Gateway/routing layer and business logic
-- **External APIs (BRS API)**: Source of Iranian capital market data
+- **External APIs (Yahoo Finance)**: Source of US capital market data
 - **PostgreSQL**: Stores Assets/PriceCandles/MLSignals/Portfolios/…
 
 ## Diagram (PlantUML)
@@ -17,13 +17,13 @@ actor "User" as U
 rectangle "Frontend\n(Next.js / React)" as FE
 rectangle "Backend API\n(FastAPI / ASGI)" as BE
 database "PostgreSQL" as DB
-cloud "BRS API (brsapi.ir)\nTSETMC Webservices" as BRS
+cloud "Yahoo Finance API\n(US Markets)" as YF
 
 U --> FE : HTTP / Web requests
 FE --> BE : REST calls (+ WebSocket if used)\n/api/v1/*
 
 BE --> DB : SQL (Async SQLAlchemy)
-BE --> BRS : Upstream fetch\nAllSymbols / Symbol / Candlestick / History / ...
+BE --> YF : Upstream fetch\nAllSymbols / Symbol / Candlestick / History / ...
 
 note right of BE
 Middlewares:
@@ -40,7 +40,7 @@ end note
 - Frontend sends request -> Backend:
   - auth guard (when enabled)
   - then the appropriate Router runs
-- For some endpoints, the Backend calls the **BRS API** (Live Proxy / Stock Fetch)
+- For some endpoints, the Backend calls the **Yahoo Finance API** (Live Proxy / Stock Fetch)
 - For other endpoints, the Backend reads/returns data from **PostgreSQL** or uses it for calculations.
 
 ---

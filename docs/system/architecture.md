@@ -18,7 +18,6 @@ A comprehensive guide to the BedaanWaves platform architecture, implementation d
 - **DataIngestionPipeline**: Multi-source data collection and validation
 - **MarketDataProcessor**: Real-time data cleaning and normalization
 - **IntlApiClient**: US/Middle East market API integration
-- **CryptoApiClient**: Cryptocurrency exchange API integration
 - **FinancialDataIngestService**: Multi-source financial statement ingestion
 
 ### Tier 3: Analysis Services
@@ -37,7 +36,6 @@ A comprehensive guide to the BedaanWaves platform architecture, implementation d
 - **PortfolioOptimizationService**: Markowitz-based optimization with constraints
 - **TimeSeriesForecastingService**: ARIMA, LSTM, Prophet implementations
 - **CoefficientLearningService**: Dynamic coefficient learning for zero-shot forecasting
-- **CryptoMLService**: Crypto-specific ML models with on-chain metrics integration
 - **UserFilteredRecommendationService**: Personalized recommendations based on user preferences
 
 ### Tier 5: NLP Services
@@ -56,7 +54,6 @@ A comprehensive guide to the BedaanWaves platform architecture, implementation d
 - **PreferenceService**: User customization of dashboards and alerts
 - **NotificationService**: Multi-channel notifications (email, SMS, push)
 - **UserMarketSettingsService**: Country/index/industry selection for personalized feeds
-- **UserCryptoSettingsService**: Cryptocurrency selection preferences
 
 ### Tier 7: Specialized Services
 - **SectorAnalysisService**: Sector performance metrics and comparisons
@@ -66,16 +63,6 @@ A comprehensive guide to the BedaanWaves platform architecture, implementation d
 - **CalendarService**: Market calendar integration with holiday detection
 - **InternationalMarketService**: Multi-country data integration with localization
 - **SectorFilterService**: Industry-based filtering system
-
-### Tier 8: Crypto Services
-- **PriceService**: Real-time crypto price feeds from 10+ exchanges
-- **PortfolioService**: Crypto portfolio management with rebalancing
-- **CryptoIngestionService**: Exchange data ingestion with outlier detection
-- **CryptoMLService**: Crypto-specific ML analysis with volatility prediction
-- **CustomSelectionService**: Top 300 crypto selection with weighting
-- **MarketCapService**: Real-time market cap-based filtering
-- **AnalysisService**: On-chain metrics analysis and alerts
-- **ArbitrageService**: Cross-exchange price monitoring with opportunity detection
 
 ### Tier 9: System Services
 - **SchedulerService**: Task scheduling pipeline with priority queues

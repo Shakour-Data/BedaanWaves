@@ -23,9 +23,24 @@ class _FakeRow:
 
 
 def _make_session(rows):
+    """Build a session that supports both code paths:
+
+    - the precomputed ``MarketScoreTrendService.get_trend`` path
+      (calls ``result.mappings().all()``) — returns ``[]`` by default so the
+      endpoint falls back to the on-the-fly aggregator (matching the legacy
+      behaviour asserted by these tests).
+    - the on-the-fly ``_aggregate_score_trend_on_the_fly`` path
+      (calls ``result.all()``) — returns the provided ``rows``.
+
+    Tests that want to exercise the precomputed path patch
+    ``MarketScoreTrendService.get_trend`` directly.
+    """
     session = MagicMock()
     result = MagicMock()
     result.all = MagicMock(return_value=rows)
+    mappings = MagicMock()
+    mappings.all = MagicMock(return_value=[])
+    result.mappings = MagicMock(return_value=mappings)
     session.execute = AsyncMock(return_value=result)
     return session
 
@@ -55,7 +70,7 @@ def _dims(f, t, s, r, m, a):
 
 class TestScoreTrendDashboard(unittest.TestCase):
     def _run(self, coro):
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.new_event_loop().run_until_complete(coro)
 
     def test_score_trend_includes_all_six_dimensions(self):
         rows = [
@@ -94,6 +109,67 @@ class TestScoreTrendDashboard(unittest.TestCase):
         self.assertEqual(
             second["technical_change"], second["dimension_changes"]["technical"]
         )
+
+    def test_score_trend_uses_precomputed_when_available(self):
+        """The endpoint must report ``source: precomputed`` when the
+        ``MarketScoreTrendService.get_trend`` path returns rows.
+        """
+        from unittest.mock import patch
+
+        precomputed = [
+            {
+                "date": "2026-09-01",
+                "avg_score": 60.0,
+                "avg_dimensions": {dim: 60.0 for dim in DIM_KEYS},
+                "symbol_count": 100,
+            },
+        ]
+
+        async def fake_get_trend(self, days, market, db):
+            return precomputed
+
+        with patch.object(
+            dashboard_routes.MarketScoreTrendService,
+            "get_trend",
+            new=fake_get_trend,
+        ):
+            response = self._run(
+                dashboard_routes.get_score_trend(
+                    days=30, market="NASDAQ", db=_make_session([])
+                )
+            )
+
+        self.assertEqual(response["source"], "precomputed")
+        self.assertEqual(response["count"], 1)
+        self.assertEqual(response["series"][0]["date"], "2026-09-01")
+        self.assertEqual(response["series"][0]["score_change"], 0.0)
+
+    def test_score_trend_falls_back_when_precomputed_empty(self):
+        """If the precomputed table has no rows, the endpoint must compute
+        on-the-fly and report ``source: on_the_fly_fallback``.
+        """
+        from unittest.mock import patch
+
+        async def fake_get_trend(self, days, market, db):
+            return []
+
+        rows = [
+            _row("2026-09-01", 60.0, _dims(55.0, 58.0, 62.0, 70.0, 50.0, 65.0)),
+        ]
+        with patch.object(
+            dashboard_routes.MarketScoreTrendService,
+            "get_trend",
+            new=fake_get_trend,
+        ):
+            response = self._run(
+                dashboard_routes.get_score_trend(
+                    days=30, market="NASDAQ", db=_make_session(rows)
+                )
+            )
+
+        self.assertEqual(response["source"], "on_the_fly_fallback")
+        self.assertEqual(response["count"], 1)
+        self.assertEqual(response["series"][0]["avg_score"], 60.0)
 
     def test_score_trend_handles_empty_series(self):
         response = self._run(

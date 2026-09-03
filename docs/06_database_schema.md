@@ -48,7 +48,7 @@ CREATE TABLE assets (
     symbol VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     asset_class VARCHAR(20) NOT NULL, -- EQUITY, ETF, NEWS
-    market VARCHAR(20) NOT NULL, -- NASDAQ, NYSE, TSE, OTC
+    market VARCHAR(20) NOT NULL, -- NASDAQ, NYSE, LSE, AMEX, OTC
     sector VARCHAR(100),
     sub_sector VARCHAR(100),
     country_code VARCHAR(2), -- ISO 3166-1 alpha-2
@@ -84,7 +84,7 @@ CREATE TABLE price_candles (
     turnover DECIMAL(20, 2),
     transactions INTEGER,
     adjusted_close DECIMAL(20, 8),
-    source VARCHAR(50), -- YahooFinance, BRS, etc.
+    source VARCHAR(50), -- YahooFinance, AlphaVantage, etc.
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Constraints

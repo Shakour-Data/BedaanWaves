@@ -18,7 +18,7 @@ The Stock page displays real-time stock data, charts, and analysis tools for ind
 - Share insights with colleagues
 
 ## Technical Details
-- Data sourced from multiple providers (NASDAQ, NYSE, Crypto exchanges)
+- Data sourced from multiple providers (NASDAQ, NYSE)
 - Real-time updates via WebSocket
 - Responsive chart components
 - Dark/light theme toggle

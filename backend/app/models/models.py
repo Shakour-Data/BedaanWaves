@@ -1538,3 +1538,36 @@ class ScoreHistory(Base):
         Index('idx_score_history_asset_date', 'asset_id', 'date'),
         Index('idx_score_history_date', 'date'),
     )
+
+
+# ===========================================================================
+# 32b. Market Score Trend - Precomputed daily market-wide aggregates
+# ===========================================================================
+class MarketScoreTrend(Base):
+    """Precomputed per-day market-wide score aggregates.
+
+    Populated by ``MarketScoreTrendService`` after the per-asset ``ScoreHistory``
+    rows are written. The dashboard ``/dashboard/score-trend`` endpoint reads
+    directly from this table instead of re-aggregating ``score_history`` on
+    every request.
+    """
+
+    __tablename__ = "market_score_trend"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market = Column(String(32), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+
+    avg_score = Column(Numeric(8, 4), nullable=False)
+    avg_dimensions = Column(JSONB, nullable=False, default={})
+    symbol_count = Column(Integer, nullable=False, default=0)
+
+    computed_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        UniqueConstraint('market', 'date', name='uix_market_score_trend_market_date'),
+        Index('idx_market_score_trend_market_date', 'market', 'date'),
+    )

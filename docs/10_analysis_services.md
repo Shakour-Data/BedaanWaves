@@ -333,7 +333,7 @@ service = FundamentalAnalysisService()
 # Get fundamental ratios
 ratios = await service.analyze({
     "symbol_id": asset_uuid,
-    "region": "us",  # "iran", "us", "international"
+    "region": "us",  # "us", "international"
     "include_comparison": True
 })
 

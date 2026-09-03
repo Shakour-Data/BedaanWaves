@@ -10,7 +10,7 @@
   - [x] Review existing database schema (backend/app/models/models.py)
   - [x] Identify all tables and relationships (Asset, PriceCandle, etc.)
   - [x] Document current API endpoints (16 routers)
-  - [x] Analyze data import/export processes (brs_api_client.py, crypto_api_client.py)
+    - [x] Analyze data import/export processes (yahoo_finance_client.py)
   - [x] Review error handling patterns (middleware.py, global exception handlers)
   - [x] Test data consistency (via HealthChecker + DatabaseService)
 
@@ -28,12 +28,6 @@
   - [x] Review model performance metrics
   - [x] Understand dependencies
   - [x] Check model versioning strategy
-
-- [x] **CryptoAndStocks Expansion**
-  - [x] Assess scope and requirements
-  - [x] Identify data sources (Binance, etc.)
-  - [x] Review existing code structure
-  - [x] Determine integration strategy
 
 ---
 
@@ -102,7 +96,7 @@
 - [x] HealthChecker (System monitoring)
 
 ### Tier 2 - Data Services 
-- [x] BrsApiClient (Tehran Stock Exchange API)
+- [x] YahooFinanceClient (NASDAQ API)
 - [x] StockService (Stock data management)
 - [x] MarketService (Market data aggregation)
 - [x] PortfolioService (Portfolio operations)
@@ -125,7 +119,6 @@
 - [x] PortfolioOptimizationService
 - [x] TimeSeriesForecastingService
 - [x] CoefficientLearningService
-- [x] CryptoMLService
 
 ### Tier 5 - NLP Services 
 - [x] SentimentAnalysisService (Persian support)
@@ -147,14 +140,7 @@
 - [x] ScreeningService (flexible universe filtering)
 - [x] ComparisonService (cross-symbol metric comparison)
 - [x] CorrelationService (return correlation matrix & pair detection)
-- [x] CalendarService (TSE trading days & corporate events)
-
-### Tier 8 - Crypto Services  (3/5)
-- [x] CryptoPriceService (Price service)
-- [x] CryptoPortfolioService (Portfolio service)
-- [x] CryptoMLService (Analysis)
-- [ ] CryptoNewsService
-- [ ] ArbitrageService
+- [x] CalendarService (NASDAQ trading days & corporate events)
 
 ### Tier 9 - System Services  (3/6)
 - [x] SchedulerService
@@ -182,7 +168,6 @@
 - [x] `backend/app/api/routes/notifications.py` - Notification routes
 - [x] `backend/app/api/routes/specialized.py` - Specialized routes
 - [x] `backend/app/api/routes/system.py` - System routes
-- [x] `backend/app/api/routes/crypto.py` - Crypto routes
 - [x] `backend/app/api/routes/intl.py` - International routes
 - [x] `backend/app/api/routes/live.py` - Live data routes
 
@@ -317,7 +302,6 @@ curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
 -  Signal accuracy tracked
 
 ### Phase 4 Completion
--  Crypto support integrated (Price, Portfolio services)
 -  Portfolio management working (PortfolioService)
 -  Risk analysis complete (RiskAnalysisService)
 -  System production-ready
@@ -335,7 +319,7 @@ curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
 **Solution**: Implement auto-reconnect in frontend, check firewall, increase timeout
 
 **Issue**: ML signals not updating
-**Solution**: Check model service status, verify data pipeline (see run_crypto_pipeline in main.py), check logs
+**Solution**: Check model service status, verify data pipeline (see run_data_pipeline in main.py), check logs
 
 **Issue**: Frontend crashes
 **Solution**: Check browser console, verify API connectivity (ensure CORS_ORIGINS is set), clear cache

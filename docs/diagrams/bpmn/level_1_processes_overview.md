@@ -5,7 +5,7 @@ This level shows an overview of the system's main processes.
 ## Processes
 - **Authentication**: Register / Login / Refresh (Public)
 - **Market Data Access**: Symbols / Price History / Latest Prices
-- **Live Data Proxy**: Proxy endpoints to the BRS API
+- **Live Data Proxy**: Proxy endpoints to the Yahoo Finance API
 - **Analysis Pipeline**: Technical / Momentum / Volatility / Risk / Scoring / Signals
 - **ML Inference**: Predict / Patterns / Anomaly / Recommendation / Forecast / Optimize
 - **Portfolio Management**: Create portfolio / Manage holdings
@@ -26,7 +26,7 @@ flowchart TD
 
   AUTH --> DB[(PostgreSQL users)]
   MK --> DB
-  LIVE --> BRS[BRS API brsapi.ir]
+  LIVE --> YF[Yahoo Finance API]
   AN --> DB
   ML --> DB
   PO --> DB
