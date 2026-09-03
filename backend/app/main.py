@@ -331,6 +331,9 @@ async def lifespan(app: FastAPI):
         container.register_instance("scheduler", scheduler_svc)
         container.register_instance("metrics", container.get("metrics_service"))
 
+        await scheduler_svc.initialize()
+        logger.info("SchedulerService started")
+
         app.state.container = container
         _container = container
         set_global_container(container)

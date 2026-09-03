@@ -81,12 +81,12 @@ end
 actor User
 participant "Frontend" as FE
 participant "Router /market/live/candlestick/{l18}" as R
-participant "BRS BrsApiClient" as BRS
+participant "Yahoo Finance Client" as YF
 
 User -> FE : GET /api/v1/market/live/candlestick/{l18}
 FE -> R : request
-R -> BRS : get_candlestick(l18, candle_type)
-BRS --> R : upstream JSON payload
+R -> YF : get_candlestick(l18, candle_type)
+YF --> R : upstream JSON payload
 R --> FE : 200 upstream response
 @enduml
 ```

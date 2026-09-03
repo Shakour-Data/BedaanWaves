@@ -20,7 +20,6 @@ The Portfolio page enables users to manage their investment portfolios, track pe
 - Real-time valuation updates via WebSocket
 - Tax-lot accounting for accurate P&L
 - Support for multi-currency portfolios
-- Integration with crypto and traditional assets
 - Export to CSV/PDF for reporting
 
 ## API Integration

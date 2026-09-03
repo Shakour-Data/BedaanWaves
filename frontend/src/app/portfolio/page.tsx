@@ -10,6 +10,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
+import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 
 import { t } from "@/lib/i18n";
 
@@ -45,17 +46,19 @@ export default function PortfolioPage() {
           
           const prices = pricesRes.data?.data || {};
           
-          const enrichedHoldings: AssetRow[] = holdingsData.map((h: any) => {
-            const asset = assetMap.get(h.asset_id);
-            return {
-              symbol: asset?.symbol || "Unknown",
-              name: asset?.name || "Unknown",
-              market: asset?.market || "NASDAQ",
-              price: prices[asset?.symbol]?.price ?? h.entry_price ?? 0,
-              changePct: prices[asset?.symbol]?.change_pct ?? 0,
-              quantity: Number(h.quantity),
-              avg_price: Number(h.entry_price) };
-          });
+          const enrichedHoldings: AssetRow[] = holdingsData
+            .map((h: any) => {
+              const asset = assetMap.get(h.asset_id);
+              return {
+                symbol: asset?.symbol || "Unknown",
+                name: asset?.name || "Unknown",
+                market: asset?.market || "NASDAQ",
+                price: prices[asset?.symbol]?.price ?? h.entry_price ?? 0,
+                changePct: prices[asset?.symbol]?.change_pct ?? 0,
+                quantity: Number(h.quantity),
+                avg_price: Number(h.entry_price) };
+            })
+            .filter((h: AssetRow) => isNasdaqEquityLike(h));
           
           setHoldings(enrichedHoldings);
           

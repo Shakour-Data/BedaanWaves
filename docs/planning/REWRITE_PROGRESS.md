@@ -29,7 +29,7 @@
 - [x] Technical indicators configuration
 - [x] NLP configuration (Persian support)
 - [x] Portfolio & Risk management configuration
-- [x] Multi-asset (crypto) configuration
+- [x] Multi-asset configuration
 
 **Settings Added**: 100+
 **Configuration Groups**: 15+
@@ -67,8 +67,7 @@
 5. NLP Services (5): Sentiment, News, Entity, Summary
 6. User Services (6): Auth, Portfolio, Alerts
 7. Specialized Services (5): Hierarchy, Backtest, Optimization
-8. Crypto Services (5): Multi-asset analysis
-9. System Services (6): Monitoring, Backup, Recovery
+8. System Services (6): Monitoring, Backup, Recovery
 
 **Total Services**: 50+
 **Files Created**: 6
@@ -96,7 +95,7 @@
 - [x] HealthChecker (System monitoring)
 
 #### 3.2: Tier 2 - Data Services  COMPLETE
-- [x] BrsApiClient (Tehran Stock Exchange)
+- [x] YahooFinanceClient (NASDAQ API)
 - [x] StockService
 - [x] MarketService
 - [x] PortfolioService
@@ -119,7 +118,6 @@
 - [x] EnsembleService
 - [x] FeatureEngineeringService
 - [x] CoefficientLearningService
-- [x] CryptoMLService
 - [x] PatternRecognitionService
 - [x] RecommendationService
 - [x] PortfolioOptimizationService
@@ -145,14 +143,7 @@
 - [x] ScreeningService (flexible universe filtering)
 - [x] ComparisonService (cross-symbol metric comparison)
 - [x] CorrelationService (return correlation matrix & pair detection)
-- [x] CalendarService (TSE trading days & corporate events)
-
-#### 3.8: Tier 8 - Crypto Services  PARTIAL (3/5)
-- [x] CryptoPriceService
-- [x] CryptoPortfolioService
-- [x] CryptoMLService (Analysis)
-- [ ] CryptoNewsService
-- [ ] ArbitrageService
+- [x] CalendarService (NASDAQ trading days & corporate events)
 
 #### 3.9: Tier 9 - System Services  PARTIAL (3/6)
 - [x] SchedulerService
@@ -169,7 +160,6 @@
 - [x] Portfolio Routes
 - [x] Alert/Notification Routes
 - [x] News Routes
-- [x] Crypto Routes
 - [x] System Routes
 - [x] Health & Status Routes
 - [x] ML Routes
@@ -213,7 +203,6 @@
 - [x] Established Domain Shared components (Result, Optional, Exceptions)
 - [x] Refactored Core Infrastructure (ConfigService, LoggerService, CacheService, DependencyContainer, AioHttpClient)
 - [x] Refactored Scoring Domain (Dimension VO, StockScore Entity, ScoringEngine Domain Service)
-- [x] Refactored Crypto Module (Part 1: PriceService, ArbitrageService, IngestionService, Repositories)
 - [ ] Refactor remaining 40+ services to follow Clean Architecture
 - [ ] Achieve > 90% Unit Test coverage with AAA pattern
 - [ ] Enforce < 10 lines per method and < 200 lines per class across entire project
@@ -249,13 +238,6 @@
 - ML coefficient learning captured
 - Persian NLP pipeline documented
 - Sentiment analysis framework captured
-
-### From CryptoAndStocks (Multi-Asset)
- **Consolidation Achieved**:
-- Multi-asset support architecture documented
-- Cryptocurrency APIs integrated
-- Multi-chain support planned
-- DeFi protocol analysis planned
 
 ### From .kilo (Configuration)
  **Consolidation Achieved**:
@@ -318,8 +300,7 @@
 ##  Next Steps
 
 ### Immediate (This Week)
-1. Implement remaining Crypto services (News, Arbitrage)
-2. Implement remaining System services (Backup, Logging, NotificationDispatcher)
+1. Implement remaining System services (Backup, Logging, NotificationDispatcher)
 3. Create Alembic migrations for database schema
 4. Add unit tests for Tiers 2-4 services
 
@@ -346,7 +327,7 @@
 - **50+ backend services** from Bedaan4D-ML
 - **6D scoring with 305-node hierarchy** from Bedaan6D-project
 - **ML models & NLP** from Bedaan_4D_AI
-- **Multi-asset support** from CryptoAndStocks
+- **Multi-asset support** from portfolio modules
 - **Configuration framework** from .kilo
 
 ### Technologies Integrated
@@ -402,7 +383,7 @@
 
 ---
 
-**Status**: Phase 3 ~85% Complete — Tiers 1-7 fully implemented (35 services), Tier 8 Crypto (3/5), Tier 9 System (3/6), API routes mostly complete  
+**Status**: Phase 3 ~85% Complete — Tiers 1-7 fully implemented (35 services), Tier 9 System (3/6), API routes mostly complete  
 **Note**: This document now reflects actual implementation status. AGENTS.md is the source of truth for service status.  
-**Estimated Completion**: Remaining Crypto/System services + DB migrations + tests + frontend  
+**Estimated Completion**: Remaining System services + DB migrations + tests + frontend  
 **Quality Grade**: A (Architecture & Documentation)

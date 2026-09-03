@@ -53,7 +53,7 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **BrsApiClient** | `app.services.data.brs_api_client` |  Yes | LoggerService | Tehran Stock Exchange API integration |
+| **YahooFinanceClient** | `app.services.data.yahoo_finance_client` |  Yes | LoggerService | NASDAQ market data API integration |
 | **StockService** | `app.services.data.stock_service` |  Yes | DatabaseService, LoggerService | Stock data management and operations |
 | **MarketService** | `app.services.data.market_service` |  Yes | DatabaseService, LoggerService | Market data aggregation and analysis |
 | **PortfolioService** | `app.services.data.portfolio_service` |  Yes | DatabaseService, LoggerService | Portfolio operations and management |
@@ -63,8 +63,8 @@ Services are organized by:
 | **MarketDataProcessing** | `app.services.data.market_data_processing` |  No | LoggerService | Market data cleaning and validation |
 | **IntlApiClient** | `app.services.data.intl_api_client` |  Yes | LoggerService | International market APIs integration |
 | **DataValidationService** | `app.services.data.data_validation_service` |  No | LoggerService | Data integrity validation |
-| **FinancialDataIngestService** | `app.services.data.financial_data_ingest_service` |  No | LoggerService | Financial statements ingestion (CODAL, Yahoo, AlphaVantage) |
-| **StockFundamentalDataIngestionService** | `app.services.data.stock_fundamental_ingestion_service` |  No | LoggerService | Fundamental data pipeline (Iran/US/International) |
+| **FinancialDataIngestService** | `app.services.data.financial_data_ingest_service` |  No | LoggerService | Financial statements ingestion (Yahoo, AlphaVantage) |
+| **StockFundamentalDataIngestionService** | `app.services.data.stock_fundamental_ingestion_service` |  No | LoggerService | Fundamental data pipeline (US/International) |
 
 **Implementation Status**: 6/13 (46%) Complete
 **Characteristics**: Mixed singleton/lifecycle services, some services in development
@@ -104,7 +104,7 @@ Services are organized by:
 
 | Service Name | Class Location | Singleton | Dependencies | Purpose |
 |-------------|----------------|-----------|--------------|---------|
-| **SentimentAnalysisService** | `app.services.nlp.sentiment_analysis_service` |  Yes | LoggerService | Persian and multi-language sentiment analysis |
+| **SentimentAnalysisService** | `app.services.nlp.sentiment_analysis_service` |  Yes | LoggerService | English and multi-language sentiment analysis |
 | **NewsSummarizationService** | `app.services.nlp.news_summarization_service` |  No | LoggerService | Automatic text summarization |
 | **DocumentExtractionService** | `app.services.nlp.document_extraction_service` |  No | LoggerService | PDF and document text extraction |
 | **ChatbotService** | `app.services.nlp.chatbot_service` |  No | LoggerService | Conversational AI for user assistance |
@@ -172,7 +172,7 @@ System Services → LoggerService, potentially other SystemServices
 ```
 
 ### External Service Dependencies
-- **BRS API**: BrsApiClient
+ - **Yahoo Finance API**: YahooFinanceClient
 - **International Markets**: IntlApiClient
 - **News Sources**: NewsService with external API clients
 - **ML Models**: Remote model endpoints, local model storage
@@ -278,7 +278,7 @@ External APIs → Data Services (Ingestion) → Database Services (Storage)
 - **ISO 27001**: Information security management principles
 - **SOC 2**: Trust service principles for availability and security
 - **PCI DSS**: Considered for payment-related features (when applicable)
-- **Industry Regulations**: Iran financial regulations, international compliance
+ - **Industry Regulations**: US financial regulations, international compliance
 
 ## Service Testing & Quality Assurance
 

@@ -6,7 +6,7 @@ This level shows the process for accessing/fetching market data.
 - `GET /market/symbols` (from DB)
 - `GET /market/price-history` (from DB)
 - `GET /market/latest-prices` (from DB)
-- `GET /market/live/*` (proxy to BRS API)
+- `GET /market/live/*` (proxy to Yahoo Finance API)
 
 ## Diagram (Mermaid)
 ```mermaid
@@ -36,10 +36,9 @@ flowchart TD
   subgraph LiveFlow[Live Proxy Flow]
     R4 --> LIVE1[market/live router
 /history/{l18}]
-    LIVE1 --> BRS[BRS API brsapi.ir
-History.php]
-    BRS --> LIVE1
-  end
+    LIVE1 --> YF[Yahoo Finance API
+    YF --> LIVE1
+   end
 
   MKT1 --> RESP1[200 Response]
   MKT2 --> RESP2[200 Response]
@@ -52,4 +51,4 @@ History.php]
 - **DB Entities**:
   - Asset
   - PriceCandle
-- **Upstream Entities** (Live): JSON output of BRS API
+- **Upstream Entities** (Live): JSON output of Yahoo Finance API

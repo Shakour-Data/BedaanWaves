@@ -41,19 +41,40 @@ const ALLOWED_MARKETS = new Set(["NASDAQ"]);
  * backend is supposed to enforce the same rule, but if a stale cache,
  * a partial migration, or a new endpoint ever leaks a non-Nasdaq row,
  * the UI will not surface it.
+ *
+ * Returns ``true`` when the row passes all filters (i.e. is a Nasdaq
+ * equity/ETF). Returns ``false`` when the row is explicitly tagged as
+ * a non-Nasdaq instrument OR carries a crypto-style symbol suffix
+ * (e.g. ``BTC-USD``, ``ETHUSDT``).
+ *
+ * The ``market`` field is optional. Many backend responses (e.g.
+ * ``top_performers`` on the general dashboard) omit the field because
+ * the list is already pre-filtered on the server; in that case we only
+ * reject on symbol-shape signals (crypto suffixes), not on a missing
+ * market tag.
  */
 export function isNasdaqEquityLike(row: {
   market?: string | null;
   symbol?: string | null;
 }): boolean {
+  // Explicit non-Nasdaq market tag → reject.
   if (row.market && !ALLOWED_MARKETS.has(row.market)) return false;
+
   const sym = (row.symbol ?? "").toUpperCase();
-  // yfinance's crypto tickers use suffixes like "-USD" (BTC-USD); filter
-  // those out even if the backend says "NASDAQ" (defense in depth).
-  if (sym.endsWith("-USD") || sym.endsWith("USD")) {
-    // Keep legit "USD" pairs from real Nasdaq-listed ETFs (e.g. "USD" by
-    // itself is not a real ticker) — but drop crypto-style suffixes.
-    if (sym.includes("-USD") || /^[A-Z]{2,5}USD$/.test(sym)) return false;
+  if (!sym) return false;
+
+  // Crypto-style suffixes from yfinance / Binance / Coinbase. Legitimate
+  // Nasdaq tickers are 1-5 uppercase letters; crypto pairs add "-USD",
+  // "USDT", "USDC" or similar.
+  if (sym.endsWith("-USD") || sym.endsWith("-USDT") || sym.endsWith("-USDC")) {
+    return false;
+  }
+  if (
+    /^[A-Z]{2,5}(USD|USDT|USDC|BUSD|DAI)$/.test(sym)
+  ) {
+    // e.g. BTCUSDT, ETHUSD, SOLUSDC — these are crypto pairs, not Nasdaq
+    // equities, regardless of what the backend ``market`` field says.
+    return false;
   }
   return true;
 }

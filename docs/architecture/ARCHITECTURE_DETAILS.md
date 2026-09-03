@@ -38,10 +38,10 @@ CREATE TABLE assets (
     
     -- Classification
     asset_class VARCHAR(20) NOT NULL CHECK (asset_class IN (
-        'EQUITY', 'ETF', 'CRYPTO', 'COMMODITY', 'BOND', 'INDEX'
+        'EQUITY', 'ETF', 'BOND', 'INDEX'
     )),
     market VARCHAR(20) NOT NULL CHECK (market IN (
-        'TSE', 'OTC', 'BINANCE', 'KRAKEN', 'NYSE', 'NASDAQ'
+        'OTC', 'NYSE', 'NASDAQ'
     )),
     
     -- Hierarchy
@@ -51,7 +51,7 @@ CREATE TABLE assets (
     
     -- Geographic
     country_code CHAR(2),
-    currency VARCHAR(3) NOT NULL DEFAULT 'IRR',
+        currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     
     -- Metadata
     isin_code VARCHAR(12),
@@ -69,9 +69,8 @@ CREATE TABLE assets (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     CONSTRAINT valid_classification CHECK (
-        (asset_class = 'EQUITY' AND market IN ('TSE', 'OTC')) OR
-        (asset_class = 'CRYPTO' AND market IN ('BINANCE', 'KRAKEN')) OR
-        (asset_class = 'ETF' AND market IN ('TSE', 'NYSE')) OR
+        (asset_class = 'EQUITY' AND market IN ('NASDAQ', 'OTC')) OR
+        (asset_class = 'ETF' AND market IN ('NASDAQ', 'NYSE')) OR
         true
     )
 );
@@ -301,7 +300,7 @@ def upgrade():
     # Step 2: Migrate data from old tables
     op.execute("""
         INSERT INTO assets (symbol, name, asset_class, market, active, created_at, updated_at)
-        SELECT ticker, name, 'EQUITY', 'TSE', true, created_at, updated_at
+        SELECT ticker, name, 'EQUITY', 'NASDAQ', true, created_at, updated_at
         FROM bedaan4d_ml.stocks
         WHERE active = true
     """)
@@ -311,7 +310,7 @@ def upgrade():
         CREATE VIEW bedaan4d_ml.stocks AS
         SELECT symbol as ticker, name, market, sector, active, created_at, updated_at
         FROM assets
-        WHERE asset_class = 'EQUITY' AND market = 'TSE'
+        WHERE asset_class = 'EQUITY' AND market = 'NASDAQ'
     """)
     
     # Step 4: Add indexes and constraints
@@ -352,8 +351,8 @@ Retrieve available trading symbols with metadata.
 **Parameters:**
 ```json
 {
-  "asset_class": "EQUITY|CRYPTO|ETF",
-  "market": "TSE|OTC|BINANCE",
+  "asset_class": "EQUITY|ETF",
+  "market": "NASDAQ|OTC|NYSE",
   "sector": "string (optional)",
   "limit": 100,
   "offset": 0,
@@ -368,13 +367,13 @@ Retrieve available trading symbols with metadata.
   "data": [
     {
       "id": "uuid",
-      "symbol": "FSPD",
-      "name": "Foolad",
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
       "asset_class": "EQUITY",
-      "market": "TSE",
-      "sector": "Metals & Mining",
-      "country_code": "IR",
-      "currency": "IRR",
+      "market": "NASDAQ",
+      "sector": "Technology",
+      "country_code": "US",
+      "currency": "USD",
       "active": true,
       "listing_date": "1990-01-01"
     }
@@ -636,7 +635,7 @@ Create new alert.
 #### 1. Market Data Service
 
 **Responsibilities:**
-- Fetch data from external APIs (BRS, Binance, etc.)
+- Fetch data from external APIs (Yahoo Finance, Intl API, etc.)
 - Normalize and validate data
 - Store in PostgreSQL
 - Provide data query API
@@ -663,27 +662,16 @@ class DataProvider(ABC):
     ) -> List[Candle]:
         pass
 
-class BRSProvider(DataProvider):
+class YahooFinanceProvider(DataProvider):
     def __init__(self, api_key: str):
-        self.client = BRSAPIClient(api_key)
+        self.client = YahooFinanceClient(api_key)
     
     async def get_symbols(self) -> List[Symbol]:
-        # Fetch from BRS API and normalize
+        # Fetch from Yahoo Finance API and normalize
         pass
     
     async def get_price_history(...) -> List[Candle]:
         # Fetch OHLCV and normalize
-        pass
-
-class CryptoProvider(DataProvider):
-    def __init__(self):
-        self.exchanges = {
-            'BINANCE': BinanceClient(),
-            'KRAKEN': KrakenClient()
-        }
-    
-    async def get_symbols(self) -> List[Symbol]:
-        # Aggregate from multiple exchanges
         pass
 
 class DataAggregator:

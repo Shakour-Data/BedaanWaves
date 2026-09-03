@@ -26,7 +26,7 @@ package "Auth / User" {
 }
 
 package "Market / Data Access" {
-  [BrsApiClient] as BRS_CLIENT
+  [YahooFinanceClient] as YF_CLIENT
   [StockService] as STOCK_S
   [MarketService] as MARKET_S
   [HistoryService] as HISTORY_S
@@ -69,7 +69,7 @@ package "System" {
 [ML] --> [PostgreSQL] : candles -> features -> results
 [Auth / User] --> [PostgreSQL] : user/roles/notifications
 
-[Market / Data Access] --> [BRS API] : upstream requests
+  [Market / Data Access] --> [Yahoo Finance API] : upstream requests
 [ML] --> [PostgreSQL] : store ML results
 [FastAPI Routers] --> [System] : enqueue/run jobs
 
@@ -77,5 +77,5 @@ package "System" {
 ```
 
 ## Notes
-- Some routes (e.g. `live/*`) are direct proxies to the BRS API and do not need the DB.
+- Some routes (e.g. `live/*`) are direct proxies to the Yahoo Finance API and do not need the DB.
 - Some routes (e.g. `/analysis/technical/{symbol}`) use data stored in the DB.

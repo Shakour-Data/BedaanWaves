@@ -1,7 +1,7 @@
 # BedaanWaves - NLP Services
 
 ## Overview
-Natural Language Processing services for Persian and English financial text analysis, including sentiment analysis, news summarization, document extraction, and conversational AI.
+Natural Language Processing services for English language financial text analysis, including sentiment analysis, news summarization, document extraction, and conversational AI.
 
 ## Key NLP Services
 
@@ -9,7 +9,6 @@ Natural Language Processing services for Persian and English financial text anal
 Multi-language sentiment analysis focused on financial news and social media.
 
 **Features:**
-- Persian language support (Hazm, ParsBERT)
 - English support (FinBERT, VADER)
 - News source credibility weighting
 - Real-time sentiment scoring (-1 to +1)

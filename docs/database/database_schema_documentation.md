@@ -80,7 +80,7 @@ This document details the complete database schema for the BedaanWaves platform,
 | Column Name | Data Type | Constraints | Description |
 |-------------|-----------|-------------|-------------|
 | data_id | BIGINT | PK, AI, NOT NULL | Unique data point ID |
-| symbol | VARCHAR(20) | FK, NOT NULL | Stock/crypto symbol |
+| symbol | VARCHAR(20) | FK, NOT NULL | Stock symbol |
 | timestamp | DATETIME | NOT NULL | Data capture timestamp |
 | open_price | DECIMAL(18,8) | NOT NULL | Opening price |
 | high_price | DECIMAL(18,8) | NOT NULL | High price |
@@ -131,9 +131,9 @@ This document details the complete database schema for the BedaanWaves platform,
 
 | Column Name | Data Type | Constraints | Description |
 |-------------|-----------|-------------|-------------|
-| symbol | VARCHAR(20) | PK, NOT NULL | Stock/crypto ticker symbol |
+| symbol | VARCHAR(20) | PK, NOT NULL | Stock ticker symbol |
 | name | VARCHAR(255) | NOT NULL | Full security name |
-| security_type | ENUM('STOCK','ETF','CRYPTO','INDEX') | NOT NULL | Type of security |
+| security_type | ENUM('STOCK','ETF','INDEX') | NOT NULL | Type of security |
 | exchange | VARCHAR(50) | NOT NULL | Primary exchange |
 | currency | VARCHAR(10) | NOT NULL | Trading currency |
 | sector | VARCHAR(100) | NULLABLE | Industry sector |

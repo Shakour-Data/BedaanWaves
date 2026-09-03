@@ -77,11 +77,10 @@ Macro analysis evaluates securities based on broader economic and market factors
 ### US-Specific Factors
 
 - **US GDP Growth**: Domestic economic expansion
-- **Sanctions Impact**: International trade restrictions
-- **Currency Devaluation**: Rial exchange rate pressures
+- **Federal Reserve Policy**: Monetary policy impact
 - **Inflation Rate**: Domestic price level changes
-- **Oil Exports**: Energy revenue flows
-- **Subsidy Removal**: Government fiscal policy impact
+- **Employment Data**: Labor market indicators
+- **Consumer Spending**: Domestic demand trends
 
 ### Global Market Factors
 - **US Dollar Strength**: Currency impact on global markets

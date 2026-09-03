@@ -4,7 +4,7 @@
 The News page aggregates market news from multiple sources, provides sentiment analysis, and allows users to filter and save articles.
 
 ## Key Features
-- **News Aggregation**: Real-time news from 50+ sources (international markets, crypto)
+- **News Aggregation**: Real-time news from 50+ sources (international markets)
 - **Sentiment Analysis**: AI-powered sentiment scoring (positive/negative/neutral)
 - **Filtering**: Filter by sector, asset class, importance, date range
 - **Personalized Feed**: User preferences influence article ordering

@@ -47,7 +47,7 @@ This document provides an accurate, verified implementation status across all se
 
 | Service | Class | File Location | Tests | Dependencies |
 |---------|-------|---------------|-------|--------------|
-| BrsApiClient | `BrsApiClient` | `app/services/data/brs_api_client.py` |  | LoggerService |
+| **YahooFinanceClient** | `YahooFinanceClient` | `app/services/data/yahoo_finance_client.py` |  | LoggerService |
 | StockService | `StockService` | `app/services/data/stock_service.py` |  | DatabaseService, LoggerService |
 | MarketService | `MarketService` | `app/services/data/market_service.py` |  | DatabaseService, LoggerService |
 | PortfolioService | `PortfolioService` | `app/services/data/portfolio_service.py` |  | DatabaseService, LoggerService |
@@ -63,7 +63,7 @@ This document provides an accurate, verified implementation status across all se
 | IntlApiClient | `IntlApiClient` | `app/services/data/intl_api_client.py` | **P0** | No international market data |
 
 | DataValidationService | `DataValidationService` | `app/services/data/data_validation_service.py` | **P1** | No data quality checks |
-| FinancialDataIngestService | `FinancialDataIngestService` | `app/services/data/financial_data_ingest_service.py` | **P1** | No CODAL/Yahoo/AlphaVantage ingestion |
+| FinancialDataIngestService | `FinancialDataIngestService` | `app/services/data/financial_data_ingest_service.py` | **P1** | No Yahoo/AlphaVantage ingestion |
 | StockFundamentalDataIngestionService | `StockFundamentalDataIngestionService` | `app/services/data/stock_fundamental_ingestion_service.py` | **P1** | No fundamental data pipeline |
 
 **Impact**: Without these 7 services, the platform cannot:
@@ -194,8 +194,8 @@ This document provides an accurate, verified implementation status across all se
 
 | Phase | Services Required | Estimated Effort | Dependencies |
 |-------|-------------------|------------------|--------------|
-| **Phase 1: Data Pipeline** | IngestionService, MarketDataProcessing, IntlApiClient, DataValidationService | 3-4 weeks | BRS API, Alpha Vantage APIs |
-| **Phase 2: Fundamental Data** | FinancialDataIngestService, StockFundamentalDataIngestionService | 2-3 weeks | CODAL API access, Yahoo Finance API |
+| **Phase 1: Data Pipeline** | IngestionService, MarketDataProcessing, IntlApiClient, DataValidationService | 3-4 weeks | Yahoo Finance API, Alpha Vantage APIs |
+| **Phase 2: Fundamental Data** | FinancialDataIngestService, StockFundamentalDataIngestionService | 2-3 weeks | Yahoo Finance API access |
 | **Phase 3: System Operations** | BackupService, LoggingService, NotificationDispatcher, DataIntegrityService | 2-3 weeks | PostgreSQL backup tools, ELK/Loki stack |
 | **Phase 4: Remaining Specialized** | SectorFilterService, PeerComparisonService | 1-2 weeks | Depends on Phase 1-2 |
 

@@ -10,6 +10,7 @@ import logging
 from app.db.base import get_async_session
 from app.models.models import Asset, ScoreHistory
 from app.services.analysis.dashboard_service import DashboardService
+from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
@@ -194,75 +195,17 @@ async def get_score_trend(
             detail="Only the NASDAQ market is supported by /dashboard/score-trend.",
         )
     try:
-        cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
+        # Prefer the precomputed ``market_score_trend`` table populated by
+        # the daily ``MarketScoreTrendRecompute`` scheduler job. Fall back to
+        # the on-the-fly aggregation if rows are missing (e.g. before the
+        # first scheduler run after the migration).
+        trend_service = MarketScoreTrendService()
+        series = await trend_service.get_trend(days=days, market=market, db=db)
+        source = "precomputed"
 
-        # The score trend is restricted to Nasdaq-listed equities + ETFs.
-        # Crypto, forex, commodities, bonds, indexes, and non-Nasdaq
-        # equities are never aggregated into the trend, even if they
-        # somehow have a ``ScoreHistory`` row.
-        market_filter = and_(
-            Asset.market == "NASDAQ",
-            Asset.asset_class.in_(["EQUITY", "ETF"]),
-        )
-
-        # Build a per-dimension AVG() expression that pulls the value out of
-        # the JSONB ``dimension_scores`` column. ``has_key`` is used so legacy
-        # rows that miss a particular dimension are excluded from the average
-        # (treated as NULL) instead of dragging the mean down to zero.
-        dim_exprs = []
-        for dim in DIMENSIONS:
-            expr = func.coalesce(
-                func.avg(
-                    case(
-                        (
-                            ScoreHistory.dimension_scores.has_key(dim),
-                            func.cast(ScoreHistory.dimension_scores[dim], Numeric(10, 4)),
-                        ),
-                        else_=None,
-                    )
-                ),
-                0.0,
-            ).label(f"avg_{dim}")
-            dim_exprs.append(expr)
-
-        # ``overall_score`` is aliased to avg_score for backward compatibility
-        # with the original 2-field payload.
-        query = (
-            select(
-                ScoreHistory.date.label("date"),
-                func.avg(ScoreHistory.overall_score).label("avg_score"),
-                *dim_exprs,
-                func.count(func.distinct(ScoreHistory.asset_id)).label("symbol_count"),
-            )
-            .join(Asset, Asset.id == ScoreHistory.asset_id)
-            .where(
-                and_(
-                    Asset.active == True,
-                    market_filter,
-                    ScoreHistory.date >= cutoff,
-                )
-            )
-            .group_by(ScoreHistory.date)
-            .order_by(ScoreHistory.date.asc())
-        )
-
-        result = await db.execute(query)
-        rows = result.all()
-
-        series = []
-        for row in rows:
-            avg_dims = {
-                dim: round(float(getattr(row, f"avg_{dim}") or 0.0), 4)
-                for dim in DIMENSIONS
-            }
-            series.append(
-                {
-                    "date": row.date.isoformat(),
-                    "avg_score": round(float(row.avg_score or 0.0), 4),
-                    "avg_dimensions": avg_dims,
-                    "symbol_count": int(row.symbol_count or 0),
-                }
-            )
+        if not series:
+            series = await _aggregate_score_trend_on_the_fly(db, days=days)
+            source = "on_the_fly_fallback"
 
         # Compute day-over-day deltas on the server so the client can plot
         # them directly. The first day is reported with a delta of 0.
@@ -291,8 +234,79 @@ async def get_score_trend(
             "count": len(series),
             "dimensions": list(DIMENSIONS),
             "series": series,
+            "source": source,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as exc:
         logger.error(f"Score trend error: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+async def _aggregate_score_trend_on_the_fly(
+    db: AsyncSession, days: int
+) -> list:
+    """Fallback aggregator: same SQL as the original endpoint.
+
+    Used only when the precomputed ``market_score_trend`` table has no rows
+    for the requested window. Kept as a private helper so the response shape
+    stays identical to the precomputed path.
+    """
+    DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
+    cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    market_filter = and_(
+        Asset.market == "NASDAQ",
+        Asset.asset_class.in_(["EQUITY", "ETF"]),
+    )
+
+    dim_exprs = []
+    for dim in DIMENSIONS:
+        expr = func.coalesce(
+            func.avg(
+                case(
+                    (
+                        ScoreHistory.dimension_scores.has_key(dim),
+                        func.cast(ScoreHistory.dimension_scores[dim], Numeric(10, 4)),
+                    ),
+                    else_=None,
+                )
+            ),
+            0.0,
+        ).label(f"avg_{dim}")
+        dim_exprs.append(expr)
+
+    query = (
+        select(
+            ScoreHistory.date.label("date"),
+            func.avg(ScoreHistory.overall_score).label("avg_score"),
+            *dim_exprs,
+            func.count(func.distinct(ScoreHistory.asset_id)).label("symbol_count"),
+        )
+        .join(Asset, Asset.id == ScoreHistory.asset_id)
+        .where(
+            and_(
+                Asset.active == True,  # noqa: E712
+                market_filter,
+                ScoreHistory.date >= cutoff,
+            )
+        )
+        .group_by(ScoreHistory.date)
+        .order_by(ScoreHistory.date.asc())
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    series = []
+    for row in rows:
+        avg_dims = {
+            dim: round(float(getattr(row, f"avg_{dim}") or 0.0), 4)
+            for dim in DIMENSIONS
+        }
+        series.append({
+            "date": row.date.isoformat(),
+            "avg_score": round(float(row.avg_score or 0.0), 4),
+            "avg_dimensions": avg_dims,
+            "symbol_count": int(row.symbol_count or 0),
+        })
+    return series

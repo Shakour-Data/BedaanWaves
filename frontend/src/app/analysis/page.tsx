@@ -12,6 +12,7 @@ import {
   fetchScoring 
 } from "@/lib/api/stocks";
 import type { AssetRow } from "@/lib/dashboard-data";
+import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -42,12 +43,14 @@ export default function AnalysisPage() {
         if (!active) return;
 
         const symbolMap = new Map(symbolsRes.data.map((s: any) => [s.symbol, s.name]));
-        const movers: AssetRow[] = (performersRes.data.data ?? []).map((p: any) => ({
-          symbol: p.symbol,
-          name: symbolMap.get(p.symbol) || p.name || "",
-          market: "NASDAQ",
-          price: p.current_price,
-          changePct: p.change_percent }));
+        const movers: AssetRow[] = (performersRes.data.data ?? [])
+          .filter((p: any) => isNasdaqEquityLike({ symbol: p.symbol }))
+          .map((p: any) => ({
+            symbol: p.symbol,
+            name: symbolMap.get(p.symbol) || p.name || "",
+            market: "NASDAQ",
+            price: p.current_price,
+            changePct: p.change_percent }));
         setTopMovers(movers.slice(0, 5));
 
         // Fetch detailed analysis for the top symbol if available

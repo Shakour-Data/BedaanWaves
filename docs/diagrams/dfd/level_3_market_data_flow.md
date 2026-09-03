@@ -17,8 +17,8 @@ flowchart TD
   MK --> FE
 
   FE -->|GET /market/live/*| L[Market Live Router]
-  L -->|HTTP upstream calls| BRS[BRS API]
-  BRS -->|upstream JSON| L
+  L -->|HTTP upstream calls| YF[Yahoo Finance API]
+  YF -->|upstream JSON| L
   L --> FE
 
   %% Internal normalization notes
@@ -34,6 +34,6 @@ flowchart TD
   - sorting and limit
 
 ## Data Flows (Live Proxy)
-- `BrsApiClient` calls BRS API for:
-  - AllSymbols / Symbol / Candlestick / History / Transaction / Shareholder / Index / Codal ...
+- `YahooFinanceClient` calls Yahoo Finance API for:
+  - AllSymbols / Symbol / Candlestick / History
 - The output is returned to the client with minimal processing (almost pass-through).

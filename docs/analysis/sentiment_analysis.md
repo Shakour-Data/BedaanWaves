@@ -12,7 +12,7 @@ Sentiment analysis evaluates market sentiment through analysis of news, social m
 | **Level 1** | **Sentiment** (15% weight) |
 | **Level 2** | `News_Sentiment`, `Social_Media_Sentiment`, `Analyst_Sentiment` |
 | **Level 3 – News_Sentiment** | Article Classification, Source Credibility, Temporal Momentum |
-| **Level 4 – News Sub-Aspects** | `Persian_NLP_Score`, `English_NLP_Score`, `Topic_Relevance_Direct`, `Topic_Relevance_Indirect`, `Source_Trust_Score`, `Recency_Weight_24h`, `Recency_Weight_7d`, `Sentiment_Momentum_1d`, `Sentiment_Momentum_7d` |
+| **Level 4 – News Sub-Aspects** | `English_NLP_Score`, `Topic_Relevance_Direct`, `Topic_Relevance_Indirect`, `Source_Trust_Score`, `Recency_Weight_24h`, `Recency_Weight_7d`, `Sentiment_Momentum_1d`, `Sentiment_Momentum_7d` |
 | **Level 3 – Social_Media_Sentiment** | Volume Analysis, Influencer Impact, Trend Detection |
 | **Level 4 – Social Sub-Aspects** | `Mention_Volume_Daily`, `Positive_Negative_Ratio`, `Influencer_Reach_Weighted`, `Retail_vs_Institutional_Split`, `Geographic_Sentiment_Index`, `Viral_Spike_Detection`, `Hashtag_Sentiment_Score`, `Emoji_Sentiment_Adjustment` |
 | **Level 3 – Analyst_Sentiment** | Rating Consensus, Price Target Changes, Earnings Revisions |
@@ -37,7 +37,7 @@ Sentiment analysis evaluates market sentiment through analysis of news, social m
 - **Source Credibility**: Weighting by source reliability and authority
 - **Topic Relevance**: Direct vs. indirect mentions
 - **Timeliness**: Recency weighting (more recent news weighted higher)
-- **Language Analysis**: Persian and international news sentiment
+- **Language Analysis**: English and international news sentiment
 
 ### Social Media Sentiment
 - **Social Volume**: Mentions across platforms
@@ -58,15 +58,15 @@ Sentiment analysis evaluates market sentiment through analysis of news, social m
 
 ## Natural Language Processing (NLP) Components
 
-### Persian Language Processing
-- **Persian Sentiment Models**: Custom-trained models for Farsi text
-- **Named Entity Recognition**: Company and entity identification in Persian text
-- **Context Understanding**: Handling Persian linguistic nuances
-- **Dialect Handling**: Various Persian language variants
+### English Language Processing
+- **English Sentiment Models**: Pre-trained models for English text
+- **Named Entity Recognition**: Company and entity identification in English text
+- **Context Understanding**: Handling English linguistic nuances
+- **Dialect Handling**: Various English language variants
 - **Informal Language Processing**: Social media slang and abbreviations
 
 ### Multilingual Analysis
-- **Cross-language Sentiment**: Comparing Persian vs. English sentiment
+- **Cross-language Sentiment**: Comparing English vs. other language sentiment
 - **Translation Consistency**: Ensuring consistent sentiment across languages
 - **International News Impact**: Global news effect on local sentiment
 - **Currency Impact Analysis**: How international news affects local markets
@@ -74,7 +74,7 @@ Sentiment analysis evaluates market sentiment through analysis of news, social m
 ## Analysis Process
 1. **Data Collection**: Continuous scraping of news, social media, and analyst sources
 2. **Text Preprocessing**: Cleaning, normalization, tokenization of text data
-3. **Language Detection**: Identifying Persian vs. other language content
+3. **Language Detection**: Identifying primary language of content
 4. **Sentiment Scoring**: Applying NLP models to generate sentiment scores
 5. **Entity Recognition**: Linking sentiment to specific companies/sector
 6. **Temporal Analysis**: Tracking sentiment changes over time
@@ -85,7 +85,7 @@ Sentiment analysis evaluates market sentiment through analysis of news, social m
 11. **Final Aggregation**: Combining news, social, and analyst components
 
 ## Machine Learning Integration
-- **Transformer Models**: BERT-based models for Persian sentiment
+- **Transformer Models**: BERT-based models for English sentiment
 - **Ensemble Methods**: Combining multiple NLP approaches
 - **Temporal Models**: LSTM/GRU for sentiment time-series forecasting
 - **Anomaly Detection**: Identifying unusual sentiment spikes
@@ -123,14 +123,14 @@ flowchart TD
     subgraph Preprocessing[" Preprocessing"]
         A4 --> B1[Language Detection]
         B1 --> B2[Tokenization & Normalization]
-        B2 --> B3[Persian Morphology Processing]
+        B2 -->         B3[Text Normalization]
         B3 --> B4[Sarcasm Detection]
         B4 --> B5[Entity Linking]
         B5 --> B6[Cleaned Corpus]
     end
 
     subgraph ML_Processing[" ML Processing"]
-        B6 --> C1[BERT-based Persian Sentiment Model]
+        B6 -->         C1[BERT-based Sentiment Model]
         C1 --> C2[Ensemble Classifier]
         C2 --> C3[Temporal Convolutional Network]
         C3 --> C4[Anomaly Detection Layer]

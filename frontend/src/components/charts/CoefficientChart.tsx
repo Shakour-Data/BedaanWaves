@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   createChart,
-  BarSeries,
+  HistogramSeries,
   ColorType,
   CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
-  type BarData,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -82,8 +81,9 @@ export function CoefficientChart({ data, height = 360 }: CoefficientChartProps) 
     });
     chartRef.current = chart;
 
-    const series = chart.addSeries(BarSeries, {
-      priceFormat: { type: "volume" },
+    const series = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
+      priceScaleId: "right",
     });
     series.setData(chartData);
 
