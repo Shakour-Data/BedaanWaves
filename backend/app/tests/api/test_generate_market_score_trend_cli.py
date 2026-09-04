@@ -67,7 +67,3 @@ class TestGenerateMarketScoreTrendCLI(unittest.TestCase):
         start, parsed_end = self._with_args("2026-08-01")
         self.assertEqual(parsed_end, end)
         self.assertEqual(start, end - timedelta(days=29))
-
-
-if __name__ == "__main__":
-    unittest.main()

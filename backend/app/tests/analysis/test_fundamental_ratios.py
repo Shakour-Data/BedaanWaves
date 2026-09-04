@@ -189,7 +189,3 @@ class TestStockFundamentalAnalysis(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(result["ratios"]["pe_ratio"], 30.0, places=2)
         self.assertAlmostEqual(result["ratios"]["pb_ratio"], 2.0, places=2)
         self.assertAlmostEqual(result["ratios"]["roe"], 25.0, places=2)
-
-
-if __name__ == "__main__":
-    unittest.main()
