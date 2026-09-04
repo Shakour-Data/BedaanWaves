@@ -534,10 +534,15 @@ async def get_sub_aspect_trend(
             status_code=400,
             detail="Only the NASDAQ market is supported by /dashboard/sub-aspect-trend.",
         )
+    if not isinstance(latest, bool):
+        latest = False
+    if not isinstance(end_date, str):
+        end_date = None
+    if not isinstance(parent, str):
+        parent = None
     service = HierarchicalScoreTrendService()
     try:
-        latest = bool(latest)
-        end_dt = datetime.fromisoformat(end_date).date() if isinstance(end_date, str) and end_date else None
+        end_dt = datetime.fromisoformat(end_date).date() if end_date else None
         result = await service.get_trend(
             level="sub_aspect", days=days, market=market, parent=parent, latest=latest, end_date=end_dt, db=db,
         )
