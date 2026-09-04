@@ -26,7 +26,7 @@ export function InputField({
   id,
   ...props
 }: InputFieldProps) {
-  const inputId = id ?? `field-${label.replace(/\s+/g, "-").toLowerCase()}`;
+  const inputId = id ?? `field-${label.replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 32)}`;
   const messageId = `${inputId}-message`;
   const describedById = helpText ? `${inputId}-help` : undefined;
 

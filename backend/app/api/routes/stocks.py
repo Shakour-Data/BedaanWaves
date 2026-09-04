@@ -3,10 +3,14 @@
 All data is fetched live from yfinance. No hardcoded or mock data.
 """
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Header, Response
+from fastapi import APIRouter, Depends, Query, HTTPException, Header, Response, UploadFile, File
 from typing import List, Optional
 from datetime import datetime, timezone
 import logging
+import csv
+import io
+import json as json_module
+
 from app.core.utils import utc_now_iso
 
 from app.services.data.stock_service import StockService
@@ -236,28 +240,32 @@ async def export_portfolio_data(
 
 @router.post("/import", response_model=dict)
 async def import_portfolio_data(
-    file: str,
+    file: UploadFile = File(...),
     service: StockService = Depends(get_stock_service),
     response: Response = None
 ) -> dict:
-    """Import portfolio data from JSON or CSV format."""
     if response:
         _add_version_header(response, "v1")
-    
+
+    MAX_SIZE = 5 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=413, detail="File too large (max 5MB)")
+
     try:
-        if file.startswith('[{') or file.startswith('['):
-            data = __import__("json").loads(file)
-        elif file.startswith('{'):
-            data = __import__("json").loads(file)
+        text = content.decode("utf-8")
+        if text.strip().startswith('[{') or text.strip().startswith('['):
+            data = json_module.loads(text)
+        elif text.strip().startswith('{'):
+            data = json_module.loads(text)
         else:
-            import io, csv
-            csv_buffer = io.StringIO(file)
+            csv_buffer = io.StringIO(text)
             reader = csv.DictReader(csv_buffer)
             data = list(reader) if reader.fieldnames else []
-        
+
         imported = []
         errors = []
-        
+
         for item in data if isinstance(data, list) else [data]:
             if isinstance(item, dict) and "ticker" in item:
                 ticker = item.get("ticker")
@@ -266,7 +274,7 @@ async def import_portfolio_data(
                         imported.append(ticker)
                     except Exception as e:
                         errors.append({"ticker": ticker, "error": str(e)})
-        
+
         return {
             "status": "success",
             "imported_count": len(imported),
@@ -275,7 +283,7 @@ async def import_portfolio_data(
             "api_version": "v1",
             "timestamp": utc_now_iso()
         }
-    except __import__("json").JSONDecodeError as e:
+    except json_module.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Import failed: {str(e)}")

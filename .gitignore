@@ -82,6 +82,9 @@ frontend/test-results/
 # Root-level logs
 logs/
 
+# Docker secrets (never commit — contains real passwords/keys)
+.env.docker
+
 # Temporary backend test scripts
 backend/check_routes.py
 backend/test_*.py
@@ -139,6 +142,14 @@ inspect_values.py
 .test_output.txt
 .test_results.log
 .coverage
+check_columns.py
+check_schemas.py
+check_views.py
+deep_inspect.py
+forensic.py
+get_assets.py
+inspect_data.py
+purification/
 backend/backfill_sec_financials.py
 backend/sec_cik_lookup.py
 find_parse2.js

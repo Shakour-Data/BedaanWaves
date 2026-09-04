@@ -113,9 +113,8 @@ def rate_limit(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
-            # Generate key from request context if available
             key = f"{key_prefix}:{func.__name__}"
-            if hasattr(args[0], 'client'):
+            if args and hasattr(args[0], "client") and hasattr(args[0].client, "host"):
                 key = f"{key_prefix}:{args[0].client.host}:{func.__name__}"
 
             if not limiter.is_allowed(key):

@@ -41,7 +41,7 @@ describe('RankingPage', () => {
   it('should show loading state initially', () => {
     (fetchNasdaqRankings as unknown as { mockImplementation: (fn: () => Promise<never>) => void }).mockImplementation(() => new Promise(() => {}));
     render(<RankingPage />);
-    expect(screen.getByTestId('page-loading')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading/i })).toBeInTheDocument();
   });
 
   it('should render rankings when data loads', async () => {
