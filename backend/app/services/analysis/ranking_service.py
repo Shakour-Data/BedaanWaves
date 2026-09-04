@@ -11,6 +11,8 @@ Provides:
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 import logging
+import asyncio
+from app.core.utils import utc_now_iso
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, and_
@@ -91,10 +93,8 @@ class RankingService:
                 "count": 0,
                 "total": 0,
                 "data": [],
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
-
-        import asyncio
 
         async def score_asset(asset: Asset) -> Dict[str, Any]:
             try:
@@ -220,7 +220,7 @@ class RankingService:
             "sort_by": sort_by,
             "order": order,
             "data": page,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_score_history(
@@ -268,7 +268,7 @@ class RankingService:
             "days": days,
             "count": len(history),
             "history": history,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_hierarchy_scores(self, symbol: str, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
@@ -406,7 +406,7 @@ class RankingService:
             "overall_score": scored.get("overall_score", 0),
             "grade": scored.get("grade", ""),
             "hierarchy": hierarchy_scores,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_coefficients(self, symbol: str, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
@@ -457,5 +457,5 @@ class RankingService:
             "symbol": asset.symbol,
             "name": asset.name,
             "coefficients": coefficients,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }

@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from sqlalchemy import select, and_, func
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
@@ -78,7 +79,7 @@ class FundamentalAnalysisService(AnalysisService):
         assessment = self._determine_assessment(ratios)
         
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "ticker": ticker,
             "market": self.market_type.value if self.market_type else "UNKNOWN",
             "ratios": ratios,

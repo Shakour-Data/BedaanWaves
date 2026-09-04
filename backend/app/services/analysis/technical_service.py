@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import math
 import asyncio
 from functools import lru_cache
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 
@@ -54,7 +55,7 @@ class TechnicalAnalysisService(AnalysisService):
             return {"error": "Insufficient price data", "min_required": 30}
 
         indicators = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "market": data.get("market", "NASDAQ"),
             "current_price": current_price,
