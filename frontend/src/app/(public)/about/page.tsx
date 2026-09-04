@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { PublicLayout } from "@/components/layout/PublicLayout";
-import { ArrowRight, Target, Lightbulb, Lock, Users, Award, Globe } from "lucide-react";
+import { ArrowRight, Target, Lightbulb, Lock, Globe } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About Us | BedaanWaves",

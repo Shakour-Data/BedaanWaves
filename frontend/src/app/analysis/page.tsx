@@ -87,18 +87,18 @@ export default function AnalysisPage() {
 
   return (
     <NewDashboardShell title={t("app.analysis.title", "en")}>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Analysis Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2">
           {analysisTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-semibold transition duration-fast ease-flow whitespace-nowrap flex items-center gap-2",
+                "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap",
                 activeTab === tab.id
-                  ? "bg-secondary text-[var(--color-text-primary)] shadow-sm"
-                  : "bg-neutral text-muted-foreground hover:bg-neutral/80"
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text-primary)]"
               )}
             >
               <span>{tab.icon}</span>
@@ -108,126 +108,178 @@ export default function AnalysisPage() {
         </div>
 
         {/* Top Movers */}
-        <TarotCard icon="🚀" title={t("app.analysis.top_movers", "en")}>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+              <span className="text-lg">🚀</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.top_movers", "en")}</h3>
+              <p className="text-xs text-[var(--color-text-muted)]">Top performing stocks today</p>
+            </div>
+          </div>
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
-            <p className="text-muted-foreground py-4 text-center">{t("app.analysis.no_data", "en")}</p>
+            <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.no_data", "en")}</p>
           )}
-        </TarotCard>
+        </div>
 
         {/* Technical Analysis Panel */}
         {activeTab === "technical" && (
-          <TarotCard icon="[Chart]" title={t("app.analysis.technical_charts", "en")}>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">📈</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.technical_charts", "en")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Technical indicators for top movers</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {topMovers.slice(0, 3).map((mover, i) => (
-                <div key={i} className="p-4 rounded-xl bg-neutral/50 border border-border/40 transition duration-fast ease-flow hover:bg-neutral">
-                  <div className="font-bold text-lg text-foreground">{mover.symbol}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{mover.name}</div>
-                  <div className="text-xl font-bold mt-2 text-foreground">
-                    {mover.price.toLocaleString("en-US")}
+                <div key={i} className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-5 transition-all hover:border-[var(--color-primary)]/30 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="font-bold text-lg text-[var(--color-text-primary)]">{mover.symbol}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">{mover.name}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-[var(--color-text-primary)]">
+                        {mover.price.toLocaleString("en-US")}
+                      </div>
+                      <div className={`text-sm font-semibold ${mover.changePct >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-error)]"}`}>
+                        {mover.changePct >= 0 ? "+" : ""}{mover.changePct.toFixed(2)}%
+                      </div>
+                    </div>
                   </div>
-                  <div className={`text-sm mt-1 font-semibold ${mover.changePct >= 0 ? "text-success" : "text-primary"}`}>
-                    {mover.changePct >= 0 ? "▲" : "▼"} {Math.abs(mover.changePct).toFixed(2)}%
+                  <div className="h-16 rounded-lg bg-[var(--color-border)]/30 flex items-end gap-1 p-2">
+                    {Array.from({ length: 12 }).map((_, j) => (
+                      <div key={j} className="flex-1 rounded bg-[var(--color-primary)]/60 hover:bg-[var(--color-primary)] transition-colors" style={{ height: `${30 + Math.random() * 70}%` }} />
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
-          </TarotCard>
+          </div>
         )}
 
         {/* Fundamental Analysis Panel */}
         {activeTab === "fundamental" && (
-          <TarotCard icon="🏦" title={t("app.analysis.fundamental_indicators", "en").replace("{symbol}", analysisData?.symbol || "")}>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">🏦</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.fundamental_indicators", "en").replace("{symbol}", analysisData?.symbol || "")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Key fundamental metrics</p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Object.entries(analysisData?.fundamental || {}).slice(0, 8).map(([key, value]: [string, any], i) => (
-                <div key={i} className="text-center p-3 rounded-xl bg-neutral/50 border border-border/40">
-                  <div className="text-xs text-muted-foreground uppercase">{key.replace(/_/g, " ")}</div>
-                  <div className="text-sm font-bold mt-1 text-foreground">
+                <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4 text-center">
+                  <div className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{key.replace(/_/g, " ")}</div>
+                  <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">
                     {typeof value === "number" ? value.toLocaleString("en-US") : value || "—"}
                   </div>
                 </div>
               ))}
               {(!analysisData?.fundamental || Object.keys(analysisData.fundamental).length === 0) && (
-                <div className="col-span-full py-4 text-center text-muted-foreground text-xs">
+                <div className="col-span-full py-8 text-center text-[var(--color-text-muted)] text-sm">
                   {t("app.analysis.fundamental_not_found", "en")}
                 </div>
               )}
             </div>
-          </TarotCard>
+          </div>
         )}
 
         {/* 6D Scoring Panel */}
         {activeTab === "scoring" && (
-          <TarotCard icon="💯" title={`${t("app.nav.scoring", "en")} (${analysisData?.symbol || ""})`}>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">💯</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{`${t("app.nav.scoring", "en")} (${analysisData?.symbol || ""})`}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">AI-powered stock scoring</p>
+              </div>
+            </div>
             {analysisData?.scoring ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl">
+                <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-5">
                   <div>
-                    <div className="text-xs text-muted-foreground">{t("app.analysis.overall_score", "en")}</div>
-                    <div className="text-3xl font-bold text-secondary">
+                    <div className="text-xs text-[var(--color-text-muted)]">{t("app.analysis.overall_score", "en")}</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">
                       {analysisData.scoring.overall_score?.toLocaleString("en-US")}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-muted-foreground">{t("app.analysis.grade", "en")}</div>
-                    <div className="text-2xl font-bold text-foreground">{analysisData.scoring.grade}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">{t("app.analysis.grade", "en")}</div>
+                    <div className="text-2xl font-bold text-[var(--color-text-primary)]">{analysisData.scoring.grade}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {Object.entries(analysisData.scoring.dimensions || {}).map(([dim, score]: [string, any], i) => (
-                    <div key={i} className="p-3 rounded-xl border border-border/40 bg-neutral/30">
-                      <div className="text-xs text-muted-foreground capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}</div>
-                      <div className="text-lg font-bold mt-1">{score?.toLocaleString("en-US")}</div>
+                    <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/30 p-3">
+                      <div className="text-xs text-[var(--color-text-muted)] capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}</div>
+                      <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">{score}</div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                <p>{t("app.analysis.scoring_not_found", "en")}</p>
-              </div>
+              <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.scoring_not_found", "en")}</p>
             )}
-          </TarotCard>
+          </div>
         )}
 
-        {/* Sentiment Panel */}
+        {/* Sentiment Analysis Panel */}
         {activeTab === "sentiment" && (
-          <TarotCard icon="🎭" title={t("app.analysis.sentiment_title", "en").replace("{symbol}", analysisData?.symbol || "")}>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">🎭</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.sentiment_title", "en").replace("{symbol}", analysisData?.symbol || "")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Market sentiment analysis</p>
+              </div>
+            </div>
             {analysisData?.sentiment ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { 
-                    label: t("app.analysis.sentiment_labels.overall", "en"), 
-                    value: t(`app.analysis.sentiment_values.${analysisData.sentiment.label?.toLowerCase()}`, "en"), 
-                    score: analysisData.sentiment.confidence, 
-                    color: analysisData.sentiment.label === "positive" ? "text-success" : analysisData.sentiment.label === "negative" ? "text-primary" : "text-muted-foreground" 
+                  {
+                    label: t("app.analysis.sentiment_labels.overall", "en"),
+                    value: t(`app.analysis.sentiment_values.${analysisData.sentiment.label?.toLowerCase()}`, "en"),
+                    score: analysisData.sentiment.confidence,
+                    color: analysisData.sentiment.label === "positive" ? "text-[var(--color-success)]" : analysisData.sentiment.label === "negative" ? "text-[var(--color-error)]" : "text-[var(--color-text-muted)]"
                   },
-                  { 
-                    label: t("app.analysis.sentiment_labels.news_count", "en"), 
-                    value: t("app.analysis.sentiment_values.news_items", "en").replace("{count}", analysisData.sentiment.news_count?.toLocaleString("en-US") || "0"), 
-                    score: null, 
-                    color: "text-foreground" 
+                  {
+                    label: t("app.analysis.sentiment_labels.news_count", "en"),
+                    value: t("app.analysis.sentiment_values.news_items", "en").replace("{count}", analysisData.sentiment.news_count?.toLocaleString("en-US") || "0"),
+                    score: null,
+                    color: "text-[var(--color-text-primary)]"
                   },
-                  { 
-                    label: t("app.analysis.sentiment_labels.confidence", "en"), 
-                    value: `${(analysisData.sentiment.confidence * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}%`, 
-                    score: null, 
-                    color: "text-secondary" 
+                  {
+                    label: t("app.analysis.sentiment_labels.confidence", "en"),
+                    value: `${(analysisData.sentiment.confidence * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}%`,
+                    score: null,
+                    color: "text-[var(--color-primary)]"
                   },
                 ].map((sentiment, i) => (
-                  <div key={i} className="text-center p-6 rounded-xl bg-neutral/50 border border-border/40">
-                    <div className="text-xs text-muted-foreground">{sentiment.label}</div>
+                  <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-6 text-center">
+                    <div className="text-xs text-[var(--color-text-muted)]">{sentiment.label}</div>
                     <div className={`text-lg font-bold mt-2 ${sentiment.color}`}>{sentiment.value}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                <p>{t("app.analysis.sentiment_not_found", "en")}</p>
-              </div>
+              <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.sentiment_not_found", "en")}</p>
             )}
-          </TarotCard>
+          </div>
         )}
       </div>
     </NewDashboardShell>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -73,16 +74,25 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
-      <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error ? (
-            <div className="rounded-xl bg-error/10 px-4 py-3 text-sm text-error border border-error/20 animate-in fade-in slide-in-from-top-2">
-              {error}
-            </div>
-          ) : null}
+    <div className="w-full">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-balance">
+          Welcome back
+        </h1>
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Enter your credentials to access your account
+        </p>
+      </div>
 
-          <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error ? (
+          <div className="rounded-xl bg-[var(--color-error-light)] px-4 py-3 text-sm text-[var(--color-error)] border border-[var(--color-error)]/20 animate-in fade-in slide-in-from-top-2">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="space-y-4">
+          <div className="relative">
             <InputField
               id="username"
               type="text"
@@ -98,7 +108,9 @@ export default function LoginPage() {
               validationState={usernameValid}
               validationMessage={usernameValid === "invalid" ? "Username must be at least 3 characters." : undefined}
             />
+          </div>
 
+          <div className="relative">
             <InputField
               id="password"
               type={showPassword ? "text" : "password"}
@@ -114,43 +126,44 @@ export default function LoginPage() {
               validationState={passwordValid}
               validationMessage={passwordValid === "invalid" ? "Password must be at least 6 characters." : undefined}
             />
-            
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-xs text-[var(--color-primary)] hover:underline mt-1"
+              className="absolute right-3 top-9 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? "Hide password" : "Show password"}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+        </div>
 
-          <div className="flex items-center justify-between text-xs px-1">
-            <label className="flex items-center gap-2 text-[var(--color-text-secondary)] cursor-pointer group">
-              <input type="checkbox" className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-              <span className="group-hover:text-[var(--color-text-primary)] transition-colors">Remember me</span>
-            </label>
-            <Link href="/forgot-password" disable-nav="true" className="text-[var(--color-primary)] hover:underline font-medium">
-              Forgot password?
-            </Link>
-          </div>
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2 text-[var(--color-text-secondary)] cursor-pointer group">
+            <input type="checkbox" className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+            <span className="group-hover:text-[var(--color-text-primary)] transition-colors">Remember me</span>
+          </label>
+          <Link href="/forgot-password" className="text-[var(--color-primary)] hover:underline font-medium text-sm">
+            Forgot password?
+          </Link>
+        </div>
 
-          <PrimaryButton
-            type="submit"
-            disabled={loading}
-            className="mt-2 w-full justify-center h-11"
-            size="lg"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </PrimaryButton>
+        <PrimaryButton
+          type="submit"
+          disabled={loading}
+          className="w-full justify-center h-11 gap-2"
+          size="lg"
+        >
+          {loading ? "Signing in..." : "Sign in"}
+          {!loading && <ArrowRight className="h-4 w-4" />}
+        </PrimaryButton>
 
-          <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-[var(--color-primary)] hover:underline font-bold">
-              Sign up
-            </Link>
-          </p>
-        </form>
-      </div>
-    </main>
+        <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-[var(--color-primary)] hover:underline font-semibold">
+            Sign up
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }
