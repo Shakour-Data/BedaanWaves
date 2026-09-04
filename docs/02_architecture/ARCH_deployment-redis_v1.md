@@ -28,48 +28,64 @@ Redis Cache برای بهبود عملکرد پلتفرم BedaanWaves اضافه
 
 ## روش‌های راه‌اندازی
 
-### روش ۱: Docker Compose (توصیه شده)
+### روش ۱: نصب مستقیم در Ubuntu/Debian (توصیه شده)
 
 ```bash
-# 1. اجرای Redis به همراه سایر سرویس‌ها
-docker-compose -f docker-compose.yml -f docker-compose.redis.yml up -d
+# 1. به‌روزرسانی لیست بسته‌ها
+sudo apt update
 
-# 2. بررسی وضعیت
-docker-compose ps
+# 2. نصب Redis
+sudo apt install redis-server -y
 
-# 3. مشاهده logs
-docker-compose logs -f redis
-```
-
-### روش ۲: اجرای مستقل Redis
-
-```bash
-# 1. اجرای Redis به صورت standalone
-docker run -d \
-  --name bedaanwaves-redis \
-  -p 6379:6379 \
-  -v redis_data:/data \
-  redis:7-alpine \
-  redis-server --appendonly yes
-
-# 2. تست اتصال
-docker exec -it bedaanwaves-redis redis-cli ping
-```
-
-### روش ۳: نصب مستقیم (بدون Docker)
-
-```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install redis-server
+# 3. فعال‌سازی و شروع سرویس Redis
 sudo systemctl enable redis-server
 sudo systemctl start redis-server
 
-# macOS
+# 4. بررسی وضعیت
+sudo systemctl status redis-server
+
+# 5. تست اتصال
+redis-cli ping
+# خروجی مورد انتظار: PONG
+```
+
+### روش ۲: نصب مستقیم در macOS
+
+```bash
+# 1. نصب Redis با Homebrew
 brew install redis
+
+# 2. شروع سرویس Redis
 brew services start redis
 
-# تست
+# 3. تست اتصال
+redis-cli ping
+# خروجی مورد انتظار: PONG
+```
+
+### روش ۳: نصب مستقیم در Windows
+
+**گزینه A: استفاده از Memurai (توصیه شده برای Windows)**
+```powershell
+# 1. دانلود و نصب Memurai از https://www.memurai.com/
+# 2. نصب به عنوان سرویس Windows
+# 3. شروع سرویس از Services.msc
+# 4. تست اتصال
+redis-cli ping
+```
+
+**گزینه B: استفاده از Redis برای Windows**
+```powershell
+# 1. دانلود Redis برای Windows از GitHub
+# https://github.com/microsoftarchive/redis/releases
+
+# 2. استخراج و اجرا
+redis-server.exe --service-install redis.windows.conf --loglevel verbose
+
+# 3. شروع سرویس
+redis-server --service-start
+
+# 4. تست اتصال
 redis-cli ping
 ```
 
@@ -89,21 +105,9 @@ CACHE_BACKEND=redis
 CACHE_TTL=3600
 ```
 
-### تنظیمات Docker
+### تنظیمات پیکربندی Redis
 
-برای محیط production، فایل `docker-compose.redis.yml` را ویرایش کنید:
-
-```yaml
-services:
-  redis:
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-```
-
-### تنظیمات Redis
-
-فایل [`redis.conf`](file:///e:/BedaanWaves/deployment/redis/redis.conf) را بررسی کنید. تنظیمات کلیدی:
+فایل [`redis.conf`](deployment/redis/redis.conf) را بررسی کنید. تنظیمات کلیدی:
 
 ```conf
 # حداکثر حافظه (256MB برای cache)
@@ -117,6 +121,27 @@ databases 2
 
 # پورت
 port 6379
+
+# bind به همه interfaces (برای دسترسی محلی)
+bind 127.0.0.1 ::1
+
+# timeout برای connections idle
+timeout 300
+
+# TCP keepalive
+tcp-keepalive 60
+```
+
+#### تنظیمات Redis برای Windows
+
+اگر از Memurai استفاده می‌کنید، فایل کانفیگ در این مسیر قرار می‌گیرد:
+```
+C:\Program Files\Memurai\memurai.conf
+```
+
+اگر از Redis برای Windows استفاده می‌کنید:
+```
+C:\Program Files\Redis\redis.windows.conf
 ```
 
 ---
@@ -294,9 +319,9 @@ redis-cli KEYS "pattern:*" | xargs redis-cli DEL
 ## منابع بیشتر
 
 - [Redis Documentation](https://redis.io/documentation)
-- [Redis Docker Hub](https://hub.docker.com/_/redis)
 - [Redis Configuration](https://redis.io/docs/management/config/)
 - [Redis Persistence](https://redis.io/docs/management/persistence/)
+- [Memurai Documentation](https://docs.memurai.com/)
 
 ---
 
