@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import timezone, datetime
 import json
 from .base_service import BaseService
+from app.core.utils import utc_now_iso
 
 
 class LoggerService(BaseService):
@@ -164,7 +165,7 @@ class LoggerService(BaseService):
         
         # Format as JSON
         log_data = {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'timestamp': utc_now_iso(),
             'message': message,
             **data
         }
