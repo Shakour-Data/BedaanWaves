@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
@@ -30,21 +31,21 @@ class DataLineageService(AnalysisService):
                 "source_type": "government_api",
                 "update_frequency": "monthly",
                 "description": "Measure of average change in prices over time",
-                "last_updated": datetime.now(timezone.utc).isoformat()
+                "last_updated": utc_now_iso()
             },
             "gdp": {
                 "name": "Gross Domestic Product",
                 "source_type": "government_api",
                 "update_frequency": "quarterly",
                 "description": "Total value of goods and services produced",
-                "last_updated": datetime.now(timezone.utc).isoformat()
+                "last_updated": utc_now_iso()
             },
             "unemployment": {
                 "name": "Unemployment Rate",
                 "source_type": "government_api",
                 "update_frequency": "monthly",
                 "description": "Percentage of labor force without work",
-                "last_updated": datetime.now(timezone.utc).isoformat()
+                "last_updated": utc_now_iso()
             }
         }
         
@@ -70,7 +71,7 @@ class DataLineageService(AnalysisService):
                 "name": indicator.upper(),
                 "source_type": "unknown",
                 "description": f"Indicator {indicator}",
-                "last_updated": datetime.now(timezone.utc).isoformat()
+                "last_updated": utc_now_iso()
             }
         
         # Create content hash for data integrity
@@ -81,7 +82,7 @@ class DataLineageService(AnalysisService):
             "indicator": indicator,
             "source_info": self.indicator_sources[indicator].copy(),
             "data_hash": data_hash,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "record_id": hashlib.md5(f"{indicator}{datetime.now()}".encode()).hexdigest()[:8]
         }
         
@@ -131,7 +132,7 @@ class DataLineageService(AnalysisService):
             "transformation": transformation,
             "parameters": parameters,
             "output_hash": output_hash,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "record_id": output_id
         }
         
@@ -190,7 +191,7 @@ class DataLineageService(AnalysisService):
             "indicator": indicator,
             "root_source": latest_record_data["data"].get("source_info", {}),
             "lineage_tree": lineage_tree,
-            "generated_at": datetime.now(timezone.utc).isoformat()
+            "generated_at": utc_now_iso()
         }
 
     def _build_lineage_tree(self, record_id: str, depth: int, visited: Optional[set] = None) -> Dict[str, Any]:

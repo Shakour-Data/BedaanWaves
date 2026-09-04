@@ -17,6 +17,7 @@ import logging
 from sqlalchemy import select, func, and_, desc, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import literal_column
+from app.core.utils import utc_now_iso
 
 from app.models.models import (
     Asset,
@@ -442,7 +443,7 @@ class DashboardService:
                 "distribution": [],
                 "symbols": [],
                 "latest_date": None,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
 
         active_assets_subq = (
@@ -690,7 +691,7 @@ class DashboardService:
             "top_performers": top_performers,
             "bottom_performers": bottom_performers,
             "latest_date": latest_date,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_news_dashboard(
@@ -716,7 +717,7 @@ class DashboardService:
                 "summary": {"total_symbols": 0, "total_news": 0},
                 "symbols": [],
                 "latest_date": None,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
 
         active_assets_subq = (
@@ -900,7 +901,7 @@ class DashboardService:
                             "top_performers": symbols_data[:10],
                             "bottom_performers": symbols_data[-10:][::-1],
                             "latest_date": None,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": utc_now_iso(),
                         }
             except Exception as exc:
                 logger.warning(f"Real-time news augmentation failed: {exc}")
@@ -929,7 +930,7 @@ class DashboardService:
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],
             "latest_date": latest_date,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_board_dashboard(
@@ -954,7 +955,7 @@ class DashboardService:
                 "summary": {"total_symbols": 0},
                 "symbols": [],
                 "latest_date": None,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
 
         active_assets_subq = (
@@ -1053,7 +1054,7 @@ class DashboardService:
                 for s in symbols_data[-10:][::-1]
             ],
             "latest_date": latest_date,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_ai_dashboard(
@@ -1078,7 +1079,7 @@ class DashboardService:
                 "summary": {"total_symbols": 0},
                 "symbols": [],
                 "latest_date": None,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
 
         active_assets_subq = (
@@ -1192,7 +1193,7 @@ class DashboardService:
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],
             "latest_date": latest_date,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_general_dashboard(
@@ -1217,7 +1218,7 @@ class DashboardService:
                 "dimensions": {},
                 "symbols": [],
                 "latest_date": None,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
 
         # Get latest ScoreHistory per asset using subquery to avoid parameter limits
@@ -1348,7 +1349,7 @@ class DashboardService:
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],
             "latest_date": latest_date,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def get_dashboard(

@@ -14,6 +14,7 @@ filter by key-prefix at the right level.
 import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from app.core.utils import utc_now_iso
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -110,7 +111,7 @@ class CoefficientHistoryService(BaseService):
             "count": len(series),
             "latest_date": latest_date,
             "series": series,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     @staticmethod
@@ -124,7 +125,7 @@ class CoefficientHistoryService(BaseService):
             "count": 0,
             "latest_date": None,
             "series": [],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def _latest_date(
