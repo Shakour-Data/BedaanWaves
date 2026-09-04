@@ -125,7 +125,7 @@ class TestScoreTrendDashboard(unittest.TestCase):
             },
         ]
 
-        async def fake_get_trend(self, days, market, db):
+        async def fake_get_trend(self, days, market, db, end_date=None, latest=False):
             return precomputed
 
         with patch.object(
@@ -150,7 +150,7 @@ class TestScoreTrendDashboard(unittest.TestCase):
         """
         from unittest.mock import patch
 
-        async def fake_get_trend(self, days, market, db):
+        async def fake_get_trend(self, days, market, db, end_date=None, latest=False):
             return []
 
         rows = [

@@ -382,13 +382,6 @@ class ScoringService(AnalysisService):
     # _score_pe_global, _score_roe_global,
     # _assign_grade, _generate_signals, score_multiple, rank_stocks, get_hierarchy_info
     
-    def _score_rsi_tse(self, rsi: float) -> float:
-        if rsi > 70:
-            return max(0, 100 - (rsi - 70) * 2)
-        elif rsi < 30:
-            return max(0, 100 - (30 - rsi) * 2)
-        return 50 + (rsi - 50) * 0.5
-    
     def _score_rsi_global(self, rsi: float) -> float:
         if rsi > 75:
             return max(0, 100 - (rsi - 75) * 2.5)
@@ -396,28 +389,8 @@ class ScoringService(AnalysisService):
             return max(0, 100 - (25 - rsi) * 2.5)
         return 50 + (rsi - 50) * 0.5
     
-    def _score_macd_tse(self, macd: float) -> float:
-        return min(100, max(0, 50 + macd * 10))
-    
     def _score_macd_global(self, macd: float) -> float:
         return min(100, max(0, 50 + macd * 10))
-    
-    def _score_volume_tse(self, volume: float) -> float:
-        return min(100, max(0, volume / 1000))
-    
-    def _score_pe_tse(self, pe: float) -> float:
-        if pe <= 0:
-            return 0.0
-        if pe < 8:
-            return 90
-        elif pe < 15:
-            return 75
-        elif pe < 25:
-            return 60
-        elif pe < 40:
-            return 40
-        else:
-            return max(0, 100 - pe)
     
     def _score_pe_global(self, pe: float) -> float:
         if pe <= 0:
@@ -432,9 +405,6 @@ class ScoringService(AnalysisService):
             return 40
         else:
             return max(0, 100 - pe)
-    
-    def _score_roe_tse(self, roe: float) -> float:
-        return min(100, max(0, roe * 2))
     
     def _score_roe_global(self, roe: float) -> float:
         return min(100, max(0, roe * 2))

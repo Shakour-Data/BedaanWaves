@@ -308,7 +308,7 @@ Performance Monitoring
 -  Comprehensive error handling
 -  Multiple DB support (PostgreSQL, SQLite)
 - ️ No REST API layer yet
-- ️ Limited to domestic market (BRS)
+- ️ Limited to US market (Yahoo Finance)
 - ️ Monolithic Python structure
 
 **Bedaan6D-project** (Frontend)
@@ -866,7 +866,7 @@ class PortfolioAnalyzer:
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|-----------|
 | Service outage | Low | High | Monitoring, alerts, failover mechanisms |
-| External API downtime (BRS) | Medium | Medium | Fallback cache, graceful degradation |
+| External API downtime (Yahoo Finance) | Medium | Medium | Fallback cache, graceful degradation |
 | Model accuracy degradation | Medium | Medium | Performance monitoring, automated alerts |
 
 ### Timeline Risks

@@ -130,6 +130,116 @@ function CoefficientFilterableChart({
   );
 }
 
+function LevelTrendSection({
+  title,
+  description,
+  response,
+}: {
+  title: string;
+  description: string;
+  response: LevelTrendResponse | null;
+}) {
+  if (!response) {
+    return (
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
+          <p className="text-[11px] text-[var(--color-text-secondary)]">{description}</p>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (response.series.length === 0) {
+    return (
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
+          <p className="text-[11px] text-[var(--color-text-secondary)]">{description}</p>
+        </div>
+        <p className="py-6 text-center text-[var(--color-text-secondary)]">No data available</p>
+      </div>
+    );
+  }
+
+  const seriesKeys = response.keys.filter(
+    (k) => response.series.some((pt) => (pt.avg_scores[k] ?? 0) > 0)
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title} — Trend</h3>
+          <p className="text-[11px] text-[var(--color-text-secondary)]">{description}</p>
+          {response.latest_date && (
+            <p className="text-[10px] text-[var(--color-text-secondary)]">
+              Last 30 days — ending {new Date(response.latest_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </p>
+          )}
+        </div>
+        <ScoreTrendChart
+          showLegend
+          series={seriesKeys.map((key, i) => ({
+            key,
+            label: SUB_DIMENSION_KEY_LABELS[key] ?? key,
+            color: DIMENSION_COLORS[i % DIMENSION_COLORS.length],
+            data: response.series.map((pt) => ({ time: pt.date, value: pt.avg_scores[key] ?? 0 })),
+          }))}
+          height={260}
+        />
+      </div>
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title} — Daily Change</h3>
+          <p className="text-[11px] text-[var(--color-text-secondary)]">
+            Day-over-day change summed across all series (green = up, red = down)
+          </p>
+        </div>
+        <BarChart
+          data={response.series.map((pt) => {
+            const total = Object.values(pt.score_changes ?? {}).reduce((sum, v) => sum + v, 0);
+            return { time: pt.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
+          })}
+          height={200}
+        />
+      </div>
+    </div>
+  );
+}
+
+const SUB_DIMENSION_KEY_LABELS: Record<string, string> = {
+  valuation: "Valuation",
+  profitability: "Profitability",
+  growth: "Growth",
+  liquidity: "Liquidity",
+  efficiency: "Efficiency",
+  corporate_actions: "Corporate Actions",
+  moving_averages: "Moving Averages",
+  momentum: "Momentum",
+  volatility: "Volatility",
+  volume: "Volume",
+  trend: "Trend",
+  news_sentiment: "News Sentiment",
+  social_sentiment: "Social Sentiment",
+  analyst_sentiment: "Analyst Sentiment",
+  market_risk: "Market Risk",
+  credit_risk: "Credit Risk",
+  operational_risk: "Operational Risk",
+  liquidity_risk: "Liquidity Risk",
+  gdp: "GDP",
+  inflation: "Inflation",
+  interest_rates: "Interest Rates",
+  exchange_rates: "Exchange Rates",
+  commodity_prices: "Commodity Prices",
+  ml_prediction: "ML Prediction",
+  pattern_recognition: "Pattern Recognition",
+  anomaly_detection: "Anomaly Detection",
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -202,6 +312,29 @@ export default function DashboardPage() {
     const sub = searchParams.get("sub");
     setActiveSub(sub);
   }, [searchParams]);
+
+  const loadSubLevelTrends = useCallback(async (latestDate: string | null) => {
+    const options: ScoreTrendOptions = latestDate
+      ? { endDate: latestDate }
+      : { latest: true };
+    const [subDim, asp, subAsp] = await Promise.allSettled([
+      fetchSubDimensionTrend(30, "NASDAQ", options),
+      fetchAspectTrend(30, "NASDAQ", options),
+      fetchSubAspectTrend(30, "NASDAQ", options),
+    ]);
+    if (subDim.status === "fulfilled") setSubDimensionTrend(subDim.value);
+    if (asp.status === "fulfilled") setAspectTrend(asp.value);
+    if (subAsp.status === "fulfilled") setSubAspectTrend(subAsp.value);
+  }, []);
+
+  useEffect(() => {
+    if (!subLevelChartsOpen) return;
+    if (generalData?.latest_date) {
+      loadSubLevelTrends(generalData.latest_date);
+    } else {
+      loadSubLevelTrends(null);
+    }
+  }, [generalData?.latest_date, subLevelChartsOpen, loadSubLevelTrends]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -365,6 +498,11 @@ export default function DashboardPage() {
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">30-Day Trend</h2>
+                  {scoreTrend?.latest_date && (
+                    <p className="text-[10px] text-[var(--color-text-secondary)] mt-1">
+                      Latest data: {new Date(scoreTrend.latest_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric"})}
+                    </p>
+                  )}
                   <p className="text-xs text-[var(--color-text-secondary)]">
                     Daily averages across {scoreTrend?.series?.[0]?.symbol_count?.toLocaleString("en-US") ?? "—"} NASDAQ symbols
                     {scoreTrend?.market ? ` (${scoreTrend.market})` : ""}
@@ -463,6 +601,82 @@ export default function DashboardPage() {
                   filter={coefficientFilter}
                   onFilterChange={setCoefficientFilter}
                 />
+              </div>
+            )}
+
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setSubLevelChartsOpen((prev) => !prev)}
+                aria-expanded={subLevelChartsOpen}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                    Sub-Level Score Trends
+                    <span className="ml-2 text-[10px] font-normal text-[var(--color-text-secondary)]">
+                      {subLevelChartsOpen ? "Click to collapse" : "Click to expand"}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    30-day trend + daily delta for sub-dimensions, aspects, and sub-aspects. Anchored to the same date as the 6D spider chart above.
+                  </p>
+                </div>
+                <span className="text-xl text-[var(--color-text-secondary)]">{subLevelChartsOpen ? "−" : "+"}</span>
+              </button>
+              {subLevelChartsOpen && (
+                <div className="mt-4 space-y-4">
+                  <LevelTrendSection
+                    title="Sub-Dimension Score Trend"
+                    description="Mean across all NASDAQ symbols per taxonomy key (valuation, momentum, gdp, …)"
+                    response={subDimensionTrend}
+                  />
+                  <LevelTrendSection
+                    title="Aspect Score Trend"
+                    description="Mean across all NASDAQ symbols per aspect key"
+                    response={aspectTrend}
+                  />
+                  <LevelTrendSection
+                    title="Sub-Aspect Score Trend"
+                    description="Mean across all NASDAQ symbols per sub-aspect key"
+                    response={subAspectTrend}
+                  />
+                </div>
+              )}
+            </div>
+
+            {coefficientHistory && coefficientHistory.series.length > 0 && (
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Coefficient History (30-Day)</h2>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Daily dimension weight snapshots with delta column chart.
+                  </p>
+                </div>
+                <ScoreTrendChart
+                  showLegend
+                  series={coefficientHistory.dimensions.map((dim, i) => ({
+                    key: dim,
+                    label: DIMENSION_LABELS[dim] ?? dim,
+                    color: DIMENSION_COLORS[i % DIMENSION_COLORS.length],
+                    data: coefficientHistory.series.map((p) => ({
+                      time: p.date,
+                      value: p.dimensions?.[dim] ?? 0,
+                    })),
+                  }))}
+                  height={240}
+                />
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Coefficient Weight Changes (Daily Delta)</h3>
+                  <ColumnChart
+                    data={coefficientHistory.series.map((p) => ({
+                      time: p.date,
+                      value: Object.values(p.dimension_changes ?? {}).reduce((sum, v) => sum + v, 0),
+                      color: (Object.values(p.dimension_changes ?? {}).reduce((sum, v) => sum + v, 0)) >= 0 ? "#10b981" : "#ef4444",
+                    }))}
+                    height={200}
+                  />
+                </div>
               </div>
             )}
 

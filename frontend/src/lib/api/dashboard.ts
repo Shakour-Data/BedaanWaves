@@ -186,8 +186,9 @@ export interface GeneralDashboardResponse {
     grade: string;
     dimensions: Record<string, number>;
   }>;
-  top_performers: Array<{ symbol: string; name: string; overall_score: number }>;
+    top_performers: Array<{ symbol: string; name: string; overall_score: number }>;
   bottom_performers: Array<{ symbol: string; name: string; overall_score: number }>;
+  latest_date: string | null;
   timestamp: string;
 }
 
@@ -360,8 +361,9 @@ export async function fetchDashboardData(generalOverride?: GeneralDashboardRespo
     live };
 }
 
-export async function fetchGeneralDashboard(): Promise<GeneralDashboardResponse> {
-  const res = await apiClient.get<GeneralDashboardResponse>("/analysis/dashboard/general", { timeout: 120000 });
+export async function fetchGeneralDashboard(latest: boolean = false): Promise<GeneralDashboardResponse> {
+  const url = latest ? "/analysis/dashboard/general?latest=true" : "/analysis/dashboard/general";
+  const res = await apiClient.get<GeneralDashboardResponse>(url, { timeout: 120000 });
   return res.data;
 }
 
@@ -411,19 +413,176 @@ export interface ScoreTrendResponse {
   market: string;
   count: number;
   dimensions: string[];
+  latest_date: string | null;
   series: ScoreTrendPoint[];
   timestamp: string;
+}
+
+export interface ScoreTrendOptions {
+  latest?: boolean;
+  endDate?: string;
 }
 
 export async function fetchScoreTrend(
   days: number = 30,
   market?: string,
+  options?: ScoreTrendOptions,
 ): Promise<ScoreTrendResponse> {
   const params = new URLSearchParams({ days: String(days) });
   if (market) params.set("market", market);
+  if (options?.latest) params.set("latest", "true");
+  if (options?.endDate) params.set("end_date", options.endDate);
   const res = await apiClient.get<ScoreTrendResponse>(
     `/analysis/dashboard/score-trend?${params.toString()}`,
     { timeout: 60000 },
   );
   return res.data;
 }
+
+export interface CoefficientHistoryPoint {
+  date: string;
+  dimensions: Record<string, number>;
+  dimension_changes: Record<string, number>;
+}
+
+export interface CoefficientHistoryResponse {
+  status: string;
+  days: number;
+  market: string;
+  count: number;
+  dimensions: string[];
+  series: CoefficientHistoryPoint[];
+  latest_date: string | null;
+  timestamp: string;
+}
+
+export interface HierarchicalTrendPoint {
+  date: string;
+  metrics: Record<string, number>;
+  metric_changes: Record<string, number>;
+}
+
+export interface HierarchicalTrendResponse {
+  status: string;
+  level: "sub_dimension" | "aspect" | "sub_aspect";
+  days: number;
+  market: string;
+  parent: string | null;
+  count: number;
+  latest_date: string | null;
+  series: HierarchicalTrendPoint[];
+  timestamp: string;
+}
+
+export interface CoefficientHistoryByLevelResponse {
+  status: string;
+  level: "dimension" | "sub_dimension" | "aspect" | "sub_aspect";
+  days: number;
+  market: string;
+  parent: string | null;
+  count: number;
+  latest_date: string | null;
+  series: Array<{
+    date: string;
+    metrics: Record<string, number>;
+    metric_changes: Record<string, number>;
+  }>;
+  timestamp: string;
+}
+
+export async function fetchCoefficientHistory(
+  days: number = 30,
+  market?: string,
+  options?: ScoreTrendOptions,
+): Promise<CoefficientHistoryResponse> {
+  const params = new URLSearchParams({ days: String(days) });
+  if (market) params.set("market", market);
+  if (options?.latest) params.set("latest", "true");
+  if (options?.endDate) params.set("end_date", options.endDate);
+  const url = `/analysis/dashboard/coefficient-history?${params.toString()}`;
+  const res = await apiClient.get<CoefficientHistoryResponse>(url, { timeout: 60000 });
+  return res.data;
+}
+
+export async function fetchHierarchicalTrend(
+  level: "sub_dimension" | "aspect" | "sub_aspect",
+  days: number = 30,
+  market?: string,
+  options?: ScoreTrendOptions & { parent?: string },
+): Promise<HierarchicalTrendResponse> {
+  const params = new URLSearchParams({ level, days: String(days) });
+  if (market) params.set("market", market);
+  if (options?.latest) params.set("latest", "true");
+  if (options?.endDate) params.set("end_date", options.endDate);
+  if (options?.parent) params.set("parent", options.parent);
+  const res = await apiClient.get<HierarchicalTrendResponse>(
+    `/analysis/dashboard/hierarchical-trend?${params.toString()}`,
+    { timeout: 60000 },
+  );
+  return res.data;
+}
+
+export async function fetchCoefficientHistoryByLevel(
+  level: "dimension" | "sub_dimension" | "aspect" | "sub_aspect",
+  days: number = 30,
+  market?: string,
+  options?: ScoreTrendOptions & { parent?: string },
+): Promise<CoefficientHistoryByLevelResponse> {
+  const params = new URLSearchParams({ level, days: String(days) });
+  if (market) params.set("market", market);
+  if (options?.latest) params.set("latest", "true");
+  if (options?.endDate) params.set("end_date", options.endDate);
+  if (options?.parent) params.set("parent", options.parent);
+  const res = await apiClient.get<CoefficientHistoryByLevelResponse>(
+    `/analysis/dashboard/coefficient-history-by-level?${params.toString()}`,
+    { timeout: 60000 },
+  );
+  return res.data;
+}
+
+export interface LevelTrendPoint {
+  date: string;
+  avg_scores: Record<string, number>;
+  score_changes: Record<string, number>;
+  symbol_count: number;
+}
+
+export interface LevelTrendResponse {
+  status: string;
+  days: number;
+  market: string;
+  count: number;
+  level: "sub_dimension" | "aspect" | "sub_aspect";
+  keys: string[];
+  series: LevelTrendPoint[];
+  latest_date: string | null;
+  timestamp: string;
+}
+
+function buildLevelTrendFetcher(path: string) {
+  return async function fetchLevelTrend(
+    days: number = 30,
+    market?: string,
+    options?: ScoreTrendOptions,
+  ): Promise<LevelTrendResponse> {
+    const params = new URLSearchParams({ days: String(days) });
+    if (market) params.set("market", market);
+    if (options?.latest) params.set("latest", "true");
+    if (options?.endDate) params.set("end_date", options.endDate);
+    const url = `${path}?${params.toString()}`;
+    const res = await apiClient.get<LevelTrendResponse>(url, { timeout: 60000 });
+    return res.data;
+  };
+}
+
+export const fetchSubDimensionTrend = buildLevelTrendFetcher(
+  "/analysis/dashboard/sub-dimension-trend",
+);
+
+export const fetchAspectTrend = buildLevelTrendFetcher(
+  "/analysis/dashboard/aspect-trend",
+);
+
+export const fetchSubAspectTrend = buildLevelTrendFetcher(
+  "/analysis/dashboard/sub-aspect-trend",
+);
