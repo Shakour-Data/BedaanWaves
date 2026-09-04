@@ -291,6 +291,8 @@ class HierarchicalScoreTrendService(BaseService):
             "sub_aspect": _is_sub_aspect_key,
         }[level]
 
+        symbol_counts: Dict[date, int] = {}
+
         for row in rows:
             capture_date = row.capture_date
             if isinstance(capture_date, datetime):
@@ -298,6 +300,7 @@ class HierarchicalScoreTrendService(BaseService):
 
             scores = row._mapping[column_name] or {}
             bucket = by_date.setdefault(capture_date, {})
+            has_contributing_score = False
 
             for raw_key, raw_value in scores.items():
                 if not level_filter(raw_key):
@@ -309,6 +312,10 @@ class HierarchicalScoreTrendService(BaseService):
                 except (TypeError, ValueError):
                     continue
                 bucket.setdefault(raw_key, []).append(value)
+                has_contributing_score = True
+
+            if has_contributing_score:
+                symbol_counts[capture_date] = symbol_counts.get(capture_date, 0) + 1
 
         series: List[Dict[str, Any]] = []
         for capture_date in sorted(by_date.keys()):
@@ -320,6 +327,7 @@ class HierarchicalScoreTrendService(BaseService):
             series.append({
                 "date": capture_date.isoformat(),
                 "metrics": metrics,
+                "symbol_count": symbol_counts.get(capture_date, 0),
             })
 
         # Day-over-day deltas
