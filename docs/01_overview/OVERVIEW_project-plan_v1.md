@@ -123,13 +123,13 @@
 - عدم استفاده از Cache Layer
 
 **راه‌حل:**
-1. پیکربندی Redis با Docker Compose
+1. نصب مستقیم Redis بر روی سیستم عامل (بدون Docker)
 2. پیاده‌سازی Redis Backend برای Cache Service
 3. به‌روزرسانی سرویس‌های اصلی برای استفاده از Cache
 4. تنظیم TTL مناسب برای داده‌های مختلف
 
 **وظایف:**
-- [ ] پیکربندی Redis در Docker Compose
+- [ ] پیکربندی Redis به صورت بومی روی سیستم عامل
 - [ ] پیاده‌سازی RedisCacheBackend
 - [ ] به‌روزرسانی CacheService
 - [ ] اضافه کردن Cache به APIهای پرتکرار
@@ -137,9 +137,9 @@
 - [ ] تست عملکرد
 
 **خروجی‌ها:**
-- فایل `docker-compose.redis.yml`
 - فایل `redis_cache_backend.py`
 - به‌روزرسانی `cache_service.py`
+- فایل‌های پیکربندی Redis بومی
 - گزارش بهبود عملکرد
 
 **معیار موفقیت:**
