@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 import logging
 from datetime import datetime, timezone
+from app.core.utils import utc_now_iso
 
 from ..core import ExternalAPIService
 from app.core.config import get_settings
@@ -134,7 +135,7 @@ class ApiClient(ABC):
             "status": "healthy" if self.call_count > 0 else "uninitialized",
             "last_error": self.last_error,
             "call_count": self.call_count,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
 
@@ -188,7 +189,7 @@ class NasdaqApiClient(ApiClient):
                 "market_type": MarketType.NASDAQ,
                 "info": info,
                 "history": hist.to_dict("records") if not hist.empty else [],
-                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "last_updated": utc_now_iso(),
                 "metadata": {
                     "source": "yfinance",
                     "exchange": "NASDAQ",
@@ -240,7 +241,7 @@ class NasdaqApiClient(ApiClient):
                 "name": display_name,
                 "info": info,
                 "history": hist.to_dict("records") if not hist.empty else [],
-                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "last_updated": utc_now_iso(),
                 "metadata": {
                     "source": "yfinance",
                     "exchange": "NASDAQ",
@@ -295,7 +296,7 @@ class NasdaqApiClient(ApiClient):
             result = {
                 "market_type": MarketType.NASDAQ,
                 "market_name": "NASDAQ Stock Market",
-                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "last_updated": utc_now_iso(),
                 "indices": index_data,
                 "metadata": {
                     "source": "yfinance",

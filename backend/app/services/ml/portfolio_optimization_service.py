@@ -6,6 +6,7 @@ Portfolio optimization and allocation suggestions.
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from ..core import MLService
+from app.core.utils import utc_now_iso
 
 
 class PortfolioOptimizationService(MLService):
@@ -49,5 +50,5 @@ class PortfolioOptimizationService(MLService):
             "expected_return": round(sum(allocation.get(a, 0) * returns.get(a, 0) for a in assets), 4),
             "expected_volatility": round(sum(allocation.get(a, 0) * risks.get(a, 0) for a in assets), 4),
             "sharpe_ratio": round(sum(allocation.get(a, 0) * returns.get(a, 0) for a in assets) / max(sum(allocation.get(a, 0) * risks.get(a, 0) for a in assets), 1e-6), 4),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }

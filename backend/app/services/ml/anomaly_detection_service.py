@@ -5,7 +5,9 @@ Market anomaly detection and unusual activity spotting.
 import math
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+import asyncio
 from ..core import MLService
+from app.core.utils import utc_now_iso
 
 
 class AnomalyDetectionService(MLService):
@@ -76,11 +78,10 @@ class AnomalyDetectionService(MLService):
             "value": round(current, 4),
             "threshold": z_threshold,
             "severity": "high" if abs(z_score) > 4 else "medium" if abs(z_score) > 3 else "low",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def batch_detect(self, data_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        import asyncio
         tasks = [self.predict(d) for d in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         processed = []

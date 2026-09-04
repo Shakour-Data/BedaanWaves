@@ -12,6 +12,7 @@ from app.services.core.base_service import BaseService
 from app.services.ml.recommendation_service import RecommendationService
 from app.services.analysis.scoring_service import ScoringService
 import logging
+from app.core.utils import utc_now_iso
 
 class UserFilteredRecommendationService(BaseService):
     """
@@ -271,7 +272,7 @@ class UserFilteredRecommendationService(BaseService):
             "target_value": target_value,
             "total_assets": len(recommendations),
             "allocation": allocation,
-            "generated_at": datetime.now(timezone.utc).isoformat()
+            "generated_at": utc_now_iso()
         }
 
 # Factory function for dependency injection

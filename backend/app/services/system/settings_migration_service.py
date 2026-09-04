@@ -12,6 +12,7 @@ import json
 from app.services.core.base_service import BaseService
 from app.services.user.preference_service import PreferenceService
 import logging
+from app.core.utils import utc_now_iso
 
 class SettingsMigrationService(BaseService):
     """
@@ -107,7 +108,7 @@ class SettingsMigrationService(BaseService):
             backup = {
                 "user_id": user_id,
                 "version": self.current_version,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "settings": settings,
                 "backup_id": f"backup_{user_id}_{int(datetime.now(timezone.utc).timestamp())}",
                 "schema_version": self.current_version
@@ -155,7 +156,7 @@ class SettingsMigrationService(BaseService):
                 "success": True,
                 "user_id": user_id,
                 "backup_id": backup_id,
-                "restored_at": datetime.now(timezone.utc).isoformat(),
+                "restored_at": utc_now_iso(),
                 "message": "Settings restored successfully"
             }
             
@@ -203,7 +204,7 @@ class SettingsMigrationService(BaseService):
                 "user_id": user_id,
                 "from_version": from_version,
                 "to_version": to_version,
-                "migrated_at": datetime.now(timezone.utc).isoformat(),
+                "migrated_at": utc_now_iso(),
                 "settings_updated": len(migrated_settings)
             }
             
@@ -311,7 +312,7 @@ class SettingsMigrationService(BaseService):
             "valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
-            "validated_at": datetime.now(timezone.utc).isoformat()
+            "validated_at": utc_now_iso()
         }
     
     async def get_migration_status(self, user_id: str) -> Dict[str, Any]:
@@ -328,7 +329,7 @@ class SettingsMigrationService(BaseService):
         return {
             "user_id": user_id,
             "current_version": self.current_version,
-            "last_migrated": datetime.now(timezone.utc).isoformat(),
+            "last_migrated": utc_now_iso(),
             "pending_migrations": [],
             "can_migrate": True
         }
@@ -347,7 +348,7 @@ class SettingsMigrationService(BaseService):
             "success": True,
             "backups_removed": 0,
             "backups_retained": 0,
-            "cleaned_at": datetime.now(timezone.utc).isoformat()
+            "cleaned_at": utc_now_iso()
         }
 
 # Factory function for dependency injection

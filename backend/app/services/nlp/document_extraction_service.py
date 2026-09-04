@@ -7,7 +7,9 @@ Supports PDFs, HTML pages, and plain text with entity recognition.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+import asyncio
 from ..core import BaseService
+from app.core.utils import utc_now_iso
 
 
 class DocumentExtractionService(BaseService):
@@ -81,7 +83,7 @@ class DocumentExtractionService(BaseService):
             "language": self._detect_language(content),
             "entity_count": sum(len(v) for v in entities.values()),
             "table_count": len(tables),
-            "extracted_at": datetime.now(timezone.utc).isoformat(),
+            "extracted_at": utc_now_iso(),
         }
     
     def _extract_entities(self, content: str) -> Dict[str, List[str]]:
@@ -171,7 +173,7 @@ class DocumentExtractionService(BaseService):
         return {
             "metrics": {k: v for k, v in metrics.items() if v is not None},
             "found_count": sum(1 for v in metrics.values() if v is not None),
-            "extracted_at": datetime.now(timezone.utc).isoformat(),
+            "extracted_at": utc_now_iso(),
         }
     
     async def batch_extract(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -184,7 +186,6 @@ class DocumentExtractionService(BaseService):
         Returns:
             List of extraction results
         """
-        import asyncio
         tasks = [self.extract(doc) for doc in documents]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         

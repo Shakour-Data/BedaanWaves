@@ -6,7 +6,9 @@ Stock price and direction prediction using ML models.
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 import math
+import asyncio
 from ..core import MLService
+from app.core.utils import utc_now_iso
 
 
 class PredictionService(MLService):
@@ -58,11 +60,10 @@ class PredictionService(MLService):
             "confidence": round(confidence, 4),
             "horizon_days": horizon,
             "direction": "up" if momentum > 0 else "down",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def batch_predict(self, data_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        import asyncio
         tasks = [self.predict(d) for d in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         processed = []

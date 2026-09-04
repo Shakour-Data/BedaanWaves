@@ -13,6 +13,7 @@ from app.services.data.data_validation_service import DataValidationService
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 import logging
+from app.core.utils import utc_now_iso
 
 class DataIntegrityService(BaseService):
     """
@@ -283,7 +284,7 @@ class DataIntegrityService(BaseService):
                     data = await self.stock_service.get_stock(symbol)
                 elif asset_type == "indices" and self.market_service:
                     # Simplified - would use actual index data
-                    data = {"timestamp": datetime.now(timezone.utc).isoformat()}
+                    data = {"timestamp": utc_now_iso()}
                 else:
                     data = None
                 
@@ -455,7 +456,7 @@ class DataIntegrityService(BaseService):
     def _generate_alerts(self, checks: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate alerts based on check results."""
         alerts = []
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = utc_now_iso()
         
         # Source availability alerts
         if "source_availability" in checks:

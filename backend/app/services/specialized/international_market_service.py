@@ -12,6 +12,7 @@ from app.services.core.base_service import BaseService
 from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 import logging
+from app.core.utils import utc_now_iso
 
 class InternationalMarketService(BaseService):
     """
@@ -226,7 +227,7 @@ class InternationalMarketService(BaseService):
             Dictionary mapping country to market data
         """
         snapshot = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "countries": {},
             "regions": {}
         }
@@ -338,7 +339,7 @@ class InternationalMarketService(BaseService):
         """
         comparison = {
             "metric": metric,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "countries": {}
         }
         
