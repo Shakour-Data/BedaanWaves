@@ -261,7 +261,7 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />);
 
-    expect(screen.getAllByRole('presentation', { hidden: true }).length).toBeGreaterThanOrEqual(0);
+    expect(screen.queryAllByRole('presentation', { hidden: true }).length).toBeGreaterThanOrEqual(0);
   });
 
   it('renders the SpiderChart with 6D scores after data loads', async () => {

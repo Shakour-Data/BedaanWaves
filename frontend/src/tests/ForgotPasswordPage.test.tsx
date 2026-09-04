@@ -1,9 +1,26 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import ForgotPasswordPage from '@/app/(auth)/forgot-password/page';
+
+vi.mock('@/lib/password-recovery-api', () => ({
+  requestPasswordReset: vi.fn(() => Promise.resolve({ success: true, message: 'Recovery link sent to your email' })),
+  isValidEmail: vi.fn(() => true),
+}));
+
+vi.mock('@/store/useUXStore', () => ({
+  useUXStore: () => ({ addToast: vi.fn() }),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn() }) }));
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
 
 describe('ForgotPasswordPage', () => {
   it('renders initially with email field and Send button', () => {
