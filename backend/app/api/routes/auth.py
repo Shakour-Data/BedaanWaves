@@ -32,6 +32,13 @@ ERROR_MESSAGES = {
         "user_not_found": "User not found",
         "invalid_refresh": "Invalid or expired refresh token",
     },
+    "fa": {
+        "username_exists": "نام کاربری قبلاً ثبت شده است",
+        "email_exists": "ایمیل قبلاً ثبت شده است",
+        "invalid_credentials": "نام کاربری یا رمز عبور اشتباه است",
+        "user_not_found": "کاربر یافت نشد",
+        "invalid_refresh": "توکن ریفرش نامعتبر یا منقضی شده است",
+    },
 }
 
 def get_message(lang: str, key: str) -> str:
@@ -39,8 +46,8 @@ def get_message(lang: str, key: str) -> str:
 
 @router.post("/register", response_model=Token)
 async def register(
-    data: RegisterRequest, 
-    lang: str = Query("en", pattern="^(en)$")
+    data: RegisterRequest,
+    lang: str = Query("en", pattern="^(en|fa)$")
 ) -> Token:
     existing = await get_user_by_username(data.username)
     if existing:
@@ -63,8 +70,8 @@ async def register(
 
 @router.post("/login", response_model=Token)
 async def login(
-    data: LoginRequest, 
-    lang: str = Query("en", pattern="^(en)$")
+    data: LoginRequest,
+    lang: str = Query("en", pattern="^(en|fa)$")
 ) -> Token:
     user = await authenticate_user(data.username, data.password)
     if not user:
@@ -81,8 +88,8 @@ async def login(
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-    token: str, 
-    lang: str = Query("en", pattern="^(en)$")
+    token: str,
+    lang: str = Query("en", pattern="^(en|fa)$")
 ) -> Token:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])

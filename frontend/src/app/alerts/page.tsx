@@ -2,19 +2,51 @@
 
 import { useState, useEffect } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { apiClient } from "@/lib/api";
 import type { AssetRow } from "@/lib/dashboard-data";
 
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
 import { formatTimeAgo } from "@/lib/utils";
+
+interface WatchlistItem {
+  asset?: {
+    symbol?: string;
+    name?: string;
+    market?: string;
+  };
+}
+
+interface Watchlist {
+  is_default?: boolean;
+  items?: WatchlistItem[];
+}
+
+interface Notification {
+  type?: string;
+  title?: string;
+  created_at?: string;
+  extra?: { signal_type?: string };
+  read?: boolean;
+}
+
+interface PriceMap {
+  [symbol: string]: {
+    price?: number;
+    change_pct?: number;
+  };
+}
 
 export default function AlertsPage() {
   
   const [watchlistAlerts, setWatchlistAlerts] = useState<AssetRow[]>([]);
-  const [alertHistory, setAlertHistory] = useState<any[]>([]);
+  const [alertHistory, setAlertHistory] = useState<Array<{
+    time: string;
+    alert: string;
+    type: string;
+    status: string;
+    statusKey: string;
+  }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,45 +58,47 @@ export default function AlertsPage() {
       setAlertHistory([]);
 
       try {
-        const watchlistsRes = await apiClient.get<any[]>("/watchlists/watchlists");
-        const notificationsRes = await apiClient.get<any[]>("/notifications/notifications?limit=20");
+        const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists/watchlists");
+        const notificationsRes = await apiClient.get<Notification[]>("/notifications/notifications?limit=20");
 
         if (!active) return;
 
-        // Build watchlist alerts from default watchlist
         const watchlists = watchlistsRes.data || [];
-        const defaultWatchlist = watchlists.find((w: any) => w.is_default);
+        const defaultWatchlist = watchlists.find((w) => w.is_default);
         if (defaultWatchlist?.items?.length) {
-          const symbols = defaultWatchlist.items.map((item: any) => item.asset?.symbol).filter(Boolean);
+          const symbols = defaultWatchlist.items
+            .map((item) => item.asset?.symbol)
+            .filter((symbol): symbol is string => Boolean(symbol));
           if (symbols.length) {
-            const pricesRes = await apiClient.get<any>(
-              `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+            const pricesRes = await apiClient.get<PriceMap>(
+              `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
             );
             const prices = pricesRes.data?.data || pricesRes.data || {};
 
             const watchAssets = defaultWatchlist.items
-              .filter((item: any) => prices[item.asset?.symbol])
-              .map((item: any) => ({
-                symbol: item.asset.symbol,
-                name: item.asset.name,
-                market: item.asset.market as "NASDAQ",
-                price: prices[item.asset.symbol].price,
-                changePct: prices[item.asset.symbol].change_pct }));
+              .filter((item) => prices[item.asset?.symbol as string])
+              .map((item) => ({
+                symbol: item.asset!.symbol,
+                name: item.asset!.name,
+                market: item.asset!.market as "NASDAQ",
+                price: prices[item.asset!.symbol].price,
+                changePct: prices[item.asset!.symbol].change_pct,
+              }));
             setWatchlistAlerts(watchAssets);
           }
         }
 
-        // Build notification history
         const notifications = notificationsRes.data || [];
         const history = notifications
-          .filter((n: any) => n.type === "ALERT" || n.title?.includes("Alert"))
+          .filter((n) => n.type === "ALERT" || n.title?.includes("Alert"))
           .slice(0, 10)
-          .map((n: any) => ({
-            time: formatTimeAgo(n.created_at),
-            alert: n.title,
+          .map((n) => ({
+            time: formatTimeAgo(n.created_at as string),
+            alert: n.title as string,
             type: n.extra?.signal_type || "INFO",
             status: n.read ? t("app.alerts.status.executed", "en") : t("app.alerts.status.active", "en"),
-            statusKey: n.read ? "executed" : "active" }));
+            statusKey: n.read ? "executed" : "active",
+          }));
         setAlertHistory(history);
 
       } catch (error) {

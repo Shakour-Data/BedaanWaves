@@ -166,6 +166,7 @@ class HierarchicalScoreTrendService(BaseService):
         parent: Optional[str] = None,
         latest: bool = False,
         end_date: Optional[date] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Dict[str, Any]:
         """Aggregate sub-dim / aspect / sub-aspect scores for a window.
 
@@ -179,6 +180,8 @@ class HierarchicalScoreTrendService(BaseService):
             latest:   When ``True`` the window ends on the most recent
                       capture date instead of today.
             end_date: Explicit end date (overrides ``latest``).
+            db:       Optional pre-existing session (used by tests / route
+                      handlers to share the request-scoped session).
 
         Returns:
             ``{status, level, days, market, count, latest_date, series}`` where
@@ -188,20 +191,40 @@ class HierarchicalScoreTrendService(BaseService):
         if level not in ("sub_dimension", "aspect", "sub_aspect"):
             raise ValueError(f"Unsupported level: {level}")
 
-        async with async_session_maker() as session:
-            if latest:
-                effective_end = await self._latest_capture_date(market, session)
-            else:
-                effective_end = end_date or datetime.now(timezone.utc).date()
+        if db is None:
+            async with async_session_maker() as session:
+                return await self._get_trend_impl(
+                    level=level, days=days, market=market, parent=parent,
+                    latest=latest, end_date=end_date, db=session,
+                )
+        return await self._get_trend_impl(
+            level=level, days=days, market=market, parent=parent,
+            latest=latest, end_date=end_date, db=db,
+        )
 
-            if effective_end is None:
-                return self._empty(level, days, market)
+    async def _get_trend_impl(
+        self,
+        level: str,
+        days: int,
+        market: str,
+        parent: Optional[str],
+        latest: bool,
+        end_date: Optional[date],
+        db: AsyncSession,
+    ) -> Dict[str, Any]:
+        if latest:
+            effective_end = await self._latest_capture_date(market, db)
+        else:
+            effective_end = end_date or datetime.now(timezone.utc).date()
 
-            start_date = effective_end - timedelta(days=days - 1)
-            rows = await self._aggregate_window(
-                session, level=level, market=market,
-                start_date=start_date, end_date=effective_end, parent=parent,
-            )
+        if effective_end is None:
+            return self._empty(level, days, market)
+
+        start_date = effective_end - timedelta(days=days - 1)
+        rows = await self._aggregate_window(
+            db, level=level, market=market,
+            start_date=start_date, end_date=effective_end, parent=parent,
+        )
 
         latest_date = rows[-1]["date"] if rows else None
         return {

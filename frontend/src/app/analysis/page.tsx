@@ -1,7 +1,6 @@
 "use client";
 
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
@@ -15,13 +14,40 @@ import type { AssetRow } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
+
+interface Performer {
+  symbol: string;
+  name?: string;
+  current_price?: number;
+  change_percent?: number;
+}
+
+interface SymbolItem {
+  symbol: string;
+  name: string;
+}
+
+interface AnalysisData {
+  fundamental?: Record<string, unknown>;
+  technical?: unknown;
+  sentiment?: {
+    label?: string;
+    confidence?: number;
+    news_count?: number;
+  };
+  scoring?: {
+    overall_score?: number;
+    grade?: string;
+    dimensions?: Record<string, unknown>;
+  };
+  symbol?: string;
+}
 
 export default function AnalysisPage() {
   
   const [activeTab, setActiveTab] = useState("technical");
   const [topMovers, setTopMovers] = useState<AssetRow[]>([]);
-  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const analysisTabs = [
@@ -37,23 +63,23 @@ export default function AnalysisPage() {
     async function loadAnalysisData() {
       setLoading(true);
       try {
-        const performersRes = await apiClient.get<any>("/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ");
-        const symbolsRes = await apiClient.get<any[]>("/market/symbols?market=NASDAQ&limit=50");
+        const performersRes = await apiClient.get<{ data: Performer[] }>("/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ");
+        const symbolsRes = await apiClient.get<{ data: SymbolItem[] }>("/market/symbols?market=NASDAQ&limit=50");
 
         if (!active) return;
 
-        const symbolMap = new Map(symbolsRes.data.map((s: any) => [s.symbol, s.name]));
+        const symbolMap = new Map(symbolsRes.data.map((s) => [s.symbol, s.name]));
         const movers: AssetRow[] = (performersRes.data.data ?? [])
-          .filter((p: any) => isNasdaqEquityLike({ symbol: p.symbol }))
-          .map((p: any) => ({
+          .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
+          .map((p) => ({
             symbol: p.symbol,
             name: symbolMap.get(p.symbol) || p.name || "",
             market: "NASDAQ",
             price: p.current_price,
-            changePct: p.change_percent }));
+            changePct: p.change_percent,
+          }));
         setTopMovers(movers.slice(0, 5));
 
-        // Fetch detailed analysis for the top symbol if available
         if (movers.length > 0) {
           const topSymbol = movers[0].symbol;
           const [fundamental, technical, sentiment, scoring] = await Promise.all([
@@ -222,10 +248,10 @@ export default function AnalysisPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {Object.entries(analysisData.scoring.dimensions || {}).map(([dim, score]: [string, any], i) => (
+                  {Object.entries(analysisData.scoring.dimensions || {}).map(([dim, score]: [string, unknown], i) => (
                     <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/30 p-3">
                       <div className="text-xs text-[var(--color-text-muted)] capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}</div>
-                      <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">{score}</div>
+                      <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">{typeof score === "number" ? score.toLocaleString("en-US") : String(score ?? "—")}</div>
                     </div>
                   ))}
                 </div>

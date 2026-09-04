@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # ============================================================
     # DATABASE CONFIGURATION
     # ============================================================
-    DATABASE_URL: str = "postgresql://administrator:placeholder@localhost:5432/bedaanwaves_db"
+    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/bedaanwaves_db"
     DB_DRIVER: str = "postgresql"
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     API_BASE_PATH: str = "/api/v1"
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8000
+    API_PORT: int = 3000
     API_VERSION: str = "1.0.0"
     API_TITLE: str = "BedaanWaves API"
     API_TIMEOUT: int = 30
@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     AUTH_PUBLIC_PATHS: List[str] = [
         "/",
         "/health",
-        "/api/data-health",
+        "/api/v1/data-health",
     ]
     # Path prefixes that never require authentication (e.g. the auth router itself).
     AUTH_PUBLIC_PREFIXES: List[str] = [

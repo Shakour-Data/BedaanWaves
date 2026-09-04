@@ -72,7 +72,9 @@ async def init_db() -> None:
     from alembic import command
     from alembic.config import Config
 
-    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini"))
+    from pathlib import Path
+    alembic_ini = Path(__file__).resolve().parent.parent / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini))
     alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
     command.upgrade(alembic_cfg, "head")
     logger.info("Database migrations applied successfully")

@@ -31,7 +31,7 @@ function ResetPasswordForm() {
   const pwdState: PwdValidationState = useMemo(() => {
     if (!password) return "idle";
     if (password.length < 8) return "invalid";
-    if (!confirmPassword) return "valid";
+    if (!confirmPassword) return "idle";
     return password === confirmPassword ? "valid" : "invalid";
   }, [password, confirmPassword]);
 

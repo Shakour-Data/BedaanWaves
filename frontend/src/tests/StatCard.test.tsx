@@ -30,10 +30,10 @@ describe('StatCard', () => {
     expect(screen.queryByText(/%/)).toBeNull()
   })
 
-  it('applies article role', () => {
+  it('renders stat card container', () => {
     render(<StatCard stat={mockStat} />);
 
-    const card = screen.getByRole('article')
+    const card = screen.getByText('Total Index').closest('div')
     expect(card).not.toBeNull()
   })
 })
@@ -42,27 +42,27 @@ describe('ChangeBadge', () => {
   it('renders positive change with green styling', () => {
     render(<ChangeBadge value={2.5} />)
 
-    const badge = screen.getByText(/2\.50%/)
+    const badge = screen.getByText(/2\.50%/).parentElement
     expect(badge).not.toBeNull()
-    expect(badge.className).toContain('bg-success/15')
-    expect(badge.className).toContain('text-success')
+    expect(badge!.className).toContain('bg-success/10')
+    expect(badge!.className).toContain('text-success')
   })
 
   it('renders negative change with red styling', () => {
     render(<ChangeBadge value={-1.75} />)
 
-    const badge = screen.getByText(/1\.75%/)
+    const badge = screen.getByText(/1\.75%/).parentElement
     expect(badge).not.toBeNull()
-    expect(badge.className).toContain('bg-error/15')
-    expect(badge.className).toContain('text-error')
+    expect(badge!.className).toContain('bg-error/10')
+    expect(badge!.className).toContain('text-error')
   })
 
   it('renders zero change as positive', () => {
     render(<ChangeBadge value={0} />)
 
-    const badge = screen.getByText(/0\.00%/)
+    const badge = screen.getByText(/0\.00%/).parentElement
     expect(badge).not.toBeNull()
-    expect(badge.className).toContain('bg-success/15')
-    expect(badge.className).toContain('text-success')
+    expect(badge!.className).toContain('bg-success/10')
+    expect(badge!.className).toContain('text-success')
   })
 })

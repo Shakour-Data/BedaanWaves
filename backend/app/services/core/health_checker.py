@@ -5,7 +5,7 @@ Monitors health of all system components and services.
 Provides health status endpoints and alerts.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 from datetime import timezone, datetime
 import asyncio
 from .base_service import BaseService
@@ -37,7 +37,7 @@ class HealthChecker(BaseService):
         """
         super().__init__(service_name)
         self.check_interval = check_interval_seconds
-        self._checks: Dict[str, callable] = {}
+        self._checks: Dict[str, Callable[..., Any]] = {}
         self._last_results: Dict[str, Dict[str, Any]] = {}
         self._is_monitoring = False
         self._monitor_task = None

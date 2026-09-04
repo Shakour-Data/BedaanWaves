@@ -37,6 +37,7 @@
   ],
   "exclude": [
     "node_modules",
-    "src/tests/**/*"
+    "src/tests/**/*",
+    "playwright.config.ts"
   ]
 }

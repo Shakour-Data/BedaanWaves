@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard, fetchScoreTrend } from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
-import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse } from "@/lib/api/dashboard";
+import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse, LevelTrendResponse, CoefficientHistoryResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
 import { useDateStore, useSelectedDate, useLatestAvailableDate, useEffectiveDate } from "@/store/useDateStore";
@@ -17,6 +17,8 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 import { CoefficientChart } from "@/components/charts/CoefficientChart";
+import { ColumnChart } from "@/components/charts/ColumnChart";
+import { BarChart } from "@/components/charts/BarChart";
 import { DimensionDashboard } from "@/components/dashboard/DimensionDashboard";
 import { NewsDashboard } from "@/components/dashboard/NewsDashboard";
 import { BoardDashboard } from "@/components/dashboard/BoardDashboard";
@@ -255,6 +257,12 @@ export default function DashboardPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [scoreTrend, setScoreTrend] = useState<ScoreTrendResponse | null>(null);
   const [scoreTrendLoading, setScoreTrendLoading] = useState(true);
+  const [subDimensionTrend, setSubDimensionTrend] = useState<LevelTrendResponse | null>(null);
+  const [aspectTrend, setAspectTrend] = useState<LevelTrendResponse | null>(null);
+  const [subAspectTrend, setSubAspectTrend] = useState<LevelTrendResponse | null>(null);
+  const [subLevelChartsOpen, setSubLevelChartsOpen] = useState(false);
+  const [coefficientHistory, setCoefficientHistory] = useState<CoefficientHistoryResponse | null>(null);
+  const [coefficientHistoryLoading, setCoefficientHistoryLoading] = useState(true);
   const [coefficientFilter, setCoefficientFilter] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -265,11 +273,6 @@ export default function DashboardPage() {
   const latestAvailableDate = useLatestAvailableDate();
   const setLatestAvailableDate = useDateStore((state) => state.setLatestAvailableDate);
   const effectiveDate = useEffectiveDate();
-
-  // Reload score trend when effective date changes
-  useEffect(() => {
-    loadScoreTrend();
-  }, [effectiveDate, loadScoreTrend]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -303,10 +306,48 @@ export default function DashboardPage() {
     }
   }, [addToast]);
 
+  const loadScoreTrend = useCallback(async () => {
+    setScoreTrendLoading(true);
+    try {
+      const options: ScoreTrendOptions = effectiveDate
+        ? { endDate: effectiveDate }
+        : { latest: true };
+      const data = await fetchScoreTrend(30, "NASDAQ", options);
+      setScoreTrend(data);
+    } catch (err) {
+      const message = getApiErrorMessage(err);
+      setError(message);
+      addToast({ type: "error", message });
+    } finally {
+      setScoreTrendLoading(false);
+    }
+  }, [effectiveDate, addToast]);
+
+  const loadCoefficientHistory = useCallback(async () => {
+    setCoefficientHistoryLoading(true);
+    try {
+      const options: ScoreTrendOptions = effectiveDate
+        ? { endDate: effectiveDate }
+        : { latest: true };
+      const data = await fetchCoefficientHistory(30, "NASDAQ", options);
+      setCoefficientHistory(data);
+    } catch (err) {
+      const message = getApiErrorMessage(err);
+      setError(message);
+      addToast({ type: "error", message });
+    } finally {
+      setCoefficientHistoryLoading(false);
+    }
+  }, [effectiveDate, addToast]);
+
+  useEffect(() => {
+    loadScoreTrend();
+    loadCoefficientHistory();
+  }, [loadScoreTrend, loadCoefficientHistory]);
+
   useEffect(() => {
     loadDashboard();
-    loadScoreTrend();
-  }, [loadDashboard, loadScoreTrend]);
+  }, [loadDashboard]);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as Tab | null;

@@ -41,7 +41,7 @@ def _technical_score(closes: list[float]) -> float:
     elif change_pct <= -50:
         return 0.0
     else:
-        return 50.0 + change_pct
+        return max(0.0, min(100.0, 50.0 + change_pct))
 
 
 def _risk_score(closes: list[float]) -> float:

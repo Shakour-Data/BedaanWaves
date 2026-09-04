@@ -75,7 +75,7 @@ setup_node() {
 setup_database() {
     log "Setting up database"
     check_command psql
-    createdb bedaanwaves --username=postgres --host=localhost || echo "Database might already exist"
+    createdb bedaanwaves_db --username=postgres --host=localhost || echo "Database might already exist"
     log "Database setup complete"
 }
 
@@ -91,13 +91,13 @@ run_migrations() {
 start_dev_servers() {
     log "Starting development servers"
     cd backend
-    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+    uvicorn app.main:app --reload --host 0.0.0.0 --port 3000 &
     
     cd ../frontend
     npm run dev -- --port 3005 &
     
     log "Development servers started"
-    log "Backend: http://localhost:8000"
+    log "Backend: http://localhost:3000"
     log "Frontend: http://localhost:3005"
 }
 
@@ -118,7 +118,7 @@ User=${username}
 Group=${group}
 WorkingDirectory=/opt/bedaanwaves/backend
 Environment=PATH=/opt/bedaanwaves/venv/bin:/opt/bedaanwaves/node_modules
-ExecStart=/opt/bedaanwaves/venv/bin/uvicorn app.main:app --workers 4 --host 0.0.0.0 --port 8000
+ExecStart=/opt/bedaanwaves/venv/bin/uvicorn app.main:app --workers 4 --host 0.0.0.0 --port 3000
 Restart=always
 RestartSec=3
 StandardOutput=journal

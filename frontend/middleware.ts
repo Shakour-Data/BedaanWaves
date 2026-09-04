@@ -13,7 +13,7 @@ function getCspHeader(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' http://localhost:3000 https:",
+    "connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 http://localhost:8000 https:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

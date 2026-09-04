@@ -659,7 +659,7 @@ class CompanyLeadership(Base):
     start_date = Column(Date)
     end_date = Column(Date)
     source = Column(String(50), default="SEC")
-    fetched_at = Column(DateTime, default=lambda: datetime.now())
+    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index('idx_company_leadership_asset', 'asset_id'),
@@ -682,7 +682,7 @@ class News(Base):
     published_at = Column(DateTime, index=True)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
     language = Column(String(5), default="fa")
-    fetched_at = Column(DateTime, default=datetime.utcnow)
+    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (Index('idx_news_published', 'published_at'),)
 
