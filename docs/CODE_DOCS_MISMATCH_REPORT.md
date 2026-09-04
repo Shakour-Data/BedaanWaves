@@ -339,11 +339,11 @@ lang: str = Query("en", pattern="^(en|fa)$"),
 
 # And add Persian messages:
 "fa": {
-    "request_sent": "اگر حسابی برای این ایمیل وجود داشته باشد، لینک بازیابی ارسال شده است.",
-    "token_invalid": "این لینک بازیابی منقضی شده یا دیگر معتبر نیست. لطفاً یک لینک جدید درخواست کنید.",
-    "password_updated": "رمز عبور شما با موفقیت به‌روزرسانی شد. اکنون می‌توانید وارد شوید.",
-    "password_too_short": "رمز عبور باید حداقل ۸ کاراکتر باشد.",
-    "token_missing": "هیچ توکن بازیابی ارائه نشده است. لطفاً لینک ایمیل را باز کنید.",
+    "request_sent": "If an account exists for this email, a recovery link has been sent.",
+    "token_invalid": "This recovery link has expired or is no longer valid. Please request a new link.",
+    "password_updated": "Your password has been updated successfully. You can now log in.",
+    "password_too_short": "Password must be at least 8 characters.",
+    "token_missing": "No recovery token was provided. Please open the link from your email.",
 },
 ```
 

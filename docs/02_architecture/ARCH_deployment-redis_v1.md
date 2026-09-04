@@ -1,12 +1,12 @@
 # Redis Cache Setup Guide
-## راهنمای راه‌اندازی Redis Cache
+## Redis Cache Setup Guide
 
 **تاریخ:** 2026-09-04  
 **نسخه:** 1.0.0
 
 ---
 
-## 📋 فهرست مطالب
+## 📋 Table of Contents
 
 1. [مقدمه](#مقدمه)
 2. [روش‌های راه‌اندازی](#روشهای-راهاندازی)
@@ -16,7 +16,7 @@
 
 ---
 
-## مقدمه
+## Introduction
 
 Redis Cache برای بهبود عملکرد پلتفرم BedaanWaves اضافه شده است. این سیستم:
 
@@ -26,9 +26,9 @@ Redis Cache برای بهبود عملکرد پلتفرم BedaanWaves اضافه
 
 ---
 
-## روش‌های راه‌اندازی
+## Setup Methods
 
-### روش ۱: نصب مستقیم در Ubuntu/Debian (توصیه شده)
+### Method 1: Direct Installation on Ubuntu/Debian (Recommended)
 
 ```bash
 # 1. به‌روزرسانی لیست بسته‌ها
@@ -49,7 +49,7 @@ redis-cli ping
 # خروجی مورد انتظار: PONG
 ```
 
-### روش ۲: نصب مستقیم در macOS
+### Method 2: Direct Installation on macOS
 
 ```bash
 # 1. نصب Redis با Homebrew
@@ -63,7 +63,7 @@ redis-cli ping
 # خروجی مورد انتظار: PONG
 ```
 
-### روش ۳: نصب مستقیم در Windows
+### Method 3: Direct Installation on Windows
 
 **گزینه A: استفاده از Memurai (توصیه شده برای Windows)**
 ```powershell
@@ -91,9 +91,9 @@ redis-cli ping
 
 ---
 
-## پیکربندی
+## Configuration
 
-### تنظیمات Backend
+### Backend Settings
 
 فایل `.env` را به‌روز کنید:
 
@@ -105,7 +105,7 @@ CACHE_BACKEND=redis
 CACHE_TTL=3600
 ```
 
-### تنظیمات پیکربندی Redis
+### Redis Configuration Settings
 
 فایل [`redis.conf`](deployment/redis/redis.conf) را بررسی کنید. تنظیمات کلیدی:
 
@@ -132,7 +132,7 @@ timeout 300
 tcp-keepalive 60
 ```
 
-#### تنظیمات Redis برای Windows
+#### Redis Settings for Windows
 
 اگر از Memurai استفاده می‌کنید، فایل کانفیگ در این مسیر قرار می‌گیرد:
 ```
@@ -146,9 +146,9 @@ C:\Program Files\Redis\redis.windows.conf
 
 ---
 
-## تست و بررسی
+## Testing and Verification
 
-### ۱. تست اتصال پایه
+### 1. Basic Connection Test
 
 ```bash
 # اتصال به Redis
@@ -171,7 +171,7 @@ DEL test_key
 EXIT
 ```
 
-### ۲. تست از طریق Backend
+### 2. Testing via Backend
 
 ```bash
 # اجرای تست اتصال Redis
@@ -192,7 +192,7 @@ asyncio.run(test())
 "
 ```
 
-### ۳. تست عملکرد
+### 3. Performance Test
 
 ```bash
 # استفاده از redis-benchmark
@@ -203,7 +203,7 @@ redis-benchmark -h localhost -p 6379 -n 100000 -c 50
 # - GET: > 100,000 ops/sec
 ```
 
-### ۴. مانیتورینگ
+### 4. Monitoring
 
 ```bash
 # مشاهده اطلاعات Redis
@@ -224,9 +224,9 @@ redis-cli DBSIZE
 
 ---
 
-## عیب‌یابی
+## Troubleshooting
 
-### مشکل ۱: عدم اتصال به Redis
+### Issue 1: Unable to Connect to Redis
 
 **علامت:**
 ```
@@ -248,7 +248,7 @@ netstat -tlnp | grep 6379
 sudo ufw allow 6379
 ```
 
-### مشکل ۲: خطای حافظه
+### Issue 2: Memory Error
 
 **علامت:**
 ```
@@ -270,7 +270,7 @@ maxmemory-policy allkeys-lru
 sudo systemctl restart redis-server
 ```
 
-### مشکل ۳: عملکرد ضعیف
+### Issue 3: Poor Performance
 
 **علامت:**
 - زمان پاسخ بالا
@@ -292,7 +292,7 @@ tcp-keepalive 60
 # 4. استفاده از connection pooling در برنامه
 ```
 
-### مشکل ۴: داده‌های cache شده منقضی نمی‌شوند
+### Issue 4: Cached Data Not Expiring
 
 **علامت:**
 - داده‌های قدیمی در cache
@@ -316,7 +316,7 @@ redis-cli KEYS "pattern:*" | xargs redis-cli DEL
 
 ---
 
-## منابع بیشتر
+## Additional Resources
 
 - [Redis Documentation](https://redis.io/documentation)
 - [Redis Configuration](https://redis.io/docs/management/config/)

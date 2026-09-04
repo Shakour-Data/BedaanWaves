@@ -1,5 +1,5 @@
 # BedaanWaves - Master Plan
-## پلن جامع اجرای پروژه
+## Comprehensive Project Execution Plan
 
 **تاریخ ایجاد:** 2026-09-04  
 **وضعیت:** در حال اجرا  
@@ -7,7 +7,7 @@
 
 ---
 
-## 📋 فهرست مطالب
+## 📋 Table of Contents
 
 1. [ executive summary](#1-executive-summary)
 2. [ Roadmap کلی](#2-roadmap-کلی)
@@ -20,16 +20,16 @@
 
 ## 1. Executive Summary
 
-### 🎯 هدف کلی
+### 🎯 Main Objective
 ارتقاء و تکمیل پلتفرم تحلیل سهام BedaanWaves با افزودن قابلیت‌های پیشرفته، بهینه‌سازی عملکرد، و رفع مشکلات موجود.
 
-### 📊 وضعیت فعلی
+### 📊 Current Status
 - **بک‌اند:** 80+ سرویس، معماری DDD، پوشش تست متوسط
 - **فرانت‌اند:** Next.js 16, React 19, 100+ کامپوننت
 - **دیتابیس:** PostgreSQL با 25+ جدول
 - **مشکل اصلی:** ناهماهنگی داده‌ها در Dashboard (رفع شد در فاز ۱)
 
-### 🎯 نتایج مورد انتظار
+### 🎯 Expected Results
 - بهبود 70% زمان پاسخ API با Redis Cache
 - افزودن ۶ API جدید برای مقایسه، پیش‌بینی و هشدار
 - پوشش تست E2E کامل با Playwright
@@ -37,7 +37,7 @@
 
 ---
 
-## 2. Roadmap کلی
+## 2. General Roadmap
 
 ```
 فاز ۰: آماده‌سازی        [██████████] 100% ✅
@@ -49,9 +49,9 @@
 فاز ۶: مستندسازی        [░░░░░░░░░░]  0% ⏳
 ```
 
-### ⏱️ زمان‌بندی تخمینی
+### ⏱️ Estimated Timeline
 
-| فاز | مدت | شروع | پایان |
+| Phase | Duration | Start | End |
 |-----|-----|-------|-------|
 | فاز ۰ | ۱ روز | 2026-09-04 | 2026-09-04 ✅ |
 | فاز ۱ | ۱ روز | 2026-09-04 | 2026-09-04 ✅ |
@@ -65,9 +65,9 @@
 
 ---
 
-## 3. فازها به تفصیل
+## 3. Phases in Detail
 
-### ✅ فاز ۰: آماده‌سازی (تکمیل شد)
+### ✅ Phase 0: Preparation (Completed)
 
 **هدف:** بررسی وضعیت فعلی و آماده‌سازی برای شروع
 
@@ -84,7 +84,7 @@
 
 ---
 
-### ✅ فاز ۱: رفع Inconsistency داده‌ها (تکمیل شد)
+### ✅ Phase 1: Fix Data Inconsistency (Completed)
 
 **هدف:** رفع ناهماهنگی تاریخ در Spider Chart و Trend Chart
 
@@ -113,7 +113,7 @@
 
 ---
 
-### ⏳ فاز ۲: بهینه‌سازی - اضافه کردن Redis Cache
+### ⏳ Phase 2: Optimization - Add Redis Cache
 
 **هدف:** بهبود 70% زمان پاسخ API با استفاده از Redis Cache
 
@@ -149,13 +149,13 @@
 
 ---
 
-### ⏳ فاز ۳: APIهای جدید
+### ⏳ Phase 3: New APIs
 
 **هدف:** افزودن ۶ API جدید برای مقایسه، پیش‌بینی و هشدار
 
 **APIهای مورد نیاز:**
 
-| شماره | نام | توضیحات |
+| Number | Name | Description |
 |-------|-----|---------|
 | 21 | Compare | مقایسه چند سهم |
 | 22 | Composite Score | امتیاز ترکیبی |
@@ -180,7 +180,7 @@
 
 ---
 
-### ⏳ فاز ۴: E2E Tests با Playwright
+### ⏳ Phase 4: E2E Tests with Playwright
 
 **هدف:** پوشش تست End-to-End کامل برای جلوگیری از باگ‌های مخفی
 
@@ -198,7 +198,7 @@
 
 ---
 
-### ⏳ فاز ۵: ویژگی‌های پیشرفته
+### ⏳ Phase 5: Advanced Features
 
 **ویژگی‌ها:**
 1. **مقایسه سهام:** انتخاب ۲-۵ سهم و مقایسه چارت‌ها
@@ -214,7 +214,7 @@
 
 ---
 
-### ⏳ فاز ۶: مستندسازی
+### ⏳ Phase 6: Documentation
 
 **مستندات مورد نیاز:**
 1. **API Documentation:** Swagger/OpenAPI
@@ -231,20 +231,20 @@
 
 ---
 
-## 4. معیارهای موفقیت
+## 4. Success Criteria
 
-### معیارهای کلی پروژه
+### General Project Criteria
 
-| معیار | هدف | روش اندازه‌گیری |
+| Criteria | Goal | Measurement Method |
 |-------|-----|------------------|
 | زمان پاسخ API | < 200ms (p95) | Prometheus/Grafana |
 | پوشش تست | > 80% | Coverage Report |
 | Uptime | > 99.9% | Monitoring |
 | رضایت کاربر | > 4.5/5 | User Survey |
 
-### معیارهای هر فاز
+### Phase Criteria
 
-| فاز | معیار موفقیت | وضعیت |
+| Phase | Success Criteria | Status |
 |-----|--------------|-------|
 | فاز ۰ | مستندسازی کامل وضعیت فعلی | ✅ تکمیل |
 | فاز ۱ | همگام‌سازی ۱۰۰% تاریخ در چارت‌ها | ✅ تکمیل |
@@ -256,11 +256,11 @@
 
 ---
 
-## 5. مدیریت ریسک
+## 5. Risk Management
 
-### ریسک‌های شناسایی شده
+### Identified Risks
 
-| ریسک | احتمال | تأثیر | راه‌حل |
+| Risk | Probability | Impact | Solution |
 |------|--------|-------|--------|
 | ناسازگاری با داده‌های قدیمی | متوسط | بالا | Migration Scripts |
 | کاهش عملکرد با Redis | کم | بالا | Monitoring و Tuning |
@@ -269,11 +269,11 @@
 
 ---
 
-## 6. گزارش‌دهی
+## 6. Reporting
 
-### فرمول گزارش‌دهی
+### Reporting Framework
 
-| نوع گزارش | فرکانس | مخاطب |
+| Report Type | Frequency | Audience |
 |-----------|--------|-------|
 | Daily Standup | روزانه | تیم توسعه |
 | Progress Report | هفتگی | مدیر پروژه |
@@ -282,25 +282,25 @@
 
 ---
 
-## ضمیمه‌ها
+## Appendices
 
-### A. اصطلاحات و تعاریف
+### A. Terms and Definitions
 
 - **DateStore:** مدیریت مرکزی تاریخ برای همگام‌سازی چارت‌ها
 - **Redis Cache:** سیستم کشینگ در حافظه برای بهبود عملکرد
 - **E2E Test:** تست End-to-End برای شبیه‌سازی رفتار کاربر
 - **API:** Application Programming Interface
 
-### B. منابع و مراجع
+### B. Resources and References
 
 1. [FastAPI Documentation](https://fastapi.tiangolo.com/)
 2. [Next.js Documentation](https://nextjs.org/docs)
 3. [Redis Documentation](https://redis.io/documentation)
 4. [Playwright Documentation](https://playwright.dev/)
 
-### C. تاریخچه تغییرات
+### C. Change History
 
-| تاریخ | نسخه | تغییرات | نویسنده |
+| Date | Version | Changes | Author |
 |-------|------|---------|---------|
 | 2026-09-04 | 1.0.0 | ایجاد مستند Master Plan | AI Assistant |
 
