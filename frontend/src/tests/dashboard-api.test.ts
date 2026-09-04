@@ -1,5 +1,13 @@
 import { vi } from 'vitest'
-import { fetchDashboardData, fetchScoreTrend, fetchCoefficientHistory } from '@/lib/api/dashboard'
+import {
+  fetchDashboardData,
+  fetchScoreTrend,
+  fetchCoefficientHistory,
+  fetchSubDimensionTrend,
+  fetchAspectTrend,
+  fetchSubAspectTrend,
+  fetchHierarchicalTrend,
+} from '@/lib/api/dashboard'
 import { apiClient } from '@/lib/api'
 
 vi.mock('@/lib/api', () => ({
@@ -12,7 +20,7 @@ describe('Dashboard API Service', () => {
   })
 
   it('should fetch dashboard data when all APIs succeed', async () => {
-    ;(apiClient.get as any).mockImplementation((url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
       if (url.includes('market/market-overview')) {
         return Promise.resolve({ data: {
           status: 'success',
@@ -95,7 +103,7 @@ describe('Dashboard API Service', () => {
   })
 
   it('should handle API failures gracefully', async () => {
-    ;(apiClient.get as any).mockImplementation((url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
       return Promise.reject(new Error('API Error'))
     })
 
@@ -112,7 +120,7 @@ describe('Dashboard API Service', () => {
   })
 
   it('should fetch score trend with day-over-day deltas', async () => {
-    ;(apiClient.get as any).mockImplementation((url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
       if (url.includes('analysis/dashboard/score-trend')) {
         return Promise.resolve({ data: {
           status: 'success',
@@ -237,14 +245,137 @@ describe('Dashboard API Service', () => {
     })
     ;(apiClient.get as any) = spy
 
-    await fetchCoefficientHistory(30, 'NASDAQ', { endDate: '2026-08-31' })
+    await fetchCoefficientHistory(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
 
     expect(spy).toHaveBeenCalledTimes(1)
     const calledUrl: string = spy.mock.calls[0][0]
     expect(calledUrl).toContain('analysis/dashboard/coefficient-history')
     expect(calledUrl).toContain('days=30')
     expect(calledUrl).toContain('market=NASDAQ')
+    expect(calledUrl).toContain('latest=true')
     expect(calledUrl).toContain('end_date=2026-08-31')
+    expect(calledUrl).not.toMatch(/\?$/)
+    expect(calledUrl).not.toMatch(/\?\?/)
+  })
+
+  it('should call the sub-dimension-trend endpoint with correct params', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        days: 30,
+        market: 'NASDAQ',
+        count: 0,
+        level: 'sub_dimension',
+        keys: [],
+        series: [],
+        latest_date: null,
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    await fetchSubDimensionTrend(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('analysis/dashboard/sub-dimension-trend')
+    expect(calledUrl).toContain('days=30')
+    expect(calledUrl).toContain('market=NASDAQ')
+    expect(calledUrl).toContain('latest=true')
+    expect(calledUrl).toContain('end_date=2026-08-31')
+    expect(calledUrl).not.toMatch(/\?$/)
+    expect(calledUrl).not.toMatch(/\?\?/)
+  })
+
+  it('should call the aspect-trend endpoint with correct params', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        days: 30,
+        market: 'NASDAQ',
+        count: 0,
+        level: 'aspect',
+        keys: [],
+        series: [],
+        latest_date: null,
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    await fetchAspectTrend(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('analysis/dashboard/aspect-trend')
+    expect(calledUrl).toContain('days=30')
+    expect(calledUrl).toContain('market=NASDAQ')
+    expect(calledUrl).toContain('latest=true')
+    expect(calledUrl).toContain('end_date=2026-08-31')
+    expect(calledUrl).not.toMatch(/\?$/)
+    expect(calledUrl).not.toMatch(/\?\?/)
+  })
+
+  it('should call the sub-aspect-trend endpoint with correct params', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        days: 30,
+        market: 'NASDAQ',
+        count: 0,
+        level: 'sub_aspect',
+        keys: [],
+        series: [],
+        latest_date: null,
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    await fetchSubAspectTrend(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('analysis/dashboard/sub-aspect-trend')
+    expect(calledUrl).toContain('days=30')
+    expect(calledUrl).toContain('market=NASDAQ')
+    expect(calledUrl).toContain('latest=true')
+    expect(calledUrl).toContain('end_date=2026-08-31')
+    expect(calledUrl).not.toMatch(/\?$/)
+    expect(calledUrl).not.toMatch(/\?\?/)
+  })
+
+  it('should call the hierarchical-trend endpoint with the level param', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        level: 'sub_dimension',
+        days: 30,
+        market: 'NASDAQ',
+        parent: 'fundamental',
+        count: 0,
+        latest_date: null,
+        series: [],
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    await fetchHierarchicalTrend('sub_dimension', 30, 'NASDAQ', {
+      endDate: '2026-08-31',
+      latest: true,
+      parent: 'fundamental',
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('analysis/dashboard/hierarchical-trend')
+    expect(calledUrl).toContain('level=sub_dimension')
+    expect(calledUrl).toContain('days=30')
+    expect(calledUrl).toContain('market=NASDAQ')
+    expect(calledUrl).toContain('latest=true')
+    expect(calledUrl).toContain('end_date=2026-08-31')
+    expect(calledUrl).toContain('parent=fundamental')
     expect(calledUrl).not.toMatch(/\?$/)
     expect(calledUrl).not.toMatch(/\?\?/)
   })

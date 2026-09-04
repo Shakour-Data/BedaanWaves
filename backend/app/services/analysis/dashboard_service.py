@@ -379,6 +379,29 @@ class DashboardService:
     def __init__(self):
         pass
 
+    async def _get_latest_score_date(self, db: AsyncSession) -> Optional[str]:
+        """Return the max ScoreHistory.date across active NASDAQ assets as ISO string.
+
+        Returns None if there is no score history for any active NASDAQ asset.
+        """
+        result = await db.execute(
+            select(func.max(ScoreHistory.date))
+            .join(Asset, Asset.id == ScoreHistory.asset_id)
+            .where(and_(
+                Asset.active == True,  # noqa: E712
+                Asset.market == "NASDAQ",
+                Asset.asset_class.in_(["EQUITY", "ETF"]),
+            ))
+        )
+        latest_date_row = result.scalar_one_or_none()
+        if latest_date_row is None:
+            return None
+        return (
+            latest_date_row.isoformat()
+            if hasattr(latest_date_row, "isoformat")
+            else str(latest_date_row)
+        )
+
     async def get_dimension_dashboard(
         self,
         db: AsyncSession,
@@ -649,6 +672,8 @@ class DashboardService:
         top_performers = symbols_data[:10]
         bottom_performers = symbols_data[-10:][::-1]
 
+        latest_date = await self._get_latest_score_date(db)
+
         return {
             "status": "success",
             "dimension": dimension,
@@ -664,7 +689,7 @@ class DashboardService:
             "symbols": symbols_data[:limit],
             "top_performers": top_performers,
             "bottom_performers": bottom_performers,
-            "latest_date": None,
+            "latest_date": latest_date,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -886,6 +911,8 @@ class DashboardService:
 
         symbols_data.sort(key=lambda x: x["score"], reverse=True)
 
+        latest_date = await self._get_latest_score_date(db)
+
         return {
             "status": "success",
             "dimension": "news",
@@ -1002,6 +1029,8 @@ class DashboardService:
 
         symbols_data.sort(key=lambda x: x["score"], reverse=True)
 
+        latest_date = await self._get_latest_score_date(db)
+
         return {
             "status": "success",
             "dimension": "board",
@@ -1023,7 +1052,7 @@ class DashboardService:
                 {"symbol": s["symbol"], "name": s["name"], "score": s["score"], "board_count": s["board_count"], "officer_count": s["officer_count"]}
                 for s in symbols_data[-10:][::-1]
             ],
-            "latest_date": None,
+            "latest_date": latest_date,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -1144,6 +1173,8 @@ class DashboardService:
         worst = min(symbols_data, key=lambda x: x["score"]) if symbols_data else None
 
         symbols_data.sort(key=lambda x: x["score"], reverse=True)
+
+        latest_date = await self._get_latest_score_date(db)
 
         return {
             "status": "success",
@@ -1302,20 +1333,7 @@ class DashboardService:
             {"key": "ai",          "label": "AI",          "weight": 0.10},
         ]
 
-        latest_date = None
-        if latest:
-            latest_date_result = await db.execute(
-                select(func.max(ScoreHistory.date))
-                .join(Asset, Asset.id == ScoreHistory.asset_id)
-                .where(and_(
-                    Asset.active == True,  # noqa: E712
-                    Asset.market == "NASDAQ",
-                    Asset.asset_class.in_(["EQUITY", "ETF"]),
-                ))
-            )
-            latest_date_row = latest_date_result.scalar_one_or_none()
-            if latest_date_row is not None:
-                latest_date = latest_date_row.isoformat() if hasattr(latest_date_row, "isoformat") else str(latest_date_row)
+        latest_date = await self._get_latest_score_date(db)
 
         return {
             "status": "success",
