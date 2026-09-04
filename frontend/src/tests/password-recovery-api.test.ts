@@ -37,15 +37,21 @@ describe('password-recovery-api utilities', () => {
   });
 
   describe('isValidPassword', () => {
-    it('accepts passwords >= 8 characters', () => {
+    it('accepts passwords >= 8 characters with letters and numbers', () => {
       expect(isValidPassword('password123')).toBe(true);
-      expect(isValidPassword('12345678')).toBe(true);
+      expect(isValidPassword('Passw0rd!')).toBe(true);
     });
 
     it('rejects passwords < 8 characters', () => {
       expect(isValidPassword('')).toBe(false);
       expect(isValidPassword('short')).toBe(false);
       expect(isValidPassword('1234567')).toBe(false);
+    });
+
+    it('rejects passwords without letters or numbers', () => {
+      expect(isValidPassword('abcdefgh')).toBe(false);
+      expect(isValidPassword('12345678')).toBe(false);
+      expect(isValidPassword('!!!!!!!!')).toBe(false);
     });
   });
 
