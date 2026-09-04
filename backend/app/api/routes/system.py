@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import timezone, datetime
 from typing import Optional
 import logging
+from app.core.utils import utc_now_iso
 
 from app.api.dependencies import get_current_admin_user, get_health_checker
 from app.services.core.dependency_container import get_global_container
@@ -87,7 +88,7 @@ async def get_platform_metrics() -> dict:
     """Get platform-wide metrics summary."""
     svc = _get_metrics()
     metrics = svc.get_all_metrics()
-    return {"status": "success", "timestamp": datetime.now(timezone.utc).isoformat(), **metrics}
+    return {"status": "success", "timestamp": utc_now_iso(), **metrics}
 
 
 @router.get("/metrics/health")

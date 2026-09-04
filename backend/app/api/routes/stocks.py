@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Header, Response
 from typing import List, Optional
 from datetime import datetime, timezone
 import logging
+from app.core.utils import utc_now_iso
 
 from app.services.data.stock_service import StockService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
@@ -89,7 +90,7 @@ async def search_stocks(
         "count": len(results),
         "data": results[:limit],
         "api_version": "v1",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": utc_now_iso()
     }
 
 
@@ -111,7 +112,7 @@ async def get_stock(
         "ticker": ticker,
         "data": data,
         "api_version": version,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": utc_now_iso()
     }
     
     if version == "v1":
@@ -141,7 +142,7 @@ async def get_multiple_stocks(
         "failed": failed,
         "data": results,
         "api_version": "v1",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": utc_now_iso()
     }
 
 
@@ -180,7 +181,7 @@ async def get_multiple_stocks_v2(
         "data": results,
         "api_version": "v2",
         "features": ["batch", "historical_inclusion"] if include_history else ["batch"],
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": utc_now_iso()
     }
 
 
@@ -205,12 +206,12 @@ async def export_portfolio_data(
     data = await service.get_multiple(tickers)
     
     export_result = {
-        "export_timestamp": datetime.now(timezone.utc).isoformat(),
+        "export_timestamp": utc_now_iso(),
         "total_records": len(tickers),
         "successful_exports": sum(1 for v in data.values() if "error" not in v),
         "format": format,
         "data": data,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": utc_now_iso()
     }
     
     if format == "csv":
@@ -226,7 +227,7 @@ async def export_portfolio_data(
                     d.get("price", ""),
                     d.get("volume", ""),
                     d.get("change", ""),
-                    datetime.now(timezone.utc).isoformat()
+                    utc_now_iso()
                 ])
         export_result["csv_content"] = csv_buffer.getvalue()
     
@@ -272,7 +273,7 @@ async def import_portfolio_data(
             "imported_tickers": imported,
             "errors": errors,
             "api_version": "v1",
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": utc_now_iso()
         }
     except __import__("json").JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")

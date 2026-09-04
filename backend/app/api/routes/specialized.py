@@ -6,6 +6,7 @@ from sqlalchemy import select, and_, func
 from datetime import timezone, datetime, date
 from typing import List, Optional, Dict, Any
 import logging
+from app.core.utils import utc_now_iso
 
 from app.db.base import get_async_session
 from app.models.models import Asset, candle_model_for_market, MLSignal
@@ -123,7 +124,7 @@ async def sectors_summary(
     svc = _load(SectorAnalysisService)
     await svc.initialize()
     result = await svc.analyze_all(universe)
-    result["timestamp"] = datetime.now(timezone.utc).isoformat()
+    result["timestamp"] = utc_now_iso()
     return {"status": "success", **result}
 
 
@@ -159,7 +160,7 @@ async def compare(data: dict = Body(...)) -> dict:
     svc = _load(ComparisonService)
     await svc.initialize()
     result = await svc.compare(symbols_data)
-    result["timestamp"] = datetime.now(timezone.utc).isoformat()
+    result["timestamp"] = utc_now_iso()
     return result
 
 
@@ -185,7 +186,7 @@ async def correlation(data: dict = Body(...)) -> dict:
         high_threshold=float(data.get("high_threshold", 0.7)),
         low_threshold=float(data.get("low_threshold", -0.7)),
     )
-    result["timestamp"] = datetime.now(timezone.utc).isoformat()
+    result["timestamp"] = utc_now_iso()
     return result
 
 
