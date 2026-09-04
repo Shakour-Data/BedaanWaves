@@ -133,7 +133,7 @@ deploy() {
     log_success "========================================"
     echo ""
     echo "Services to start:"
-    echo "  Backend:  uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo "  Backend:  uvicorn app.main:app --host 0.0.0.0 --port 3000"
     echo "  Frontend: cd frontend && npm run dev -- --port 3005"
     echo ""
 }
