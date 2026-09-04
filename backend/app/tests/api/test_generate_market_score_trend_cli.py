@@ -11,7 +11,7 @@ BACKEND_DIR = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 )
-SCRIPT_PATH = os.path.join(BACKEND_DIR, "generate_market_score_trend.py")
+SCRIPT_PATH = os.path.join(BACKEND_DIR, "scripts", "generate_market_score_trend.py")
 
 
 def _load_module():
