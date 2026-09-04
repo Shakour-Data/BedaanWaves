@@ -389,7 +389,7 @@ class DashboardService:
             select(func.max(ScoreHistory.date))
             .join(Asset, Asset.id == ScoreHistory.asset_id)
             .where(and_(
-                Asset.active == True,  # noqa: E712
+                Asset.active,
                 Asset.market == "NASDAQ",
                 Asset.asset_class.in_(["EQUITY", "ETF"]),
             ))

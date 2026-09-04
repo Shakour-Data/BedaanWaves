@@ -286,7 +286,7 @@ async def _aggregate_score_trend_on_the_fly(
         .join(Asset, Asset.id == ScoreHistory.asset_id)
         .where(
             and_(
-                Asset.active == True,  # noqa: E712
+                Asset.active,
                 market_filter,
                 ScoreHistory.date >= cutoff,
             )

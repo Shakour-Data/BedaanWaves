@@ -52,7 +52,7 @@ async def _build_universe(
         select(Asset, Candle)
         .where(
             and_(
-                Asset.active == True,  # noqa: E712
+                Asset.active,
                 Asset.market == "NASDAQ",
                 Asset.asset_class.in_(["EQUITY", "ETF"]),
             )
@@ -83,7 +83,7 @@ async def _build_universe(
             .where(
                 and_(
                     MLSignal.asset_id.in_(asset_ids),
-                    MLSignal.is_active == True,  # noqa: E712
+                    MLSignal.is_active,
                     MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
