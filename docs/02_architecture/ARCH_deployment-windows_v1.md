@@ -1,5 +1,5 @@
 # BedaanWaves - Native Windows Setup Guide
-## راهنمای کامل نصب و راه‌اندازی بومی ویندوز (بدون Docker)
+## Complete Native Windows Setup Guide (Without Docker)
 
 **Version:** 1.0.0  
 **Last Updated:** 2026-09-04  
@@ -7,7 +7,7 @@
 
 ---
 
-## 📋 فهرست مطالب
+## 📋 Table of Contents
 
 1. [خلاصه پروژه](#خلاصه-پروژه)
 2. [پیش‌نیازها](#پیش‌نیازها)
@@ -22,7 +22,7 @@
 
 ---
 
-## 🚀 خلاصه پروژه
+## 🚀 Project Summary
 
 **BedaanWaves** یک پلتفرم تحلیل سهام NASDAQ است که شامل:
 
@@ -33,9 +33,9 @@
 
 ---
 
-## ⚙️ پیش‌نیازها
+## ⚙️ Prerequisites
 
-### سخت‌افزار
+### Hardware
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
@@ -43,7 +43,7 @@
 | RAM | 8 GB | 16 GB |
 | Disk | 50 GB SSD | 100 GB SSD |
 
-### نرم‌افزار
+### Software
 
 | Component | Version | Download |
 |-----------|---------|----------|
@@ -55,15 +55,15 @@
 
 ---
 
-## 📦 مرحله 1: نصب PostgreSQL
+## 📦 Step 1: Install PostgreSQL
 
-### 1.1 دانلود و نصب
+### 1.1 Download and Install
 
 1. به [PostgreSQL Downloads](https://www.postgresql.org/download/windows/) بروید
 2. **Windows x86-64** را دانلود کنید
 3. فایل `.exe` را اجرا کنید
 
-### 1.2 تنظیمات نصب
+### 1.2 Installation Settings
 
 در طول نصب، این مقادیر را وارد کنید:
 
@@ -75,7 +75,7 @@ Port: 5432  (پیش‌فرض)
 Locale: English, United States
 ```
 
-### 1.3 ایجاد دیتابیس
+### 1.3 Create Database
 
 پس از نصب، Command Prompt (CMD) را به صورت Administrator باز کنید:
 
@@ -93,7 +93,7 @@ psql -U postgres -c "CREATE DATABASE bedaanwaves_db;"
 psql -U postgres -l
 ```
 
-### 1.4 تنظیمات فایروال
+### 1.4 Firewall Settings
 
 اگر Windows Defender Firewall فعال است:
 
@@ -102,9 +102,9 @@ psql -U postgres -l
 netsh advfirewall firewall add rule name="PostgreSQL" dir=in action=allow protocol=tcp localport=5432
 ```
 
-### 1.5 عیب‌یابی
+### 1.5 Troubleshooting
 
-| مشکل | راه‌حل |
+| Issue | Solution |
 |------|--------|
 | "Connection refused" | PostgreSQL service را بررسی کنید: `services.msc` |
 | "password authentication failed" | رمز عبور را بررسی کنید در `pg_hba.conf` |
@@ -112,19 +112,19 @@ netsh advfirewall firewall add rule name="PostgreSQL" dir=in action=allow protoc
 
 ---
 
-## 📦 مرحله 2: نصب Redis
+## 📦 Step 2: Install Redis
 
-### گزینه 1: Memurai (توصیه شده)
+### Option 1: Memurai (Recommended)
 
 **Memurai** بهترین گزینه Redis برای ویندوز است.
 
-#### 2.1.1 دانلود و نصب
+#### 2.1.1 Download and Install
 
 1. به [Memurai Downloads](https://www.memurai.com/download) بروید
 2. نسخه **Developer Edition** را دانلود کنید (رایگان)
 3. فایل `.msi` را اجرا کنید
 
-#### 2.1.2 تنظیمات نصب
+#### 2.1.2 Installation Settings
 
 ```
 Installation Directory: C:\Program Files\Memurai
@@ -133,7 +133,7 @@ Port: 6379 (default)
 Start Service: Yes
 ```
 
-#### 2.1.3 بررسی نصب
+#### 2.1.3 Verify Installation
 
 ```powershell
 # بررسی سرویس
@@ -144,17 +144,17 @@ redis-cli ping
 # Expected: PONG
 ```
 
-### گزینه 2: Redis برای ویندوز (Microsoft Archive)
+### Option 2: Redis for Windows (Microsoft Archive)
 
 اگر Memurai در دسترس نیست:
 
-#### 2.2.1 دانلود
+#### 2.2.1 Download
 
 1. به [Redis Windows Releases](https://github.com/microsoftarchive/redis/releases) بروید
 2. آخرین نسخه را دانلود کنید (مثلاً `Redis-x64-3.0.504.msi`)
 3. فایل `.msi` را اجرا کنید
 
-#### 2.2.2 تنظیمات
+#### 2.2.2 Settings
 
 ```
 Port: 6379
@@ -162,7 +162,7 @@ Max Memory: 256MB (for cache)
 Add to PATH: Yes
 ```
 
-### 2.3 پیکربندی Redis
+### 2.3 Configure Redis
 
 فایل پیکربندی ما در این مسیر است:
 ```
@@ -174,7 +174,7 @@ deployment\redis\redis.conf
 Copy-Item "deployment\redis\redis.conf" "C:\ProgramData\Memurai\redis.conf"
 ```
 
-### 2.4 بررسی نهایی
+### 2.4 Final Verification
 
 ```powershell
 # اتصال به Redis
@@ -198,15 +198,15 @@ OK
 
 ---
 
-## 📦 مرحله 3: نصب Python
+## 📦 Step 3: Install Python
 
-### 3.1 دانلود و نصب
+### 3.1 Download and Install
 
 1. به [Python Downloads](https://www.python.org/downloads/) بروید
 2. **Python 3.11+** را دانلود کنید (Windows installer 64-bit)
 3. فایل `.exe` را اجرا کنید
 
-### 3.2 تنظیمات نصب
+### 3.2 Installation Settings
 
 **⚠️ مهم: این گزینه‌ها را انتخاب کنید:**
 
@@ -234,7 +234,7 @@ Advanced Options:
   ☐ Download debug binaries (optional)
 ```
 
-### 3.3 بررسی نصب
+### 3.3 Verify Installation
 
 ```powershell
 # بستن و باز کردن PowerShell (برای بارگذاری PATH)
@@ -250,9 +250,9 @@ pip --version
 where python
 ```
 
-### 3.4 عیب‌یابی
+### 3.4 Troubleshooting
 
-| مشکل | راه‌حل |
+| Issue | Solution |
 |------|--------|
 | "python is not recognized" | Python به PATH اضافه نشده - نصب را با "Add to PATH" اجرا کنید |
 | "pip is not recognized" | pip نصب نشده - Python را دوباره نصب کنید |
@@ -260,15 +260,15 @@ where python
 
 ---
 
-## 📦 مرحله 4: نصب Node.js
+## 📦 Step 4: Install Node.js
 
-### 4.1 دانلود و نصب
+### 4.1 Download and Install
 
 1. به [Node.js Downloads](https://nodejs.org/) بروید
 2. **LTS (Long Term Support)** را دانلود کنید (Node.js 20.x)
 3. فایل `.msi` را اجرا کنید
 
-### 4.2 تنظیمات نصب
+### 4.2 Installation Settings
 
 ```
 Destination Folder: C:\Program Files\nodejs
@@ -282,7 +282,7 @@ Features:
 ☐ Automatically install necessary tools (optional - requires 3GB)
 ```
 
-### 4.3 بررسی نصب
+### 4.3 Verify Installation
 
 ```powershell
 # بستن و باز کردن PowerShell
@@ -300,7 +300,7 @@ where node
 where npm
 ```
 
-### 4.4 تنظیمات npm (اختیاری)
+### 4.4 npm Settings (Optional)
 
 برای بهبود سرعت دانلود:
 
@@ -317,9 +317,9 @@ npm config list
 
 ---
 
-## 📦 مرحله 5: پیکربندی پروژه
+## 📦 Step 5: Configure Project
 
-### 5.1 کلون یا استخراج پروژه
+### 5.1 Clone or Extract Project
 
 ```powershell
 # اگر از git استفاده می‌کنید
@@ -331,9 +331,9 @@ cd bedaanwaves
 cd C:\Projects\bedaanwaves
 ```
 
-### 5.2 پیکربندی Backend
+### 5.2 Configure Backend
 
-#### 5.2.1 ایجاد فایل `.env`
+#### 5.2.1 Create `.env` File
 
 ```powershell
 cd backend
@@ -345,7 +345,7 @@ copy .env.example .env
 notepad .env
 ```
 
-#### 5.2.2 محتوای فایل `.env`
+#### 5.2.2 `.env` File Contents
 
 ```env
 # Application
@@ -425,9 +425,9 @@ METRICS_ENABLED=True
 - `SECRET_KEY`: کلید تصادفی قوی (حداقل 64 کاراکتر)
 - `JWT_SECRET`: کلید JWT تصادفی قوی (حداقل 64 کاراکتر)
 
-### 5.3 پیکربندی Frontend
+### 5.3 Configure Frontend
 
-#### 5.3.1 بررسی فایل‌های پیکربندی
+#### 5.3.1 Check Configuration Files
 
 ```powershell
 cd ..\frontend
@@ -446,9 +446,9 @@ NEXT_PUBLIC_APP_ENV=development
 
 ---
 
-## 🚀 مرحله 6: اجرای پروژه
+## 🚀 Step 6: Run Project
 
-### 6.1 روش 1: استفاده از اسکریپت خودکار (توصیه شده)
+### 6.1 Method 1: Use Automatic Script (Recommended)
 
 ```powershell
 # بازگشت به ریشه پروژه
@@ -461,7 +461,7 @@ cd ..\..
 .\scripts\setup-windows.ps1
 ```
 
-### 6.2 روش 2: اجرای دستی
+### 6.2 Method 2: Manual Execution
 
 اگر می‌خواهید هر سرویس را جداگانه اجرا کنید:
 
@@ -519,7 +519,7 @@ npm install
 npm run dev
 ```
 
-### 6.3 دسترسی به سرویس‌ها
+### 6.3 Access Services
 
 پس از راه‌اندازی موفق:
 
@@ -534,9 +534,9 @@ npm run dev
 
 ---
 
-## 🔧 عیب‌یابی
+## 🔧 Troubleshooting
 
-### مشکلات رایج
+### Common Issues
 
 #### 1. "Port already in use"
 
@@ -604,9 +604,9 @@ npm install
 
 ---
 
-## 📚 منابع
+## 📚 Resources
 
-### لینک‌های مفید
+### Useful Links
 
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Redis Documentation](https://redis.io/documentation)
@@ -614,7 +614,7 @@ npm install
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Next.js Documentation](https://nextjs.org/docs)
 
-### دستورات مفید
+### Useful Commands
 
 ```powershell
 # اسکریپت کمکی
@@ -636,7 +636,7 @@ redis-cli FLUSHALL                              # پاک کردن همه (احت
 
 ---
 
-## ✅ چک‌لیست نصب
+## ✅ Installation Checklist
 
 - [ ] PostgreSQL 15+ نصب شده و سرویس در حال اجرا است
 - [ ] دیتابیس `bedaanwaves_db` ایجاد شده است
