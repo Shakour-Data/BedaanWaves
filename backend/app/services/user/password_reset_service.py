@@ -57,7 +57,7 @@ async def create_password_reset_token(email: str, session=None) -> Optional[str]
             return None
 
         raw_token = generate_raw_token()
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(timezone.utc)
 
         # Invalidate previous non-consumed tokens for this user (single valid token)
         result = await session.execute(
@@ -96,7 +96,7 @@ async def get_valid_reset_token(raw_token: str, session=None) -> Optional[Passwo
     if owns:
         session = async_session_maker()
     try:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(timezone.utc)
         result = await session.execute(
             select(PasswordResetToken).where(
                 PasswordResetToken.consumed.is_(False),
@@ -138,7 +138,7 @@ async def consume_reset_token(raw_token: str, session=None) -> Optional[User]:
         if token is None:
             return None
         token.consumed = True
-        token.consumed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        token.consumed_at = datetime.now(timezone.utc)
         await session.commit()
 
         result = await session.execute(select(User).where(User.id == token.user_id))

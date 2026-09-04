@@ -136,7 +136,9 @@ def _ensure_database():
             )
             if not result.fetchone():
                 conn.execute(text("COMMIT"))
-                conn.execute(text('CREATE DATABASE "{}"'.format(db_name.replace('"', '""'))))
+                from sqlalchemy.dialects.postgresql import base as pg_base
+                identifier = pg_base.Identifier(db_name)
+                conn.execute(text('CREATE DATABASE {}'.format(identifier)))
                 logger.info(f"Database '{db_name}' created automatically")
         engine.dispose()
     except Exception as e:
@@ -247,6 +249,18 @@ async def lifespan(app: FastAPI):
 
     # Step 1: Ensure directories exist
     _ensure_directories()
+
+    # Step 2: Auto-create database if missing
+    try:
+        _ensure_database()
+    except Exception as e:
+        logger.warning(f"Database auto-creation failed: {e}")
+
+    # Step 3: Auto-run migrations
+    try:
+        _run_migrations()
+    except Exception as e:
+        logger.warning(f"Auto-migration failed: {e}")
 
     # Step 4: Auto-seed if database is empty
     if _needs_seeding():
@@ -442,12 +456,12 @@ def custom_openapi():
 
     openapi_schema["servers"] = [
         {
-            "url": "http://localhost:8000",
-            "description": "Local development",
+            "url": "/api/v1",
+            "description": "Relative to current host (works in dev & prod)",
         },
         {
             "url": "http://localhost:3000",
-            "description": "Frontend dev proxy",
+            "description": "Backend direct (dev)",
         },
     ]
 

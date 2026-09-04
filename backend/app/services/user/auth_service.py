@@ -93,15 +93,10 @@ async def ensure_admin_user() -> None:
     admin_password = os.environ.get("ADMIN_PASSWORD")
     if not admin_password:
         admin_password = secrets.token_urlsafe(16)
-        import logging
         logging.getLogger(__name__).warning(
             "ADMIN_PASSWORD not set in environment. Generated temporary admin password. "
             "Store this value securely - it will not be shown again."
         )
-        print(f"\n{'='*60}")
-        print(f"  GENERATED ADMIN PASSWORD: {admin_password}")
-        print(f"  Store this securely. Set ADMIN_PASSWORD env var to persist it.")
-        print(f"{'='*60}\n")
     await create_user(
         username="admin",
         email="admin@bedaanwaves.local",

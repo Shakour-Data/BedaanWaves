@@ -384,6 +384,8 @@ class DashboardService:
         """Return the max ScoreHistory.date across active NASDAQ assets as ISO string.
 
         Returns None if there is no score history for any active NASDAQ asset.
+        Falls back to market_score_trend and then raw ScoreHistory if the
+        primary query returns no rows.
         """
         result = await db.execute(
             select(func.max(ScoreHistory.date))
@@ -395,13 +397,43 @@ class DashboardService:
             ))
         )
         latest_date_row = result.scalar_one_or_none()
-        if latest_date_row is None:
-            return None
-        return (
-            latest_date_row.isoformat()
-            if hasattr(latest_date_row, "isoformat")
-            else str(latest_date_row)
+        if latest_date_row is not None:
+            return (
+                latest_date_row.isoformat()
+                if hasattr(latest_date_row, "isoformat")
+                else str(latest_date_row)
+            )
+
+        from app.models.models import MarketScoreTrend
+        result2 = await db.execute(
+            select(func.max(MarketScoreTrend.date))
+            .where(MarketScoreTrend.market == "NASDAQ")
         )
+        trend_date = result2.scalar_one_or_none()
+        if trend_date is not None:
+            return (
+                trend_date.isoformat()
+                if hasattr(trend_date, "isoformat")
+                else str(trend_date)
+            )
+
+        result3 = await db.execute(
+            select(func.max(ScoreHistory.date))
+            .join(Asset, Asset.id == ScoreHistory.asset_id)
+            .where(and_(
+                Asset.market == "NASDAQ",
+                Asset.asset_class.in_(["EQUITY", "ETF"]),
+            ))
+        )
+        fallback_date = result3.scalar_one_or_none()
+        if fallback_date is not None:
+            return (
+                fallback_date.isoformat()
+                if hasattr(fallback_date, "isoformat")
+                else str(fallback_date)
+            )
+
+        return None
 
     async def get_dimension_dashboard(
         self,
