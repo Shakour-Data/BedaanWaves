@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -23,10 +23,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-background)]">
@@ -105,6 +101,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Menu */}
         <div
+          key={pathname}
           className={cn(
             "md:hidden absolute top-full left-0 right-0 border-b border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl transition-all duration-300 origin-top",
             mobileOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"

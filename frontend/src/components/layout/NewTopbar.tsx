@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -8,13 +8,14 @@ import { useAppStore } from "@/store/useAppStore";
 import { useUXStore } from "@/store/useUXStore";
 import { useConfirmDialog } from "@/components/ux/useConfirmDialog";
 import { Button } from "@/components/ui/Button";
-import { StockSearchBar } from "@/components/search/StockSearchBar";
+import { Menu, Search, Bell, ChevronDown, X } from "lucide-react";
 
 interface NewTopbarProps {
   title?: string;
+  breadcrumbs?: { label: string; href?: string }[];
 }
 
-export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
+export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,50 +51,69 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
     }
   };
 
+  useEffect(() => {
+    if (showSearch) {
+      const timer = setTimeout(() => setShowSearch(false), 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSearch]);
+
   return (
     <>
-      <header className="z-30 h-16 shrink-0 border-b border-border bg-background/95 backdrop-blur-xl">
+      <header className="z-30 h-16 shrink-0 border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-xl">
         <div className="flex h-full items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden"
+              className="lg:hidden h-9 w-9"
               aria-label="Toggle menu"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+              <Menu className="h-5 w-5" />
             </Button>
 
             <div className="hidden md:block">
-              <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-              <p className="text-xs text-muted-foreground">NASDAQ Market Analysis</p>
+              <h1 className="text-lg font-semibold text-[var(--color-text-primary)] tracking-tight">{title}</h1>
+              {breadcrumbs && breadcrumbs.length > 0 && (
+                <nav className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                  {breadcrumbs.map((crumb, i) => (
+                    <span key={i} className="flex items-center gap-1.5">
+                      {i > 0 && <span>/</span>}
+                      {crumb.href ? (
+                        <Link href={crumb.href} className="hover:text-[var(--color-primary)] transition-colors">{crumb.label}</Link>
+                      ) : (
+                        <span className="text-[var(--color-text-secondary)]">{crumb.label}</span>
+                      )}
+                    </span>
+                  ))}
+                </nav>
+              )}
             </div>
           </div>
 
           <div className="hidden flex-1 max-w-xl px-8 lg:block" data-search-input>
-            <StockSearchBar
-              placeholder="Search stocks, tickers..."
-              onSelect={(stock) => router.push(`/stocks/${stock.symbol}`)}
-            />
+            <form onSubmit={handleSearch} className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input
+                type="text"
+                placeholder="Search stocks, tickers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] pl-10 pr-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+              />
+            </form>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowSearch(true)}
-              className="md:hidden"
+              className="md:hidden h-9 w-9"
               aria-label="Open search"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <Search className="h-4 w-4" />
             </Button>
 
             <div className="relative">
@@ -104,14 +124,11 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
                   setShowNotifications(!showNotifications);
                   setShowUserMenu(false);
                 }}
-                className="relative"
+                className="relative h-9 w-9"
                 aria-label="Notifications"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                </svg>
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-medium text-white ring-2 ring-background">
+                <Bell className="h-4 w-4" />
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-error)] text-[10px] font-medium text-white ring-2 ring-[var(--color-surface)]">
                   3
                 </span>
               </Button>
@@ -119,13 +136,13 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-border bg-surface shadow-lg">
-                    <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                      <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-                      <button className="text-xs text-primary hover:underline">Mark all read</button>
+                  <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
+                    <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+                      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Notifications</h3>
+                      <button className="text-xs text-[var(--color-primary)] hover:underline">Mark all read</button>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
-                      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center py-8 text-[var(--color-text-muted)]">
                         <p className="text-sm">No new notifications</p>
                       </div>
                     </div>
@@ -135,38 +152,36 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
             </div>
 
             <div className="relative">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowUserMenu(!showUserMenu);
-                setShowNotifications(false);
-              }}
-              className="flex items-center gap-2"
-              aria-label="User menu"
-            >
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowUserMenu(!showUserMenu);
+                  setShowNotifications(false);
+                }}
+                className="flex items-center gap-2 h-9 px-2"
+                aria-label="User menu"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white">
                   {user?.full_name?.[0] || user?.username?.[0] || "U"}
                 </div>
-                <div className="hidden flex-col items-start px-1 md:flex">
-                  <span className="text-xs font-medium text-foreground leading-tight">{user?.full_name || user?.username || "User"}</span>
-                </div>
+                <ChevronDown className="h-3 w-3 text-[var(--color-text-muted)] hidden sm:block" />
               </Button>
 
               {showUserMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-border bg-surface shadow-lg">
-                    <div className="border-b border-border p-4">
-                      <p className="text-sm font-semibold text-foreground">{user?.full_name || user?.username || "John Doe"}</p>
-                      <p className="text-xs text-muted-foreground">{user?.email || "john@example.com"}</p>
+                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg overflow-hidden">
+                    <div className="border-b border-[var(--color-border)] p-4">
+                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">{user?.full_name || user?.username || "John Doe"}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{user?.email || "john@example.com"}</p>
                     </div>
                     <div className="p-2">
-                      <Link href="/settings/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-border hover:text-foreground">Profile</Link>
-                      <Link href="/settings" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-border hover:text-foreground">Settings</Link>
-                      <Link href="/help" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-border hover:text-foreground">Help Center</Link>
+                      <Link href="/settings/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]">Profile</Link>
+                      <Link href="/settings" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]">Settings</Link>
+                      <Link href="/help" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]">Help Center</Link>
                     </div>
-                    <div className="border-t border-border p-2">
-                      <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-error transition-colors hover:bg-error/10">Sign Out</button>
+                    <div className="border-t border-[var(--color-border)] p-2">
+                      <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-error)] transition-colors hover:bg-[var(--color-error-light)]">Sign Out</button>
                     </div>
                   </div>
                 </>
@@ -177,26 +192,28 @@ export function NewTopbar({ title = "Dashboard" }: NewTopbarProps) {
       </header>
 
       {showSearch && (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl md:hidden">
-          <div className="flex h-16 items-center justify-between border-b border-border px-4">
+        <div className="fixed inset-0 z-50 bg-[var(--color-background)]/95 backdrop-blur-xl md:hidden">
+          <div className="flex h-16 items-center justify-between border-b border-[var(--color-border)] px-4">
             <form onSubmit={handleSearch} className="flex flex-1 items-center gap-3">
-              <span className="text-muted-foreground text-xs">Search</span>
+              <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
               <input
                 type="text"
                 placeholder="Search stocks..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="flex-1 bg-transparent text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
                 autoFocus
               />
             </form>
-            <button onClick={() => setShowSearch(false)} className="text-muted-foreground" aria-label="Close search">Cancel</button>
+            <button onClick={() => setShowSearch(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" aria-label="Close search">
+              <X className="h-5 w-5" />
+            </button>
           </div>
           <div className="p-4">
-            <p className="text-sm text-muted-foreground">Recent searches</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Recent searches</p>
+            <div className="flex flex-wrap gap-2">
               {["AAPL", "TSLA", "NVDA", "MSFT"].map((ticker) => (
-                <button key={ticker} onClick={() => { router.push(`/stocks/${ticker}`); setShowSearch(false); }} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground transition-colors">{ticker}</button>
+                <button key={ticker} onClick={() => { router.push(`/stocks/${ticker}`); setShowSearch(false); }} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-text-primary)] transition-colors">{ticker}</button>
               ))}
             </div>
           </div>
