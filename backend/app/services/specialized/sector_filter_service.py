@@ -10,6 +10,7 @@ from datetime import timezone, datetime
 import asyncio
 from app.services.core.base_service import BaseService
 import logging
+from app.core.utils import utc_now_iso
 
 class SectorFilterService(BaseService):
     """
@@ -286,7 +287,7 @@ class SectorFilterService(BaseService):
             "sub_sector_distribution": sub_sector_dist,
             "etf_ticker": etf,
             "assets": sector_assets[:10],  # Top 10 assets
-            "analysis_timestamp": datetime.now(timezone.utc).isoformat()
+            "analysis_timestamp": utc_now_iso()
         }
     
     async def get_industry_index(self, industry: str) -> Optional[str]:

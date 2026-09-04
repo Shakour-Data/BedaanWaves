@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 import asyncio
 from datetime import datetime, timezone
+from app.core.utils import utc_now_iso
 
 from ..core import ExternalAPIService
 
@@ -116,7 +117,7 @@ class IntelligentIngestionService(ExternalAPIService):
         ]
         raw = await asyncio.gather(*tasks, return_exceptions=True)
         return {
-            "processed_at": datetime.now(timezone.utc).isoformat(),
+            "processed_at": utc_now_iso(),
             "total": len(requests),
             "results": raw,
         }

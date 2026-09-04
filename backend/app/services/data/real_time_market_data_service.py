@@ -285,7 +285,6 @@ class RealTimeMarketDataService(BaseService):
         if self._cache is None:
             return None
         try:
-            import asyncio
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 future = asyncio.run_coroutine_threadsafe(
@@ -307,7 +306,6 @@ class RealTimeMarketDataService(BaseService):
         if self._cache is None:
             return
         try:
-            import asyncio
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 future = asyncio.run_coroutine_threadsafe(

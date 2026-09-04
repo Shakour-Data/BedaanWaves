@@ -7,7 +7,9 @@ Provides 3-class classification (positive/neutral/negative) with confidence scor
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+import asyncio
 from ..core import AnalysisService
+from app.core.utils import utc_now_iso
 
 
 class SentimentAnalysisService(AnalysisService):
@@ -76,7 +78,7 @@ class SentimentAnalysisService(AnalysisService):
                 "confidence": 0.0,
                 "scores": {"positive": 0.0, "neutral": 1.0, "negative": 0.0},
                 "symbol": symbol,
-                "analyzed_at": datetime.now(timezone.utc).isoformat(),
+                "analyzed_at": utc_now_iso(),
             }
         
         scores = self._calculate_sentiment_scores(text)
@@ -88,7 +90,7 @@ class SentimentAnalysisService(AnalysisService):
             "confidence": round(confidence, 2),
             "scores": {k: round(v, 2) for k, v in scores.items()},
             "symbol": symbol,
-            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "analyzed_at": utc_now_iso(),
         }
     
     def _calculate_sentiment_scores(self, text: str) -> Dict[str, float]:
@@ -123,7 +125,6 @@ class SentimentAnalysisService(AnalysisService):
         Returns:
             List of sentiment analysis results
         """
-        import asyncio
         tasks = [self.analyze(item) for item in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -181,5 +182,5 @@ class SentimentAnalysisService(AnalysisService):
             "confidence": round(avg_scores[label], 2),
             "scores": {k: round(v, 2) for k, v in avg_scores.items()},
             "news_count": len(valid_results),
-            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "analyzed_at": utc_now_iso(),
         }

@@ -12,6 +12,7 @@ import json
 from app.services.core.base_service import BaseService
 from app.services.user.preference_service import PreferenceService
 import logging
+from app.core.utils import utc_now_iso
 
 class UserMarketSettingsService(BaseService):
     """
@@ -314,7 +315,7 @@ class UserMarketSettingsService(BaseService):
             "regions": settings.get("regions", self.default_settings["regions"]),
             "exchanges": settings.get("exchanges", self.default_settings["exchanges"]),
             "currencies": settings.get("currencies", self.default_settings["currencies"]),
-            "last_updated": datetime.now(timezone.utc).isoformat()
+            "last_updated": utc_now_iso()
         }
         
         return effective_filters

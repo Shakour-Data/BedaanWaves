@@ -6,6 +6,7 @@ Time series forecasting for prices, volumes, and indicators.
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from ..core import MLService
+from app.core.utils import utc_now_iso
 
 
 class TimeSeriesForecastingService(MLService):
@@ -45,5 +46,5 @@ class TimeSeriesForecastingService(MLService):
             "horizon": horizon,
             "confidence_lower": [round(f * 0.95, 2) for f in forecasts],
             "confidence_upper": [round(f * 1.05, 2) for f in forecasts],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }

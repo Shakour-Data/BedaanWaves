@@ -6,6 +6,7 @@ Chart pattern recognition and analysis.
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from ..core import MLService
+from app.core.utils import utc_now_iso
 
 
 class PatternRecognitionService(MLService):
@@ -53,7 +54,7 @@ class PatternRecognitionService(MLService):
             "current_price": current,
             "local_max": local_max,
             "local_min": local_min,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def detect_patterns(self, prices: List[float], volume: Optional[List[float]] = None) -> List[Dict[str, Any]]:
