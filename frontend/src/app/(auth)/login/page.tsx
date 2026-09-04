@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   const validatePassword = useCallback((value: string) => {
     if (value.length === 0) return "idle";
-    if (value.length < 6) return "invalid";
+    if (value.length < 8) return "invalid";
     return "valid";
   }, []);
 
