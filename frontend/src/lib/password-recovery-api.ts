@@ -159,7 +159,9 @@ export function isValidEmail(email: string): boolean {
 /** Validate a new password (min 8 chars, must contain letters and numbers). */
 export function isValidPassword(password: string): boolean {
   if (!password || password.length < 8) return false;
-  return true;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  return hasLetter && hasNumber;
 }
 
 /** Validate a new password matches its confirmation. */
