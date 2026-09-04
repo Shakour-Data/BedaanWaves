@@ -125,7 +125,7 @@ export default function AnalysisPage() {
                   <div className="font-bold text-lg text-foreground">{mover.symbol}</div>
                   <div className="text-xs text-muted-foreground mt-1">{mover.name}</div>
                   <div className="text-xl font-bold mt-2 text-foreground">
-                    {mover.price.toLocaleString(false ? "fa-IR" : "en-US")}
+                    {mover.price.toLocaleString("en-US")}
                   </div>
                   <div className={`text-sm mt-1 font-semibold ${mover.changePct >= 0 ? "text-success" : "text-primary"}`}>
                     {mover.changePct >= 0 ? "▲" : "▼"} {Math.abs(mover.changePct).toFixed(2)}%
@@ -144,7 +144,7 @@ export default function AnalysisPage() {
                 <div key={i} className="text-center p-3 rounded-xl bg-neutral/50 border border-border/40">
                   <div className="text-xs text-muted-foreground uppercase">{key.replace(/_/g, " ")}</div>
                   <div className="text-sm font-bold mt-1 text-foreground">
-                    {typeof value === "number" ? value.toLocaleString(false ? "fa-IR" : "en-US") : value || "—"}
+                    {typeof value === "number" ? value.toLocaleString("en-US") : value || "—"}
                   </div>
                 </div>
               ))}
@@ -166,7 +166,7 @@ export default function AnalysisPage() {
                   <div>
                     <div className="text-xs text-muted-foreground">{t("app.analysis.overall_score", "en")}</div>
                     <div className="text-3xl font-bold text-secondary">
-                      {analysisData.scoring.overall_score?.toLocaleString(false ? "fa-IR" : "en-US")}
+                      {analysisData.scoring.overall_score?.toLocaleString("en-US")}
                     </div>
                   </div>
                   <div className="text-right">
@@ -178,7 +178,7 @@ export default function AnalysisPage() {
                   {Object.entries(analysisData.scoring.dimensions || {}).map(([dim, score]: [string, any], i) => (
                     <div key={i} className="p-3 rounded-xl border border-border/40 bg-neutral/30">
                       <div className="text-xs text-muted-foreground capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}</div>
-                      <div className="text-lg font-bold mt-1">{score?.toLocaleString(false ? "fa-IR" : "en-US")}</div>
+                      <div className="text-lg font-bold mt-1">{score?.toLocaleString("en-US")}</div>
                     </div>
                   ))}
                 </div>
@@ -205,7 +205,7 @@ export default function AnalysisPage() {
                   },
                   { 
                     label: t("app.analysis.sentiment_labels.news_count", "en"), 
-                    value: t("app.analysis.sentiment_values.news_items", "en").replace("{count}", analysisData.sentiment.news_count?.toLocaleString(false ? "fa-IR" : "en-US") || "0"), 
+                    value: t("app.analysis.sentiment_values.news_items", "en").replace("{count}", analysisData.sentiment.news_count?.toLocaleString("en-US") || "0"), 
                     score: null, 
                     color: "text-foreground" 
                   },

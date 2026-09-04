@@ -13,14 +13,12 @@ import {
   confirmResetPassword,
   isValidPassword,
   passwordsMatch } from "@/lib/password-recovery-api";
-import { useAuthT } from "@/i18n/auth";
 
 type ResetPhase = "verifying" | "enter_password" | "confirming" | "success" | "error";
 
 type PwdValidationState = "idle" | "validating" | "valid" | "invalid";
 
 function ResetPasswordForm() {
-  const t = useAuthT();
   const router = useRouter();
   const searchParams = useSearchParams();
 

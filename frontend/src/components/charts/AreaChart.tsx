@@ -10,6 +10,7 @@ import {
   type UTCTimestamp,
   type AreaData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
+import { priceFormatter } from "@/lib/utils";
 
 interface AreaChartProps {
   data: { time: string | UTCTimestamp; value: number }[];
@@ -66,7 +67,7 @@ export function AreaChart({
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "en-US",
-        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
+        priceFormatter: priceFormatter },
       autoSize: false });
     chartRef.current = chart;
 

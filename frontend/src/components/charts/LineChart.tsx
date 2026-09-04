@@ -10,6 +10,7 @@ import {
   type UTCTimestamp,
   type LineData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
+import { priceFormatter } from "@/lib/utils";
 
 interface LineChartProps {
   data: { time: string | UTCTimestamp; value: number }[];
@@ -61,7 +62,7 @@ export function LineChart({ data, height = 320, color = "#2563EB" }: LineChartPr
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "en-US",
-        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
+        priceFormatter: priceFormatter },
       autoSize: false });
     chartRef.current = chart;
 
