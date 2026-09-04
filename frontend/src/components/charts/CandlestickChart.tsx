@@ -14,6 +14,7 @@ import {
 import { useAppStore } from "@/store/useAppStore";
 import { semanticColors, darkSemanticColors } from "@/styles/design-tokens";
 import type { Candle, Timeframe } from "@/lib/api/stocks";
+import { priceFormatter } from "@/lib/utils";
 
 interface CandlestickChartProps {
   candles: Candle[];
@@ -101,7 +102,7 @@ export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: Ca
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "en-US",
-        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
+        priceFormatter: priceFormatter },
       autoSize: false });
     chartRef.current = chart;
 

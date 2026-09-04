@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { NewsItem, AssetRow } from "@/lib/dashboard-data";
+import { formatTimeAgo } from "@/lib/utils";
 
 export default function NewsPage() {
   
@@ -49,17 +50,6 @@ export default function NewsPage() {
     loadNews();
     return () => { active = false; };
   }, []);
-
-  const formatTimeAgo = (dateStr: string): string => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return t("app.alerts.time.now", "en");
-    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", "en")}`;
-    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", "en")}`;
-    return `${days} ${t("app.alerts.time.days_ago", "en")}`;
-  };
 
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
   const filteredNews = selectedSource ? newItems.filter((item) => item.source === selectedSource) : newItems;
