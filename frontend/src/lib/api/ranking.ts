@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api";
+import { num } from "@/lib/utils";
 
 export type Grade = "A_STRONG_BUY" | "B_BUY" | "C_HOLD" | "D_SELL" | "E_STRONG_SELL";
 
@@ -58,12 +59,6 @@ interface NasdaqRankingEnvelope {
   offset?: number;
   data?: RawNasdaqRanking[];
   items?: RawNasdaqRanking[];
-}
-
-function num(value: number | string | null | undefined): number {
-  if (value === null || value === undefined) return 0;
-  const n = typeof value === "number" ? value : parseFloat(value);
-  return Number.isFinite(n) ? n : 0;
 }
 
 function normalize(item: RawNasdaqRanking): NasdaqRanking {
