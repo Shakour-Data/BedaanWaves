@@ -10,6 +10,7 @@ from datetime import timezone, datetime, timedelta
 from abc import ABC, abstractmethod
 import hashlib
 import json
+from collections import OrderedDict
 from .base_service import BaseService
 
 
@@ -43,10 +44,11 @@ class CacheBackend(ABC):
 
 
 class MemoryCacheBackend(CacheBackend):
-    """In-memory cache backend"""
+    """In-memory cache backend with LRU eviction."""
     
-    def __init__(self):
-        self._cache: Dict[str, Dict[str, Any]] = {}
+    def __init__(self, maxsize: int = 1000):
+        self._cache: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
+        self._maxsize = maxsize
     
     async def get(self, key: str) -> Optional[Any]:
         if key not in self._cache:
@@ -72,6 +74,7 @@ class MemoryCacheBackend(CacheBackend):
             'expiry': expiry,
             'created_at': datetime.now(timezone.utc),
         }
+        self._evict_if_needed()
     
     async def delete(self, key: str) -> None:
         self._cache.pop(key, None)
@@ -93,6 +96,11 @@ class MemoryCacheBackend(CacheBackend):
     def size(self) -> int:
         """Get cache size"""
         return len(self._cache)
+
+    def _evict_if_needed(self) -> None:
+        """Evict oldest entries if cache exceeds maxsize."""
+        while len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
 
 
 class CacheService(BaseService):
