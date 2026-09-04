@@ -11,6 +11,8 @@ import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
+import { useDateStore, useSelectedDate, useLatestAvailableDate } from "@/store/useDateStore";
+import { DateSelector } from "@/components/dashboard/DateSelector";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
@@ -257,26 +259,31 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
+  
+  // Date Store Integration - Fix for data inconsistency
+  const selectedDate = useSelectedDate();
+  const latestAvailableDate = useLatestAvailableDate();
+  const setLatestAvailableDate = useDateStore((state) => state.setLatestAvailableDate);
+  const effectiveDate = useEffectiveDate();
 
-  const loadScoreTrend = useCallback(async () => {
-    setScoreTrendLoading(true);
-    try {
-      const trend = await fetchScoreTrend(30, "NASDAQ");
-      setScoreTrend(trend);
-    } catch (err) {
-      const message = getApiErrorMessage(err);
-      addToast({ type: "error", message });
-    } finally {
-      setScoreTrendLoading(false);
-    }
-  }, [addToast]);
+  // Reload score trend when effective date changes
+  useEffect(() => {
+    loadScoreTrend();
+  }, [effectiveDate, loadScoreTrend]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const general = await fetchGeneralDashboard().catch(() => null);
+      // Fetch general dashboard with effective date if available
+      const general = await fetchGeneralDashboard(!!effectiveDate).catch(() => null);
+      
+      // Update latest date from general data
+      if (general?.latest_date) {
+        setLatestAvailableDate(general.latest_date);
+      }
+      
       const dashboardData = await fetchDashboardData(general ?? undefined);
 
       setMarketStats(dashboardData.marketStats);
