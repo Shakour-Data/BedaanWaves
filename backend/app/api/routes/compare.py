@@ -1,21 +1,20 @@
-/**
- * Compare API Router
- * ---------------------------------------------------------------------------
- * API endpoints for comparing multiple stocks side-by-side.
- * 
- * FEATURES:
- * - Compare 2-5 stocks simultaneously
- * - Compare by dimensions (6D scores)
- * - Compare by financial metrics
- * - Compare by technical indicators
- * - Historical performance comparison
- * 
- * USAGE:
- * - POST /api/v1/compare/stocks - Compare specific stocks
- * - GET /api/v1/compare/dimensions/{symbol1}/{symbol2} - Compare dimensions
- * - GET /api/v1/compare/metrics/{symbol1}/{symbol2} - Compare metrics
- * - POST /api/v1/compare/historical - Compare historical performance
- */
+"""Compare API Router
+---------------------------------------------------------------------------
+API endpoints for comparing multiple stocks side-by-side.
+
+FEATURES:
+- Compare 2-5 stocks simultaneously
+- Compare by dimensions (6D scores)
+- Compare by financial metrics
+- Compare by technical indicators
+- Historical performance comparison
+
+USAGE:
+- POST /api/v1/compare/stocks - Compare specific stocks
+- GET /api/v1/compare/dimensions/{symbol1}/{symbol2} - Compare dimensions
+- GET /api/v1/compare/metrics/{symbol1}/{symbol2} - Compare metrics
+- POST /api/v1/compare/historical - Compare historical performance
+"""
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query

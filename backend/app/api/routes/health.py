@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 import logging
 from datetime import timezone, datetime
 from typing import Optional
+from app.core.utils import utc_now_iso
 
 from app.api.dependencies import get_current_admin_user
 from app.services.core.dependency_container import get_global_container
@@ -31,7 +32,7 @@ async def health_check():
     return {
         "status": "success",
         "service": "health_check",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "overall_status": result.get('overall_status', 'unknown'),
         "checks": result.get('checks', {})
     }
@@ -55,7 +56,7 @@ async def list_service_health():
     
     return {
         "status": "success",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "services": result.get('checks', {})
     }
 
@@ -109,7 +110,7 @@ async def readiness_check():
     
     return {
         "status": "ready" if is_ready else "not_ready",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "checks": result.get('checks', {})
     }
 
@@ -118,7 +119,7 @@ async def liveness_check():
     """Liveness probe for load balancers."""
     return {
         "status": "alive",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "service": "bedaanwaves",
         "version": "1.0.0"
     }
