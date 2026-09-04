@@ -227,8 +227,14 @@ export default function StocksPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">NASDAQ Stocks</h1>
-          <p className="text-[var(--color-text-secondary)]">Browse and analyze NASDAQ-listed companies</p>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight">NASDAQ Stocks</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Browse and analyze NASDAQ-listed companies</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-1">
+            <button onClick={() => setViewMode("list")} className={cn("rounded-md px-3 py-1.5 text-sm font-medium transition-all", viewMode === "list" ? "bg-[var(--color-primary)] text-white shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]")}>List</button>
+            <button onClick={() => setViewMode("grid")} className={cn("rounded-md px-3 py-1.5 text-sm font-medium transition-all", viewMode === "grid" ? "bg-[var(--color-primary)] text-white shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]")}>Grid</button>
+          </div>
         </div>
       </div>
 
@@ -239,21 +245,17 @@ export default function StocksPage() {
 
       <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--color-text-secondary)]">Sort by</span>
+          <span className="text-sm font-medium text-[var(--color-text-secondary)]">Sort by</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "symbol" | "price" | "change" | "score")}
-            className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+            className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
           >
             <option value="symbol">Symbol</option>
             <option value="price">Price</option>
             <option value="change">Change %</option>
             <option value="score">AI Score</option>
           </select>
-        </div>
-        <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-1">
-          <button onClick={() => setViewMode("list")} className={cn("rounded-md p-2 transition-colors", viewMode === "list" ? "bg-[var(--color-primary)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]")}><span className="text-sm">List</span></button>
-          <button onClick={() => setViewMode("grid")} className={cn("rounded-md p-2 transition-colors", viewMode === "grid" ? "bg-[var(--color-primary)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]")}><span className="text-sm">Grid</span></button>
         </div>
       </div>
 

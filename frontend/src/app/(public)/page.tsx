@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { ArrowRight, TrendingUp, Brain, BarChart3, Shield, Zap, Globe, Sparkles, ChevronRight } from "lucide-react";
+import { ArrowRight, TrendingUp, Brain, BarChart3, Shield, Zap, Globe, Sparkles } from "lucide-react";
 
 const features = [
   {
@@ -269,7 +269,7 @@ export default function HomePage() {
                       </svg>
                     ))}
                   </div>
-                  <p className="mb-6 text-[var(--color-text-secondary)] italic leading-relaxed">"{testimonial.quote}"</p>
+                  <p className="mb-6 text-[var(--color-text-secondary)] italic leading-relaxed">{testimonial.quote}</p>
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-sm font-bold text-white">
                       {testimonial.author.split(" ").map(n => n[0]).join("")}

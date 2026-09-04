@@ -342,11 +342,11 @@ export default function ScoringPage() {
       {/* Filters */}
       <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--color-text-secondary)]">Filter</span>
+          <span className="text-sm font-medium text-[var(--color-text-secondary)]">Filter</span>
           <select
             value={filterRec}
             onChange={(e) => setFilterRec(e.target.value)}
-            className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+            className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
           >
             <option value="all">All Recommendations</option>
             {recommendations.map((rec) => (
@@ -356,11 +356,11 @@ export default function ScoringPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[var(--color-text-secondary)]">Settings</span>
+          <span className="text-sm font-medium text-[var(--color-text-secondary)]">Sort by</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+            className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
           >
             <option value="score">Score (High to Low)</option>
             <option value="symbol">Symbol</option>
