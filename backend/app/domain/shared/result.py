@@ -32,7 +32,7 @@ class Result(Generic[T]):
     def value(self) -> T:
         if not self._is_success:
             raise ValueError("Cannot access value of a failed result.")
-        return self._value # type: ignore
+        return self._value
 
     @property
     def error_message(self) -> Optional[str]:
