@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, case, Numeric
 from typing import Optional
 import logging
+from app.core.utils import utc_now_iso
 
 from app.db.base import get_async_session
 from app.models.models import Asset, ScoreHistory
@@ -235,7 +236,7 @@ async def get_score_trend(
             "dimensions": list(DIMENSIONS),
             "series": series,
             "source": source,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
     except Exception as exc:
         logger.error(f"Score trend error: {exc}")
@@ -285,7 +286,7 @@ async def _aggregate_score_trend_on_the_fly(
         .join(Asset, Asset.id == ScoreHistory.asset_id)
         .where(
             and_(
-                Asset.active == True,  # noqa: E712
+                Asset.active,
                 market_filter,
                 ScoreHistory.date >= cutoff,
             )

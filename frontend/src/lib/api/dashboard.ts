@@ -7,6 +7,7 @@
 import { apiClient } from "@/lib/api";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
+import { formatTimeAgo } from "@/lib/utils";
 
 export interface DashboardData {
   marketStats: MarketStat[];
@@ -228,17 +229,6 @@ interface LatestPricesResponse {
   status: string;
   timestamp: string;
   data: Record<string, { price: number; change_pct: number; volume: number }>;
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} minutes ago`;
-  if (hours < 24) return `${hours} hours ago`;
-  return `${days} days ago`;
 }
 
 async function fetchMarketStats(generalPromise: Promise<GeneralDashboardResponse> = apiClient.get<GeneralDashboardResponse>("/analysis/dashboard/general", { timeout: 60000 }).then((r) => r.data)): Promise<MarketStat[]> {

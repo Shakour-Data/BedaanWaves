@@ -9,6 +9,7 @@ import type { AssetRow } from "@/lib/dashboard-data";
 
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
+import { formatTimeAgo } from "@/lib/utils";
 
 export default function AlertsPage() {
   
@@ -77,17 +78,6 @@ export default function AlertsPage() {
     return () => { active = false; };
   }, ["en"]);
 
-  const formatTimeAgo = (dateStr: string): string => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return t("app.alerts.time.now", "en");
-    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", "en")}`;
-    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", "en")}`;
-    return `${days} ${t("app.alerts.time.days_ago", "en")}`;
-  };
-
   if (loading) {
     return (
       <NewDashboardShell title={t("app.alerts.title", "en")}>
@@ -100,52 +90,80 @@ export default function AlertsPage() {
 
   return (
     <NewDashboardShell title={t("app.alerts.title", "en")}>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
-          <TarotCard icon="Stats" title={t("app.alerts.stats", "en")}>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-sm font-bold">S</span>
+              </div>
+              <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.stats", "en")}</h3>
+            </div>
             <div className="space-y-3">
               {[
                 { label: t("app.alerts.stats_labels.active", "en"), value: watchlistAlerts.length },
               ].map((stat, i) => (
                 <div key={i} className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{stat.label}</span>
-                  <span className="font-semibold">{stat.value}</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">{stat.label}</span>
+                  <span className="font-semibold text-[var(--color-text-primary)]">{stat.value}</span>
                 </div>
               ))}
             </div>
-          </TarotCard>
+          </div>
         </div>
 
         {/* Active Alerts */}
         <div className="lg:col-span-3 space-y-4">
-          <TarotCard icon="⭐" title={t("app.alerts.watchlist_symbols", "en")}>
-            {watchlistAlerts.length > 0 ? (
-              <AssetTable rows={watchlistAlerts} />
-            ) : (
-              <p className="text-muted-foreground py-4">{t("app.alerts.watchlist_empty", "en")}</p>
-            )}
-          </TarotCard>
-
-          <TarotCard icon="📜" title={t("app.alerts.history", "en")}>
-            {alertHistory.length > 0 ? (
-              <div className="space-y-3">
-                {alertHistory.map((alert, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">{alert.time}</span>
-                      <span className="font-medium">{alert.alert}</span>
-                    </div>
-                    <span className={`text-xs ${alert.statusKey === "executed" ? "text-success" : "text-secondary"}`}>
-                      {alert.status}
-                    </span>
-                  </div>
-                ))}
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+            <div className="flex items-center gap-3 p-6 border-b border-[var(--color-border)]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-sm">⭐</span>
               </div>
-            ) : (
-              <p className="text-muted-foreground py-4">{t("app.alerts.history_empty", "en")}</p>
-            )}
-          </TarotCard>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.watchlist_symbols", "en")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Stocks in your watchlist with active alerts</p>
+              </div>
+            </div>
+            <div className="p-6">
+              {watchlistAlerts.length > 0 ? (
+                <AssetTable rows={watchlistAlerts} />
+              ) : (
+                <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.alerts.watchlist_empty", "en")}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+            <div className="flex items-center gap-3 p-6 border-b border-[var(--color-border)]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-sm">📜</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.history", "en")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Recent alert history</p>
+              </div>
+            </div>
+            <div className="p-6">
+              {alertHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {alertHistory.map((alert, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-background)]/50 border border-[var(--color-border)]/50">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--color-text-muted)]">{alert.time}</span>
+                        <span className="font-medium text-sm text-[var(--color-text-primary)]">{alert.alert}</span>
+                      </div>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${alert.statusKey === "executed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"}`}>
+                        {alert.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.alerts.history_empty", "en")}</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </NewDashboardShell>

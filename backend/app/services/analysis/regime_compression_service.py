@@ -61,7 +61,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
             "current_fingerprint": fingerprint,
             "historical_matches": matches,
             "similarity_scores": {m["regime"]: m["similarity"] for m in matches[:3]},
-            "analysis_at": datetime.now(timezone.utc).isoformat(),
+            "analysis_at": utc_now_iso(),
         }
 
     def _normalize_series(self, series: List[float]) -> List[float]:

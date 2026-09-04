@@ -38,7 +38,7 @@ class CircuitBreaker:
 
     def _check_state(self):
         if self._state == "OPEN":
-            if time.time() - self._last_failure_time > self._recovery_timeout: # type: ignore
+            if time.time() - self._last_failure_time > self._recovery_timeout:
                 self._state = "HALF_OPEN"
                 self._logger.info("Circuit breaker state changed to HALF_OPEN")
             else:

@@ -3,6 +3,7 @@ import json
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
+from app.core.utils import utc_now_iso
 
 import aiofiles
 from aioredis import Redis
@@ -60,7 +61,7 @@ class SchemaRegistry:
             "schema": data,
             "version": version_obj.version,
             "hash": schema_hash,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": utc_now_iso(),
         }
 
         self._schemas[asset_type] = schema_obj
@@ -88,7 +89,7 @@ class SchemaRegistry:
             schema_hash,
             version_obj.version,
             json.dumps(data),
-            datetime.now(timezone.utc).isoformat(),
+            utc_now_iso(),
         )
 
         self.logger.info("Registered new schema for %s (v%s)", asset_type, version_obj.version)

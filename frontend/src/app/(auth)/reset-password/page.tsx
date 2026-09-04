@@ -1,27 +1,23 @@
 "use client";
 
 import { useState, useEffect, useMemo, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { TarotCard } from "@/components/ui/TarotCard";
 import { InputField } from "@/components/ui/InputField";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { ProgressBar } from "@/components/ui/ProgressBar";
-import { useAuthStore } from "@/store/useAuthStore";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { Eye, EyeOff, ArrowRight, CheckCircle2, Lock } from "lucide-react";
 import {
   verifyResetToken,
   confirmResetPassword,
   isValidPassword,
   passwordsMatch } from "@/lib/password-recovery-api";
-import { useAuthT } from "@/i18n/auth";
 
 type ResetPhase = "verifying" | "enter_password" | "confirming" | "success" | "error";
 
 type PwdValidationState = "idle" | "validating" | "valid" | "invalid";
 
 function ResetPasswordForm() {
-  const t = useAuthT();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const token = searchParams?.get("token") ?? "";
@@ -92,57 +88,81 @@ function ResetPasswordForm() {
 
   if (phase === "verifying") {
     return (
-      <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
-        <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8 text-center">
-          <p className="mt-3 text-sm text-[var(--color-text-secondary)]" aria-live="polite">
-            Verifying your reset link...
+      <div className="w-full">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-balance">
+            Verifying your link
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Please wait while we verify your reset link...
           </p>
         </div>
-      </main>
+        <div className="flex items-center justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+      </div>
     );
   }
 
   if (phase === "error") {
     return (
-      <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
-        <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8 text-center">
-          <h1 className="text-xl font-bold text-[var(--color-error)] mb-2">Error</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">{errorMsg}</p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link href="/forgot-password" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
-              Request new link
-            </Link>
-            <span className="text-[var(--color-border)]">|</span>
-            <Link href="/login" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
-              Back to Sign in
-            </Link>
+      <div className="w-full">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-error-light)]">
+            <Lock className="h-6 w-6 text-[var(--color-error)]" />
           </div>
+          <h1 className="text-2xl font-bold text-[var(--color-error)]">Error</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">{errorMsg}</p>
         </div>
-      </main>
+        <div className="flex justify-center gap-3">
+          <Link href="/forgot-password" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+            Request new link
+          </Link>
+          <span className="text-[var(--color-border)]">|</span>
+          <Link href="/login" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+            Back to Sign in
+          </Link>
+        </div>
+      </div>
     );
   }
 
   if (phase === "success") {
     return (
-      <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
-        <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8 text-center">
-          <h1 className="text-xl font-bold text-[var(--color-success)] mb-2">Success!</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">Your password has been reset successfully. You can now log in with your new password.</p>
-          <div className="mt-6">
-            <Link href="/login" className="inline-block rounded-md bg-[var(--color-primary)] px-6 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] transition-colors">
-              Sign In
-            </Link>
+      <div className="w-full text-center">
+        <div className="mb-8">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-light)]">
+            <CheckCircle2 className="h-6 w-6 text-[var(--color-success)]" />
           </div>
+          <h1 className="text-2xl font-bold text-[var(--color-success)]">Success!</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">Your password has been reset successfully. You can now log in with your new password.</p>
         </div>
-      </main>
+        <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
+          Sign In
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
-      <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+    <div className="w-full">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-balance">
+          Set new password
+        </h1>
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Create a strong password for your account
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {errorMsg && (
+          <ErrorMessage className="mt-4" message={errorMsg} />
+        )}
+
+        <div className="space-y-4">
+          <div className="relative">
             <InputField
               id="password"
               label="New Password"
@@ -153,53 +173,56 @@ function ResetPasswordForm() {
               validationState={pwdState === "invalid" ? "invalid" : "idle"}
               validationMessage={pwdState === "invalid" && pwdError ? pwdError : undefined}
             />
-            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Must be at least 8 characters</p>
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
 
-          <div>
-            <InputField
-              id="confirmPassword"
-              label="Confirm Password"
-              type={showPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-              validationState={pwdState === "invalid" && confirmPassword ? "invalid" : "idle"}
-              validationMessage={pwdState === "invalid" && confirmPassword && pwdError ? pwdError : undefined}
-            />
-          </div>
+          <InputField
+            id="confirmPassword"
+            label="Confirm Password"
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+            validationState={pwdState === "invalid" && confirmPassword ? "invalid" : "idle"}
+            validationMessage={pwdState === "invalid" && confirmPassword && pwdError ? pwdError : undefined}
+          />
+        </div>
 
-          <div className="flex items-center">
-            <input
-              id="showPassword"
-              type="checkbox"
-              checked={showPassword}
-              onChange={(e) => setShowPassword(e.target.checked)}
-              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-            />
-            <label htmlFor="showPassword" className="ml-2 text-sm text-[var(--color-text-secondary)]">Show password</label>
-          </div>
+        <div className="flex items-center">
+          <input
+            id="showPassword"
+            type="checkbox"
+            checked={showPassword}
+            onChange={(e) => setShowPassword(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+          />
+          <label htmlFor="showPassword" className="ml-2 text-sm text-[var(--color-text-secondary)]">Show password</label>
+        </div>
 
-          {errorMsg && (
-            <ErrorMessage className="mt-4" message={errorMsg} />
-          )}
+        <PrimaryButton
+          type="submit"
+          disabled={phase === "confirming"}
+          className="w-full justify-center h-11 gap-2"
+          size="lg"
+        >
+          {phase === "confirming" ? "Processing..." : "Reset Password"}
+          {phase !== "confirming" && <ArrowRight className="h-4 w-4" />}
+        </PrimaryButton>
 
-          <button
-            type="submit"
-            disabled={phase === "confirming"}
-            className="w-full rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
-          >
-            {phase === "confirming" ? "Processing..." : "Reset Password"}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <Link href="/login" className="text-sm text-[var(--color-primary)] hover:underline">
+        <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
+          <Link href="/login" className="text-[var(--color-primary)] hover:underline font-semibold">
             Back to Sign in
           </Link>
-        </div>
-      </div>
-    </main>
+        </p>
+      </form>
+    </div>
   );
 }
 
@@ -207,11 +230,14 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center p-3">
-        <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <p className="text-center text-[var(--color-text-secondary)]">Loading...</p>
+      <div className="w-full">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Loading...</h1>
         </div>
-      </main>
+        <div className="flex items-center justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+      </div>
     }>
       <ResetPasswordForm />
     </Suspense>

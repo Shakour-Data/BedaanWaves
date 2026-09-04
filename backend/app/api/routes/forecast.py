@@ -1,25 +1,24 @@
-/**
- * Forecast API Router
- * ---------------------------------------------------------------------------
- * API endpoints for forecasting stock prices and trends using ML models.
- * 
- * FEATURES:
- * - Price forecasting (ARIMA, LSTM, Prophet)
- * - Trend direction prediction (Up/Down/Sideways)
- * - Confidence intervals for predictions
- * - Multi-horizon forecasting (1d, 7d, 30d, 90d)
- * - Feature importance analysis
- * - Model performance metrics
- * 
- * USAGE:
- * - POST /api/v1/forecast/price - Price forecast for a symbol
- * - POST /api/v1/forecast/trend - Trend direction prediction
- * - POST /api/v1/forecast/batch - Batch forecast for multiple symbols
- * - GET /api/v1/forecast/models - List available models
- * - GET /api/v1/forecast/models/{model_id} - Get model details
- * - GET /api/v1/forecast/performance/{model_id} - Model performance metrics
- * - POST /api/v1/forecast/backtest - Backtest a forecasting model
- */
+"""Forecast API Router
+---------------------------------------------------------------------------
+API endpoints for forecasting stock prices and trends using ML models.
+
+FEATURES:
+- Price forecasting (ARIMA, LSTM, Prophet)
+- Trend direction prediction (Up/Down/Sideways)
+- Confidence intervals for predictions
+- Multi-horizon forecasting (1d, 7d, 30d, 90d)
+- Feature importance analysis
+- Model performance metrics
+
+USAGE:
+- POST /api/v1/forecast/price - Price forecast for a symbol
+- POST /api/v1/forecast/trend - Trend direction prediction
+- POST /api/v1/forecast/batch - Batch forecast for multiple symbols
+- GET /api/v1/forecast/models - List available models
+- GET /api/v1/forecast/models/{model_id} - Get model details
+- GET /api/v1/forecast/performance/{model_id} - Model performance metrics
+- POST /api/v1/forecast/backtest - Backtest a forecasting model
+"""
 
 from typing import List, Optional, Literal
 from datetime import datetime, timedelta

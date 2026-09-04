@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api";
 import {
   fetchScoring,
 } from "@/lib/api/stocks";
+import { clamp, num } from "@/lib/utils";
 
 export interface DimensionScore {
   key: string;
@@ -42,25 +43,6 @@ export interface CoefficientItem {
   level: number;
 }
 
-function num(value: unknown): number {
-  if (value === null || value === undefined) return 0;
-  const n = typeof value === "number" ? value : parseFloat(String(value));
-  return Number.isFinite(n) ? n : 0;
-}
-
-function clamp(v: number, min = 0, max = 100): number {
-  return Math.max(min, Math.min(max, v));
-}
-
-const DIMENSION_LABELS: Record<string, string> = {
-  fundamental: "Fundamental",
-  technical: "Technical",
-  sentiment: "Sentiment",
-  risk: "Risk",
-  macro: "Macro",
-  ai: "AI",
-};
-
 const DIMENSION_WEIGHTS: Record<string, number> = {
   fundamental: 0.25,
   technical: 0.20,
@@ -68,6 +50,15 @@ const DIMENSION_WEIGHTS: Record<string, number> = {
   risk: 0.20,
   macro: 0.10,
   ai: 0.10,
+};
+
+export const DIMENSION_LABELS: Record<string, string> = {
+  fundamental: "Fundamental",
+  technical: "Technical",
+  sentiment: "Sentiment",
+  risk: "Risk",
+  macro: "Macro",
+  ai: "AI",
 };
 
 export const SUB_DIMENSIONS: Record<string, { key: string; label: string; weight: number }[]> = {

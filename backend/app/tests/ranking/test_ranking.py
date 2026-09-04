@@ -60,7 +60,3 @@ class TestRiskScore(unittest.TestCase):
         score = _risk_score(closes)
         self.assertLessEqual(score, 5.0)
         self.assertGreaterEqual(score, 0.0)
-
-
-if __name__ == "__main__":
-    unittest.main()

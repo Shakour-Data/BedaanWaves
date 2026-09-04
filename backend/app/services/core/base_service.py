@@ -12,6 +12,7 @@ This abstract base class provides:
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Type, TypeVar
 import logging
+import asyncio
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -203,7 +204,6 @@ class AnalysisService(BaseService):
     
     async def batch_analyze(self, data_list: list) -> list:
         """Perform batch analysis using asyncio.gather"""
-        import asyncio
         tasks = [self.analyze(item) for item in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -270,7 +270,6 @@ class ExternalAPIService(BaseService):
     
     async def _handle_rate_limit(self, retry_count: int) -> None:
         """Handle API rate limiting with exponential backoff"""
-        import asyncio
         wait_time = min(2 ** retry_count, 60)  # Max 60 seconds
         self.logger.warning(f"Rate limited. Waiting {wait_time} seconds...")
         await asyncio.sleep(wait_time)

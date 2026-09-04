@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from ...application.interfaces.i_logger import ILogger
+from app.core.utils import utc_now_iso
 
 class LoggerService(ILogger):
     """
@@ -39,7 +40,7 @@ class LoggerService(ILogger):
     def _log(self, level: str, message: str, **kwargs) -> None:
         """Internal structured logging logic."""
         log_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "level": level.upper(),
             "message": message,
             "context": self._context,

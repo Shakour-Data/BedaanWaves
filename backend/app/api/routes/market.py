@@ -10,6 +10,7 @@ import logging
 import math
 import time
 import asyncio
+from app.core.utils import utc_now_iso
 
 from app.db.base import get_async_session
 from app.models.models import Asset, candle_model_for_market
@@ -160,7 +161,7 @@ async def get_latest_prices(
     if not symbols:
         return {
             "status": "success",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "data": {}
         }
 
@@ -176,7 +177,7 @@ async def get_latest_prices(
     if not assets_by_symbol:
         return {
             "status": "success",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "data": {}
         }
     
@@ -224,7 +225,7 @@ async def get_latest_prices(
     
     return {
         "status": "success",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "data": result
     }
 
@@ -266,7 +267,7 @@ async def get_market_overview(
         "market": market,
         "total_assets": total_assets,
         "sectors": sectors,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -336,7 +337,7 @@ async def nasdaq_dashboard(
             "average_change_pct": 0.0,
             "top_gainers": [],
             "top_losers": [],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     result_rows = []
@@ -365,7 +366,7 @@ async def nasdaq_dashboard(
         "average_change_pct": round(avg_change, 2),
         "top_gainers": ranked_change[:5],
         "top_losers": sorted(ranked_change, key=lambda x: x["change_pct"])[:5],
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -430,7 +431,7 @@ async def get_market_indices(response: Response = None) -> dict:
 
     result = {
         "status": "success",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "data": data,
     }
     _indices_cache = result
@@ -489,7 +490,7 @@ async def industry_ranking(
             "market": "NASDAQ",
             "ranked_industries": 0,
             "ranking": [],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     # Separate latest and previous close per asset
@@ -544,5 +545,5 @@ async def industry_ranking(
         "market": "NASDAQ",
         "ranked_industries": len(ranking),
         "ranking": ranking,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }

@@ -203,7 +203,3 @@ class TestScoreTrendDashboard(unittest.TestCase):
                     )
                 )
             self.assertEqual(ctx.exception.status_code, 400)
-
-
-if __name__ == "__main__":
-    unittest.main()

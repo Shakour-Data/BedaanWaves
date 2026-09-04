@@ -7,7 +7,9 @@ Supports both extractive and abstractive summarization approaches.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+import asyncio
 from app.services.core.base_service import BaseService
+from app.core.utils import utc_now_iso
 
 
 class NewsSummarizationService(BaseService):
@@ -156,7 +158,6 @@ class NewsSummarizationService(BaseService):
         Returns:
             List of summarization results
         """
-        import asyncio
         tasks = [self.summarize(article) for article in articles]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -199,5 +200,5 @@ class NewsSummarizationService(BaseService):
             "digest": digest,
             "item_count": len(news_items),
             "summarized_count": len(individual_summaries),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": utc_now_iso(),
         }

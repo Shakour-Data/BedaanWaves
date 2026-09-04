@@ -3,6 +3,7 @@ import json
 import hashlib
 from datetime import datetime, timezone
 from enum import Enum
+from app.core.utils import utc_now_iso
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -207,7 +208,7 @@ class ModelRegistry(BaseService):
             "psi": psi,
             "threshold": self.drift_threshold,
             "drift_detected": drift_detected,
-            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "checked_at": utc_now_iso(),
         }
 
 

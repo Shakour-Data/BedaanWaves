@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -32,7 +33,7 @@ export default function RegisterPage() {
     const uStatus = validateUsername(username);
     const eStatus = validateEmail(email);
     const pStatus = validatePassword(password);
-    
+
     if (uStatus === "invalid") { setError("Username must be at least 3 characters."); return; }
     if (eStatus === "invalid") { setError("Please enter a valid email address."); return; }
     if (pStatus === "invalid") { setError("Password must be at least 8 characters."); return; }
@@ -52,53 +53,62 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4 bg-[var(--color-background)]">
-      <div className="w-full max-w-md bg-[var(--color-surface)] shadow-md rounded-lg border border-[var(--color-border)] p-8">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error ? (
-            <div className="rounded-xl bg-error/10 px-4 py-3 text-sm text-error border border-error/20 animate-in fade-in slide-in-from-top-2">
-              {error}
-            </div>
-          ) : null}
+    <div className="w-full">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-balance">
+          Create your account
+        </h1>
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Start your journey with BedaanWaves today
+        </p>
+      </div>
 
-          <div className="space-y-3">
-            <InputField
-              id="username"
-              type="text"
-              label={t("signup.username")}
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={t("signup.username_placeholder") || t("signup.username")}
-              disabled={loading}
-              validationState={username ? validateUsername(username) : "idle"}
-              validationMessage={username && validateUsername(username) === "invalid" ? "Username must be at least 3 characters." : undefined}
-            />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error ? (
+          <div className="rounded-xl bg-[var(--color-error-light)] px-4 py-3 text-sm text-[var(--color-error)] border border-[var(--color-error)]/20 animate-in fade-in slide-in-from-top-2">
+            {error}
+          </div>
+        ) : null}
 
-            <InputField
-              id="name"
-              type="text"
-              label={t("signup.name")}
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("signup.name_placeholder") || t("signup.name")}
-              disabled={loading}
-            />
+        <div className="space-y-4">
+          <InputField
+            id="username"
+            type="text"
+            label={t("signup.username")}
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder={t("signup.username_placeholder") || t("signup.username")}
+            disabled={loading}
+            validationState={username ? validateUsername(username) : "idle"}
+            validationMessage={username && validateUsername(username) === "invalid" ? "Username must be at least 3 characters." : undefined}
+          />
 
-            <InputField
-              id="email"
-              type="email"
-              label="Email Address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@email.com"
-              disabled={loading}
-              validationState={email ? validateEmail(email) : "idle"}
-              validationMessage={email && validateEmail(email) === "invalid" ? "Please enter a valid email address." : undefined}
-            />
+          <InputField
+            id="name"
+            type="text"
+            label={t("signup.name")}
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("signup.name_placeholder") || t("signup.name")}
+            disabled={loading}
+          />
 
+          <InputField
+            id="email"
+            type="email"
+            label="Email Address"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@email.com"
+            disabled={loading}
+            validationState={email ? validateEmail(email) : "idle"}
+            validationMessage={email && validateEmail(email) === "invalid" ? "Please enter a valid email address." : undefined}
+          />
+
+          <div className="relative">
             <InputField
               id="password"
               type={showPassword ? "text" : "password"}
@@ -111,46 +121,47 @@ export default function RegisterPage() {
               validationState={password ? validatePassword(password) : "idle"}
               validationMessage={password && validatePassword(password) === "invalid" ? "Password must be at least 8 characters." : undefined}
             />
-
-            <InputField
-              id="confirmPassword"
-              type={showPassword ? "text" : "password"}
-              label="Confirm Password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              disabled={loading}
-              validationState={confirmPassword && password !== confirmPassword ? "invalid" : confirmPassword ? "valid" : "idle"}
-              validationMessage={confirmPassword && password !== confirmPassword ? "Passwords do not match." : undefined}
-            />
-            
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-xs text-[var(--color-primary)] hover:underline mt-1 block"
+              className="absolute right-3 top-9 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? "Hide password" : "Show password"}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
 
-          <PrimaryButton
-            type="submit"
+          <InputField
+            id="confirmPassword"
+            type={showPassword ? "text" : "password"}
+            label="Confirm Password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
             disabled={loading}
-            className="mt-2 w-full justify-center h-11"
-            size="lg"
-          >
-            {loading ? "Creating account..." : "Sign Up"}
-          </PrimaryButton>
+            validationState={confirmPassword && password !== confirmPassword ? "invalid" : confirmPassword ? "valid" : "idle"}
+            validationMessage={confirmPassword && password !== confirmPassword ? "Passwords do not match." : undefined}
+          />
+        </div>
 
-          <p className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
-            Already have an account?{" "}
-            <Link href="/login" className="text-[var(--color-primary)] hover:underline font-bold">
-              Sign in
-            </Link>
-          </p>
-        </form>
-      </div>
-    </main>
+        <PrimaryButton
+          type="submit"
+          disabled={loading}
+          className="w-full justify-center h-11 gap-2"
+          size="lg"
+        >
+          {loading ? "Creating account..." : "Sign Up"}
+          {!loading && <UserPlus className="h-4 w-4" />}
+        </PrimaryButton>
+
+        <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
+          Already have an account?{" "}
+          <Link href="/login" className="text-[var(--color-primary)] hover:underline font-semibold">
+            Sign in
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }

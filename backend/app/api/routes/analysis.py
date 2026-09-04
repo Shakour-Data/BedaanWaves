@@ -6,6 +6,7 @@ from sqlalchemy import select, and_, func
 from datetime import timezone, datetime
 from typing import List, Any, Dict
 import logging
+from app.core.utils import utc_now_iso
 
 from app.db.base import get_async_session
 from app.models.models import Asset, MLSignal, candle_model_for_market, MacroIndicator
@@ -99,7 +100,7 @@ async def get_signals_summary(
     """Trading recommendations are disabled. Always returns empty summary."""
     return {
         "status": "disabled",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "total_signals": 0,
         "summary": {},
         "average_confidence": {},
@@ -116,7 +117,7 @@ async def get_signals_list(
     """Trading recommendations are disabled. Always returns empty list."""
     return {
         "status": "disabled",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "data": [],
     }
 
@@ -192,7 +193,7 @@ async def get_top_performers(
     
     return {
         "status": "success",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "data": top,
     }
 
@@ -275,7 +276,7 @@ async def get_risk_analysis(
             "max_drawdown": round(float(max_drawdown) * 100, 2),
             "avg_return": round(float(np.mean(returns)) * 100, 4),
         },
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -334,7 +335,7 @@ async def technical_analysis(
         "market": asset.market,
         "data_points": len(candles),
         "indicators": result,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -397,7 +398,7 @@ async def risk_analysis(
         "market": asset.market,
         "data_points": len(returns),
         "risk": result,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -453,7 +454,7 @@ async def fundamental_analysis(
             "status": "success",
             "symbol": symbol,
             "fundamental": result,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
@@ -504,7 +505,7 @@ async def momentum_analysis(
         "market": asset.market,
         "data_points": len(candles),
         "momentum": result.get("momentum", {}),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -551,7 +552,7 @@ async def volatility_analysis(
         "market": asset.market,
         "data_points": len(candles),
         "volatility": result.get("volatility", {}),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -600,7 +601,7 @@ async def scoring_analysis(
         "symbol": ticker,
         "scoring": result,
         "hierarchy": service.get_hierarchy_info(),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -812,7 +813,7 @@ async def score_and_rank_stocks(
         "limit": limit,
         "stocks": ranked_stocks,
         "hierarchy": service.get_hierarchy_info(),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -867,7 +868,7 @@ async def batch_fundamental_analysis(
                 results[symbol] = {
                     "status": "success",
                     "fundamental": result,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": utc_now_iso(),
                 }
             finally:
                 await stock_service.shutdown()
@@ -882,7 +883,7 @@ async def batch_fundamental_analysis(
         "failed": len(errors),
         "results": results,
         "errors": errors,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -895,7 +896,7 @@ async def fundamental_analysis_health() -> dict:
             "fundamental_analysis": True,
             "stock_fundamental_ingestion": True,
         },
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 

@@ -8,6 +8,7 @@ Verifies connectivity to the data provider and returns status.
 from fastapi import APIRouter, Depends
 from datetime import datetime, timezone
 import logging
+from app.core.utils import utc_now_iso
 
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.core.dependency_container import get_global_container
@@ -32,13 +33,13 @@ async def data_health_check() -> dict:
                 "status": "error",
                 "error_code": "SERVICE_UNAVAILABLE",
                 "message": "Real-time market data service is not registered",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
 
         health = await service.health_check()
         return {
             "status": "success",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "data": health,
         }
     except Exception as exc:
@@ -47,5 +48,5 @@ async def data_health_check() -> dict:
             "status": "error",
             "error_code": "HEALTH_CHECK_FAILED",
             "message": str(exc),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }

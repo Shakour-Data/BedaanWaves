@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from datetime import datetime, timezone
 import math
 from ..core import AnalysisService
+from app.core.utils import utc_now_iso
 
 
 class VolatilityService(AnalysisService):
@@ -46,7 +47,7 @@ class VolatilityService(AnalysisService):
         ]
         
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "volatility": {
                 "historical": self._calculate_historical_volatility(returns),

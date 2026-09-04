@@ -37,9 +37,9 @@ class Optional(Generic[T]):
     def map(self, mapper: Callable[[T], U]) -> 'Optional[U]':
         if not self._has_value:
             return Optional.none()
-        return Optional.some(mapper(self._value)) # type: ignore
+        return Optional.some(mapper(self._value))
 
     def flat_map(self, mapper: Callable[[T], 'Optional[U]']) -> 'Optional[U]':
         if not self._has_value:
             return Optional.none()
-        return mapper(self._value) # type: ignore
+        return mapper(self._value)

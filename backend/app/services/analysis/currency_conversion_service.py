@@ -5,6 +5,7 @@ import json
 import hashlib
 import logging
 from pathlib import Path
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
@@ -86,7 +87,7 @@ class CurrencyConversionService(AnalysisService):
         
         audit_entry = {
             "audit_id": audit_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "operation": "currency_conversion",
             "input": {
                 "amount": amount,
@@ -131,7 +132,7 @@ class CurrencyConversionService(AnalysisService):
                 audit_entry["methodology"] = {
                     "methodology": methodology,
                     "exchange_rate_source": "identity",
-                    "exchange_rate_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "exchange_rate_timestamp": utc_now_iso(),
                     "volatility_model": "none"
                 }
             else:
@@ -165,7 +166,7 @@ class CurrencyConversionService(AnalysisService):
                 "methodology": methodology,
                 "confidence_interval": confidence_interval,
                 "audit_id": audit_id,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": utc_now_iso()
             }
             
         except Exception as e:
@@ -177,7 +178,7 @@ class CurrencyConversionService(AnalysisService):
                 "success": False,
                 "error": str(e),
                 "audit_id": audit_id,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": utc_now_iso()
             }
 
     async def _get_exchange_rate(
@@ -212,7 +213,7 @@ class CurrencyConversionService(AnalysisService):
             "rate": rate,
             "methodology": methodology,
             "source": source,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "volatility": volatility
         }
         
