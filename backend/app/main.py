@@ -19,6 +19,7 @@ from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app.core.utils import utc_now_iso
 
 from app.core.config import get_settings
 
@@ -246,16 +247,6 @@ async def lifespan(app: FastAPI):
 
     # Step 1: Ensure directories exist
     _ensure_directories()
-
-    # Step 2: Auto-create database if missing
-    # try:
-    #     _ensure_database()
-    # except Exception as e:
-    #     logger.warning(f"Database auto-creation failed: {e}")
-
-    # Step 3: Auto-run migrations
-    # Disabled for audit testing
-    pass
 
     # Step 4: Auto-seed if database is empty
     if _needs_seeding():
@@ -533,7 +524,7 @@ async def health_check():
         "status": status,
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": utc_now_iso(),
         "checks": checks,
     }
 

@@ -11,7 +11,7 @@ import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
-import { useDateStore, useSelectedDate, useLatestAvailableDate } from "@/store/useDateStore";
+import { useDateStore, useSelectedDate, useLatestAvailableDate, useEffectiveDate } from "@/store/useDateStore";
 import { DateSelector } from "@/components/dashboard/DateSelector";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";

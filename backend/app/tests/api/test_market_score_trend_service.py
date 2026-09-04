@@ -205,7 +205,3 @@ class _FakeCtx:
 
     async def __aexit__(self, exc_type, exc, tb):
         return False
-
-
-if __name__ == "__main__":
-    unittest.main()

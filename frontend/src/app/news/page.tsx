@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { NewsItem, AssetRow } from "@/lib/dashboard-data";
+import { formatTimeAgo } from "@/lib/utils";
 
 export default function NewsPage() {
   
@@ -50,17 +51,6 @@ export default function NewsPage() {
     return () => { active = false; };
   }, []);
 
-  const formatTimeAgo = (dateStr: string): string => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return t("app.alerts.time.now", "en");
-    if (minutes < 60) return `${minutes} ${t("app.alerts.time.minutes_ago", "en")}`;
-    if (hours < 24) return `${hours} ${t("app.alerts.time.hours_ago", "en")}`;
-    return `${days} ${t("app.alerts.time.days_ago", "en")}`;
-  };
-
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
   const filteredNews = selectedSource ? newItems.filter((item) => item.source === selectedSource) : newItems;
   const trendingTopics = getTrendingTopics(newItems);
@@ -78,16 +68,22 @@ export default function NewsPage() {
 
   return (
     <NewDashboardShell title={t("app.news.title", "en")}>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
-<TarotCard icon="Search" title="Filters">
-            <div className="space-y-2">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-sm font-bold">F</span>
+              </div>
+              <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">Filters</h3>
+            </div>
+            <div className="space-y-1">
               <button
                 onClick={() => setSelectedSource(null)}
                 className={cn(
-                  "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
-                   selectedSource === null ? "bg-error text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                  "w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                   selectedSource === null ? "bg-[var(--color-primary)] text-white shadow-md" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
                 )}
               >
                 All News
@@ -97,45 +93,61 @@ export default function NewsPage() {
                   key={source}
                   onClick={() => setSelectedSource(source)}
                   className={cn(
-                    "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
-                     selectedSource === source ? "bg-error text-white shadow-md" : "hover:bg-muted/50 text-muted-foreground"
+                    "w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                     selectedSource === source ? "bg-[var(--color-primary)] text-white shadow-md" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
                   )}
                 >
                   {source}
                 </button>
               ))}
             </div>
-          </TarotCard>
+          </div>
 
           {/* Trending Topics */}
-          <TarotCard icon="🔥" title="Trending Topics">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-sm">🔥</span>
+              </div>
+              <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">Trending Topics</h3>
+            </div>
             <div className="space-y-2">
               {topTopics.map((topic, i) => (
-                <div key={i} className="flex items-center justify-between font-medium text-sm">
-                  <span className="flex-1">{topic.topic}</span>
-                  <span className="text-xs text-muted-foreground">{topic.count} news</span>
+                <div key={i} className="flex items-center justify-between font-medium text-sm p-2 rounded-lg hover:bg-[var(--color-muted)] transition-colors">
+                  <span className="flex-1 text-[var(--color-text-primary)]">{topic.topic}</span>
+                  <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-muted)] px-2 py-0.5 rounded-full">{topic.count} news</span>
                 </div>
               ))}
               {topTopics.length === 0 && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-[var(--color-text-muted)]">
                   No trending topics found
                 </p>
               )}
             </div>
-          </TarotCard>
+          </div>
         </div>
 
         {/* News List */}
         <div className="lg:col-span-3">
-          <TarotCard 
-            icon="📰" 
-            title={selectedSource 
-              ? `News from ${selectedSource}` 
-              : "All News"
-            }
-          >
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                  <span className="text-sm">📰</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">
+                    {selectedSource 
+                      ? `News from ${selectedSource}` 
+                      : "All News"
+                    }
+                  </h3>
+                </div>
+              </div>
+              <span className="text-xs text-[var(--color-text-muted)]">{filteredNews.length} articles</span>
+            </div>
             <NewsList items={filteredNews} />
-          </TarotCard>
+          </div>
         </div>
       </div>
     </NewDashboardShell>

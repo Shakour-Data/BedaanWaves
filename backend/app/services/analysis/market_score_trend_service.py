@@ -285,7 +285,7 @@ class MarketScoreTrendService(BaseService):
             .join(Asset, Asset.id == ScoreHistory.asset_id)
             .where(
                 and_(
-                    Asset.active == True,  # noqa: E712
+                    Asset.active,
                     market_filter,
                     ScoreHistory.date >= start_date,
                     ScoreHistory.date <= end_date,

@@ -131,51 +131,78 @@ export default function PortfolioPage() {
         {/* Portfolio Summary */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {stats.map((stat, i) => (
-            <StatCard key={i} stat={{ label: stat.label, value: stat.value, changePct: stat.changePct }} />
+            <div key={i} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm transition-all hover:shadow-md">
+              <p className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">{stat.label}</p>
+              <p className="text-xl font-bold text-[var(--color-text-primary)] mt-1">{stat.value}</p>
+              {stat.changePct !== undefined && (
+                <p className={`text-xs font-medium mt-1 ${stat.changePct >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-error)]"}`}>
+                  {stat.changePct >= 0 ? "+" : ""}{stat.changePct.toFixed(2)}%
+                </p>
+              )}
+            </div>
           ))}
         </section>
 
         {/* Holdings */}
-        <TarotCard icon="💼" title={t("app.portfolio.current_holdings", "en")}>
-          {holdings.length > 0 ? (
-            <AssetTable rows={holdings} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border-2 border-dashed border-border rounded-xl">
-              <div className="text-4xl mb-4">📭</div>
-              <p className="text-lg font-bold text-foreground mb-2">{t("app.portfolio.empty_title", "en")}</p>
-              <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc", "en")}</p>
-              <PrimaryButton onClick={() => window.location.href = "/stocks"} size="lg">
-                {t("app.portfolio.view_stocks", "en")}
-              </PrimaryButton>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+          <div className="flex items-center gap-3 p-6 border-b border-[var(--color-border)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+              <span className="text-lg">💼</span>
             </div>
-          )}
-        </TarotCard>
+            <div>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.current_holdings", "en")}</h3>
+              <p className="text-xs text-[var(--color-text-muted)]">Your current portfolio holdings</p>
+            </div>
+          </div>
+          <div className="p-6">
+            {holdings.length > 0 ? (
+              <AssetTable rows={holdings} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
+                <div className="text-4xl mb-4">📭</div>
+                <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">{t("app.portfolio.empty_title", "en")}</p>
+                <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc", "en")}</p>
+                <button onClick={() => window.location.href = "/stocks"} className="rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
+                  {t("app.portfolio.view_stocks", "en")}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
-        {/* Performance & Distribution - Improved UI instead of Coming Soon */}
+        {/* Performance & Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TarotCard icon="📈" title={t("app.portfolio.performance", "en")}>
-            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40 relative overflow-hidden group">
-              <div className="text-4xl mb-4 opacity-20 group-hover:scale-110 transition-transform duration-500">[Chart]</div>
-              <p className="text-sm font-medium z-10">{t("app.portfolio.coming_soon", "en")}</p>
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-xs px-3 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
-                  "Under Development..."
-                </span>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">📈</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance", "en")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Portfolio performance over time</p>
               </div>
             </div>
-          </TarotCard>
+            <div className="h-64 flex flex-col items-center justify-center text-[var(--color-text-muted)] bg-[var(--color-background)]/50 rounded-xl border border-dashed border-[var(--color-border)]">
+              <p className="text-sm font-medium">Coming Soon</p>
+              <p className="text-xs mt-1">Performance chart under development</p>
+            </div>
+          </div>
 
-          <TarotCard icon="🥧" title={t("app.portfolio.distribution", "en")}>
-            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-neutral/20 rounded-xl border border-border/40 relative overflow-hidden group">
-              <div className="text-4xl mb-4 opacity-20 group-hover:scale-110 transition-transform duration-500">💹</div>
-              <p className="text-sm font-medium z-10">{t("app.portfolio.coming_soon", "en")}</p>
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-xs px-3 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
-                  "Under Development..."
-                </span>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">🥧</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution", "en")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Asset allocation breakdown</p>
               </div>
             </div>
-          </TarotCard>
+            <div className="h-64 flex flex-col items-center justify-center text-[var(--color-text-muted)] bg-[var(--color-background)]/50 rounded-xl border border-dashed border-[var(--color-border)]">
+              <p className="text-sm font-medium">Coming Soon</p>
+              <p className="text-xs mt-1">Distribution chart under development</p>
+            </div>
+          </div>
         </div>
       </div>
     </NewDashboardShell>

@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import tempfile
 import base64
+from app.core.utils import utc_now_iso
 
 from psycopg2 import sql
 
@@ -244,7 +245,7 @@ class BackupService(BaseService):
             "metadata": {
                 "type": "database_backup",
                 "name": name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "version": "2.0",
                 "encrypted": self._fernet is not None,
             },
@@ -359,7 +360,7 @@ class BackupService(BaseService):
             "metadata": {
                 "type": "config_backup",
                 "name": name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "version": "2.0",
                 "encrypted": self._fernet is not None,
             },
@@ -445,7 +446,7 @@ class BackupService(BaseService):
             "metadata": {
                 "type": "platform_snapshot",
                 "name": name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "version": "2.0",
                 "encrypted": self._fernet is not None,
             },

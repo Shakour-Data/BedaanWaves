@@ -6,6 +6,7 @@ ML-based trading recommendations and signal generation.
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from ..core import MLService
+from app.core.utils import utc_now_iso
 
 
 class RecommendationService(MLService):
@@ -103,5 +104,5 @@ class RecommendationService(MLService):
                 "risk_weight": round(risk_component * weight_risk / 33.33, 2),
                 "momentum_weight": round(momentum_component * weight_momentum / 33.33, 2),
             },
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": utc_now_iso()
         }

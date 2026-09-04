@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from collections import deque
 import logging
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
@@ -89,13 +90,13 @@ class MonetaryPolicyService(AnalysisService):
                 "monetary_analysis": monetary_analysis,
                 "regime_classification": regime_analysis,
                 "fiscal_space": fiscal_space,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "mmt_identity_check": self._verify_mmt_identity(sectoral_balances)
             }
             
         except Exception as e:
             self.logger.error(f"MMT analysis failed: {str(e)}")
-            return {"error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
+            return {"error": str(e), "timestamp": utc_now_iso()}
 
     async def _calculate_sectoral_balances(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate the three sectoral balances from MMT framework."""
@@ -276,7 +277,7 @@ class MonetaryPolicyService(AnalysisService):
                 "external_position": external_position,
                 "monetary_condition": monetary_condition,
                 "confidence": float(confidence),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": utc_now_iso()
             }
             
             self.mmt_regime_history.append(regime_record)

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { NewSidebar } from "./NewSidebar";
 import { NewTopbar } from "./NewTopbar";
-import { Spinner } from "@/components/ui/Spinner";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 
 interface NewDashboardShellProps {
@@ -27,10 +26,10 @@ export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboard
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
         <div className="flex flex-col items-center gap-4">
-          <Spinner size="lg" />
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+          <p className="text-sm text-[var(--color-text-muted)]">Loading...</p>
         </div>
       </div>
     );
@@ -38,18 +37,18 @@ export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboard
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Redirecting to login...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
+        <p className="text-sm text-[var(--color-text-muted)]">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-[var(--color-background)]">
       <NewSidebar />
 
       <div className="flex flex-1 flex-col min-w-0 lg:ml-64">
-        <NewTopbar title={title} />
+        <NewTopbar title={title} breadcrumbs={breadcrumbs} />
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <div className="w-full max-w-[90rem]">

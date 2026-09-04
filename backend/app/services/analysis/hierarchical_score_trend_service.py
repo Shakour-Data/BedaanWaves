@@ -19,6 +19,7 @@ return an empty series (the chart falls back to "No trend data available").
 import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from app.core.utils import utc_now_iso
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -212,7 +213,7 @@ class HierarchicalScoreTrendService(BaseService):
             "count": len(rows),
             "latest_date": latest_date,
             "series": rows,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     @staticmethod
@@ -226,7 +227,7 @@ class HierarchicalScoreTrendService(BaseService):
             "count": 0,
             "latest_date": None,
             "series": [],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
         }
 
     async def _aggregate_window(

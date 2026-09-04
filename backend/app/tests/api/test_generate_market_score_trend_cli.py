@@ -11,7 +11,7 @@ BACKEND_DIR = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 )
-SCRIPT_PATH = os.path.join(BACKEND_DIR, "generate_market_score_trend.py")
+SCRIPT_PATH = os.path.join(BACKEND_DIR, "scripts", "generate_market_score_trend.py")
 
 
 def _load_module():
@@ -67,7 +67,3 @@ class TestGenerateMarketScoreTrendCLI(unittest.TestCase):
         start, parsed_end = self._with_args("2026-08-01")
         self.assertEqual(parsed_end, end)
         self.assertEqual(start, end - timedelta(days=29))
-
-
-if __name__ == "__main__":
-    unittest.main()

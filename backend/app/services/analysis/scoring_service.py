@@ -8,9 +8,11 @@ Now supports ML-driven dynamic coefficient learning.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+import asyncio
 from ..core import AnalysisService
 from ..ml import CoefficientLearningService
 from app.services.core.dependency_container import get_global_container
+from app.core.utils import utc_now_iso
 
 
 class ScoringService(AnalysisService):
@@ -270,7 +272,7 @@ class ScoringService(AnalysisService):
         scores = {
             "ticker": ticker,
             "market": market,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "dimension_scores": {},
             "overall_score": 0.0,
             "grade": "",
@@ -433,7 +435,6 @@ class ScoringService(AnalysisService):
         return signals
     
     async def score_multiple(self, stocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        import asyncio
         tasks = [self.analyze(stock) for stock in stocks]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         

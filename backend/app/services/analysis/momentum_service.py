@@ -7,6 +7,7 @@ Momentum-based analysis and trading signals.
 from typing import Any, Dict, List
 from datetime import datetime, timezone
 from ..core import AnalysisService
+from app.core.utils import utc_now_iso
 
 
 class MomentumService(AnalysisService):
@@ -40,7 +41,7 @@ class MomentumService(AnalysisService):
             return {"error": "Insufficient price data"}
         
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "ticker": data.get("ticker", "UNKNOWN"),
             "momentum": {
                 "strength": self._calculate_momentum_strength(prices),

@@ -22,6 +22,7 @@ import { fetchCoefficientHistory } from "@/lib/api/dashboard";
 import type { CoefficientHistoryResponse } from "@/lib/api/dashboard";
 
 import { t } from "@/lib/i18n";
+import { num } from "@/lib/utils";
 
 type Level = 1 | 2 | 3;
 
@@ -36,12 +37,6 @@ const LEVEL_LABELS: Record<Level, string> = {
   2: t("app.scoring.hierarchy.sub_dimensions", "en"),
   3: t("app.scoring.hierarchy.aspects", "en"),
 };
-
-function num(value: unknown): number {
-  if (value === null || value === undefined) return 0;
-  const n = typeof value === "number" ? value : parseFloat(String(value));
-  return Number.isFinite(n) ? n : 0;
-}
 
 export default function StockScoringPage() {
   const params = useParams<{ symbol: string }>();

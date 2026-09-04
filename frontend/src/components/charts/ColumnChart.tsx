@@ -11,6 +11,7 @@ import {
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 import { toTimestamp, createDateTickMarkFormatter, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
+import { priceFormatter } from "@/lib/utils";
 
 interface ColumnChartProps {
   data: { time: string | number; value: number; color?: string }[];
@@ -82,7 +83,7 @@ export function ColumnChart({ data, height = 240, valueFormatter, yAxisLabel = "
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "en-US",
-        priceFormatter: valueFormatter || ((p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 })),
+        priceFormatter: valueFormatter || priceFormatter,
       },
       autoSize: false,
     });

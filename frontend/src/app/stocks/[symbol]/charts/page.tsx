@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/scoring";
 
 import { t } from "@/lib/i18n";
+import { num } from "@/lib/utils";
 
 const SCORE_DIMENSIONS: { key: string; label: string; color: string }[] = [
   { key: "overall", label: "Overall", color: "#005A9C" },
@@ -28,12 +29,6 @@ const SCORE_DIMENSIONS: { key: string; label: string; color: string }[] = [
   { key: "macro", label: "Macro", color: "#8b5cf6" },
   { key: "ai", label: "AI", color: "#ec4899" },
 ];
-
-function num(value: unknown): number {
-  if (value === null || value === undefined) return 0;
-  const n = typeof value === "number" ? value : parseFloat(String(value));
-  return Number.isFinite(n) ? n : 0;
-}
 
 export default function StockChartsPage() {
   const params = useParams<{ symbol: string }>();

@@ -8,6 +8,8 @@ No hardcoded data. No fallback to static arrays.
 from typing import Any, Dict, Optional, List
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
+import asyncio
+from app.core.utils import utc_now_iso
 
 from app.core.config import get_settings
 from app.core.exceptions import DataProviderException
@@ -45,7 +47,7 @@ class StockService(CachedService):
         self.logger.info("StockService shutdown")
     
     async def _run_blocking(self, func, *args, **kwargs):
-        loop = __import__("asyncio").get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
 
     def _fetch_yfinance_search(self, query: str) -> List[Dict[str, Any]]:
@@ -204,7 +206,7 @@ class StockService(CachedService):
                 "change": change,
                 "change_percent": change_percent,
                 "volume": info.get("volume") or info.get("regularMarketVolume"),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
             }
         
         stock_data = await self._run_blocking(fetch)

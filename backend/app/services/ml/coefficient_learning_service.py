@@ -21,6 +21,7 @@ import asyncio
 import joblib
 import os
 from pathlib import Path
+from app.core.utils import utc_now_iso
 
 from ..core import MLService
 from app.core.config import get_settings
@@ -297,7 +298,7 @@ class CoefficientLearningService(MLService):
             performance_data = []
             for row in rows:
                 record = {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": utc_now_iso(),
                     "dimension_scores": row.dimension_scores,
                     "sub_dimension_scores": row.sub_dimension_scores,
                     "aspect_scores": row.aspect_scores,
@@ -829,13 +830,13 @@ class CoefficientLearningService(MLService):
             return {
                 "service": self.service_name,
                 "status": "healthy" if is_healthy else "unhealthy",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "details": status
             }
         except Exception as e:
             return {
                 "service": self.service_name,
                 "status": "unhealthy",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "error": str(e)
             }

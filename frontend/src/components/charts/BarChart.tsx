@@ -11,6 +11,7 @@ import {
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 import { toTimestamp, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
+import { priceFormatter } from "@/lib/utils";
 
 interface BarChartProps {
   data: { time: string | UTCTimestamp; value: number; color?: string }[];
@@ -71,7 +72,7 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
       crosshair: { mode: CrosshairMode.Normal },
       localization: {
         locale: "en-US",
-        priceFormatter: (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
+        priceFormatter: priceFormatter },
       autoSize: false });
     chartRef.current = chart;
 

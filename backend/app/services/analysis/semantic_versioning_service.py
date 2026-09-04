@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
@@ -73,7 +74,7 @@ class SemanticVersioningService(AnalysisService):
             "context": context,
             "old_version": self._format_version(current),
             "new_version": self.current_version[context],
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": utc_now_iso()
         }
 
     def _is_valid_semantic_version(self, version: str, context: str) -> bool:

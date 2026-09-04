@@ -1,26 +1,25 @@
-/**
- * Alerts API Router
- * ---------------------------------------------------------------------------
- * API endpoints for managing user alerts and notifications.
- * 
- * FEATURES:
- * - Price alerts (above/below threshold)
- * - Score change alerts (dimension scores)
- * - Volume spike alerts
- * - News/sentiment alerts
- * - Technical indicator alerts (RSI, MACD, etc.)
- * - Multi-channel delivery (in-app, email, webhook)
- * 
- * USAGE:
- * - POST /api/v1/alerts - Create new alert
- * - GET /api/v1/alerts - List user alerts
- * - GET /api/v1/alerts/{alert_id} - Get alert details
- * - PUT /api/v1/alerts/{alert_id} - Update alert
- * - DELETE /api/v1/alerts/{alert_id} - Delete alert
- * - POST /api/v1/alerts/{alert_id}/toggle - Enable/disable alert
- * - GET /api/v1/alerts/history - Get triggered alerts history
- * - POST /api/v1/alerts/bulk - Create multiple alerts
- */
+"""Alerts API Router
+---------------------------------------------------------------------------
+API endpoints for managing user alerts and notifications.
+
+FEATURES:
+- Price alerts (above/below threshold)
+- Score change alerts (dimension scores)
+- Volume spike alerts
+- News/sentiment alerts
+- Technical indicator alerts (RSI, MACD, etc.)
+- Multi-channel delivery (in-app, email, webhook)
+
+USAGE:
+- POST /api/v1/alerts - Create new alert
+- GET /api/v1/alerts - List user alerts
+- GET /api/v1/alerts/{alert_id} - Get alert details
+- PUT /api/v1/alerts/{alert_id} - Update alert
+- DELETE /api/v1/alerts/{alert_id} - Delete alert
+- POST /api/v1/alerts/{alert_id}/toggle - Enable/disable alert
+- GET /api/v1/alerts/history - Get triggered alerts history
+- POST /api/v1/alerts/bulk - Create multiple alerts
+"""
 
 from typing import List, Optional, Literal
 from datetime import datetime

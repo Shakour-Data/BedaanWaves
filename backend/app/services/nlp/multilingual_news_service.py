@@ -12,6 +12,7 @@ from app.services.core.base_service import BaseService
 from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
 from app.services.nlp.news_summarization_service import NewsSummarizationService
 import logging
+from app.core.utils import utc_now_iso
 
 class MultilingualNewsService(BaseService):
     """
@@ -193,7 +194,7 @@ class MultilingualNewsService(BaseService):
                     "sentiment": sentiment_result,
                     "summary": summary_result,
                     "country": country,
-                    "processed_at": datetime.now(timezone.utc).isoformat()
+                    "processed_at": utc_now_iso()
                 }
                 
                 processed_news.append(processed_item)
