@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { fetchDashboardData, fetchScoreTrend } from '@/lib/api/dashboard'
+import { fetchDashboardData, fetchScoreTrend, fetchCoefficientHistory } from '@/lib/api/dashboard'
 import { apiClient } from '@/lib/api'
 
 vi.mock('@/lib/api', () => ({
@@ -166,5 +166,86 @@ describe('Dashboard API Service', () => {
     expect(trend.series[1].score_change).toBeCloseTo(0.35, 2)
     expect(trend.series[2].avg_dimensions.technical).toBe(55.56)
     expect(trend.series[2].dimension_changes.technical).toBeCloseTo(0.56, 2)
+  })
+
+  it('should pin the score-trend window to the explicit end_date so the spider and trend charts can never disagree on the latest day', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        days: 30,
+        market: 'NASDAQ',
+        count: 1,
+        dimensions: [],
+        series: [
+          {
+            date: '2026-08-31',
+            avg_score: 60,
+            avg_dimensions: { fundamental: 0, technical: 0, sentiment: 0, risk: 0, macro: 0, ai: 0 },
+            symbol_count: 5600,
+          },
+        ],
+        latest_date: '2026-08-31',
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    const latestDate = '2026-08-31'
+    await fetchScoreTrend(30, 'NASDAQ', { endDate: latestDate })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('analysis/dashboard/score-trend')
+    expect(calledUrl).toContain(`end_date=${latestDate}`)
+    expect(calledUrl).not.toContain('latest=true')
+  })
+
+  it('should fall back to latest=true when no end_date is supplied', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        days: 30,
+        market: 'NASDAQ',
+        count: 0,
+        dimensions: [],
+        series: [],
+        latest_date: null,
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    await fetchScoreTrend(30, 'NASDAQ', { latest: true })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('latest=true')
+  })
+
+  it('should append every query param to the coefficient-history URL', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      data: {
+        status: 'success',
+        days: 30,
+        market: 'NASDAQ',
+        count: 0,
+        dimensions: [],
+        series: [],
+        latest_date: null,
+        timestamp: '2026-08-31T22:00:00Z',
+      },
+    })
+    ;(apiClient.get as any) = spy
+
+    await fetchCoefficientHistory(30, 'NASDAQ', { endDate: '2026-08-31' })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const calledUrl: string = spy.mock.calls[0][0]
+    expect(calledUrl).toContain('analysis/dashboard/coefficient-history')
+    expect(calledUrl).toContain('days=30')
+    expect(calledUrl).toContain('market=NASDAQ')
+    expect(calledUrl).toContain('end_date=2026-08-31')
+    expect(calledUrl).not.toMatch(/\?$/)
+    expect(calledUrl).not.toMatch(/\?\?/)
   })
 })

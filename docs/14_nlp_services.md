@@ -15,9 +15,8 @@ Multi-language sentiment analysis focused on financial news and social media.
 - Entity-level sentiment (per asset/sector)
 
 **Models:**
-- Persian: ParsBERT + Custom Financial Dictionary
 - English: FinBERT + Custom Financial Lexicon
-- Hybrid ensemble for cross-lingual content
+- Hybrid ensemble for multi-source content
 
 **Endpoints:**
 - `/api/v1/nlp/sentiment` - Analyze text sentiment
@@ -46,7 +45,7 @@ PDF and document processing for financial reports and disclosures.
 Conversational AI for market queries and portfolio assistance.
 
 **Features:**
-- Persian and English support
+- English and multilingual support
 - Intent classification
 - Entity extraction
 - Context-aware responses
@@ -65,9 +64,8 @@ Semantic search across financial documents and news.
 Country-specific news with language detection and translation.
 
 **Supported Languages:**
-- Persian (primary)
 - English (primary)
-- Arabic, Turkish, Russian (secondary)
+- German, French, Spanish (secondary)
 
 ## Architecture
 

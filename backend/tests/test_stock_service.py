@@ -1,7 +1,7 @@
 """Unit tests for Tier 2 StockService."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, AsyncMock
 
 from app.services.data.stock_service import StockService
 
@@ -42,7 +42,7 @@ class TestGetStock:
             "sector": "Technology",
             "industry": "Consumer Electronics",
         }
-        with patch.object(service, "_run_blocking", new_callable=MagicMock) as mock_run:
+        with patch.object(service, '_run_blocking', new_callable=AsyncMock) as mock_run:
             mock_run.return_value = {
                 "symbol": "AAPL",
                 "name": "Apple Inc.",

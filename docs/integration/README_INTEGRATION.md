@@ -41,7 +41,7 @@ BedaanWaves/
 │   │   └── dependencies.py          # FastAPI dependency injection
 │   ├── services/
 │   │   ├── core/                    # Tier 1: BaseService, Config, Logger, Cache, DB, Health
-│   │   ├── data/                    # Tier 2: BRS, Stock, Market, Portfolio, History, News
+│   │   ├── data/                    # Tier 2: Yahoo Finance, Stock, Market, Portfolio, History, News
 │   │   ├── analysis/                # Tier 3: Scoring, Technical, Fundamental, Risk, Momentum, Volatility
 │   │   ├── ml/                      # Tier 4: Prediction, Pattern, Anomaly, Recommendation, etc.
 │   │   ├── nlp/                     # Tier 5: Sentiment, Search, News Summarization, Chatbot, Doc Extraction

@@ -132,13 +132,15 @@ class MarketScoreTrendService(BaseService):
             days:     Lookback window length in days (default 30).
             market:   Market code (default ``NASDAQ``).
             db:       Optional injected session; otherwise a new one is opened.
-            end_date: Explicit end date for the window. When ``None`` the
-                      window ends on ``today`` (server clock) unless
-                      ``latest`` is ``True``.
-            latest:   When ``True`` the window ends on the most recent date
-                      present in ``market_score_trend`` (or ``score_history``
-                      as a fallback) rather than on ``today``. This ensures
-                      the trend chart and the spider chart (which renders the
+            end_date: Explicit end date for the window. Takes precedence over
+                      ``latest`` when supplied. When ``None`` the window
+                      ends on ``today`` (server clock) unless ``latest`` is
+                      ``True``.
+            latest:   When ``True`` (and ``end_date`` is ``None``) the window
+                      ends on the most recent date present in
+                      ``market_score_trend`` (or ``score_history`` as a
+                      fallback) rather than on ``today``. This ensures the
+                      trend chart and the spider chart (which renders the
                       latest ``ScoreHistory`` date) display the same latest
                       data point.
 
@@ -148,10 +150,17 @@ class MarketScoreTrendService(BaseService):
         if days < 1:
             return []
 
-        if latest:
+        if end_date is not None:
+            # An explicit ``end_date`` always wins, even when ``latest`` is
+            # also requested. This guarantees that callers which already
+            # resolved the "latest available date" (e.g. the spider chart
+            # endpoint) can pin the trend window to that exact date and
+            # never drift if the precomputed table lags.
+            effective_end = end_date
+        elif latest:
             effective_end = await self._latest_date(market, db)
         else:
-            effective_end = end_date or datetime.now(timezone.utc).date()
+            effective_end = datetime.now(timezone.utc).date()
 
         if effective_end is not None:
             cutoff = effective_end - timedelta(days=days - 1)

@@ -1,10 +1,10 @@
 """Database Models
 
 BedaanWaves database design:
-- Separate candle tables per market (Iran / International) due to different
+- Separate candle tables per market (International) due to different
   calendars, trading hours, and timeframes.
 - Market depth tables (top quotes), major shareholders, free float, and
-  real/legal cash flow specific to the Iranian market.
+  real/legal cash flow for international markets.
 - Fundamental, news, ML, and authentication/security tables.
 """
 

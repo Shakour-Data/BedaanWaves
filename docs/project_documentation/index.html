@@ -479,7 +479,7 @@ cloud "Yahoo Finance API" as YF
 U --> FE : HTTP requests
 FE --> BE : REST / API v1/*
 BE --> DB : SQL queries
-BE --> BRS : upstream fetch
+BE --> YF : upstream fetch
 
 note right of BE
 Middlewares:
@@ -1199,7 +1199,7 @@ flowchart TD
 
       <div id="arch-layered" class="tab-content active">
         <h4>Layered Architecture</h4>
-        <p>Presentation, Business, Data, and Integration layers: Frontend (Next.js/React) → API Gateway (FastAPI) → Core Services → Data Services (PostgreSQL/Redis) → External APIs (BRS, Intl) → Database.</p>
+        <p>Presentation, Business, Data, and Integration layers: Frontend (Next.js/React) → API Gateway (FastAPI) → Core Services → Data Services (PostgreSQL/Redis) → External APIs (Yahoo Finance, Intl) → Database.</p>
         <div class="diagram-code">
 graph TD
     A[User Layer] --> B[Frontend Layer]

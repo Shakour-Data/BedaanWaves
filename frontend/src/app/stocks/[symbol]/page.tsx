@@ -241,9 +241,12 @@ export default function StockDetailPage() {
                     ))}
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-border/40">
+                <div className="mt-4 pt-4 border-t border-border/40 flex flex-wrap gap-2">
                   <Link href={`/stocks/${symbol}/scoring`} className="inline-flex items-center gap-2 rounded-lg bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/20">
                     {t("app.scoring.title", "en")} →
+                  </Link>
+                  <Link href={`/stocks/${symbol}/charts`} className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20">
+                    Charts →
                   </Link>
                 </div>
               </TarotCard>

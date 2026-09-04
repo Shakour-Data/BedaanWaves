@@ -659,6 +659,7 @@ class ScoreHistoryPipeline:
                     "overall_score": overall_score,
                     "grade": grade,
                     "coverage": hierarchy.get("coverage", 0.0) if hierarchy else 0.0,
+                    "target_date": target_date.isoformat() if hasattr(target_date, "isoformat") else str(target_date),
                 },
             )
             # RawPerformanceScore has no natural unique key other than

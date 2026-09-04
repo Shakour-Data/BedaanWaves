@@ -6,6 +6,7 @@ read path and the fallback on-the-fly aggregator are covered.
 """
 
 import asyncio
+from datetime import date
 import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -102,6 +103,42 @@ class TestMarketScoreTrendService(unittest.TestCase):
             service.get_trend(days=30, market="NASDAQ", db=_make_session([]))
         )
         self.assertEqual(result, [])
+
+    def test_explicit_end_date_wins_over_latest(self):
+        """Regression: when the caller supplies an explicit ``end_date``
+        (e.g. the spider chart's latest_date) the trend window must end on
+        that date even if ``latest=True`` was also requested.
+
+        Without this contract the trend chart can silently drift from the
+        spider chart on the /dashboard?tab=general page whenever the
+        precomputed ``market_score_trend`` table is one day behind
+        ``score_history``.
+        """
+        service = MarketScoreTrendService()
+        # Pretend the latest data anywhere is 2026-09-02 but the caller
+        # explicitly pinned the window to 2026-08-31. ``_latest_date``
+        # must NOT be consulted.
+        service._latest_date = AsyncMock(return_value=date(2026, 9, 2))
+
+        # Reuse the existing fake-session helper but count the queries so
+        # we can assert no extra ``max(date)`` probe is fired.
+        session = _make_session([])
+
+        self._run(
+            service.get_trend(
+                days=30,
+                market="NASDAQ",
+                db=session,
+                end_date=date(2026, 8, 31),
+                latest=True,
+            )
+        )
+
+        # The latest-date probe must never run when an explicit end_date
+        # is supplied, otherwise the window end drifts.
+        service._latest_date.assert_not_called()
+        # And the main trend read must still execute exactly once.
+        self.assertEqual(session.execute.await_count, 1)
 
     def test_compute_and_persist_aggregates_then_upserts(self):
         """Verify the SQL aggregation and upsert flow without hitting a DB."""

@@ -384,6 +384,7 @@ class DashboardService:
         db: AsyncSession,
         dimension: str,
         limit: int = 50,
+        latest: bool = False,
     ) -> Dict[str, Any]:
         """
         Get dashboard data for a specific dimension (technical, fundamental, risk, ai, sentiment).
@@ -417,6 +418,7 @@ class DashboardService:
                 "summary": {"total_symbols": 0, "avg_score": 0, "best_symbol": None, "worst_symbol": None},
                 "distribution": [],
                 "symbols": [],
+                "latest_date": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -662,6 +664,7 @@ class DashboardService:
             "symbols": symbols_data[:limit],
             "top_performers": top_performers,
             "bottom_performers": bottom_performers,
+            "latest_date": None,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -669,6 +672,7 @@ class DashboardService:
         self,
         db: AsyncSession,
         limit: int = 50,
+        latest: bool = False,
     ) -> Dict[str, Any]:
         """Get news sentiment dashboard for all symbols."""
         # Get all active assets
@@ -686,6 +690,7 @@ class DashboardService:
                 "dimension": "news",
                 "summary": {"total_symbols": 0, "total_news": 0},
                 "symbols": [],
+                "latest_date": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -869,6 +874,7 @@ class DashboardService:
                             "symbols": symbols_data[:limit],
                             "top_performers": symbols_data[:10],
                             "bottom_performers": symbols_data[-10:][::-1],
+                            "latest_date": None,
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
             except Exception as exc:
@@ -895,6 +901,7 @@ class DashboardService:
             "symbols": symbols_data[:limit],
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],
+            "latest_date": latest_date,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -902,6 +909,7 @@ class DashboardService:
         self,
         db: AsyncSession,
         limit: int = 50,
+        latest: bool = False,
     ) -> Dict[str, Any]:
         """Get board/governance dashboard for all symbols."""
         assets_query = (
@@ -918,6 +926,7 @@ class DashboardService:
                 "dimension": "board",
                 "summary": {"total_symbols": 0},
                 "symbols": [],
+                "latest_date": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -1014,6 +1023,7 @@ class DashboardService:
                 {"symbol": s["symbol"], "name": s["name"], "score": s["score"], "board_count": s["board_count"], "officer_count": s["officer_count"]}
                 for s in symbols_data[-10:][::-1]
             ],
+            "latest_date": None,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -1021,6 +1031,7 @@ class DashboardService:
         self,
         db: AsyncSession,
         limit: int = 50,
+        latest: bool = False,
     ) -> Dict[str, Any]:
         """Get AI/ML dashboard for all symbols."""
         assets_query = (
@@ -1037,6 +1048,7 @@ class DashboardService:
                 "dimension": "ai",
                 "summary": {"total_symbols": 0},
                 "symbols": [],
+                "latest_date": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -1148,12 +1160,14 @@ class DashboardService:
             "symbols": symbols_data[:limit],
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],
+            "latest_date": latest_date,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     async def get_general_dashboard(
         self,
         db: AsyncSession,
+        latest: bool = False,
     ) -> Dict[str, Any]:
         """Get general/overall dashboard data."""
         # Get all active assets with latest scores
@@ -1171,6 +1185,7 @@ class DashboardService:
                 "summary": {"total_symbols": 0},
                 "dimensions": {},
                 "symbols": [],
+                "latest_date": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -1287,6 +1302,21 @@ class DashboardService:
             {"key": "ai",          "label": "AI",          "weight": 0.10},
         ]
 
+        latest_date = None
+        if latest:
+            latest_date_result = await db.execute(
+                select(func.max(ScoreHistory.date))
+                .join(Asset, Asset.id == ScoreHistory.asset_id)
+                .where(and_(
+                    Asset.active == True,  # noqa: E712
+                    Asset.market == "NASDAQ",
+                    Asset.asset_class.in_(["EQUITY", "ETF"]),
+                ))
+            )
+            latest_date_row = latest_date_result.scalar_one_or_none()
+            if latest_date_row is not None:
+                latest_date = latest_date_row.isoformat() if hasattr(latest_date_row, "isoformat") else str(latest_date_row)
+
         return {
             "status": "success",
             "summary": {
@@ -1299,6 +1329,7 @@ class DashboardService:
             "symbols": symbols_data[:100],
             "top_performers": symbols_data[:10],
             "bottom_performers": symbols_data[-10:][::-1],
+            "latest_date": latest_date,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -1306,15 +1337,16 @@ class DashboardService:
         self,
         db: AsyncSession,
         dimension: str = "general",
+        latest: bool = False,
     ) -> Dict[str, Any]:
         """Get dashboard data by dimension."""
         if dimension == "general":
-            return await self.get_general_dashboard(db)
+            return await self.get_general_dashboard(db, latest=latest)
         elif dimension == "news":
-            return await self.get_news_dashboard(db)
+            return await self.get_news_dashboard(db, latest=latest)
         elif dimension == "board":
-            return await self.get_board_dashboard(db)
+            return await self.get_board_dashboard(db, latest=latest)
         elif dimension == "ai":
-            return await self.get_ai_dashboard(db)
+            return await self.get_ai_dashboard(db, latest=latest)
         else:
-            return await self.get_dimension_dashboard(db, dimension)
+            return await self.get_dimension_dashboard(db, dimension, latest=latest)
