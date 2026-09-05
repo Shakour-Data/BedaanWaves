@@ -14,6 +14,7 @@ from app.services.analysis.dashboard_service import DashboardService
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 from app.services.analysis.coefficient_history_service import CoefficientHistoryService
 from app.services.analysis.hierarchical_score_trend_service import HierarchicalScoreTrendService, SUB_DIMENSION_TO_PARENT
+from app.services.analysis.coefficient_history_service import DIMENSION_KEYS
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
