@@ -10,7 +10,6 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { PageLoading } from "@/components/ui/PageLoading";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { AssetTable } from "@/components/shared/AssetTable";
 import { StockPicker } from "@/components/search/StockPicker";
 import { fetchSymbols } from "@/lib/api/stocks";
 import {
@@ -30,7 +29,6 @@ import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
-import type { AssetRow } from "@/lib/dashboard-data";
 
 export default function WatchlistPage() {
   const addToast = useUXStore((state) => state.addToast);
@@ -82,6 +80,7 @@ export default function WatchlistPage() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadWatchlists();
       fetchSymbols({ limit: 1000 }).then((assets) => {
         const map = new Map(assets.map((a) => [a.symbol.toUpperCase(), a.id]));

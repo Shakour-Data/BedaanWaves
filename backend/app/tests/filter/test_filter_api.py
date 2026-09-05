@@ -4,13 +4,14 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.api.routes.filter import router as filter_router
 from app.services.filter.filter_service import FilterService
 from app.services.filter.filter_parser import parse_filter_tree
 from app.services.filter.field_registry import FieldRegistry
-from app.schemas.filter_schemas import AdvancedFilterRequest, FilterGroup, FilterCondition, LogicOperator
+from app.schemas.filter_schemas import FilterGroup, FilterCondition, LogicOperator
 
 
 class FakeRow:
@@ -33,9 +34,15 @@ def _make_session(rows):
     return session
 
 
+def _create_test_app():
+    _app = FastAPI()
+    _app.include_router(filter_router, prefix="/api/v1/filter", tags=["filter"])
+    return _app
+
+
 class TestAdvancedFilterAPI(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(app)
+        self.client = TestClient(_create_test_app())
 
     def _build_payload(self, **overrides):
         default = {
@@ -48,7 +55,7 @@ class TestAdvancedFilterAPI(unittest.TestCase):
             },
             "limit": 10,
             "offset": 0,
-            "sort_by": "score",
+            "sort_by": "overall_score",
             "sort_dir": "desc",
         }
         default.update(overrides)

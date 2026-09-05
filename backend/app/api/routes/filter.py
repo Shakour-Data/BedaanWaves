@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["filter"])
 
 
-@router.post("/filter/advanced", response_model=dict)
+@router.post("/advanced", response_model=dict)
 async def advanced_filter(
     payload: AdvancedFilterRequest,
     db: AsyncSession = Depends(get_async_session),
@@ -41,7 +41,7 @@ async def advanced_filter(
             parsed_root=parsed,
             limit=payload.limit,
             offset=payload.offset,
-            sort_by=payload.sort_by or "score",
+            sort_by=payload.sort_by or "overall_score",
             sort_dir=payload.sort_dir or "desc",
         )
         return result
@@ -50,7 +50,7 @@ async def advanced_filter(
         raise HTTPException(status_code=500, detail="Internal filter engine error")
 
 
-@router.get("/filter/fields", response_model=dict)
+@router.get("/fields", response_model=dict)
 async def list_filterable_fields() -> dict:
     """Return the full registry of filterable fields for the UI."""
     registry = FieldRegistry()

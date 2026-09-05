@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useStockSearch } from "@/hooks/useStockSearch";
 import { cn } from "@/lib/cn";
 import { Search, X, Loader2, AlertCircle } from "lucide-react";
