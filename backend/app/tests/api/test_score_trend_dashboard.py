@@ -45,7 +45,7 @@ def _make_session(rows):
     return session
 
 
-def _row(date, avg_score, dims, symbol_count=42):
+def _row(date, avg_score, dims, symbol_count=100):
     return _FakeRow(
         date=SimpleNamespace(isoformat=lambda d=date: d),
         avg_score=avg_score,
