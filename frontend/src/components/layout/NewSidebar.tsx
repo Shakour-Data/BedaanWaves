@@ -63,9 +63,6 @@ export function NewSidebar() {
   const [userExpanded, setUserExpanded] = useState<Set<string>>(new Set(["Analytics"]));
 
   const isActive = useCallback((href: string) => {
-    if (href.startsWith("/dashboard?")) {
-      return false;
-    }
     return pathname.startsWith(href);
   }, [pathname]);
 

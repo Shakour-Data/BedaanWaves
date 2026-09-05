@@ -63,7 +63,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginStore(username, password);
-      addToast({ type: "success", message: "Welcome back! Redirecting to dashboard..." });
+      addToast({ type: "success", message: "Welcome back! Redirecting to leaderboard..." });
     } catch (err) {
       const message = getApiErrorMessage(err);
       setError(message);

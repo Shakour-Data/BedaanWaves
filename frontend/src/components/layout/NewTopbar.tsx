@@ -30,7 +30,7 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
   const handleLogout = useCallback(async () => {
     const confirmed = await confirm({
       title: "Sign out?",
-      description: "You will need to sign in again to access your dashboard.",
+      description: "You will need to sign in again to access your analytics.",
       confirmLabel: "Sign out",
       onConfirm: () => {
         addToast({ type: "info", message: "You have been signed out." });

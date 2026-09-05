@@ -17,13 +17,13 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('text=email|text=password')).toBeVisible();
   });
 
-  test('should navigate to dashboard after successful login', async ({ page }) => {
+  test('should navigate to leaderboard after successful login', async ({ page }) => {
     await page.locator('input[type="email"]').fill('test@example.com');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button[type="submit"]').click();
 
-    await page.waitForURL('/dashboard');
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+    await page.waitForURL('/leaderboard');
+    await expect(page.locator('text=Leaderboard')).toBeVisible();
   });
 
   test('should show error message for invalid credentials', async ({ page }) => {
@@ -35,25 +35,20 @@ test.describe('Authentication Flow', () => {
   });
 });
 
-test.describe('Dashboard', () => {
+test.describe('Leaderboard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/leaderboard');
   });
 
-  test('should load dashboard with market stats', async ({ page }) => {
-    await expect(page.locator('text=Market')).toBeVisible();
+  test('should load leaderboard with top performers', async ({ page }) => {
+    await expect(page.locator('text=Leaderboard')).toBeVisible();
   });
 
-  test('should display asset table', async ({ page }) => {
-    await expect(page.locator('table, .overflow-x-auto')).toBeVisible();
+  test('should display ranked entries', async ({ page }) => {
+    await expect(page.locator('text=Top Performers')).toBeVisible();
   });
 
-  test('should display news feed', async ({ page }) => {
-    await expect(page.locator('text=News')).toBeVisible();
-  });
-
-  test('should have live data indicator', async ({ page }) => {
-    const liveIndicator = page.locator('text=live|text=connected');
-    await expect(liveIndicator.first()).toBeVisible();
+  test('should have filterable levels', async ({ page }) => {
+    await expect(page.locator('text=Overall')).toBeVisible();
   });
 });
