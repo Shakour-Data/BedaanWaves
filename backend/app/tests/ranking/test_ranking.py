@@ -8,24 +8,24 @@ from app.api.routes.ranking import _assign_grade, _technical_score, _risk_score
 
 
 class TestAssignGrade(unittest.TestCase):
-    def test_strong_buy(self):
-        self.assertEqual(_assign_grade(90), "A_STRONG_BUY")
+    def test_strong_bullish(self):
+        self.assertEqual(_assign_grade(90), "STRONG_BULLISH")
 
-    def test_buy_boundary(self):
-        self.assertEqual(_assign_grade(70), "B_BUY")
+    def test_bullish_boundary(self):
+        self.assertEqual(_assign_grade(70), "BULLISH")
 
-    def test_hold_boundary(self):
-        self.assertEqual(_assign_grade(55), "C_HOLD")
+    def test_neutral_boundary(self):
+        self.assertEqual(_assign_grade(55), "NEUTRAL")
 
-    def test_sell_boundary(self):
-        self.assertEqual(_assign_grade(40), "D_SELL")
+    def test_bearish_boundary(self):
+        self.assertEqual(_assign_grade(40), "BEARISH")
 
-    def test_strong_sell(self):
-        self.assertEqual(_assign_grade(10), "E_STRONG_SELL")
+    def test_strong_bearish(self):
+        self.assertEqual(_assign_grade(10), "STRONG_BEARISH")
 
     def test_exact_threshold(self):
-        self.assertEqual(_assign_grade(85), "A_STRONG_BUY")
-        self.assertEqual(_assign_grade(54.9), "D_SELL")
+        self.assertEqual(_assign_grade(85), "STRONG_BULLISH")
+        self.assertEqual(_assign_grade(54.9), "BEARISH")
 
 
 class TestTechnicalScore(unittest.TestCase):
