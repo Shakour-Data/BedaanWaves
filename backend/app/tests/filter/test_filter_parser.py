@@ -189,12 +189,11 @@ class TestQueryBuilder(unittest.TestCase):
         self.assertIsNotNone(stmt)
 
     def test_invalid_operator_raises(self):
-        with self.assertRaises(QueryBuildError):
-            parsed = parse_filter_tree(
+        with self.assertRaises(ValueError):
+            parse_filter_tree(
                 FilterCondition(field="overall_score", operator="invalid_op", value=1, level="overall"),
                 self.reg,
             )
-            build_query_from_tree(parsed, self.reg)
 
 
 class TestFilterService(unittest.TestCase):
@@ -203,6 +202,9 @@ class TestFilterService(unittest.TestCase):
 
     def _run(self, coro):
         return asyncio.new_event_loop().run_until_complete(coro)
+
+    def _row(self, **kwargs):
+        return FakeRow(**kwargs)
 
     def test_execute_filter_returns_results(self):
         rows = [
