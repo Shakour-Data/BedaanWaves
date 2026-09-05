@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Mail, CheckCircle2 } from "lucide-react";
+
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useUXStore } from "@/store/useUXStore";
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
       {sent ? (
         <div className="rounded-2xl border border-[var(--color-success)]/30 bg-[var(--color-success-light)] p-6 text-center animate-in fade-in zoom-in-95">
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success)]/10">
-            <CheckCircle2 className="h-6 w-6 text-[var(--color-success)]" />
+            <span className="text-2xl font-bold text-[var(--color-success)]">\u2713</span>
           </div>
           <p className="font-semibold text-[var(--color-text-primary)]">Reset link sent!</p>
           <p className="text-sm mt-1 text-[var(--color-text-secondary)]">
@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
           </p>
           <Link href="/login" className="inline-flex items-center gap-2 mt-6 text-sm font-semibold text-[var(--color-primary)] hover:underline">
             Back to Sign in
-            <ArrowRight className="h-3 w-3" />
+            <span className="font-mono">\u2192</span>
           </Link>
         </div>
       ) : (
@@ -99,7 +99,6 @@ export default function ForgotPasswordPage() {
             size="lg"
           >
             {loading ? "Processing..." : "Send Reset Link"}
-            {!loading && <Mail className="h-4 w-4" />}
           </PrimaryButton>
 
           <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
