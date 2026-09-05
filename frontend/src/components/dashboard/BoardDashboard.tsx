@@ -31,8 +31,9 @@ export function BoardDashboard() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
-  }, []);
+  }, [loadData]);
 
   const spiderData = useMemo(() => {
     if (!data) return [];
