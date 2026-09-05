@@ -13,17 +13,17 @@ router = APIRouter(tags=["ranking"])
 
 
 def _assign_grade(score: float) -> str:
-    """Assign a letter grade based on overall score."""
+    """Assign a grade based on overall score."""
     if score >= 85:
-        return "A_STRONG_BUY"
+        return "STRONG_BULLISH"
     elif score >= 70:
-        return "B_BUY"
+        return "BULLISH"
     elif score >= 55:
-        return "C_HOLD"
+        return "NEUTRAL"
     elif score >= 40:
-        return "D_SELL"
+        return "BEARISH"
     else:
-        return "E_STRONG_SELL"
+        return "STRONG_BEARISH"
 
 
 def _technical_score(closes: list[float]) -> float:

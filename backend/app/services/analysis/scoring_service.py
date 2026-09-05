@@ -413,15 +413,15 @@ class ScoringService(AnalysisService):
     
     def _assign_grade(self, score: float) -> str:
         if score >= 85:
-            return "A_STRONG_BUY"
+            return "STRONG_BULLISH"
         elif score >= 70:
-            return "B_BUY"
+            return "BULLISH"
         elif score >= 55:
-            return "C_HOLD"
+            return "NEUTRAL"
         elif score >= 40:
-            return "D_SELL"
+            return "BEARISH"
         else:
-            return "E_STRONG_SELL"
+            return "STRONG_BEARISH"
     
     def _generate_signals(self, dimension_scores: Dict[str, float]) -> List[str]:
         signals = []

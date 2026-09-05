@@ -28,11 +28,11 @@ class ScoreTierEnum(str, Enum):
 
 
 class SignalTypeEnum(str, Enum):
-    BUY = "BUY"
-    SELL = "SELL"
-    HOLD = "HOLD"
-    STRONG_BUY = "STRONG_BUY"
-    STRONG_SELL = "STRONG_SELL"
+    STRONG_BULLISH = "STRONG_BULLISH"
+    BULLISH = "BULLISH"
+    NEUTRAL = "NEUTRAL"
+    BEARISH = "BEARISH"
+    STRONG_BEARISH = "STRONG_BEARISH"
 
 
 class TimeframeEnum(str, Enum):

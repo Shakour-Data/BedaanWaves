@@ -217,7 +217,7 @@ class RankingService:
                 else:
                     scored = {
                         "overall_score": 0,
-                        "grade": "E_STRONG_SELL",
+                        "grade": "STRONG_BEARISH",
                         "dimension_scores": {},
                     }
 

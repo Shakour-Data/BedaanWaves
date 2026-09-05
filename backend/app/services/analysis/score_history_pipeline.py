@@ -295,11 +295,11 @@ class ScoreHistoryPipeline:
             exp_ret = float(row.expected_return)
             data["expected_return"] = exp_ret
             if exp_ret > 0.05:
-                data["prediction"] = "BUY"
+                data["prediction"] = "BULLISH"
             elif exp_ret < -0.05:
-                data["prediction"] = "SELL"
+                data["prediction"] = "BEARISH"
             else:
-                data["prediction"] = "HOLD"
+                data["prediction"] = "NEUTRAL"
         if row.confidence is not None:
             data["confidence"] = float(row.confidence)
         if row.risk_score is not None:

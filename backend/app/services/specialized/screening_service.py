@@ -9,7 +9,7 @@ Supported criteria (all optional):
 - sectors                      : list of allowed sector names
 - asset_class                  : single asset class filter
 - min_volume / max_volume      : traded volume bounds
-- signals                      : list of allowed signal types (BUY, SELL, HOLD, ...)
+ - signals                      : list of allowed signal types (BULLISH, BEARISH, NEUTRAL, ...)
 - min_momentum                 : minimum absolute momentum
 """
 

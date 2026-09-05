@@ -631,7 +631,13 @@ async def get_symbol_scoring(
     candles.reverse() # asc order for analysis
     
     if len(candles) < 20:
-        raise HTTPException(status_code=400, detail="Insufficient data for scoring")
+        return {
+            "status": "insufficient_data",
+            "symbol": asset.symbol,
+            "message": f"Only {len(candles)} 1-day candles available; at least 20 required for scoring",
+            "scoring": None,
+            "timestamp": utc_now_iso(),
+        }
     
     prices = [float(c.close) for c in candles]
     
