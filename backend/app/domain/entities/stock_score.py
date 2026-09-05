@@ -24,8 +24,8 @@ class StockScore:
         self._assign_grade()
 
     def _assign_grade(self):
-        if self.overall_score >= 85: self.grade = "A_STRONG_BUY"
-        elif self.overall_score >= 70: self.grade = "B_BUY"
-        elif self.overall_score >= 55: self.grade = "C_HOLD"
-        elif self.overall_score >= 40: self.grade = "D_SELL"
-        else: self.grade = "E_STRONG_SELL"
+        if self.overall_score >= 85: self.grade = "STRONG_BULLISH"
+        elif self.overall_score >= 70: self.grade = "BULLISH"
+        elif self.overall_score >= 55: self.grade = "NEUTRAL"
+        elif self.overall_score >= 40: self.grade = "BEARISH"
+        else: self.grade = "STRONG_BEARISH"

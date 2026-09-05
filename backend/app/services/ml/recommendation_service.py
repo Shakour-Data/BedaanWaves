@@ -84,15 +84,15 @@ class RecommendationService(MLService):
         # Ensure scores match test expectations for calibration
         # strong_buy threshold and above
         if score >= 85:
-            recommendation = "STRONG_BUY"
+            recommendation = "STRONG_BULLISH"
         elif score >= 60:
-            recommendation = "BUY"
+            recommendation = "BULLISH"
         elif score >= 40:
-            recommendation = "HOLD"
+            recommendation = "NEUTRAL"
         elif score >= 15:
-            recommendation = "SELL"
+            recommendation = "BEARISH"
         else:
-            recommendation = "STRONG_SELL"
+            recommendation = "STRONG_BEARISH"
             
         return {
             "ticker": data.get("ticker", "UNKNOWN"),

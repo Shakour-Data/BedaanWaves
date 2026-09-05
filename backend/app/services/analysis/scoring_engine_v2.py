@@ -233,13 +233,13 @@ def score_market(asset_metrics: Dict[str, Dict[str, Optional[float]]]
 
 
 def grade(score: float) -> str:
-    """Map 0-100 overall to a buy/hold/sell grade."""
+    """Map 0-100 overall to a bullish/bearish grade."""
     if score >= 80:
-        return "A_STRONG_BUY"
+        return "STRONG_BULLISH"
     if score >= 65:
-        return "B_BUY"
+        return "BULLISH"
     if score >= 50:
-        return "C_HOLD"
+        return "NEUTRAL"
     if score >= 35:
-        return "D_SELL"
-    return "E_STRONG_SELL"
+        return "BEARISH"
+    return "STRONG_BEARISH"

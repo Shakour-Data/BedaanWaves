@@ -545,13 +545,13 @@ asyncio.run(main())
                         closes = [float(c[0]) for c in reversed(candles)]
                         rsi = self._compute_rsi(closes)
                         if rsi is not None:
-                            signal_type = "HOLD"
+                            signal_type = "NEUTRAL"
                             confidence = 50.0
                             if rsi < 30:
-                                signal_type = "BUY"
+                                signal_type = "BULLISH"
                                 confidence = 70 + (30 - rsi)
                             elif rsi > 70:
-                                signal_type = "SELL"
+                                signal_type = "BEARISH"
                                 confidence = 70 + (rsi - 70)
 
                             signal = MLSignal(

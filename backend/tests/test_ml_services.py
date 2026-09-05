@@ -186,7 +186,7 @@ class TestRecommendationService:
             "risk": {"sharpe_ratio": 1.5}
         }
         result = await service.predict(data)
-        assert result["recommendation"] == "STRONG_BUY"
+        assert result["recommendation"] == "STRONG_BULLISH"
         assert result["score"] > 70
         assert "factors" in result
 
@@ -200,7 +200,7 @@ class TestRecommendationService:
             "risk": {"sharpe_ratio": 0.8}
         }
         result = await service.predict(data)
-        assert result["recommendation"] in ("BUY", "HOLD")
+        assert result["recommendation"] in ("BULLISH", "NEUTRAL")
         assert 40 < result["score"] <= 70
 
     @pytest.mark.asyncio
@@ -213,7 +213,7 @@ class TestRecommendationService:
             "risk": {"sharpe_ratio": 0.3}
         }
         result = await service.predict(data)
-        assert result["recommendation"] == "HOLD"
+        assert result["recommendation"] == "NEUTRAL"
         assert 40 < result["score"] <= 50
 
     @pytest.mark.asyncio
@@ -226,7 +226,7 @@ class TestRecommendationService:
             "risk": {"sharpe_ratio": 0.0}
         }
         result = await service.predict(data)
-        assert result["recommendation"] in ("SELL", "STRONG_SELL")
+        assert result["recommendation"] in ("BEARISH", "STRONG_BEARISH")
         assert 0 <= result["score"] <= 100
 
     @pytest.mark.asyncio
@@ -239,7 +239,7 @@ class TestRecommendationService:
             "risk": {"sharpe_ratio": -0.5}
         }
         result = await service.predict(data)
-        assert result["recommendation"] in ("SELL", "STRONG_SELL")
+        assert result["recommendation"] in ("BEARISH", "STRONG_BEARISH")
         assert result["score"] <= 30
 
     @pytest.mark.asyncio

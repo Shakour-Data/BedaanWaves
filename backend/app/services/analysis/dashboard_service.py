@@ -1144,20 +1144,20 @@ class DashboardService:
 
         def _derive_signal_type(confidence: float, expected_return: float) -> str:
             """Map real ML output to a real signal label. Pure function over
-            the live row — no constants, no fallbacks to 'HOLD' on success.
+            the live row — no constants, no fallbacks to 'NEUTRAL' on success.
 
             Thresholds are calibrated to the real scale of `expected_return`
             in the live data (currently percent units, range -0.10 to 0.30).
             """
             if confidence >= 80.0 and expected_return >= 0.20:
-                return "STRONG_BUY"
+                return "STRONG_BULLISH"
             if confidence >= 60.0 and expected_return >= 0.10:
-                return "BUY"
+                return "BULLISH"
             if confidence >= 80.0 and expected_return <= -0.05:
-                return "STRONG_SELL"
+                return "STRONG_BEARISH"
             if confidence >= 60.0 and expected_return <= 0.0:
-                return "SELL"
-            return "HOLD"
+                return "BEARISH"
+            return "NEUTRAL"
 
         # Get dimension scores
         latest_sh_subq = (
