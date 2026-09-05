@@ -6,7 +6,7 @@ import Link from "next/link";
 import { InputField } from "@/components/ui/InputField";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { Eye, EyeOff, ArrowRight, CheckCircle2, Lock } from "lucide-react";
+
 import {
   verifyResetToken,
   confirmResetPassword,
@@ -109,7 +109,7 @@ function ResetPasswordForm() {
       <div className="w-full">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-error-light)]">
-            <Lock className="h-6 w-6 text-[var(--color-error)]" />
+            <span className="text-xl font-bold text-[var(--color-error)] font-mono">LOCK</span>
           </div>
           <h1 className="text-2xl font-bold text-[var(--color-error)]">Error</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">{errorMsg}</p>
@@ -132,14 +132,14 @@ function ResetPasswordForm() {
       <div className="w-full text-center">
         <div className="mb-8">
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-light)]">
-            <CheckCircle2 className="h-6 w-6 text-[var(--color-success)]" />
+            <span className="text-2xl font-bold text-[var(--color-success)]">\u2713</span>
           </div>
           <h1 className="text-2xl font-bold text-[var(--color-success)]">Success!</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">Your password has been reset successfully. You can now log in with your new password.</p>
         </div>
         <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
           Sign In
-          <ArrowRight className="h-4 w-4" />
+          <span className="font-mono">\u2192</span>
         </Link>
       </div>
     );
@@ -176,10 +176,10 @@ function ResetPasswordForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+              className="absolute right-3 top-9 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors tracking-wide"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? "HIDE" : "SHOW"}
             </button>
           </div>
 
@@ -213,7 +213,7 @@ function ResetPasswordForm() {
           size="lg"
         >
           {phase === "confirming" ? "Processing..." : "Reset Password"}
-          {phase !== "confirming" && <ArrowRight className="h-4 w-4" />}
+          {phase !== "confirming" && "\u2192"}
         </PrimaryButton>
 
         <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
