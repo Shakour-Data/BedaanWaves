@@ -75,6 +75,7 @@ frontend/refactor.js
 verify_no_mock_data.py
 verify_*.py
 verify_*.out
+_yf_check.py
 
 # Frontend test results (Playwright)
 frontend/test-results/
