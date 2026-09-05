@@ -39,6 +39,7 @@ const categories: NavCategory[] = [
       { label: "News", href: "/news", marker: "NW" },
       { label: "Alerts", href: "/alerts", marker: "AL" },
       { label: "Search", href: "/search-demo", marker: "SR" },
+      { label: "Watchlist", href: "/watchlist", marker: "WL" },
     ],
   },
   {
