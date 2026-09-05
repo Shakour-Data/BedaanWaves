@@ -204,7 +204,7 @@ export default function StockScoringPage() {
         value: num(scoreMapForLevel(pt)?.[item.key] ?? pt.overall),
       })),
     }));
-  }, [history, itemsForLevel, drill.level]);
+  }, [history, itemsForLevel, scoreMapForLevel]);
 
   const perStockChangeSeries = useMemo(() => {
     if (!history || history.length < 2 || !itemsForLevel.length) return [];
@@ -217,7 +217,7 @@ export default function StockScoringPage() {
         value: num(scoreMapForLevel(pt)?.[item.key] ?? pt.overall) - num(scoreMapForLevel(history[j])?.[item.key] ?? history[j].overall),
       })),
     }));
-  }, [history, itemsForLevel, drill.level]);
+  }, [history, itemsForLevel, scoreMapForLevel]);
 
   const perStockChangeFlat = useMemo(() => {
     if (!perStockChangeSeries.length) return [];

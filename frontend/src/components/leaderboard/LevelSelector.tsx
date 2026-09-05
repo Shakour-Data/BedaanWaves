@@ -53,12 +53,7 @@ export function LevelSelector({
           <button
             key={lvl.id}
             type="button"
-            onClick={() => {
-              onLevelChange(lvl.id);
-              if (lvl.id !== "overall" && onDimensionChange) {
-                onDimensionChange(activeDimension);
-              }
-            }}
+            onClick={() => onLevelChange(lvl.id)}
             className={cn(
               "rounded-lg px-4 py-2 text-sm font-medium transition-all",
               level === lvl.id

@@ -186,7 +186,7 @@ export default function StocksPage() {
       }
     }
     loadStocks();
-  }, [addToast]);
+  }, [addToast, searchQuery]);
 
   useEffect(() => {
     if (searchQuery) {

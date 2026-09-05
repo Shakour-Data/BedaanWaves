@@ -92,15 +92,15 @@
       "loading": "Loading alerts...",
       "types": {
         "all": "All",
-        "buy": "Buy",
-        "sell": "Sell",
-        "hold": "Hold"
+        "bullish": "Bullish",
+        "bearish": "Bearish",
+        "neutral": "Neutral"
       },
       "stats_labels": {
         "active": "Active Alerts",
-        "buy": "Buy Alerts",
-        "sell": "Sell Alerts",
-        "hold": "Hold Alerts"
+        "bullish": "Bullish Alerts",
+        "bearish": "Bearish Alerts",
+        "neutral": "Neutral Alerts"
       },
       "status": {
         "executed": "Executed",
@@ -517,11 +517,11 @@
       "showing": "Showing {from}–{to} of {total}",
       "page": "Page {page} of {pages}",
       "grades": {
-        "A_STRONG_BUY": "Strong Buy",
-        "B_BUY": "Buy",
-        "C_HOLD": "Hold",
-        "D_SELL": "Sell",
-        "E_STRONG_SELL": "Strong Sell"
+        "STRONG_BULLISH": "Strong Bullish",
+        "BULLISH": "Bullish",
+        "NEUTRAL": "Neutral",
+        "BEARISH": "Bearish",
+        "STRONG_BEARISH": "Strong Bearish"
       }
     }
   }

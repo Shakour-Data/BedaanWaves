@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
 
 export default function MethodologyPage() {
   

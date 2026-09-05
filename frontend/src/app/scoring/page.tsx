@@ -13,7 +13,7 @@ interface ScoredStock {
   change: number;
   changePercent: number;
   score: number;
-  recommendation: "Strong Buy" | "Buy" | "Hold" | "Sell" | "Strong Sell";
+  recommendation: "Strong Bullish" | "Bullish" | "Neutral" | "Bearish" | "Strong Bearish";
   sector: string;
   metrics: {
     value: number;
@@ -27,11 +27,11 @@ interface ScoredStock {
 
 function getRecommendationColor(rec: string) {
   switch (rec) {
-    case "Strong Buy": return "bg-success";
-    case "Buy": return "bg-primary";
-    case "Hold": return "bg-warning";
-    case "Sell": return "bg-error";
-    case "Strong Sell": return "bg-error";
+    case "Strong Bullish": return "bg-success";
+    case "Bullish": return "bg-primary";
+    case "Neutral": return "bg-warning";
+    case "Bearish": return "bg-error";
+    case "Strong Bearish": return "bg-error";
     default: return "bg-border";
   }
 }
@@ -54,12 +54,12 @@ export default function ScoringPage() {
             if (!scoring) return null;
             const overallScore = typeof scoring.overall_score === "number" ? scoring.overall_score : 0;
             const grade = String(scoring.grade || "C_HOLD");
-            let recommendation: ScoredStock["recommendation"] = "Hold";
-            if (overallScore >= 85) recommendation = "Strong Buy";
-            else if (overallScore >= 70) recommendation = "Buy";
-            else if (overallScore >= 55) recommendation = "Hold";
-            else if (overallScore >= 40) recommendation = "Sell";
-            else recommendation = "Strong Sell";
+            let recommendation: ScoredStock["recommendation"] = "Neutral";
+            if (overallScore >= 85) recommendation = "Strong Bullish";
+            else if (overallScore >= 70) recommendation = "Bullish";
+            else if (overallScore >= 55) recommendation = "Neutral";
+            else if (overallScore >= 40) recommendation = "Bearish";
+            else recommendation = "Strong Bearish";
 
             const priceHistory = await fetchPriceHistory({ symbol: asset.symbol, timeframe: "1d", limit: 2 }).catch(() => [] as Candle[]);
             const lastCandle = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : null;
@@ -84,9 +84,9 @@ export default function ScoringPage() {
                 momentum: typeof scoring.dimension_scores?.technical === "number" ? scoring.dimension_scores.technical : 50,
                 quality: typeof scoring.dimension_scores?.risk === "number" ? 100 - scoring.dimension_scores.risk : 50,
               },
-              aiAnalysis: grade.includes("BUY") || grade.includes("STRONG_BUY")
+              aiAnalysis: grade.includes("BULLISH") || grade.includes("STRONG_BULLISH")
                 ? "Strong AI score indicating favorable market conditions and fundamentals."
-                : grade.includes("SELL") || grade.includes("STRONG_SELL")
+                : grade.includes("BEARISH") || grade.includes("STRONG_BEARISH")
                 ? "Weak AI score suggesting potential downside risk."
                 : "Neutral AI score with mixed signals across dimensions.",
             };
@@ -111,14 +111,6 @@ export default function ScoringPage() {
     return () => { active = false; };
   }, []);
 
-  const grades = [
-    { label: "A (Strong Buy)", min: 85, color: "text-success", bg: "bg-success/10" },
-    { label: "B (Buy)", min: 70, color: "text-success", bg: "bg-success/10" },
-    { label: "C (Hold)", min: 55, color: "text-warning", bg: "bg-warning/10" },
-    { label: "D (Sell)", min: 40, color: "text-error", bg: "bg-error/10" },
-    { label: "E (Strong Sell)", min: 0, color: "text-error", bg: "bg-error/10" },
-  ];
-
   const filteredStocks = useMemo(() => {
     let filtered = stocks;
 
@@ -140,7 +132,7 @@ export default function ScoringPage() {
     });
   }, [stocks, filterRec, sortBy]);
 
-  const recommendations = ["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"];
+  const recommendations = ["Strong Bullish", "Bullish", "Neutral", "Bearish", "Strong Bearish"];
   const avgScore = stocks.length > 0 ? Math.round(stocks.reduce((acc, s) => acc + s.score, 0) / stocks.length) : 0;
 
   if (stocksLoading) {
