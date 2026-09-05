@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useCallback } from "react";
 import { useAppStore } from "@/store/useAppStore";
 
 interface SpiderChartProps {
@@ -42,7 +42,7 @@ export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick 
 
   const angleStep = useMemo(() => data.length > 0 ? (2 * Math.PI) / data.length : 0, [data.length]);
 
-  const getLabelAtPosition = (clientX: number, clientY: number): string | null => {
+  const getLabelAtPosition = useCallback((clientX: number, clientY: number): string | null => {
     const canvas = canvasRef.current;
     if (!canvas || data.length === 0) return null;
 
@@ -74,7 +74,7 @@ export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick 
     }
 
     return null;
-  };
+  }, [data, size, angleStep]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

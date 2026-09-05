@@ -2,8 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { apiClient } from '../lib/api';
 
-type Role = "user" | "admin";
-
 export interface UserProfile {
   id: string;
   username: string;
@@ -94,7 +92,8 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           localStorage.removeItem('auth-storage');
-          window.location.href = '/login';
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.assign('/login');
         }
       },
     }),

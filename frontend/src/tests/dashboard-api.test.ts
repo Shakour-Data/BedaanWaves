@@ -103,7 +103,8 @@ describe('Dashboard API Service', () => {
   })
 
   it('should handle API failures gracefully', async () => {
-    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((// eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _url: string) => {
       return Promise.reject(new Error('API Error'))
     })
 

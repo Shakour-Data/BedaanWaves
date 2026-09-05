@@ -15,6 +15,7 @@ export default function SearchDemoPage() {
 
       <StockSearchBar
         placeholder="Search stocks, tickers..."
+        recentSearches={["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN"]}
         onSelect={(stock) => {
           console.log("Selected stock:", stock);
         }}
@@ -30,6 +31,7 @@ export default function MyPage() {
   return (
     <StockSearchBar
       placeholder="Search stocks..."
+      recentSearches={["AAPL", "TSLA", "NVDA"]}
       onSelect={(stock) => {
         console.log("Selected:", stock);
       }}

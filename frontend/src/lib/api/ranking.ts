@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api";
 import { num } from "@/lib/utils";
 
-export type Grade = "A_STRONG_BUY" | "B_BUY" | "C_HOLD" | "D_SELL" | "E_STRONG_SELL";
+export type Grade = "STRONG_BULLISH" | "BULLISH" | "NEUTRAL" | "BEARISH" | "STRONG_BEARISH";
 
 export type RankingSortField =
   | "overall_score"

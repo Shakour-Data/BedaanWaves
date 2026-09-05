@@ -22,11 +22,11 @@ import {
 const PAGE_SIZE = 20;
 
 const GRADE_STYLES: Record<Grade, "success" | "warning" | "error" | "default"> = {
-  A_STRONG_BUY: "success",
-  B_BUY: "success",
-  C_HOLD: "warning",
-  D_SELL: "error",
-  E_STRONG_SELL: "error",
+  STRONG_BULLISH: "success",
+  BULLISH: "success",
+  NEUTRAL: "warning",
+  BEARISH: "error",
+  STRONG_BEARISH: "error",
 };
 
 function scoreBarVariant(score: number): "success" | "warning" | "error" {
