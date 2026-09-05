@@ -1,18 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { TarotCard } from "@/components/ui/TarotCard";
 import { NewsList } from "@/components/dashboard/NewsList";
-import { AssetTable } from "@/components/dashboard/AssetTable";
-import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
-import type { NewsItem, AssetRow } from "@/lib/dashboard-data";
+import type { NewsItem } from "@/lib/dashboard-data";
 import { formatTimeAgo } from "@/lib/utils";
 
 export default function NewsPage() {
@@ -20,7 +14,6 @@ export default function NewsPage() {
   const [newItems, setNewItems] = useState<NewsItem[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     let active = true;
@@ -29,18 +22,19 @@ export default function NewsPage() {
       setLoading(true);
       try {
         // Fetch market news
-        const newsRes = await apiClient.get<any>("/news/market?limit=20");
+        const newsRes = await apiClient.get<{ data: NewsItem[] }>("/news/market?limit=20");
         
         if (active) {
-          const newsItems: NewsItem[] = (newsRes.data || {}).data || [];
-          const formattedNews: NewsItem[] = newsItems.map((item: any) => ({
+          const newsItems: NewsItem[] = newsRes.data?.data || [];
+          const formattedNews: NewsItem[] = newsItems.map((item) => ({
             title: item.title,
             source: item.source || "Unknown",
-            time: formatTimeAgo(item.published_at || item.created_at) }));
+            time: item.time || formatTimeAgo(new Date().toISOString())
+          }));
 
           setNewItems(formattedNews);
         }
-      } catch (error) {
+      } catch {
         // Handle error silently
       } finally {
         if (active) setLoading(false);
@@ -53,7 +47,6 @@ export default function NewsPage() {
 
   const sources = Array.from(new Set(newItems.map((item) => item.source)));
   const filteredNews = selectedSource ? newItems.filter((item) => item.source === selectedSource) : newItems;
-  const trendingTopics = getTrendingTopics(newItems);
   const topTopics = getTopTopics(newItems);
 
   if (loading) {
@@ -169,8 +162,4 @@ function getTopTopics(newsItems: NewsItem[]): { topic: string; count: number }[]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([topic, count]) => ({ topic, count }));
-}
-
-function getTrendingTopics(newsItems: NewsItem[]): { topic: string; count: number }[] {
-  return getTopTopics(newsItems);
 }

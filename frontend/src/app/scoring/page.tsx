@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { fetchSymbols, fetchScoring, fetchPriceHistory } from "@/lib/api/stocks";
+import type { Candle } from "@/lib/api/stocks";
 
 interface ScoredStock {
   symbol: string;
@@ -36,22 +37,8 @@ function getRecommendationColor(rec: string) {
   }
 }
 
-const mlCoefficients = [
-  { label: "Fundamental", defaultWeight: 25, mlOptimized: true },
-  { label: "Technical", defaultWeight: 20, mlOptimized: true },
-  { label: "Sentiment", defaultWeight: 15, mlOptimized: true },
-  { label: "Risk", defaultWeight: 20, mlOptimized: true },
-  { label: "Macro", defaultWeight: 10, mlOptimized: true },
-  { label: "AI", defaultWeight: 10, mlOptimized: true }
-];
-
 export default function ScoringPage() {
-  const [expandedDim, setExpandedDim] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
-  const [scoringData, setScoringData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [stocks, setStocks] = useState<ScoredStock[]>([]);
   const [stocksLoading, setStocksLoading] = useState(true);
   const [filterRec, setFilterRec] = useState<string>("all");
@@ -76,7 +63,7 @@ export default function ScoringPage() {
             else if (overallScore >= 40) recommendation = "Sell";
             else recommendation = "Strong Sell";
 
-            const priceHistory = await fetchPriceHistory({ symbol: asset.symbol, timeframe: "1d", limit: 2 }).catch(() => [] as any[]);
+            const priceHistory = await fetchPriceHistory({ symbol: asset.symbol, timeframe: "1d", limit: 2 }).catch(() => [] as Candle[]);
             const lastCandle = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : null;
             const prevCandle = priceHistory.length > 1 ? priceHistory[priceHistory.length - 2] : null;
             const price = lastCandle ? lastCandle.close : 0;
@@ -126,86 +113,6 @@ export default function ScoringPage() {
     return () => { active = false; };
   }, []);
 
-  const dimensionDetails = [
-    {
-      id: "fundamental",
-      title: `${t("app.scoring.dimensions.fundamental")} (25%)`,
-      weight: 25,
-      color: "bg-primary/10 border-primary/30",
-      icon: "🏦",
-      aspects: [
-        { name: "P/E Ratio", desc: "Price-to-Earnings Ratio" },
-        { name: "ROE", desc: "Return on Equity" },
-        { name: "Book Value", desc: "Book Value per Share" },
-        { name: "Revenue Growth", desc: "Annual Revenue Growth" },
-        { name: "Debt-to-Equity", desc: "Debt-to-Equity Ratio" }
-      ],
-    },
-    {
-      id: "technical",
-      title: `${t("app.scoring.dimensions.technical")} (20%)`,
-      weight: 20,
-      color: "bg-success/10 border-success/30",
-      icon: "📈",
-      aspects: [
-        { name: "RSI", desc: "Relative Strength Index" },
-        { name: "MACD", desc: "Moving Average Convergence Divergence" },
-        { name: "Moving Averages", desc: "50 and 200-day Moving Averages" },
-        { name: "Bollinger Bands", desc: "Bollinger Bands" },
-        { name: "Volume Profile", desc: "Volume Profile" }
-      ],
-    },
-    {
-      id: "sentiment",
-      title: `${t("app.scoring.dimensions.sentiment")} (15%)`,
-      weight: 15,
-      color: "bg-primary/10 border-primary/30",
-      icon: "🎭",
-      aspects: [
-        { name: "News Sentiment", desc: "News Sentiment" },
-        { name: "Social Media", desc: "Social Media Sentiment" },
-        { name: "Analyst Ratings", desc: "Analyst Ratings" }
-      ],
-    },
-    {
-      id: "risk",
-      title: `${t("app.scoring.dimensions.risk")} (20%)`,
-      weight: 20,
-      color: "bg-error/10 border-error/30",
-      icon: "🛡️",
-      aspects: [
-        { name: "Volatility", desc: "Price Volatility" },
-        { name: "VaR", desc: "Value at Risk" },
-        { name: "Sharpe Ratio", desc: "Sharpe Ratio" },
-        { name: "Max Drawdown", desc: "Maximum Drawdown" }
-      ],
-    },
-    {
-      id: "macro",
-      title: `${t("app.scoring.dimensions.macro")} (10%)`,
-      weight: 10,
-      color: "bg-secondary/10 border-secondary/30",
-      icon: "🌍",
-      aspects: [
-        { name: "GDP Growth", desc: "GDP Growth" },
-        { name: "Inflation", desc: "Inflation Rate" },
-        { name: "Interest Rates", desc: "Interest Rates" }
-      ],
-    },
-    {
-      id: "ai",
-      title: `${t("app.scoring.dimensions.ai")} (10%)`,
-      weight: 10,
-      color: "bg-primary/10 border-primary/30",
-      icon: "🤖",
-      aspects: [
-        { name: "LSTM Forecast", desc: "Price Forecasting with LSTM" },
-        { name: "Pattern Detection", desc: "Chart Pattern Detection" },
-        { name: "Anomaly Detection", desc: "Anomaly Detection" }
-      ],
-    },
-  ];
-
   const grades = [
     { label: "A (Strong Buy)", min: 85, color: "text-success", bg: "bg-success/10" },
     { label: "B (Buy)", min: 70, color: "text-success", bg: "bg-success/10" },
@@ -213,35 +120,6 @@ export default function ScoringPage() {
     { label: "D (Sell)", min: 40, color: "text-error", bg: "bg-error/10" },
     { label: "E (Strong Sell)", min: 0, color: "text-error", bg: "bg-error/10" },
   ];
-
-  useEffect(() => {
-    if (search.length > 1) {
-      fetchSymbols({ limit: 5 }).then(assets => {
-        setSuggestions(assets.filter(a => 
-          a.symbol.toLowerCase().includes(search.toLowerCase()) || 
-          a.name.toLowerCase().includes(search.toLowerCase())
-        ));
-      });
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSuggestions([]);
-    }
-  }, [search]);
-
-  const handleSelect = async (symbol: string) => {
-    setSearch(symbol);
-    setSuggestions([]);
-    setSelectedSymbol(symbol);
-    setLoading(true);
-    try {
-      const data = await fetchScoring(symbol);
-      setScoringData(data);
-    } catch (error) {
-      console.error("Error fetching scoring:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredStocks = useMemo(() => {
     let filtered = stocks;
@@ -358,7 +236,7 @@ export default function ScoringPage() {
           <span className="text-sm font-medium text-[var(--color-text-secondary)]">Sort by</span>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as "score" | "symbol" | "change")}
             className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
           >
             <option value="score">Score (High to Low)</option>

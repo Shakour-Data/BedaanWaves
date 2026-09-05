@@ -303,7 +303,7 @@ export default function StockDetailPage() {
                 </div>
               </div>
               {noData ? (
-                <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">{t("app.stocks.detail.no_history", "en")}</div>
+                <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">{t("app.stocks.detail.no_history")}</div>
               ) : (
                 <CandlestickChart candles={visibleCandles} timeframe="1d" height={420} />
               )}

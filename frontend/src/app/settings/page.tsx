@@ -6,9 +6,23 @@ import { Button } from "@/components/ui/Button";
 import { useState, useEffect } from "react";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
 import { cn } from "@/lib/cn";
+
+interface MarketData {
+  [country: string]: {
+    indices?: Array<{ id: string; name: string; desc?: string }>;
+    stocks?: Array<{ id: string; name: string; symbol?: string; change?: number }>;
+    industries?: Array<{ id: string; name: string; change?: string }>;
+  };
+}
+
+interface Country {
+  id: string;
+  name: string;
+  flag: string;
+  region: string;
+}
 
 export default function SettingsPage() {
   const addToast = useUXStore((state) => state.addToast);
@@ -22,8 +36,8 @@ export default function SettingsPage() {
     sms: false,
     telegram: true
   });
-  const [marketData, setMarketData] = useState<any>(null);
-  const [countries, setCountries] = useState<any[]>([]);
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -151,7 +165,7 @@ export default function SettingsPage() {
                       <span>[Chart]</span> {t("app.settings.indices")}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {data.indices?.map((index: any) => (
+                       {data.indices?.map((index) => (
                         <label
                           key={index.id}
                           className={cn(
@@ -177,13 +191,13 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {data.stocks?.length > 0 && (
-                    <div>
-                      <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>📈</span> {t("app.settings.stocks")}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        {data.stocks.map((stock: any) => (
+                   {data.stocks && data.stocks.length > 0 && (
+                     <div>
+                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
+                         <span>📈</span> {t("app.settings.stocks")}
+                       </h4>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                          {data.stocks.map((stock) => (
                           <label
                             key={stock.id}
                             className={cn(
@@ -210,13 +224,13 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {data.industries?.length > 0 && (
-                    <div>
-                      <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>🏭</span> {t("app.settings.industries")}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {data.industries.map((industry: any) => (
+                   {data.industries && data.industries.length > 0 && (
+                     <div>
+                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
+                         <span>🏭</span> {t("app.settings.industries")}
+                       </h4>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {data.industries.map((industry) => (
                           <label
                             key={industry.id}
                             className={cn(
