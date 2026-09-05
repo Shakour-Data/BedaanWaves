@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -94,7 +94,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
               aria-label="Toggle menu"
             >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? (
+                <span className="text-xl font-mono">\u00D7</span>
+              ) : (
+                <span className="text-xl font-mono">\u2261</span>
+              )}
             </button>
           </div>
         </div>
