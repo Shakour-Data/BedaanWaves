@@ -51,7 +51,6 @@ from app.services.data.real_time_market_data_service import RealTimeMarketDataSe
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.ingestion_service import IntelligentIngestionService
 from app.services.data.news_service import NewsService
-from app.services.core.dependency_container import DependencyContainer, set_global_container
 
 from app.services.user.auth_service import ensure_admin_user
 
@@ -69,7 +68,6 @@ from app.api.routes import (
     notifications_router,
     specialized_router,
     system_router,
-    intl_router,
     live_router,
     live_sse_router,
     health_router,
@@ -360,7 +358,6 @@ async def lifespan(app: FastAPI):
         app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
         app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
         app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
-        app.include_router(intl_router, prefix="/api/v1/intl", tags=["intl"])
         app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
         app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
         app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
