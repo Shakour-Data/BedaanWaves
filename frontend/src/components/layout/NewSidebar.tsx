@@ -5,17 +5,15 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
-import { LayoutDashboard, BarChart3, LineChart, Newspaper, Shield, Users, Sparkles, TrendingUp, Search, Settings, User, HelpCircle, ChevronDown } from "lucide-react";
 
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ReactNode;
+  marker: string;
 }
 
 interface NavCategory {
   label: string;
-  icon: React.ReactNode;
   items: NavItem[];
 }
 
@@ -25,50 +23,46 @@ const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boole
 const categories: NavCategory[] = [
   {
     label: "Dashboard",
-    icon: <LayoutDashboard className="h-4 w-4" />,
     items: [
-      { label: "General", href: "/dashboard?tab=general", icon: <LayoutDashboard className="h-4 w-4" /> },
-      { label: "Technical", href: "/dashboard?tab=technical", icon: <LineChart className="h-4 w-4" /> },
-      { label: "Fundamental", href: "/dashboard?tab=fundamental", icon: <BarChart3 className="h-4 w-4" /> },
-      { label: "News Feed", href: "/dashboard?tab=news", icon: <Newspaper className="h-4 w-4" /> },
-      { label: "Risk Metrics", href: "/dashboard?tab=risk", icon: <Shield className="h-4 w-4" /> },
-      { label: "Board & Governance", href: "/dashboard?tab=board", icon: <Users className="h-4 w-4" /> },
-      { label: "AI Insights", href: "/dashboard?tab=ai", icon: <Sparkles className="h-4 w-4" /> },
+      { label: "General", href: "/dashboard?tab=general", marker: "D" },
+      { label: "Technical", href: "/dashboard?tab=technical", marker: "T" },
+      { label: "Fundamental", href: "/dashboard?tab=fundamental", marker: "F" },
+      { label: "News Feed", href: "/dashboard?tab=news", marker: "N" },
+      { label: "Risk Metrics", href: "/dashboard?tab=risk", marker: "R" },
+      { label: "Board & Governance", href: "/dashboard?tab=board", marker: "B" },
+      { label: "AI Insights", href: "/dashboard?tab=ai", marker: "AI" },
     ],
   },
   {
     label: "Markets",
-    icon: <TrendingUp className="h-4 w-4" />,
     items: [
-      { label: "Stocks", href: "/stocks", icon: <TrendingUp className="h-4 w-4" /> },
-      { label: "Analysis", href: "/analysis", icon: <Search className="h-4 w-4" /> },
-      { label: "Scoring", href: "/scoring", icon: <Sparkles className="h-4 w-4" /> },
-      { label: "Portfolio", href: "/portfolio", icon: <BarChart3 className="h-4 w-4" /> },
-      { label: "Rankings", href: "/ranking", icon: <Users className="h-4 w-4" /> },
+      { label: "Stocks", href: "/stocks", marker: "S" },
+      { label: "Analysis", href: "/analysis", marker: "A" },
+      { label: "Scoring", href: "/scoring", marker: "SC" },
+      { label: "Portfolio", href: "/portfolio", marker: "P" },
+      { label: "Rankings", href: "/ranking", marker: "RN" },
     ],
   },
   {
     label: "Intelligence",
-    icon: <Sparkles className="h-4 w-4" />,
     items: [
-      { label: "News", href: "/news", icon: <Newspaper className="h-4 w-4" /> },
-      { label: "Alerts", href: "/alerts", icon: <Shield className="h-4 w-4" /> },
-      { label: "Search", href: "/search-demo", icon: <Search className="h-4 w-4" /> },
+      { label: "News", href: "/news", marker: "NW" },
+      { label: "Alerts", href: "/alerts", marker: "AL" },
+      { label: "Search", href: "/search-demo", marker: "SR" },
     ],
   },
   {
     label: "Resources",
-    icon: <HelpCircle className="h-4 w-4" />,
     items: [
-      { label: "Methodology", href: "/methodology", icon: <BarChart3 className="h-4 w-4" /> },
-      { label: "Help", href: "/help", icon: <HelpCircle className="h-4 w-4" /> },
+      { label: "Methodology", href: "/methodology", marker: "M" },
+      { label: "Help", href: "/help", marker: "H" },
     ],
   },
 ];
 
 const bottomItems: NavItem[] = [
-  { label: "Settings", href: "/settings", icon: <Settings className="h-4 w-4" /> },
-  { label: "Profile", href: "/settings/profile", icon: <User className="h-4 w-4" /> },
+  { label: "Settings", href: "/settings", marker: "ST" },
+  { label: "Profile", href: "/settings/profile", marker: "PR" },
 ];
 
 export function NewSidebar() {
@@ -187,11 +181,11 @@ export function NewSidebar() {
                       <span className="flex-1 text-left">{cat.label}</span>
                       <span
                         className={cn(
-                          "text-[var(--color-text-muted)] transition-transform duration-200",
+                          "text-xs text-[var(--color-text-muted)] transition-transform duration-200 font-mono",
                           isExpanded && "rotate-180"
                         )}
                       >
-                        <ChevronDown className="h-3 w-3" />
+                        {isExpanded ? "\u25B2" : "\u25BC"}
                       </span>
                     </button>
 
@@ -213,11 +207,11 @@ export function NewSidebar() {
                              >
                               <span
                                 className={cn(
-                                  "flex h-5 w-5 items-center justify-center rounded transition-colors",
+                                  "flex h-5 w-5 items-center justify-center rounded transition-colors text-[10px] font-bold",
                                   active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
                                 )}
                               >
-                                {item.icon}
+                                {item.marker}
                               </span>
                               <span className="flex-1">{item.label}</span>
                               {active && (
@@ -257,11 +251,11 @@ export function NewSidebar() {
                    >
                     <span
                       className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded transition-colors",
+                        "flex h-5 w-5 items-center justify-center rounded transition-colors text-[10px] font-bold",
                         active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
                       )}
                     >
-                      {item.icon}
+                      {item.marker}
                     </span>
                     <span className="flex-1">{item.label}</span>
                     {active && (
