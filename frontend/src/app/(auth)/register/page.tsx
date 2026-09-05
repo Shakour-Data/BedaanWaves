@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, UserPlus } from "lucide-react";
+
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -124,10 +124,10 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+              className="absolute right-3 top-9 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors tracking-wide"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? "HIDE" : "SHOW"}
             </button>
           </div>
 
@@ -152,7 +152,7 @@ export default function RegisterPage() {
           size="lg"
         >
           {loading ? "Creating account..." : "Sign Up"}
-          {!loading && <UserPlus className="h-4 w-4" />}
+          {!loading && "+"}
         </PrimaryButton>
 
         <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
