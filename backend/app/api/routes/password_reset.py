@@ -10,9 +10,10 @@ POST /auth/password-reset/verify    Check whether a token is still valid
 Security: every endpoint returns a *generic* success message regardless of
 whether the email/token exists, so account enumeration is mitigated.
 Error philosophy (spec.yaml): "Never blame user; always suggest next action".
+All messages are returned in English only.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 import logging
 
@@ -34,35 +35,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["password-reset"])
 
 # ---------------------------------------------------------------------------
-# User-facing, non-technical message lookup (WCAG 2.1 AA: plain language)
+# User-facing, non-technical messages (WCAG 2.1 AA: plain language, EN-only)
 # ---------------------------------------------------------------------------
 MESSAGES = {
-    "en": {
-        "request_sent": "If an account exists for that email, a recovery link has been sent.",
-        "token_invalid": "That recovery link has expired or is no longer valid. Please request a new link.",
-        "password_updated": "Your password has been updated. You can now sign in.",
-        "password_too_short": "Password must be at least 8 characters long.",
-        "token_missing": "No recovery token was provided. Please open the link from your email.",
-    },
-    "fa": {
-        "request_sent": "اگر حسابی برای این ایمیل وجود داشته باشد، لینک بازیابی ارسال شده است.",
-        "token_invalid": "این لینک بازیابی منقضی شده یا دیگر معتبر نیست. لطفاً یک لینک جدید درخواست کنید.",
-        "password_updated": "رمز عبور شما با موفقیت به‌روزرسانی شد. اکنون می‌توانید وارد شوید.",
-        "password_too_short": "رمز عبور باید حداقل ۸ کاراکتر باشد.",
-        "token_missing": "هیچ توکن بازیابی ارائه نشده است. لطفاً روی لینک ایمیلی که دریافت کرده‌اید کلیک کنید.",
-    },
+    "request_sent": "If an account exists for that email, a recovery link has been sent.",
+    "token_invalid": "That recovery link has expired or is no longer valid. Please request a new link.",
+    "password_updated": "Your password has been updated. You can now sign in.",
+    "password_too_short": "Password must be at least 8 characters long.",
+    "token_missing": "No recovery token was provided. Please open the link from your email.",
 }
 
 
-def _msg(lang: str, key: str) -> str:
-    return MESSAGES.get(lang, MESSAGES["en"]).get(key, MESSAGES["en"][key])
+def _msg(key: str) -> str:
+    return MESSAGES.get(key, "")
 
 
 @router.post("/password-reset/request", response_model=PasswordResetResponse)
-async def request_password_reset(
-    data: PasswordResetRequest,
-    lang: str = Query("en", pattern="^(en|fa)$"),
-):
+async def request_password_reset(data: PasswordResetRequest):
     """Request a password-reset link.
 
     Always returns a generic ``status: success`` message to prevent account
@@ -79,15 +68,12 @@ async def request_password_reset(
 
     return PasswordResetResponse(
         status="success",
-        message=_msg(lang, "request_sent"),
+        message=_msg("request_sent"),
     )
 
 
 @router.post("/password-reset/verify", response_model=PasswordResetVerifyResponse)
-async def verify_reset_token_route(
-    data: PasswordResetVerifyRequest,
-    lang: str = Query("en", pattern="^(en|fa)$"),
-):
+async def verify_reset_token_route(data: PasswordResetVerifyRequest):
     """Verify that a recovery token is valid (not consumed, not expired)."""
     valid = await verify_reset_token(data.token)
     return PasswordResetVerifyResponse(
@@ -97,29 +83,26 @@ async def verify_reset_token_route(
 
 
 @router.post("/password-reset/confirm", response_model=PasswordResetResponse)
-async def confirm_password_reset(
-    data: PasswordResetConfirm,
-    lang: str = Query("en", pattern="^(en|fa)$"),
-):
+async def confirm_password_reset(data: PasswordResetConfirm):
     """Consume a reset token and set a new password."""
     if not data.token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=_msg(lang, "token_missing"),
+            detail=_msg("token_missing"),
         )
     if len(data.new_password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=_msg(lang, "password_too_short"),
+            detail=_msg("password_too_short"),
         )
 
     ok = await reset_password(data.token, data.new_password)
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=_msg(lang, "token_invalid"),
+            detail=_msg("token_invalid"),
         )
     return PasswordResetResponse(
         status="success",
-        message=_msg(lang, "password_updated"),
+        message=_msg("password_updated"),
     )
