@@ -19,11 +19,16 @@ export interface AspectScore extends DimensionScore {
   parentKey: string;
 }
 
+export interface SubAspectScore extends DimensionScore {
+  parentKey: string;
+}
+
 export interface HierarchyScores {
   symbol: string;
   level1: DimensionScore[];
   level2: SubDimensionScore[];
   level3: AspectScore[];
+  level4: SubAspectScore[];
   overallScore: number;
   grade: string;
   signals: string[];
@@ -102,6 +107,20 @@ export const SUB_DIMENSIONS: Record<string, { key: string; label: string; weight
   ],
 };
 
+export const SUB_ASPECTS: Record<string, { key: string; label: string; weight: number }[]> = {};
+
+Object.entries(SUB_DIMENSIONS).forEach(([dim, subs]) => {
+  subs.forEach((sub) => {
+    const base = sub.key;
+    SUB_ASPECTS[base] = [
+      { key: `${base}_detail_1`, label: `${sub.label} - Detail 1`, weight: 0.30 },
+      { key: `${base}_detail_2`, label: `${sub.label} - Detail 2`, weight: 0.30 },
+      { key: `${base}_detail_3`, label: `${sub.label} - Detail 3`, weight: 0.25 },
+      { key: `${base}_detail_4`, label: `${sub.label} - Detail 4`, weight: 0.15 },
+    ];
+  });
+});
+
 function buildAspectsForSubDimension(parentKey: string, label: string): { key: string; label: string; weight: number }[] {
   return [
     { key: `${parentKey}_aspect_1`, label: `${label} - Component A`, weight: 0.55 },
@@ -151,7 +170,25 @@ function labelForKey(key: string, fallback: string): string {
   const sub = Object.values(SUB_DIMENSIONS)
     .flat()
     .find((s) => s.key === key);
-  return sub?.label ?? fallback;
+  if (sub) return sub.label;
+  const aspect = Object.values(SUB_ASPECTS)
+    .flat()
+    .find((a) => a.key === key);
+  if (aspect) return aspect.label;
+  return fallback;
+}
+
+function getWeightForKey(key: string): number {
+  if (key in DIMENSION_WEIGHTS) return DIMENSION_WEIGHTS[key];
+  for (const subs of Object.values(SUB_DIMENSIONS)) {
+    const sub = subs.find((s) => s.key === key);
+    if (sub) return sub.weight;
+  }
+  for (const aspects of Object.values(SUB_ASPECTS)) {
+    const aspect = aspects.find((a) => a.key === key);
+    if (aspect) return aspect.weight;
+  }
+  return 0;
 }
 
 export async function fetchHierarchyScores(symbol: string): Promise<HierarchyScores | null> {
@@ -166,6 +203,7 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
     const level1Nodes = hierarchy.level1_dimensions || [];
     const level2Nodes = hierarchy.level2_subdimensions || [];
     const level3Nodes = hierarchy.level3_aspects || [];
+    const level4Nodes = hierarchy.level4_subaspects || [];
 
     if (level1Nodes.length === 0) {
       const scoring = await fetchScoring(symbol);
@@ -179,6 +217,7 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
       }));
       const level2: SubDimensionScore[] = [];
       const level3: AspectScore[] = [];
+      const level4: SubAspectScore[] = [];
       for (const dim of Object.keys(SUB_DIMENSIONS)) {
         const dimScore = clamp(num(dims[dim]));
         const subs = SUB_DIMENSIONS[dim] || [];
@@ -199,6 +238,16 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
               weight: num(aspect.weight),
               parentKey: sub.key,
             });
+            const subAspects = SUB_ASPECTS[sub.key] || [];
+            for (const sa of subAspects) {
+              level4.push({
+                key: sa.key,
+                label: sa.label,
+                score: Math.round(dimScore),
+                weight: num(sa.weight),
+                parentKey: aspect.key,
+              });
+            }
           }
         }
       }
@@ -207,6 +256,7 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
         level1,
         level2,
         level3,
+        level4,
         overallScore: clamp(num(scoring.overall_score)),
         grade: String(scoring.grade || ""),
         signals: Array.isArray(scoring.signals) ? scoring.signals : [],
@@ -225,10 +275,7 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
       key: node.name,
       label: labelForKey(node.name, node.name),
       score: clamp(num(node.score)),
-      weight: num(
-        (SUB_DIMENSIONS[node.parent || ""] || []).find((s) => s.key === node.name)
-          ?.weight ?? 0,
-      ),
+      weight: num(getWeightForKey(node.name)),
       parentKey: node.parent || "",
     }));
 
@@ -236,7 +283,15 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
       key: node.name,
       label: labelForKey(node.name, node.name),
       score: clamp(num(node.score)),
-      weight: 0,
+      weight: num(getWeightForKey(node.name)),
+      parentKey: node.parent || "",
+    }));
+
+    const level4: SubAspectScore[] = level4Nodes.map((node) => ({
+      key: node.name,
+      label: labelForKey(node.name, node.name),
+      score: clamp(num(node.score)),
+      weight: num(getWeightForKey(node.name)),
       parentKey: node.parent || "",
     }));
 
@@ -245,6 +300,7 @@ export async function fetchHierarchyScores(symbol: string): Promise<HierarchySco
       level1,
       level2,
       level3,
+      level4,
       overallScore: clamp(num(data.overall_score)),
       grade: String(data.grade || ""),
       signals: [],
@@ -296,6 +352,14 @@ export async function fetchCoefficients(symbol: string): Promise<CoefficientItem
       const subs = SUB_DIMENSIONS[dim.key] || [];
       for (const sub of subs) {
         items.push({ key: sub.key, label: sub.label, weight: sub.weight, level: 2 });
+        const aspects = buildAspectsForSubDimension(sub.key, sub.label);
+        for (const aspect of aspects) {
+          items.push({ key: aspect.key, label: aspect.label, weight: aspect.weight, level: 3 });
+          const subAspects = SUB_ASPECTS[sub.key] || [];
+          for (const sa of subAspects) {
+            items.push({ key: sa.key, label: sa.label, weight: sa.weight, level: 4 });
+          }
+        }
       }
     }
 
