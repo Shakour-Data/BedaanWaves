@@ -99,6 +99,7 @@ backend/complete_*.py
 backend/populate_*.py
 backend/validate_*.py
 backend/create_*.py
+backend/temp_*.py
 
 # Temporary backend output files
 backend/ls_out.txt
