@@ -130,7 +130,7 @@ export default function HelpPage() {
               <div className="space-y-3">
                 <Link href="/leaderboard" passHref>
                   <Button className="w-full cursor-pointer">
-                    {t("app.help.go_dashboard")}
+                    {t("app.help.go_leaderboard")}
                   </Button>
                 </Link>
                 <Link href="/scoring" passHref>

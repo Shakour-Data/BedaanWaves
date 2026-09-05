@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('SSE Real-Time Updates', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/leaderboard');
   });
 
   test('should establish SSE connection and receive live updates', async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe('SSE Real-Time Updates', () => {
 
 test.describe('Export Functionality', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/leaderboard');
   });
 
   test('should export data as CSV', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('Export Functionality', () => {
 
 test.describe('GraphQL Integration', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/leaderboard');
   });
 
   test('should execute GraphQL query and display results', async ({ page }) => {
