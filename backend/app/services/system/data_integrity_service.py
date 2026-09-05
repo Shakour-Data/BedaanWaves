@@ -10,7 +10,10 @@ from datetime import timezone, datetime, timedelta
 import asyncio
 from app.services.core.base_service import BaseService
 from app.services.data.data_validation_service import DataValidationService
-from app.services.data.intl_api_client import IntlApiClient
+try:
+    from app.services.data.intl_api_client import IntlApiClient
+except Exception:
+    IntlApiClient = None
 from app.services.data.market_service import MarketService
 import logging
 from app.core.utils import utc_now_iso

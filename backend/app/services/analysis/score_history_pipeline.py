@@ -615,11 +615,21 @@ class ScoreHistoryPipeline:
             dimension_scores = scored.get("dimension_scores", {})
             overall_score = scored.get("overall_score", 0)
             grade = scored.get("grade", "")
+            sub_dimension_scores = {}
+            aspect_scores = {}
+            sub_aspect_scores = {}
+            if hierarchy is not None:
+                sub_dimension_scores = dict(hierarchy.get("sub_dimension_scores", {}))
+                aspect_scores = dict(hierarchy.get("aspect_scores", {}))
+                sub_aspect_scores = dict(hierarchy.get("sub_aspect_scores", {}))
 
             stmt = pg_insert(ScoreHistory).values(
                 asset_id=asset_id,
                 date=target_date,
                 dimension_scores=dimension_scores,
+                sub_dimension_scores=sub_dimension_scores,
+                aspect_scores=aspect_scores,
+                sub_aspect_scores=sub_aspect_scores,
                 overall_score=overall_score,
                 grade=grade,
                 created_at=datetime.now(timezone.utc).replace(tzinfo=None),
@@ -628,6 +638,9 @@ class ScoreHistoryPipeline:
                 index_elements=["asset_id", "date"],
                 set_={
                     "dimension_scores": stmt.excluded.dimension_scores,
+                    "sub_dimension_scores": stmt.excluded.sub_dimension_scores,
+                    "aspect_scores": stmt.excluded.aspect_scores,
+                    "sub_aspect_scores": stmt.excluded.sub_aspect_scores,
                     "overall_score": stmt.excluded.overall_score,
                     "grade": stmt.excluded.grade,
                     "created_at": stmt.excluded.created_at,
