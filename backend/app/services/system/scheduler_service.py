@@ -153,9 +153,13 @@ class SchedulerService(BaseService):
             pipeline = ScoreHistoryPipeline()
             await pipeline.initialize()
             try:
-                result = await pipeline.compute_and_persist_all(
-                    market="NASDAQ", batch_size=100
+                result = await pipeline.compute_and_persist_v2(
+                    market="NASDAQ"
                 )
+                if result.get("written", 0) == 0:
+                    return await pipeline.compute_and_persist_all(
+                        market="NASDAQ", batch_size=100
+                    )
                 return result
             except Exception as e:
                 logger.error(f"DailyScoreRecalculation failed: {e}")
