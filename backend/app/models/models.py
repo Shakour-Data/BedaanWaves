@@ -1526,9 +1526,11 @@ class ScoreHistory(Base):
     date = Column(Date, nullable=False, index=True)
 
     dimension_scores = Column(JSONB, nullable=False, default={})
+    sub_dimension_scores = Column(JSONB, nullable=False, default={})
+    aspect_scores = Column(JSONB, nullable=False, default={})
+    sub_aspect_scores = Column(JSONB, nullable=False, default={})
     overall_score = Column(Numeric(8, 4), nullable=False)
     grade = Column(String(20), nullable=False)
-
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     asset = relationship("Asset")
