@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { apiClient, getApiErrorMessage } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchRiskDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 import type { GeneralDashboardResponse, ScoreTrendResponse, LevelTrendResponse, CoefficientHistoryResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
-import { useDateStore, useEffectiveDate } from "@/store/useDateStore";
+import { useDateStore, useEffectiveDate, useUseLatestDate } from "@/store/useDateStore";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
@@ -271,6 +271,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
+  const useLatestDate = useUseLatestDate();
   
   // Date Store Integration - Fix for data inconsistency
   const setLatestAvailableDate = useDateStore((state) => state.setLatestAvailableDate);
@@ -281,7 +282,10 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const general = await fetchGeneralDashboard(!!effectiveDate).catch(() => null);
+      const generalOptions = effectiveDate
+        ? (useLatestDate ? { latest: true } : { endDate: effectiveDate })
+        : {};
+      const general = await fetchGeneralDashboard(generalOptions).catch(() => null);
       
       if (general?.latest_date) {
         setLatestAvailableDate(general.latest_date);
@@ -304,7 +308,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [addToast, effectiveDate, setLatestAvailableDate]);
+  }, [addToast, effectiveDate, useLatestDate, setLatestAvailableDate]);
 
   const loadScoreTrend = useCallback(async () => {
     setScoreTrendLoading(true);
@@ -343,7 +347,6 @@ export default function DashboardPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadScoreTrend();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCoefficientHistory();
   }, [loadScoreTrend, loadCoefficientHistory]);
 
@@ -363,6 +366,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const sub = searchParams.get("sub");
     if (sub !== activeSub) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveSub(sub);
     }
   }, [searchParams, activeSub]);
@@ -393,7 +397,6 @@ export default function DashboardPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadSubLevelTrends(generalData.latest_date);
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadSubLevelTrends(null);
     }
   }, [generalData?.latest_date, subLevelChartsOpen, loadSubLevelTrends]);
