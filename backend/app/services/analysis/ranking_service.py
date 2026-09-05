@@ -96,7 +96,53 @@ class RankingService:
                 "timestamp": utc_now_iso(),
             }
 
+        active_assets_subq = (
+            select(Asset.id)
+            .where(
+                and_(
+                    Asset.market == "NASDAQ",
+                    Asset.active == True,
+                    Asset.asset_class.in_(["EQUITY", "ETF"]),
+                )
+            )
+            .subquery()
+        )
+
+        latest_sh_subq = (
+            select(
+                ScoreHistory.asset_id,
+                ScoreHistory.dimension_scores,
+                ScoreHistory.overall_score,
+                ScoreHistory.grade,
+            )
+            .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+            .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+            .distinct(ScoreHistory.asset_id)
+            .subquery()
+        )
+
+        sh_result = await db.execute(select(latest_sh_subq))
+        sh_rows = sh_result.all()
+        sh_map = {row.asset_id: row for row in sh_rows}
+
         async def score_asset(asset: Asset) -> Dict[str, Any]:
+            sh = sh_map.get(asset.id)
+            if sh is not None and sh.overall_score is not None:
+                dims = dict(sh.dimension_scores) if sh.dimension_scores else {}
+                return {
+                    "symbol": asset.symbol,
+                    "name": asset.name,
+                    "overall_score": float(sh.overall_score),
+                    "grade": sh.grade or "",
+                    "dimension_scores": dims,
+                    "fundamental": float(dims.get("fundamental", 0)),
+                    "technical": float(dims.get("technical", 0)),
+                    "sentiment": float(dims.get("sentiment", 0)),
+                    "risk": float(dims.get("risk", 0)),
+                    "macro": float(dims.get("macro", 0)),
+                    "ai": float(dims.get("ai", 0)),
+                }
+
             try:
                 Candle = candle_model_for_market(asset.market)
                 candle_result = await db.execute(
@@ -175,12 +221,20 @@ class RankingService:
                         "dimension_scores": {},
                     }
 
+                dimension_scores = scored.get("dimension_scores", {})
+
                 return {
                     "symbol": asset.symbol,
                     "name": asset.name,
                     "overall_score": scored.get("overall_score", 0),
                     "grade": scored.get("grade", ""),
-                    "dimension_scores": scored.get("dimension_scores", {}),
+                    "dimension_scores": dimension_scores,
+                    "fundamental": dimension_scores.get("fundamental", 0),
+                    "technical": dimension_scores.get("technical", 0),
+                    "sentiment": dimension_scores.get("sentiment", 0),
+                    "risk": dimension_scores.get("risk", 0),
+                    "macro": dimension_scores.get("macro", 0),
+                    "ai": dimension_scores.get("ai", 0),
                 }
             except Exception as exc:
                 logger.error(f"Error scoring {asset.symbol}: {exc}")
@@ -190,6 +244,12 @@ class RankingService:
                     "overall_score": 0,
                     "grade": "E_STRONG_SELL",
                     "dimension_scores": {},
+                    "fundamental": 0,
+                    "technical": 0,
+                    "sentiment": 0,
+                    "risk": 0,
+                    "macro": 0,
+                    "ai": 0,
                 }
 
         tasks = [score_asset(asset) for asset in assets]
@@ -395,6 +455,18 @@ class RankingService:
                         {
                             "parent": sub,
                             "name": f"{sub}_aspect_{i}",
+                            "score": round(dim_score, 2),
+                        }
+                    )
+
+        for dim, sub_dims in sub_dim_map.items():
+            dim_score = float(dimension_scores.get(dim, 50.0))
+            for sub in sub_dims:
+                for i in range(1, 5):
+                    hierarchy_scores["level4_subaspects"].append(
+                        {
+                            "parent": f"{sub}_aspect_{1 if i <= 2 else 2}",
+                            "name": f"{sub}_detail_{i}",
                             "score": round(dim_score, 2),
                         }
                     )
