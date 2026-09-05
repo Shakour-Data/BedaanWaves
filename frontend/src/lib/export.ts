@@ -7,7 +7,7 @@ export interface ExportOptions {
 }
 
 export interface ExportableRow {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export function exportData(
@@ -17,7 +17,6 @@ export function exportData(
   const {
     filename = 'export',
     format = 'csv',
-    includeHeaders = true,
     customFilename = '' } = options;
   
   const filenameWithExt = customFilename 

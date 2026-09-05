@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { NewsList } from '@/components/dashboard/NewsList'
+import { NewsList } from '@/components/shared/NewsList'
 import type { NewsItem } from '@/lib/dashboard-data'
 
 describe('NewsList', () => {

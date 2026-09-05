@@ -182,10 +182,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 Product
               </h4>
               <ul className="space-y-3">
-                {["Features", "Dashboard", "Markets", "Pricing"].map((item) => (
+                {["Features", "Leaderboard", "Markets", "Pricing"].map((item) => (
                   <li key={item}>
                     <Link
-                      href={item === "Features" ? "/services" : item === "Dashboard" ? "/dashboard" : item === "Markets" ? "/stocks" : "/services"}
+                      href={item === "Features" ? "/services" : item === "Leaderboard" ? "/leaderboard" : item === "Markets" ? "/stocks" : "/services"}
                       className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors"
                     >
                       {item}

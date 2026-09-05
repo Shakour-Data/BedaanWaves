@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { StatCard, ChangeBadge } from '@/components/dashboard/StatCard'
+import { StatCard, ChangeBadge } from '@/components/shared/StatCard'
 import type { MarketStat } from '@/lib/dashboard-data'
 
 describe('StatCard', () => {
