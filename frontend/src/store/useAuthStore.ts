@@ -20,18 +20,10 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   loading: boolean;
-  currentLang: "en" | "fa";
-  setLanguage: (lang: "en" | "fa") => void;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, full_name: string) => Promise<void>;
   logout: () => void;
 }
-
-const getInitialLang = () => {
-  if (typeof window === 'undefined') return 'en';
-  const saved = localStorage.getItem('lang');
-  return (saved === 'fa' || saved === 'en') ? saved : 'en';
-};
 
 async function fetchUserProfile(): Promise<UserProfile | null> {
   try {
@@ -50,13 +42,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       loading: false,
-      currentLang: getInitialLang(),
-      setLanguage: (lang) => set({ currentLang: lang }),
       login: async (username, password) => {
         set({ loading: true });
         try {
-          const currentLang = getInitialLang();
-          const response = await apiClient.post(`auth/login?lang=${currentLang}`, { username, password });
+          const response = await apiClient.post('auth/login', { username, password });
           const token = response.data.access_token;
           const refreshToken = response.data.refresh_token;
           set({
@@ -77,8 +66,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (username, email, password, full_name) => {
         set({ loading: true });
         try {
-          const currentLang = getInitialLang();
-          const response = await apiClient.post(`auth/register?lang=${currentLang}`, { username, email, password, full_name });
+          const response = await apiClient.post('auth/register', { username, email, password, full_name });
           const token = response.data.access_token;
           const refreshToken = response.data.refresh_token;
           set({
@@ -117,7 +105,6 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         token: state.token,
         refreshToken: state.refreshToken,
-        currentLang: state.currentLang,
       }),
     }
   )
