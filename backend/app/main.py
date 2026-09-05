@@ -78,6 +78,7 @@ from app.api.routes import (
     market_data_router,
     data_health_router,
     dashboard_router,
+    filter_router,
 )
 
 logging.basicConfig(
@@ -371,6 +372,7 @@ async def lifespan(app: FastAPI):
     app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
     app.include_router(data_health_router, tags=["data-health"])
     app.include_router(dashboard_router, prefix="/api/v1/analysis", tags=["dashboard"])
+    app.include_router(filter_router, prefix="/api/v1/filter", tags=["filter"])
     app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
     app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
     app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])

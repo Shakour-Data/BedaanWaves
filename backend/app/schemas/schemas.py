@@ -343,10 +343,28 @@ class WatchlistItemCreate(BaseModel):
     alert_threshold_pct: Optional[Decimal] = Field(None, ge=0, le=100)
 
 
+class WatchlistCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    is_default: bool = False
+
+
 class WatchlistUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     is_default: Optional[bool] = None
+
+
+class WatchlistItemResponse(BaseModel):
+    id: uuid.UUID
+    watchlist_id: uuid.UUID
+    asset_id: uuid.UUID
+    note: Optional[str] = None
+    alert_threshold_pct: Optional[Decimal] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class WatchlistResponse(BaseModel):
@@ -366,18 +384,6 @@ class WatchlistResponse(BaseModel):
 class WatchlistItemUpdate(BaseModel):
     note: Optional[str] = None
     alert_threshold_pct: Optional[Decimal] = Field(None, ge=0, le=100)
-
-
-class WatchlistItemResponse(BaseModel):
-    id: uuid.UUID
-    watchlist_id: uuid.UUID
-    asset_id: uuid.UUID
-    note: Optional[str] = None
-    alert_threshold_pct: Optional[Decimal] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # Notification Schemas

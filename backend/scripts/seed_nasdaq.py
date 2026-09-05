@@ -7,6 +7,9 @@ Uses PostgreSQL upsert for idempotency.
 Run:
     cd backend
     python scripts/seed_nasdaq.py
+
+For sector/industry backfill after seeding, run:
+    python scripts/backfill_sector_industry.py
 """
 
 import sys
