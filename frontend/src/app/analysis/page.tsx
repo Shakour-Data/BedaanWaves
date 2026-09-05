@@ -1,7 +1,7 @@
 "use client";
 
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { AssetTable } from "@/components/dashboard/AssetTable";
+import { AssetTable } from "@/components/shared/AssetTable";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
 import { 
@@ -36,7 +36,7 @@ interface AnalysisData {
     news_count?: number;
   };
   scoring?: {
-    overall_score?: number;
+    overall_score?: number | string;
     grade?: string;
     dimensions?: Record<string, unknown>;
   };
@@ -88,7 +88,7 @@ export default function AnalysisPage() {
             fetchSentiment(topSymbol),
             fetchScoring(topSymbol)
           ]);
-          setAnalysisData({ fundamental, technical, sentiment, scoring, symbol: topSymbol });
+          setAnalysisData({ fundamental: fundamental ?? undefined, technical: technical ?? undefined, sentiment: sentiment ?? undefined, scoring: scoring ?? undefined, symbol: topSymbol });
         }
       } catch (error) {
         console.error("Error loading analysis data:", error);

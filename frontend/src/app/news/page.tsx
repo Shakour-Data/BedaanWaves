@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { NewsList } from "@/components/dashboard/NewsList";
+import { NewsList } from "@/components/shared/NewsList";
 import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";

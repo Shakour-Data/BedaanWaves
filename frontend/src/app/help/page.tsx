@@ -18,7 +18,7 @@ const documentationSections = [
 ];
 
 const frontendPages = [
-  { name: "Dashboard", path: "/dashboard", description: "Main market overview with indices and stocks", status: "Live API" },
+  { name: "Leaderboard", path: "/leaderboard", description: "Top performers and biggest movers", status: "Live API" },
   { name: "Stocks", path: "/stocks", description: "Stock list with search and filters", status: "Live API" },
   { name: "Stock Detail", path: "/stocks/[symbol]", description: "Candlestick chart and scoring", status: "Live API" },
   { name: "Scoring", path: "/scoring", description: "6-dimensional AI scoring overview", status: "Live API" },
@@ -128,7 +128,7 @@ export default function HelpPage() {
 
             <TarotCard icon="🚀" title={t("app.help.quick_access")}>
               <div className="space-y-3">
-                <Link href="/dashboard" passHref>
+                <Link href="/leaderboard" passHref>
                   <Button className="w-full cursor-pointer">
                     {t("app.help.go_dashboard")}
                   </Button>

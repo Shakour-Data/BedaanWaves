@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { AssetTable } from "@/components/dashboard/AssetTable";
+import { AssetTable } from "@/components/shared/AssetTable";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { PageLoading } from "@/components/ui/PageLoading";
 import { apiClient } from "@/lib/api";

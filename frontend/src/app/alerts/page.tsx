@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { AssetTable } from "@/components/dashboard/AssetTable";
+import { AssetTable } from "@/components/shared/AssetTable";
 import { apiClient } from "@/lib/api";
 import type { AssetRow } from "@/lib/dashboard-data";
 
