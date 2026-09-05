@@ -2,9 +2,10 @@
 Tier 5: NLP Services
 
 Services for natural language processing:
-- SentimentAnalysisService: Persian sentiment analysis for financial texts
+- SentimentAnalysisService: Financial text sentiment analysis
 - NewsSummarizationService: News content summarization and key point extraction
 - DocumentExtractionService: Structured data extraction from documents
+All text processing is English-only (Nasdaq market focus).
 """
 
 from .sentiment_analysis_service import SentimentAnalysisService
