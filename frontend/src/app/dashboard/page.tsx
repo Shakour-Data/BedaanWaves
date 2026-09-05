@@ -4,15 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchRiskDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
-import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse, LevelTrendResponse, CoefficientHistoryResponse } from "@/lib/api/dashboard";
+import type { GeneralDashboardResponse, ScoreTrendResponse, LevelTrendResponse, CoefficientHistoryResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
-import { useDateStore, useSelectedDate, useLatestAvailableDate, useEffectiveDate } from "@/store/useDateStore";
-import { DateSelector } from "@/components/dashboard/DateSelector";
+import { useDateStore, useEffectiveDate } from "@/store/useDateStore";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
@@ -267,117 +265,92 @@ export default function DashboardPage() {
   const [subAspectTrend, setSubAspectTrend] = useState<LevelTrendResponse | null>(null);
   const [subLevelChartsOpen, setSubLevelChartsOpen] = useState(false);
   const [coefficientHistory, setCoefficientHistory] = useState<CoefficientHistoryResponse | null>(null);
-  const [coefficientHistoryLoading, setCoefficientHistoryLoading] = useState(true);
+  const [, setCoefficientHistoryLoading] = useState(true);
   const [coefficientFilter, setCoefficientFilter] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
   
   // Date Store Integration - Fix for data inconsistency
-  const selectedDate = useSelectedDate();
-  const latestAvailableDate = useLatestAvailableDate();
   const setLatestAvailableDate = useDateStore((state) => state.setLatestAvailableDate);
   const effectiveDate = useEffectiveDate();
 
   const loadDashboard = useCallback(async () => {
-    // eslint-disable-next-line
     setLoading(true);
-    // eslint-disable-next-line
     setError(null);
 
     try {
-      // Fetch general dashboard with effective date if available
       const general = await fetchGeneralDashboard(!!effectiveDate).catch(() => null);
       
-      // Update latest date from general data
       if (general?.latest_date) {
-        // eslint-disable-next-line
         setLatestAvailableDate(general.latest_date);
       }
       
       const dashboardData = await fetchDashboardData(general ?? undefined);
 
-      // eslint-disable-next-line
       setMarketStats(dashboardData.marketStats);
       const uniqueTop = dashboardData.topMovers.reduce<AssetRow[]>((acc, stock) => {
         if (!acc.some((s) => s.symbol === stock.symbol)) acc.push(stock);
         return acc;
       }, []);
-      // eslint-disable-next-line
       setTopStocks(uniqueTop.slice(0, 5));
-      // eslint-disable-next-line
       setNews(dashboardData.news);
-      // eslint-disable-next-line
       setGeneralData(general);
     } catch (err) {
       const message = getApiErrorMessage(err);
-      // eslint-disable-next-line
       setError(message);
       addToast({ type: "error", message });
     } finally {
-      // eslint-disable-next-line
       setLoading(false);
     }
-  }, [addToast, effectiveDate, fetchGeneralDashboard, fetchDashboardData, setLatestAvailableDate]);
+  }, [addToast, effectiveDate, setLatestAvailableDate]);
 
   const loadScoreTrend = useCallback(async () => {
-    // eslint-disable-next-line
     setScoreTrendLoading(true);
     try {
       const options: ScoreTrendOptions = effectiveDate
         ? { endDate: effectiveDate }
         : { latest: true };
       const data = await fetchScoreTrend(30, "NASDAQ", options);
-      // eslint-disable-next-line
       setScoreTrend(data);
     } catch (err) {
       const message = getApiErrorMessage(err);
-      // eslint-disable-next-line
       setError(message);
       addToast({ type: "error", message });
     } finally {
-      // eslint-disable-next-line
       setScoreTrendLoading(false);
     }
   }, [effectiveDate, addToast]);
 
   const loadCoefficientHistory = useCallback(async () => {
-    // eslint-disable-next-line
     setCoefficientHistoryLoading(true);
     try {
       const options: ScoreTrendOptions = effectiveDate
         ? { endDate: effectiveDate }
         : { latest: true };
       const data = await fetchCoefficientHistory(30, "NASDAQ", options);
-      // eslint-disable-next-line
       setCoefficientHistory(data);
     } catch (err) {
       const message = getApiErrorMessage(err);
-      // eslint-disable-next-line
       setError(message);
       addToast({ type: "error", message });
     } finally {
-      // eslint-disable-next-line
       setCoefficientHistoryLoading(false);
     }
   }, [effectiveDate, addToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line
     loadScoreTrend();
-    // eslint-disable-next-line
     loadCoefficientHistory();
   }, [loadScoreTrend, loadCoefficientHistory]);
 
   useEffect(() => {
-    // eslint-disable-next-line
     loadDashboard();
   }, [loadDashboard]);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as Tab | null;
     if (tab && tabs.some(t => t.id === tab) && tab !== activeTab) {
-      // eslint-disable-next-line
       setActiveTab(tab);
     }
   }, [searchParams, activeTab]);
@@ -385,7 +358,6 @@ export default function DashboardPage() {
   useEffect(() => {
     const sub = searchParams.get("sub");
     if (sub !== activeSub) {
-      // eslint-disable-next-line
       setActiveSub(sub);
     }
   }, [searchParams, activeSub]);
@@ -400,7 +372,6 @@ export default function DashboardPage() {
       fetchSubAspectTrend(30, "NASDAQ", options),
     ]);
     if (subDim.status === "fulfilled") {
-      // eslint-disable-next-line
       setSubDimensionTrend(subDim.value);
     }
     if (asp.status === "fulfilled") {
@@ -416,8 +387,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!subLevelChartsOpen) return;
     if (generalData?.latest_date) {
+      // eslint-disable-next-line
       loadSubLevelTrends(generalData.latest_date);
     } else {
+      // eslint-disable-next-line
       loadSubLevelTrends(null);
     }
   }, [generalData?.latest_date, subLevelChartsOpen, loadSubLevelTrends]);

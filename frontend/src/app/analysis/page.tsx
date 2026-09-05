@@ -204,11 +204,11 @@ export default function AnalysisPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {Object.entries(analysisData?.fundamental || {}).slice(0, 8).map(([key, value]: [string, any], i) => (
+              {Object.entries(analysisData?.fundamental || {}).slice(0, 8).map(([key, value]: [string, unknown], i) => (
                 <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4 text-center">
                   <div className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{key.replace(/_/g, " ")}</div>
                   <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">
-                    {typeof value === "number" ? value.toLocaleString("en-US") : value || "—"}
+                     {typeof value === "number" ? value.toLocaleString("en-US") : typeof value === "string" ? value : "—"}
                   </div>
                 </div>
               ))}
