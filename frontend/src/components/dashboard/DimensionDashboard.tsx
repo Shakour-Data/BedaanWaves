@@ -247,6 +247,7 @@ export function DimensionDashboard({ dimension, fetchFn, color, activeSub, onSub
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [fetchFn]);
 

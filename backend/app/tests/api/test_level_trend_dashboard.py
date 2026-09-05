@@ -104,8 +104,8 @@ class TestLevelTrendEndpoints(unittest.TestCase):
         )
         # avg_scores surface includes every canonical key
         self.assertEqual(set(first["avg_scores"].keys()), set(SUB_DIMENSION_KEYS))
-        self.assertEqual(first["avg_scores"]["valuation"], 50.0)
-        self.assertEqual(second["avg_scores"]["valuation"], 55.0)
+        self.assertEqual(first["avg_scores"]["fundamental_price_history"], 50.0)
+        self.assertEqual(second["avg_scores"]["fundamental_price_history"], 55.0)
 
     def test_sub_dimension_trend_rejects_non_nasdaq(self):
         with self.assertRaises(Exception) as ctx:
@@ -131,7 +131,7 @@ class TestLevelTrendEndpoints(unittest.TestCase):
         )
         self.assertEqual(response["count"], 2)
         self.assertEqual(response["latest_date"], "2026-09-01")
-        self.assertEqual(response["series"][1]["avg_scores"]["valuation"], 60.0)
+        self.assertEqual(response["series"][1]["avg_scores"]["fundamental_price_history"], 60.0)
 
     # -------------------------------------------------------------- #
     # Aspect trend
@@ -178,8 +178,8 @@ class TestLevelTrendEndpoints(unittest.TestCase):
         self.assertEqual(response["latest_date"], "2026-09-01")
 
         first, second = response["series"]
-        self.assertEqual(first["avg_scores"]["sub_aspect_1"], 10.0)
-        self.assertEqual(second["avg_scores"]["sub_aspect_1"], 15.0)
+        self.assertEqual(first["avg_scores"]["fundamental_price_aspect_1_detail_1"], 10.0)
+        self.assertEqual(second["avg_scores"]["fundamental_price_aspect_1_detail_1"], 15.0)
         self.assertTrue(
             all(abs(v - 5.0) < 1e-9 for v in second["score_changes"].values())
         )
@@ -209,7 +209,7 @@ class TestLevelTrendEndpoints(unittest.TestCase):
         rows = [
             _capture_row(
                 "2026-08-31",
-                {"valuation": 60.0, "unknown_key": 999.0},
+                {"fundamental_price_history": 60.0, "unknown_key": 999.0},
             ),
         ]
         response = self._run(
@@ -220,7 +220,7 @@ class TestLevelTrendEndpoints(unittest.TestCase):
         self.assertEqual(response["count"], 1)
         first = response["series"][0]
         self.assertNotIn("unknown_key", first["avg_scores"])
-        self.assertEqual(first["avg_scores"]["valuation"], 60.0)
+        self.assertEqual(first["avg_scores"]["fundamental_price_history"], 60.0)
 
     def test_level_trend_invalid_end_date_returns_400(self):
         with self.assertRaises(Exception) as ctx:

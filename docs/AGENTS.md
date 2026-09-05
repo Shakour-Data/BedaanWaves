@@ -50,6 +50,6 @@ npx playwright test       # Run end-to-end tests (if configured)
 ## Important notes
 
 - The password-recovery feature is fully implemented in both `backend/app/` and `frontend/src/`.
-- Backend tests live in `backend/app/tests/auth/` and cover both the service layer and the API layer (26 tests, all passing).
+- Backend tests live in `backend/app/tests/auth/` and cover both the service layer and the API layer (46 tests, all passing — includes `lang=fa` Persian message coverage for auth and password-recovery endpoints).
 - Frontend tests live in `frontend/src/tests/` and cover the FSM hook, page component, API utilities, and UI components.
 - The primary brand colour for call-to-action buttons is `#005A9C` (`.btn-primary-brand` class).

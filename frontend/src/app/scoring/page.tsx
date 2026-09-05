@@ -225,6 +225,7 @@ export default function ScoringPage() {
         ));
       });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
     }
   }, [search]);

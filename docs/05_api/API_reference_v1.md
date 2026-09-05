@@ -6,7 +6,7 @@ BedaanWaves provides a comprehensive set of RESTful API endpoints across 16+ rou
 
 ## Base URL
 - **Production**: Configured via `API_HOST` and `API_PORT` environment variables
-- **Development**: `http://localhost:8000`
+- **Development**: `http://localhost:3000`
 - **API Prefix**: `/api/v1/` (configurable via `API_V1_STR`)
 
 ## Authentication
