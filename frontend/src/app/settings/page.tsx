@@ -93,26 +93,26 @@ export default function SettingsPage() {
 
   if (loading && !marketData) {
     return (
-      <NewDashboardShell title={t("app.settings.title", "en")}>
+      <NewDashboardShell title={t("app.settings.title")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.settings.loading", "en")}
+          {t("app.settings.loading")}
         </div>
       </NewDashboardShell>
     );
   }
 
   return (
-    <NewDashboardShell title={t("app.settings.title", "en")}>
+    <NewDashboardShell title={t("app.settings.title")}>
       <div className="flex flex-col gap-6">
-        <Card icon="Settings" title={t("app.settings.overview_title", "en")}>
+        <Card icon="Settings" title={t("app.settings.overview_title")}>
           <p className="text-muted-foreground text-justify">
-            {t("app.settings.overview_desc", "en")}
+            {t("app.settings.overview_desc")}
           </p>
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div className="lg:col-span-3">
-            <Card icon="[Global]" title={t("app.settings.country_selection", "en")}>
+            <Card icon="[Global]" title={t("app.settings.country_selection")}>
               <div className="space-y-2">
                 {countries.map((country) => {
                   const isSelected = selectedCountry === country.id;
@@ -142,13 +142,13 @@ export default function SettingsPage() {
           <div className="lg:col-span-9">
             <Card 
               icon={countryInfo?.flag || "🏳️"} 
-              title={t("app.settings.market_config", "en").replace("{country}", countryInfo?.name || "")}
+              title={t("app.settings.market_config").replace("{country}", countryInfo?.name || "")}
             >
               {data ? (
                 <div className="space-y-6">
                   <div>
                     <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                      <span>[Chart]</span> {t("app.settings.indices", "en")}
+                      <span>[Chart]</span> {t("app.settings.indices")}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {data.indices?.map((index: any) => (
@@ -180,7 +180,7 @@ export default function SettingsPage() {
                   {data.stocks?.length > 0 && (
                     <div>
                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>📈</span> {t("app.settings.stocks", "en")}
+                        <span>📈</span> {t("app.settings.stocks")}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {data.stocks.map((stock: any) => (
@@ -213,7 +213,7 @@ export default function SettingsPage() {
                   {data.industries?.length > 0 && (
                     <div>
                       <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                        <span>🏭</span> {t("app.settings.industries", "en")}
+                        <span>🏭</span> {t("app.settings.industries")}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {data.industries.map((industry: any) => (
@@ -250,7 +250,7 @@ export default function SettingsPage() {
 
                   <div className="pt-4 border-t border-border/60">
                     <h4 className="font-bold mb-3 text-sm flex items-center gap-2">
-                      <span>Alerts</span> {t("app.settings.notification_prefs", "en")}
+                      <span>Alerts</span> {t("app.settings.notification_prefs")}
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {notificationTypes.map((type) => (
@@ -278,14 +278,14 @@ export default function SettingsPage() {
 
                   <div className="flex justify-end gap-3 pt-6">
                     <Button onClick={handleSave} className="px-8">
-                      {t("app.settings.save_settings", "en")}
+                      {t("app.settings.save_settings")}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-4">
                   <div className="text-4xl">📭</div>
-                  <p>{t("app.settings.no_config", "en")}</p>
+                  <p>{t("app.settings.no_config")}</p>
                 </div>
               )}
             </Card>

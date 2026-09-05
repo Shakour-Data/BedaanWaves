@@ -62,18 +62,18 @@ export default function HelpPage() {
   );
 
   return (
-    <NewDashboardShell title={t("app.help.title", "en")}>
+    <NewDashboardShell title={t("app.help.title")}>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("app.help.title", "en")}</h1>
-          <p className="text-muted-foreground">{t("app.help.subtitle", "en")}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("app.help.title")}</h1>
+          <p className="text-muted-foreground">{t("app.help.subtitle")}</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           {[
-            { id: "frontend", label: t("app.help.categories.frontend", "en"), icon: "🌐" },
-            { id: "database", label: t("app.help.categories.database", "en"), icon: "🗄️" },
-            { id: "api", label: t("app.help.categories.api", "en"), icon: "🔌" }
+            { id: "frontend", label: t("app.help.categories.frontend"), icon: "🌐" },
+            { id: "database", label: t("app.help.categories.database"), icon: "🗄️" },
+            { id: "api", label: t("app.help.categories.api"), icon: "🔌" }
           ].map((cat) => (
             <button
               key={cat.id}
@@ -99,7 +99,7 @@ export default function HelpPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 flex flex-col gap-6">
-            <TarotCard icon="📂" title={t("app.help.index_title", "en")}>
+            <TarotCard icon="📂" title={t("app.help.index_title")}>
               <div className="space-y-2">
                 {filteredSections.map((section) => (
                   <button
@@ -126,16 +126,16 @@ export default function HelpPage() {
               </div>
             </TarotCard>
 
-            <TarotCard icon="🚀" title={t("app.help.quick_access", "en")}>
+            <TarotCard icon="🚀" title={t("app.help.quick_access")}>
               <div className="space-y-3">
                 <Link href="/dashboard" passHref>
                   <Button className="w-full cursor-pointer">
-                    {t("app.help.go_dashboard", "en")}
+                    {t("app.help.go_dashboard")}
                   </Button>
                 </Link>
                 <Link href="/scoring" passHref>
                   <Button className="w-full cursor-pointer">
-                    {t("app.help.view_scoring", "en")}
+                    {t("app.help.view_scoring")}
                   </Button>
                 </Link>
               </div>
@@ -144,17 +144,17 @@ export default function HelpPage() {
 
           <div className="lg:col-span-3">
             {activeSection === "frontend-pages" && (
-              <TarotCard icon="📄" title={t("app.help.sections.frontend_pages.title", "en")}>
+              <TarotCard icon="📄" title={t("app.help.sections.frontend_pages.title")}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b-2 border-border">
-                        <th className="text-right p-3 font-semibold">{t("app.help.table.page", "en")}</th>
-                        <th className="text-right p-3 font-semibold">{t("app.help.table.path", "en")}</th>
+                        <th className="text-right p-3 font-semibold">{t("app.help.table.page")}</th>
+                        <th className="text-right p-3 font-semibold">{t("app.help.table.path")}</th>
                         <th className="text-right p-3 font-semibold">
-                          {t("app.help.table.description", "en")}
+                          {t("app.help.table.description")}
                         </th>
-                        <th className="text-right p-3 font-semibold">{t("app.help.table.status", "en")}</th>
+                        <th className="text-right p-3 font-semibold">{t("app.help.table.status")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -177,17 +177,17 @@ export default function HelpPage() {
                 </div>
                 <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                   <p className="text-xs text-muted-foreground flex gap-4 flex-wrap">
-                    <span><strong>{t("app.help.stats.total_pages", "en")}</strong> 15</span>
-                    <span><strong>{t("app.help.stats.live_api", "en")}</strong> 10</span>
-                    <span><strong>{t("app.help.stats.static", "en")}</strong> 5</span>
-                    <span><strong>{t("app.help.stats.needs_sync", "en")}</strong> 1</span>
+                    <span><strong>{t("app.help.stats.total_pages")}</strong> 15</span>
+                    <span><strong>{t("app.help.stats.live_api")}</strong> 10</span>
+                    <span><strong>{t("app.help.stats.static")}</strong> 5</span>
+                    <span><strong>{t("app.help.stats.needs_sync")}</strong> 1</span>
                   </p>
                 </div>
               </TarotCard>
             )}
 
             {activeSection === "component-guide" && (
-              <TarotCard icon="🧩" title={t("app.help.sections.component_guide.title", "en")}>
+              <TarotCard icon="🧩" title={t("app.help.sections.component_guide.title")}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {uiComponents.map((comp, i) => (
                     <div
@@ -213,7 +213,7 @@ export default function HelpPage() {
             )}
 
             {activeSection === "schema-overview" && (
-              <TarotCard icon="🗄️" title={t("app.help.sections.schema_overview.title", "en")}>
+              <TarotCard icon="🗄️" title={t("app.help.sections.schema_overview.title")}>
                 <div className="space-y-4">
                   {coreTables.map((table, i) => (
                     <div key={i} className="border border-border rounded-lg p-3">
@@ -231,7 +231,7 @@ export default function HelpPage() {
             )}
 
             {activeSection === "api-reference" && (
-              <TarotCard icon="🔌" title={t("app.help.sections.api_reference.title", "en")}>
+              <TarotCard icon="🔌" title={t("app.help.sections.api_reference.title")}>
                 <p className="text-muted-foreground">
                   API documentation is available in the backend codebase under <code className="px-1.5 py-0.5 rounded bg-muted text-xs">backend/app/</code>.
                   All endpoints require Bearer token authentication.

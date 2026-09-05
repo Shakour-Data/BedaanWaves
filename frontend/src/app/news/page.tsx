@@ -58,16 +58,16 @@ export default function NewsPage() {
 
   if (loading) {
     return (
-      <NewDashboardShell title={t("app.news.title", "en")}>
+      <NewDashboardShell title={t("app.news.title")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.news.loading", "en")}
+          {t("app.news.loading")}
         </div>
       </NewDashboardShell>
     );
   }
 
   return (
-    <NewDashboardShell title={t("app.news.title", "en")}>
+    <NewDashboardShell title={t("app.news.title")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
         {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">

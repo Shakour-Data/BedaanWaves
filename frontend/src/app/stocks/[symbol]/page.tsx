@@ -71,7 +71,7 @@ export default function StockDetailPage() {
         if (activeTab === "risk") { setRisk(results[4] as Record<string, unknown>); setFundamental(results[5] as Record<string, unknown>); }
       } catch (e: unknown) {
         if (!cancelled) {
-          const message = e instanceof Error ? e.message : t("app.stocks.detail.error_title", "en");
+          const message = e instanceof Error ? e.message : t("app.stocks.detail.error_title");
           setError(message);
           addToast({ type: "error", message });
         }
@@ -86,12 +86,12 @@ export default function StockDetailPage() {
   }, [symbol, activeTab, addToast]);
 
   const MARKET_LABEL: Record<Market, string> = {
-    NASDAQ: t("app.stocks.markets.nasdaq", "en") };
+    NASDAQ: t("app.stocks.markets.nasdaq") };
 
   const RANGES = useMemo(() => [
-    { key: "30", label: t("app.stocks.detail.ranges.1m", "en"), days: 30 },
-    { key: "90", label: t("app.stocks.detail.ranges.3m", "en"), days: 90 },
-    { key: "all", label: t("app.stocks.detail.ranges.all", "en"), days: null },
+    { key: "30", label: t("app.stocks.detail.ranges.1m"), days: 30 },
+    { key: "90", label: t("app.stocks.detail.ranges.3m"), days: 90 },
+    { key: "all", label: t("app.stocks.detail.ranges.all"), days: null },
   ], []);
 
   const visibleCandles = useMemo(() => {
@@ -116,7 +116,7 @@ export default function StockDetailPage() {
 
   const price = latest?.price ?? derived?.price ?? 0;
   const changePct = latest?.change_pct ?? derived?.changePct ?? 0;
-  const currency = t("app.stocks.detail.currency_usd", "en");
+  const currency = t("app.stocks.detail.currency_usd");
   const noData = !candles || candles.length === 0;
 
   const tabs: { key: Tab; label: string }[] = [
@@ -137,10 +137,10 @@ export default function StockDetailPage() {
 
   if (error) {
     return (
-      <TarotCard icon="⚠️" title={t("app.stocks.detail.error_title", "en")}>
-        <p className="text-sm text-muted-foreground">{t("app.stocks.detail.error_desc", "en").replace("{symbol}", symbol)}</p>
+      <TarotCard icon="⚠️" title={t("app.stocks.detail.error_title")}>
+        <p className="text-sm text-muted-foreground">{t("app.stocks.detail.error_desc").replace("{symbol}", symbol)}</p>
         <p className="mt-2 text-xs text-error">{error}</p>
-        <Link href="/stocks" className="mt-3 inline-block text-sm text-secondary hover:underline">← {t("app.stocks.detail.back_to_list", "en")}</Link>
+        <Link href="/stocks" className="mt-3 inline-block text-sm text-secondary hover:underline">← {t("app.stocks.detail.back_to_list")}</Link>
       </TarotCard>
     );
   }
@@ -148,7 +148,7 @@ export default function StockDetailPage() {
   return (
       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/stocks" className="hover:text-foreground">{t("app.nav.stocks", "en")}</Link>
+          <Link href="/stocks" className="hover:text-foreground">{t("app.nav.stocks")}</Link>
           <span>/</span>
           <span className="text-foreground">{symbol}</span>
         </div>
@@ -167,7 +167,7 @@ export default function StockDetailPage() {
               {asset ? <span className="text-muted-foreground">{asset.name}</span> : null}
               {asset?.sector ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("app.stocks.sector", "en")}: {asset.sector}
+                  {t("app.stocks.sector")}: {asset.sector}
                 </span>
               ) : null}
             </div>
@@ -208,15 +208,15 @@ export default function StockDetailPage() {
           <div className="space-y-4 animate-in fade-in duration-200">
             {derived ? (
               <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <StatBox label={t("app.stocks.detail.last_price", "en")} value={fmt(price, 2)} hint={currency} />
-                <StatBox label={`${t("app.stocks.detail.high", "en")} (${RANGES.find((r) => r.key === range)?.label})`} value={fmt(derived.rangeHigh, 2)} />
-                <StatBox label={`${t("app.stocks.detail.low", "en")} (${RANGES.find((r) => r.key === range)?.label})`} value={fmt(derived.rangeLow, 2)} />
-                <StatBox label={t("app.stocks.detail.volume", "en")} value={fmt(derived.lastVolume)} hint={`${t("app.stocks.detail.avg_volume", "en")}: ${fmt(derived.avgVol)}`} />
+                <StatBox label={t("app.stocks.detail.last_price")} value={fmt(price, 2)} hint={currency} />
+                <StatBox label={`${t("app.stocks.detail.high")} (${RANGES.find((r) => r.key === range)?.label})`} value={fmt(derived.rangeHigh, 2)} />
+                <StatBox label={`${t("app.stocks.detail.low")} (${RANGES.find((r) => r.key === range)?.label})`} value={fmt(derived.rangeLow, 2)} />
+                <StatBox label={t("app.stocks.detail.volume")} value={fmt(derived.lastVolume)} hint={`${t("app.stocks.detail.avg_volume")}: ${fmt(derived.avgVol)}`} />
               </section>
             ) : null}
 
             {scoring ? (
-              <TarotCard icon="💎" title={t("app.stocks.detail.analysis_6d", "en")}>
+              <TarotCard icon="💎" title={t("app.stocks.detail.analysis_6d")}>
                 <div className="flex flex-col md:flex-row items-center gap-8 py-4">
                   <div className="flex flex-col items-center justify-center">
                     <div className={cn(
@@ -225,12 +225,12 @@ export default function StockDetailPage() {
                     )}>
                       {scoring.overall_score as number}
                     </div>
-                    <div className="mt-4 text-lg font-bold">{t("app.stocks.detail.overall_score", "en")} {(scoring.grade as string)?.replace("_", " ")}</div>
+                    <div className="mt-4 text-lg font-bold">{t("app.stocks.detail.overall_score")} {(scoring.grade as string)?.replace("_", " ")}</div>
                   </div>
                   <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
                     {Object.entries(scoring.dimension_scores || {}).map(([dim, score]: [string, unknown]) => (
                       <div key={dim} className="p-3 rounded-xl bg-neutral/40 border border-border/40">
-                        <div className="text-xs text-muted-foreground uppercase">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}</div>
+                        <div className="text-xs text-muted-foreground uppercase">{t(`app.scoring.dimensions.${dim.toLowerCase()}`)}</div>
                         <div className="flex items-center justify-between mt-1">
                           <span className="font-bold text-lg">{score as number}</span>
                           <div className="h-1.5 flex-1 mx-2 bg-border rounded-full overflow-hidden">
@@ -243,7 +243,7 @@ export default function StockDetailPage() {
                 </div>
                 <div className="mt-4 pt-4 border-t border-border/40 flex flex-wrap gap-2">
                   <Link href={`/stocks/${symbol}/scoring`} className="inline-flex items-center gap-2 rounded-lg bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/20">
-                    {t("app.scoring.title", "en")} →
+                    {t("app.scoring.title")} →
                   </Link>
                   <Link href={`/stocks/${symbol}/charts`} className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20">
                     Charts →
@@ -293,7 +293,7 @@ export default function StockDetailPage() {
           <div className="space-y-4 animate-in fade-in duration-200">
             <TarotCard>
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{t("app.stocks.detail.chart_title", "en")}</h3>
+                <h3 className="text-lg font-semibold">{t("app.stocks.detail.chart_title")}</h3>
                 <div className="flex gap-1">
                   {RANGES.map((r) => (
                     <button key={r.key} type="button" onClick={() => setRange(r.key)} className={cn("rounded-full px-3 py-1 text-sm transition duration-fast ease-flow", range === r.key ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground hover:bg-neutral")}>

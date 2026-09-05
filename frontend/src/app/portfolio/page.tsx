@@ -98,18 +98,18 @@ export default function PortfolioPage() {
           const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
           
           setStats([
-            { label: t("app.portfolio.total_value", "en"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
-            { label: t("app.portfolio.total_pnl", "en"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
-            { label: t("app.portfolio.symbols_count", "en"), value: String(enrichedHoldings.length), changePct: 0 },
-            { label: t("app.portfolio.daily_return", "en"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
+            { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+            { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
+            { label: t("app.portfolio.symbols_count"), value: String(enrichedHoldings.length), changePct: 0 },
+            { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
           ]);
         } else {
           setHoldings([]);
           setStats([
-            { label: t("app.portfolio.total_value", "en"), value: "$0", changePct: 0 },
-            { label: t("app.portfolio.total_pnl", "en"), value: "$0", changePct: 0 },
-            { label: t("app.portfolio.symbols_count", "en"), value: "0", changePct: 0 },
-            { label: t("app.portfolio.daily_return", "en"), value: "0%", changePct: 0 },
+            { label: t("app.portfolio.total_value"), value: "$0", changePct: 0 },
+            { label: t("app.portfolio.total_pnl"), value: "$0", changePct: 0 },
+            { label: t("app.portfolio.symbols_count"), value: "0", changePct: 0 },
+            { label: t("app.portfolio.daily_return"), value: "0%", changePct: 0 },
           ]);
         }
       } else {
@@ -117,7 +117,7 @@ export default function PortfolioPage() {
         setStats([]);
       }
     } catch {
-      setError(t("app.portfolio.error_loading", "en"));
+      setError(t("app.portfolio.error_loading"));
     } finally {
       setLoading(false);
     }
@@ -129,13 +129,13 @@ export default function PortfolioPage() {
       loadPortfolio();
     } else {
       setLoading(false);
-      setError(t("app.portfolio.login_required", "en"));
+      setError(t("app.portfolio.login_required"));
     }
   }, [user, loadPortfolio]);
 
   if (loading) {
     return (
-      <NewDashboardShell title={t("app.portfolio.title", "en")}>
+      <NewDashboardShell title={t("app.portfolio.title")}>
         <PageLoading />
       </NewDashboardShell>
     );
@@ -143,12 +143,12 @@ export default function PortfolioPage() {
 
   if (error) {
     return (
-      <NewDashboardShell title={t("app.portfolio.title", "en")}>
-        <TarotCard icon="⚠️" title={t("app.portfolio.error_loading", "en")} className="max-w-md mx-auto border-error/20 bg-error/5">
+      <NewDashboardShell title={t("app.portfolio.title")}>
+        <TarotCard icon="⚠️" title={t("app.portfolio.error_loading")} className="max-w-md mx-auto border-error/20 bg-error/5">
           <div className="py-4 text-center">
             <p className="text-sm text-error font-medium mb-4">{error}</p>
             <PrimaryButton onClick={() => { setError(null); loadPortfolio(); }} variant="outline" size="sm">
-              {t("app.auth.submit", "en")}
+              {t("app.auth.submit")}
             </PrimaryButton>
           </div>
         </TarotCard>
@@ -157,7 +157,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <NewDashboardShell title={t("app.portfolio.title", "en")}>
+    <NewDashboardShell title={t("app.portfolio.title")}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Portfolio Summary */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -181,7 +181,7 @@ export default function PortfolioPage() {
               <span className="text-lg">💼</span>
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.current_holdings", "en")}</h3>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.current_holdings")}</h3>
               <p className="text-xs text-[var(--color-text-muted)]">Your current portfolio holdings</p>
             </div>
           </div>
@@ -191,10 +191,10 @@ export default function PortfolioPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
                 <div className="text-4xl mb-4">📭</div>
-                <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">{t("app.portfolio.empty_title", "en")}</p>
-                <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc", "en")}</p>
+                <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">{t("app.portfolio.empty_title")}</p>
+                <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc")}</p>
                 <button onClick={() => router.push("/stocks")} className="rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
-                  {t("app.portfolio.view_stocks", "en")}
+                  {t("app.portfolio.view_stocks")}
                 </button>
               </div>
             )}
@@ -209,7 +209,7 @@ export default function PortfolioPage() {
                 <span className="text-lg">📈</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance", "en")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Portfolio performance over time</p>
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function PortfolioPage() {
                 <span className="text-lg">🥧</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution", "en")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Asset allocation breakdown</p>
               </div>
             </div>

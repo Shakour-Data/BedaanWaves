@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
 import { getApiErrorMessage } from "@/lib/api";
 import {
   fetchNasdaqRankings,
@@ -49,7 +48,7 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 function GradeBadge({ grade }: { grade: Grade }) {
-  const label = t(`app.ranking.grades.${grade}`, "en");
+  const label = t(`app.ranking.grades.${grade}`);
   return (
     <Badge variant={GRADE_STYLES[grade]} size="md">{label}</Badge>
   );
@@ -72,8 +71,6 @@ function RankCell({ rank }: { rank: number }) {
 }
 
 export default function RankingPage() {
-  const currentLang = useAuthStore((state) => state.currentLang) ?? "en";
-
   const [items, setItems] = useState<NasdaqRanking[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -95,7 +92,7 @@ export default function RankingPage() {
       .catch((err: unknown) => {
         if (!active) return;
         const message = getApiErrorMessage(err);
-        setError(message || t("app.ranking.error_desc", currentLang));
+        setError(message || t("app.ranking.error_desc"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -103,7 +100,7 @@ export default function RankingPage() {
     return () => {
       active = false;
     };
-  }, [offset, sortBy, order, currentLang]);
+  }, [offset, sortBy, order]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => load(), [load]);
@@ -132,11 +129,11 @@ export default function RankingPage() {
     "cursor-pointer select-none whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground";
 
   return (
-    <NewDashboardShell title={t("app.ranking.title", currentLang)}>
+    <NewDashboardShell title={t("app.ranking.title")}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("app.ranking.title", currentLang)}</h1>
-          <p className="text-muted-foreground">{t("app.ranking.subtitle", currentLang)}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("app.ranking.title")}</h1>
+          <p className="text-muted-foreground">{t("app.ranking.subtitle")}</p>
         </div>
 
         {loading ? (
@@ -145,20 +142,20 @@ export default function RankingPage() {
           </div>
         ) : error ? (
           <ErrorMessage
-            message={t("app.ranking.error_title", currentLang)}
-            actions={[{ label: t("app.ranking.retry", currentLang), onAction: () => load() }]}
+            message={t("app.ranking.error_title")}
+            actions={[{ label: t("app.ranking.retry"), onAction: () => load() }]}
           />
         ) : (
           <Card>
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {t("app.ranking.showing", currentLang)
+                {t("app.ranking.showing")
                   .replace("{from}", String(from))
                   .replace("{to}", String(to))
                   .replace("{total}", String(total))}
               </p>
               <p className="text-sm text-muted-foreground">
-                {t("app.ranking.page", currentLang)
+                {t("app.ranking.page")
                   .replace("{page}", String(currentPage))
                   .replace("{pages}", String(totalPages))}
               </p>
@@ -166,7 +163,7 @@ export default function RankingPage() {
 
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/30 py-16">
-                <h3 className="mt-2 text-lg font-medium text-foreground">{t("app.ranking.no_results", currentLang)}</h3>
+                <h3 className="mt-2 text-lg font-medium text-foreground">{t("app.ranking.no_results")}</h3>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -174,18 +171,18 @@ export default function RankingPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className={cn(headerCellClass, "w-12 text-center")} onClick={() => toggleSort("overall_score")}>
-                        {t("app.ranking.rank", currentLang)}
+                        {t("app.ranking.rank")}
                       </th>
-                      <th className={cn(headerCellClass, "min-w-[80px]")}>{t("app.ranking.symbol", currentLang)}</th>
-                      <th className={cn(headerCellClass, "min-w-[160px]")}>{t("app.ranking.name", currentLang)}</th>
+                      <th className={cn(headerCellClass, "min-w-[80px]")}>{t("app.ranking.symbol")}</th>
+                      <th className={cn(headerCellClass, "min-w-[160px]")}>{t("app.ranking.name")}</th>
                       <th className={headerCellClass} onClick={() => toggleSort("overall_score")}>
-                        {t("app.ranking.overall_score", currentLang)}
+                        {t("app.ranking.overall_score")}
                         {sortIndicator("overall_score")}
                       </th>
-                      <th className={cn(headerCellClass, "min-w-[110px]")}>{t("app.ranking.grade", currentLang)}</th>
+                      <th className={cn(headerCellClass, "min-w-[110px]")}>{t("app.ranking.grade")}</th>
                       {["fundamental", "technical", "sentiment", "risk", "macro", "ai"].map((dim) => (
                         <th key={dim} className={headerCellClass} onClick={() => toggleSort(dim as RankingSortField)}>
-                          {t(`app.ranking.${dim}`, currentLang)}
+                          {t(`app.ranking.${dim}`)}
                           {sortIndicator(dim as RankingSortField)}
                         </th>
                       ))}
@@ -233,7 +230,7 @@ export default function RankingPage() {
                 disabled={currentPage <= 1}
                 onClick={() => setOffset((prev) => Math.max(0, prev - PAGE_SIZE))}
               >
-                {t("app.ranking.previous", currentLang)}
+                {t("app.ranking.previous")}
               </Button>
               <Button
                 size="sm"
@@ -241,7 +238,7 @@ export default function RankingPage() {
                 disabled={currentPage >= totalPages}
                 onClick={() => setOffset((prev) => Math.min((totalPages - 1) * PAGE_SIZE, prev + PAGE_SIZE))}
               >
-                {t("app.ranking.next", currentLang)}
+                {t("app.ranking.next")}
               </Button>
             </div>
           </Card>

@@ -57,7 +57,7 @@ export default function StockChartsPage() {
         setCandles(c);
         setHistory(h);
       } catch (e: unknown) {
-        if (active) setError(e instanceof Error ? e.message : t("app.analysis.scoring_not_found", "en"));
+        if (active) setError(e instanceof Error ? e.message : t("app.analysis.scoring_not_found"));
       } finally {
         if (active) setLoading(false);
       }
@@ -100,10 +100,10 @@ export default function StockChartsPage() {
 
   if (error) {
     return (
-      <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found", "en")}>
+      <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found")}>
         <p className="text-sm text-muted-foreground">{error}</p>
         <Link href={`/stocks/${symbol}`} className="mt-3 inline-block text-sm text-secondary hover:underline">
-          ← {t("app.stocks.detail.back_to_list", "en")}
+          ← {t("app.stocks.detail.back_to_list")}
         </Link>
       </TarotCard>
     );
@@ -125,7 +125,7 @@ export default function StockChartsPage() {
       <TarotCard title="Price History">
         {noPrice ? (
           <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-            {t("app.stocks.detail.no_history", "en")}
+            {t("app.stocks.detail.no_history")}
           </div>
         ) : (
           <CandlestickChart candles={candles!} timeframe="1d" height={420} />
@@ -135,7 +135,7 @@ export default function StockChartsPage() {
       <TarotCard title="6D Score History (30-Day)">
         {noScores ? (
           <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-            {t("app.analysis.no_data", "en")}
+            {t("app.analysis.no_data")}
           </div>
         ) : (
           <ScoreTrendChart series={scoreSeries} height={360} showLegend />
@@ -158,7 +158,7 @@ export default function StockChartsPage() {
           />
         ) : (
           <div className="flex min-h-[160px] items-center justify-center text-muted-foreground">
-            {t("app.analysis.no_data", "en")}
+            {t("app.analysis.no_data")}
           </div>
         )}
       </TarotCard>

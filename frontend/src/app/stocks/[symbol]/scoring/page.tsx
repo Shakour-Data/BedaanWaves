@@ -33,9 +33,9 @@ interface DrillState {
 }
 
 const LEVEL_LABELS: Record<Level, string> = {
-  1: t("app.scoring.hierarchy.dimensions", "en"),
-  2: t("app.scoring.hierarchy.sub_dimensions", "en"),
-  3: t("app.scoring.hierarchy.aspects", "en"),
+  1: t("app.scoring.hierarchy.dimensions"),
+  2: t("app.scoring.hierarchy.sub_dimensions"),
+  3: t("app.scoring.hierarchy.aspects"),
 };
 
 export default function StockScoringPage() {
@@ -73,7 +73,7 @@ export default function StockScoringPage() {
         setCoefficients(coeff);
         if (coeffHistory) setCoefficientHistory(coeffHistory);
       } catch (e: unknown) {
-        if (active) setError(e instanceof Error ? e.message : t("app.analysis.scoring_not_found", "en"));
+        if (active) setError(e instanceof Error ? e.message : t("app.analysis.scoring_not_found"));
       } finally {
         if (active) setLoading(false);
       }
@@ -159,10 +159,10 @@ export default function StockScoringPage() {
 
   if (error || !hierarchy) {
     return (
-      <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found", "en")}>
-        <p className="text-sm text-muted-foreground">{error || t("app.analysis.scoring_not_found", "en")}</p>
+      <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found")}>
+        <p className="text-sm text-muted-foreground">{error || t("app.analysis.scoring_not_found")}</p>
         <Link href={`/stocks/${symbol}`} className="mt-3 inline-block text-sm text-secondary hover:underline">
-          ← {t("app.stocks.detail.back_to_list", "en")}
+          ← {t("app.stocks.detail.back_to_list")}
         </Link>
       </TarotCard>
     );
@@ -175,7 +175,7 @@ export default function StockScoringPage() {
             {symbol}
           </Link>
           <span>/</span>
-          <span className="text-foreground">{t("app.scoring.title", "en")}</span>
+          <span className="text-foreground">{t("app.scoring.title")}</span>
         </div>
 
         <TarotCard icon="💎" title={t("app.scoring.overall_score", "en")}>
