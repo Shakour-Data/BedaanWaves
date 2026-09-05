@@ -7,7 +7,6 @@ Services for data management and external API integration:
 - PortfolioService: Portfolio management
 - HistoryService: Historical data management
 - NewsService: News data integration
-- IntlApiClient: International stock exchange data
 - FinancialDataIngestService: Financial statements from multiple sources
 - StockFundamentalDataIngestionService: Stock fundamental data ingestion
 - NasdaqIngestionService: Nasdaq Composite index and constituent data
@@ -25,7 +24,6 @@ from .market_service import MarketService
 from .portfolio_service import PortfolioService
 from .history_service import HistoryService
 from .news_service import NewsService
-from .intl_api_client import IntlApiClient
 from .financial_data_ingest_service import (
     FinancialDataIngestService,
     FinancialStatementType,
@@ -48,7 +46,6 @@ __all__ = [
     "PortfolioService",
     "HistoryService",
     "NewsService",
-    "IntlApiClient",
     "FinancialDataIngestService",
     "StockFundamentalDataIngestionService",
     "NasdaqIngestionService",
