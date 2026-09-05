@@ -101,7 +101,7 @@ export default function AlertsPage() {
             time: formatTimeAgo(n.created_at as string),
             alert: n.title as string,
             type: n.extra?.signal_type || "INFO",
-            status: n.read ? t("app.alerts.status.executed", "en") : t("app.alerts.status.active", "en"),
+            status: n.read ? t("app.alerts.status.executed") : t("app.alerts.status.active"),
             statusKey: n.read ? "executed" : "active",
           }));
         setAlertHistory(history);
@@ -119,16 +119,16 @@ export default function AlertsPage() {
 
   if (loading) {
     return (
-      <NewDashboardShell title={t("app.alerts.title", "en")}>
+      <NewDashboardShell title={t("app.alerts.title")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.alerts.loading", "en")}
+          {t("app.alerts.loading")}
         </div>
       </NewDashboardShell>
     );
   }
 
   return (
-    <NewDashboardShell title={t("app.alerts.title", "en")}>
+    <NewDashboardShell title={t("app.alerts.title")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
         {/* Alert Controls */}
         <div className="lg:col-span-1 space-y-4">
@@ -137,11 +137,11 @@ export default function AlertsPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
                 <span className="text-sm font-bold">S</span>
               </div>
-              <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.stats", "en")}</h3>
+              <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.stats")}</h3>
             </div>
             <div className="space-y-3">
               {[
-                { label: t("app.alerts.stats_labels.active", "en"), value: watchlistAlerts.length },
+                { label: t("app.alerts.stats_labels.active"), value: watchlistAlerts.length },
               ].map((stat, i) => (
                 <div key={i} className="flex justify-between items-center">
                   <span className="text-sm text-[var(--color-text-secondary)]">{stat.label}</span>
@@ -160,7 +160,7 @@ export default function AlertsPage() {
                 <span className="text-sm">⭐</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.watchlist_symbols", "en")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.watchlist_symbols")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Stocks in your watchlist with active alerts</p>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function AlertsPage() {
               {watchlistAlerts.length > 0 ? (
                 <AssetTable rows={watchlistAlerts} />
               ) : (
-                <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.alerts.watchlist_empty", "en")}</p>
+                <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.alerts.watchlist_empty")}</p>
               )}
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function AlertsPage() {
                 <span className="text-sm">📜</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.history", "en")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">{t("app.alerts.history")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Recent alert history</p>
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function AlertsPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.alerts.history_empty", "en")}</p>
+                <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.alerts.history_empty")}</p>
               )}
             </div>
           </div>

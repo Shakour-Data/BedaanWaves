@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchRiskDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
@@ -340,17 +341,21 @@ export default function DashboardPage() {
   }, [effectiveDate, addToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadScoreTrend();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCoefficientHistory();
   }, [loadScoreTrend, loadCoefficientHistory]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
   }, [loadDashboard]);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as Tab | null;
     if (tab && tabs.some(t => t.id === tab) && tab !== activeTab) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(tab);
     }
   }, [searchParams, activeTab]);
@@ -385,8 +390,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!subLevelChartsOpen) return;
     if (generalData?.latest_date) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadSubLevelTrends(generalData.latest_date);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadSubLevelTrends(null);
     }
   }, [generalData?.latest_date, subLevelChartsOpen, loadSubLevelTrends]);

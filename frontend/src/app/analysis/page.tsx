@@ -51,10 +51,10 @@ export default function AnalysisPage() {
   const [loading, setLoading] = useState(true);
 
   const analysisTabs = [
-    { id: "technical", label: t("app.analysis.tabs.technical", "en"), icon: "📈" },
-    { id: "fundamental", label: t("app.analysis.tabs.fundamental", "en"), icon: "🏦" },
-    { id: "scoring", label: t("app.analysis.tabs.scoring", "en"), icon: "💯" },
-    { id: "sentiment", label: t("app.analysis.tabs.sentiment", "en"), icon: "🎭" },
+    { id: "technical", label: t("app.analysis.tabs.technical"), icon: "📈" },
+    { id: "fundamental", label: t("app.analysis.tabs.fundamental"), icon: "🏦" },
+    { id: "scoring", label: t("app.analysis.tabs.scoring"), icon: "💯" },
+    { id: "sentiment", label: t("app.analysis.tabs.sentiment"), icon: "🎭" },
   ];
 
   useEffect(() => {
@@ -103,16 +103,16 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <NewDashboardShell title={t("app.analysis.title", "en")}>
+      <NewDashboardShell title={t("app.analysis.title")}>
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          {t("app.analysis.loading", "en")}
+          {t("app.analysis.loading")}
         </div>
       </NewDashboardShell>
     );
   }
 
   return (
-    <NewDashboardShell title={t("app.analysis.title", "en")}>
+    <NewDashboardShell title={t("app.analysis.title")}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* Analysis Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -140,14 +140,14 @@ export default function AnalysisPage() {
               <span className="text-lg">🚀</span>
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.top_movers", "en")}</h3>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.top_movers")}</h3>
               <p className="text-xs text-[var(--color-text-muted)]">Top performing stocks today</p>
             </div>
           </div>
           {topMovers.length > 0 ? (
             <AssetTable rows={topMovers} />
           ) : (
-            <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.no_data", "en")}</p>
+            <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.no_data")}</p>
           )}
         </div>
 
@@ -159,7 +159,7 @@ export default function AnalysisPage() {
                 <span className="text-lg">📈</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.technical_charts", "en")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.technical_charts")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Technical indicators for top movers</p>
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function AnalysisPage() {
                 <span className="text-lg">🏦</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.fundamental_indicators", "en").replace("{symbol}", analysisData?.symbol || "")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.fundamental_indicators").replace("{symbol}", analysisData?.symbol || "")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Key fundamental metrics</p>
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function AnalysisPage() {
               ))}
               {(!analysisData?.fundamental || Object.keys(analysisData.fundamental).length === 0) && (
                 <div className="col-span-full py-8 text-center text-[var(--color-text-muted)] text-sm">
-                  {t("app.analysis.fundamental_not_found", "en")}
+                  {t("app.analysis.fundamental_not_found")}
                 </div>
               )}
             </div>
@@ -229,7 +229,7 @@ export default function AnalysisPage() {
                 <span className="text-lg">💯</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{`${t("app.nav.scoring", "en")} (${analysisData?.symbol || ""})`}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{`${t("app.nav.scoring")} (${analysisData?.symbol || ""})`}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">AI-powered stock scoring</p>
               </div>
             </div>
@@ -237,27 +237,27 @@ export default function AnalysisPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-5">
                   <div>
-                    <div className="text-xs text-[var(--color-text-muted)]">{t("app.analysis.overall_score", "en")}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">{t("app.analysis.overall_score")}</div>
                     <div className="text-3xl font-bold bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">
                       {analysisData.scoring.overall_score?.toLocaleString("en-US")}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-[var(--color-text-muted)]">{t("app.analysis.grade", "en")}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">{t("app.analysis.grade")}</div>
                     <div className="text-2xl font-bold text-[var(--color-text-primary)]">{analysisData.scoring.grade}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {Object.entries(analysisData.scoring.dimensions || {}).map(([dim, score]: [string, unknown], i) => (
                     <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/30 p-3">
-                      <div className="text-xs text-[var(--color-text-muted)] capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`, "en")}</div>
+                      <div className="text-xs text-[var(--color-text-muted)] capitalize">{t(`app.scoring.dimensions.${dim.toLowerCase()}`)}</div>
                       <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">{typeof score === "number" ? score.toLocaleString("en-US") : String(score ?? "—")}</div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.scoring_not_found", "en")}</p>
+              <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.scoring_not_found")}</p>
             )}
           </div>
         )}
@@ -270,7 +270,7 @@ export default function AnalysisPage() {
                 <span className="text-lg">🎭</span>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.sentiment_title", "en").replace("{symbol}", analysisData?.symbol || "")}</h3>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.analysis.sentiment_title").replace("{symbol}", analysisData?.symbol || "")}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Market sentiment analysis</p>
               </div>
             </div>
@@ -278,19 +278,19 @@ export default function AnalysisPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   {
-                    label: t("app.analysis.sentiment_labels.overall", "en"),
-                    value: t(`app.analysis.sentiment_values.${analysisData.sentiment.label?.toLowerCase()}`, "en"),
+                    label: t("app.analysis.sentiment_labels.overall"),
+                    value: t(`app.analysis.sentiment_values.${analysisData.sentiment.label?.toLowerCase()}`),
                     score: analysisData.sentiment.confidence,
                     color: analysisData.sentiment.label === "positive" ? "text-[var(--color-success)]" : analysisData.sentiment.label === "negative" ? "text-[var(--color-error)]" : "text-[var(--color-text-muted)]"
                   },
                   {
-                    label: t("app.analysis.sentiment_labels.news_count", "en"),
-                    value: t("app.analysis.sentiment_values.news_items", "en").replace("{count}", analysisData.sentiment.news_count?.toLocaleString("en-US") || "0"),
+                    label: t("app.analysis.sentiment_labels.news_count"),
+                    value: t("app.analysis.sentiment_values.news_items").replace("{count}", analysisData.sentiment.news_count?.toLocaleString("en-US") || "0"),
                     score: null,
                     color: "text-[var(--color-text-primary)]"
                   },
                   {
-                    label: t("app.analysis.sentiment_labels.confidence", "en"),
+                    label: t("app.analysis.sentiment_labels.confidence"),
                      value: `${((analysisData.sentiment.confidence ?? 0) * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}%`,
                     score: null,
                     color: "text-[var(--color-primary)]"
@@ -303,7 +303,7 @@ export default function AnalysisPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.sentiment_not_found", "en")}</p>
+              <p className="text-[var(--color-text-muted)] py-8 text-center text-sm">{t("app.analysis.sentiment_not_found")}</p>
             )}
           </div>
         )}

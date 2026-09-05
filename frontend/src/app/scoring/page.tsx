@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
-import { useAuthStore } from "@/store/useAuthStore";
 import { fetchSymbols, fetchScoring, fetchPriceHistory } from "@/lib/api/stocks";
 
 interface ScoredStock {
@@ -47,7 +46,6 @@ const mlCoefficients = [
 ];
 
 export default function ScoringPage() {
-  const { currentLang } = useAuthStore();
   const [expandedDim, setExpandedDim] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
@@ -131,7 +129,7 @@ export default function ScoringPage() {
   const dimensionDetails = [
     {
       id: "fundamental",
-      title: `${t("app.scoring.dimensions.fundamental", currentLang)} (25%)`,
+      title: `${t("app.scoring.dimensions.fundamental")} (25%)`,
       weight: 25,
       color: "bg-primary/10 border-primary/30",
       icon: "🏦",
@@ -145,7 +143,7 @@ export default function ScoringPage() {
     },
     {
       id: "technical",
-      title: `${t("app.scoring.dimensions.technical", currentLang)} (20%)`,
+      title: `${t("app.scoring.dimensions.technical")} (20%)`,
       weight: 20,
       color: "bg-success/10 border-success/30",
       icon: "📈",
@@ -159,7 +157,7 @@ export default function ScoringPage() {
     },
     {
       id: "sentiment",
-      title: `${t("app.scoring.dimensions.sentiment", currentLang)} (15%)`,
+      title: `${t("app.scoring.dimensions.sentiment")} (15%)`,
       weight: 15,
       color: "bg-primary/10 border-primary/30",
       icon: "🎭",
@@ -171,7 +169,7 @@ export default function ScoringPage() {
     },
     {
       id: "risk",
-      title: `${t("app.scoring.dimensions.risk", currentLang)} (20%)`,
+      title: `${t("app.scoring.dimensions.risk")} (20%)`,
       weight: 20,
       color: "bg-error/10 border-error/30",
       icon: "🛡️",
@@ -184,7 +182,7 @@ export default function ScoringPage() {
     },
     {
       id: "macro",
-      title: `${t("app.scoring.dimensions.macro", currentLang)} (10%)`,
+      title: `${t("app.scoring.dimensions.macro")} (10%)`,
       weight: 10,
       color: "bg-secondary/10 border-secondary/30",
       icon: "🌍",
@@ -196,7 +194,7 @@ export default function ScoringPage() {
     },
     {
       id: "ai",
-      title: `${t("app.scoring.dimensions.ai", currentLang)} (10%)`,
+      title: `${t("app.scoring.dimensions.ai")} (10%)`,
       weight: 10,
       color: "bg-primary/10 border-primary/30",
       icon: "🤖",

@@ -37,7 +37,7 @@ export default function ProfilePage() {
 
   const validatePasswords = (): boolean => {
     if (newPassword && confirmPassword && newPassword !== confirmPassword) {
-      setConfirmPasswordError(t("app.settings.profile.error_password_match", "en"));
+      setConfirmPasswordError(t("app.settings.profile.error_password_match"));
       return false;
     }
     setConfirmPasswordError("");
@@ -59,7 +59,7 @@ export default function ProfilePage() {
           useAuthStore.setState({ user: profile.data });
         }
       } else {
-        throw new Error(t("app.settings.profile.error_save", "en"));
+        throw new Error(t("app.settings.profile.error_save"));
       }
     } catch (error) {
       addToast({ type: "error", message: getApiErrorMessage(error) });
@@ -69,9 +69,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <NewDashboardShell title={t("app.settings.profile.title", "en")}>
+    <NewDashboardShell title={t("app.settings.profile.title")}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-        <Card icon="Profile" title={t("app.settings.profile.user_profile", "en")} className="lg:col-span-3">
+        <Card icon="Profile" title={t("app.settings.profile.user_profile")} className="lg:col-span-3">
           <div className="flex items-center gap-6 py-2">
             <div className="w-24 h-24 rounded-full bg-neutral flex items-center justify-center text-4xl border-4 border-surface shadow-lg">
               Profile
@@ -81,46 +81,46 @@ export default function ProfilePage() {
               <p className="text-muted-foreground font-mono">{user?.email || "user@example.com"}</p>
               <div className="mt-3 flex gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-error/10 text-error border border-error/20">
-                  {t("app.settings.profile.member_since", "en").replace("{date}", "2023/01/01")}
+                  {t("app.settings.profile.member_since").replace("{date}", "2023/01/01")}
                 </span>
               </div>
             </div>
           </div>
         </Card>
 
-        <Card icon="📄" title={t("app.settings.profile.account_info", "en")} className="lg:col-span-1">
+        <Card icon="📄" title={t("app.settings.profile.account_info")} className="lg:col-span-1">
           <div className="space-y-6">
             <div>
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.email", "en")}</div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.email")}</div>
               <span className="text-sm font-medium">{user?.email || "user@example.com"}</span>
             </div>
 
             <div>
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.display_name", "en")}</div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.display_name")}</div>
               <span className="text-sm font-medium">{fullName}</span>
             </div>
 
             <div>
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.login_status", "en")}</div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.login_status")}</div>
               <span className={cn(
                 "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold",
                 user?.is_active ? "bg-success/10 text-success" : "bg-error/10 text-error"
               )}>
-                {user?.is_active ? t("app.settings.profile.active", "en") : t("app.settings.profile.inactive", "en")}
+                {user?.is_active ? t("app.settings.profile.active") : t("app.settings.profile.inactive")}
               </span>
             </div>
 
             <div>
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.joined_date", "en")}</div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.joined_date")}</div>
               <span className="text-sm font-medium">2023/01/01</span>
             </div>
           </div>
         </Card>
 
-        <Card icon="🔐" title={t("app.settings.profile.security_settings", "en")} className="lg:col-span-2">
+        <Card icon="🔐" title={t("app.settings.profile.security_settings")} className="lg:col-span-2">
           <form onSubmit={handleSave} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold mb-2">{t("app.settings.profile.full_name", "en")}</label>
+              <label className="block text-sm font-bold mb-2">{t("app.settings.profile.full_name")}</label>
               <input
                 type="text"
                 value={fullName}
@@ -131,7 +131,7 @@ export default function ProfilePage() {
 
             <div className="pt-4 border-t border-border/60">
               <h4 className="font-bold mb-4 flex items-center gap-2">
-                <span>🔑</span> {t("app.settings.profile.change_password", "en")}
+                <span>🔑</span> {t("app.settings.profile.change_password")}
               </h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,7 +163,7 @@ export default function ProfilePage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={loading}
                     className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
-                    placeholder={t("app.settings.profile.new_password", "en")}
+                    placeholder={t("app.settings.profile.new_password")}
                   />
                   <input
                     type={showPassword ? "text" : "password"}
@@ -171,7 +171,7 @@ export default function ProfilePage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={loading}
                     className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
-                    placeholder={t("app.settings.profile.confirm_password", "en")}
+                    placeholder={t("app.settings.profile.confirm_password")}
                   />
                 </div>
               </div>
@@ -189,7 +189,7 @@ export default function ProfilePage() {
                 disabled={loading}
                 className="w-full md:w-auto px-8"
               >
-                {loading ? t("app.settings.profile.saving", "en") : t("app.settings.profile.save_changes", "en")}
+                {loading ? t("app.settings.profile.saving") : t("app.settings.profile.save_changes")}
               </Button>
             </div>
           </form>

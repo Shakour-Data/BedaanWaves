@@ -16,85 +16,85 @@ export default function MethodologyPage() {
   const analysisMethods = [
     {
       id: "scoring",
-      title: t("app.methodology.methods.scoring.title", "en"),
+      title: t("app.methodology.methods.scoring.title"),
       icon: "💯",
-      description: t("app.methodology.methods.scoring.desc", "en"),
-      steps: t("app.methodology.methods.scoring.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.scoring.details", "en"),
+      description: t("app.methodology.methods.scoring.desc"),
+      steps: t("app.methodology.methods.scoring.steps") as unknown as string[],
+      details: t("app.methodology.methods.scoring.details"),
       apiEndpoints: ["/analysis/scoring", "/analysis/scoring/rank"]
     },
     {
       id: "ranking",
-      title: t("app.methodology.methods.ranking.title", "en"),
+      title: t("app.methodology.methods.ranking.title"),
       icon: "🏆",
-      description: t("app.methodology.methods.ranking.desc", "en"),
-      steps: t("app.methodology.methods.ranking.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.ranking.details", "en"),
+      description: t("app.methodology.methods.ranking.desc"),
+      steps: t("app.methodology.methods.ranking.steps") as unknown as string[],
+      details: t("app.methodology.methods.ranking.details"),
       apiEndpoints: ["/analysis/scoring/rank"]
     },
     {
       id: "technical",
-      title: t("app.methodology.methods.technical.title", "en"),
+      title: t("app.methodology.methods.technical.title"),
       icon: "📈",
-      description: t("app.methodology.methods.technical.desc", "en"),
-      steps: t("app.methodology.methods.technical.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.technical.details", "en"),
+      description: t("app.methodology.methods.technical.desc"),
+      steps: t("app.methodology.methods.technical.steps") as unknown as string[],
+      details: t("app.methodology.methods.technical.details"),
       apiEndpoints: ["/analysis/technical/{symbol}"]
     },
     {
       id: "fundamental",
-      title: t("app.methodology.methods.fundamental.title", "en"),
+      title: t("app.methodology.methods.fundamental.title"),
       icon: "🏦",
-      description: t("app.methodology.methods.fundamental.desc", "en"),
-      steps: t("app.methodology.methods.fundamental.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.fundamental.details", "en"),
+      description: t("app.methodology.methods.fundamental.desc"),
+      steps: t("app.methodology.methods.fundamental.steps") as unknown as string[],
+      details: t("app.methodology.methods.fundamental.details"),
       apiEndpoints: ["/analysis/fundamental/{symbol}"]
     },
     {
       id: "momentum",
-      title: t("app.methodology.methods.momentum.title", "en"),
+      title: t("app.methodology.methods.momentum.title"),
       icon: "🚀",
-      description: t("app.methodology.methods.momentum.desc", "en"),
-      steps: t("app.methodology.methods.momentum.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.momentum.details", "en"),
+      description: t("app.methodology.methods.momentum.desc"),
+      steps: t("app.methodology.methods.momentum.steps") as unknown as string[],
+      details: t("app.methodology.methods.momentum.details"),
       apiEndpoints: ["/analysis/momentum/{symbol}"]
     },
     {
       id: "risk",
-      title: t("app.methodology.methods.risk.title", "en"),
+      title: t("app.methodology.methods.risk.title"),
       icon: "[Security]",
-      description: t("app.methodology.methods.risk.desc", "en"),
-      steps: t("app.methodology.methods.risk.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.risk.details", "en"),
+      description: t("app.methodology.methods.risk.desc"),
+      steps: t("app.methodology.methods.risk.steps") as unknown as string[],
+      details: t("app.methodology.methods.risk.details"),
       apiEndpoints: ["/analysis/risk/{symbol}", "/analysis/volatility/{symbol}"]
     },
     {
       id: "sentiment",
-      title: t("app.methodology.methods.sentiment.title", "en"),
+      title: t("app.methodology.methods.sentiment.title"),
       icon: "🎭",
-      description: t("app.methodology.methods.sentiment.desc", "en"),
-      steps: t("app.methodology.methods.sentiment.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.sentiment.details", "en"),
+      description: t("app.methodology.methods.sentiment.desc"),
+      steps: t("app.methodology.methods.sentiment.steps") as unknown as string[],
+      details: t("app.methodology.methods.sentiment.details"),
       apiEndpoints: ["/analysis/sentiment/{symbol}"]
     },
     {
       id: "ai",
-      title: t("app.methodology.methods.ai.title", "en"),
+      title: t("app.methodology.methods.ai.title"),
       icon: "🤖",
-      description: t("app.methodology.methods.ai.desc", "en"),
-      steps: t("app.methodology.methods.ai.steps", "en") as unknown as string[],
-      details: t("app.methodology.methods.ai.details", "en"),
+      description: t("app.methodology.methods.ai.desc"),
+      steps: t("app.methodology.methods.ai.steps") as unknown as string[],
+      details: t("app.methodology.methods.ai.details"),
       apiEndpoints: ["/analysis/prediction/{symbol}"]
     }
   ];
 
   return (
-    <NewDashboardShell title={t("app.methodology.title", "en")}>
+    <NewDashboardShell title={t("app.methodology.title")}>
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <TarotCard icon="📘" title={t("app.methodology.overview", "en")}>
+        <TarotCard icon="📘" title={t("app.methodology.overview")}>
           <p className="text-muted-foreground text-justify leading-relaxed">
-            {t("app.methodology.desc", "en")}
+            {t("app.methodology.desc")}
           </p>
         </TarotCard>
 
@@ -127,7 +127,7 @@ export default function MethodologyPage() {
                 <div className="bg-neutral/30 p-4 rounded-xl border border-border/40">
                   <h4 className="font-bold text-secondary mb-3 flex items-center gap-2">
                     <span>📝</span>
-                    {t("app.methodology.process_steps", "en")}
+                    {t("app.methodology.process_steps")}
                   </h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
                     {Array.isArray(method.steps) && method.steps.map((step, i) => (
@@ -140,7 +140,7 @@ export default function MethodologyPage() {
                 <div>
                   <h4 className="font-bold text-secondary mb-2 flex items-center gap-2">
                     <span>Search</span>
-                    {t("app.methodology.technical_details", "en")}
+                    {t("app.methodology.technical_details")}
                   </h4>
                   <p className="text-sm text-muted-foreground leading-relaxed">{method.details}</p>
                 </div>
@@ -150,7 +150,7 @@ export default function MethodologyPage() {
                   <div className="bg-neutral/50 p-4 rounded-xl border border-border/20">
                     <h4 className="font-bold text-secondary mb-3 flex items-center gap-2">
                       <span>🔗</span>
-                      {t("app.methodology.api_endpoints", "en")}
+                      {t("app.methodology.api_endpoints")}
                     </h4>
                     <ul className="space-y-1 text-xs font-mono bg-background/50 p-2 rounded-lg">
                       {method.apiEndpoints.map((endpoint, i) => (
@@ -170,37 +170,37 @@ export default function MethodologyPage() {
         {/* Secondary Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Capabilities */}
-          <TarotCard icon="🚀" title={t("app.methodology.key_capabilities", "en")}>
+          <TarotCard icon="🚀" title={t("app.methodology.key_capabilities")}>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.coverage", "en")}</span>
+                <span>{t("app.methodology.coverage")}</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.realtime", "en")}</span>
+                <span>{t("app.methodology.realtime")}</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.ml_optimized", "en")}</span>
+                <span>{t("app.methodology.ml_optimized")}</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-green-500">✅</span>
-                <span>{t("app.methodology.customizable", "en")}</span>
+                <span>{t("app.methodology.customizable")}</span>
               </li>
             </ul>
           </TarotCard>
 
           {/* Disclaimers */}
-          <TarotCard icon="⚠️" title={t("app.methodology.important_notes", "en")}>
+          <TarotCard icon="⚠️" title={t("app.methodology.important_notes")}>
             <div className="space-y-3 text-sm">
               <div>
-                <h5 className="font-medium mb-1">{t("app.methodology.disclaimer_title", "en")}</h5>
-                <p className="text-muted-foreground">{t("app.methodology.disclaimer_desc", "en")}</p>
+                <h5 className="font-medium mb-1">{t("app.methodology.disclaimer_title")}</h5>
+                <p className="text-muted-foreground">{t("app.methodology.disclaimer_desc")}</p>
               </div>
               <div>
-                <h5 className="font-medium mb-1">{t("app.methodology.accuracy_title", "en")}</h5>
-                <p className="text-muted-foreground">{t("app.methodology.accuracy_desc", "en")}</p>
+                <h5 className="font-medium mb-1">{t("app.methodology.accuracy_title")}</h5>
+                <p className="text-muted-foreground">{t("app.methodology.accuracy_desc")}</p>
               </div>
             </div>
           </TarotCard>
@@ -209,10 +209,10 @@ export default function MethodologyPage() {
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-3">
           <Link href="/scoring">
-            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.explore_scoring", "en")}</PrimaryButton>
+            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.explore_scoring")}</PrimaryButton>
           </Link>
           <Link href="/analysis">
-            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.run_analysis", "en")}</PrimaryButton>
+            <PrimaryButton className="w-full cursor-pointer">{t("app.methodology.run_analysis")}</PrimaryButton>
           </Link>
         </div>
       </div>
