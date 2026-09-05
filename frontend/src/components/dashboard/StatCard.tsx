@@ -1,14 +1,13 @@
 import { cn } from "@/lib/cn";
 import type { MarketStat } from "@/lib/dashboard-data";
-import { ArrowUpIcon, ArrowDownIcon } from "@/components/icons/Icons";
 import { Badge } from "@/components/ui/Badge";
 
 export function ChangeBadge({ value }: { value: number }) {
   const up = value >= 0;
   return (
     <Badge variant={up ? "success" : "error"} size="sm">
-      <span className="flex items-center gap-1">
-        {up ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
+      <span className="flex items-center gap-1 font-mono tabular-nums">
+        {up ? "\u25B2" : "\u25BC"}
         {Math.abs(value).toFixed(2)}%
       </span>
     </Badge>
