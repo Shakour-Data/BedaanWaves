@@ -77,7 +77,7 @@ export default function StockChartsPage() {
       label: dim.label,
       color: dim.color,
       data: history.map((pt) => {
-        const raw = dim.key === "overall" ? pt.overall : pt[dim.key];
+        const raw = dim.key === "overall" ? pt.overall : (pt.dimension_scores?.[dim.key] ?? pt[dim.key]);
         return {
           time: pt.date,
           value: dim.key === "overall" ? num(raw) : (raw === undefined ? 0 : num(raw)),

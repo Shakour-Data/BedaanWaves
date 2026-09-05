@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -24,6 +24,7 @@ import {
   fetchSubAspectTrend,
   fetchCoefficientHistoryByLevel,
   type LevelTrendResponse,
+  type LevelTrendPoint,
   type CoefficientHistoryByLevelResponse,
 } from "@/lib/api/dashboard";
 
@@ -68,7 +69,6 @@ export default function StockScoringPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [drill, setDrill] = useState<DrillState>({ level: 1, selectedKey: null, selectedLabel: null });
-  const [trendFilter, setTrendFilter] = useState<string>("overall");
 
   const [subDimTrend, setSubDimTrend] = useState<LevelTrendResponse | null>(null);
   const [aspectTrend, setAspectTrend] = useState<LevelTrendResponse | null>(null);
@@ -108,31 +108,39 @@ export default function StockScoringPage() {
     };
   }, [symbol]);
 
-  const loadSubLevelData = useCallback(async () => {
-    if (!hierarchy) return;
-    const latestDate = hierarchy.timestamp ? new Date(hierarchy.timestamp).toISOString().split("T")[0] : null;
-    const baseOptions = latestDate ? { endDate: latestDate } : { latest: true };
-
-    const [subDim, asp, subAsp, subDimCoeff, aspCoeff, subAspCoeff] = await Promise.allSettled([
-      fetchSubDimensionTrend(30, "NASDAQ", drill.level >= 2 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-      fetchAspectTrend(30, "NASDAQ", drill.level >= 3 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-      fetchSubAspectTrend(30, "NASDAQ", drill.level >= 4 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-      fetchCoefficientHistoryByLevel("sub_dimension", 30, "NASDAQ", drill.level >= 2 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-      fetchCoefficientHistoryByLevel("aspect", 30, "NASDAQ", drill.level >= 3 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-      fetchCoefficientHistoryByLevel("sub_aspect", 30, "NASDAQ", drill.level >= 4 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-    ]);
-
-    if (subDim.status === "fulfilled") setSubDimTrend(subDim.value);
-    if (asp.status === "fulfilled") setAspectTrend(asp.value);
-    if (subAsp.status === "fulfilled") setSubAspectTrend(subAsp.value);
-    if (subDimCoeff.status === "fulfilled") setSubDimCoeffHistory(subDimCoeff.value);
-    if (aspCoeff.status === "fulfilled") setAspectCoeffHistory(aspCoeff.value);
-    if (subAspCoeff.status === "fulfilled") setSubAspectCoeffHistory(subAspCoeff.value);
-  }, [hierarchy, drill.level, drill.selectedKey]);
-
   useEffect(() => {
-    loadSubLevelData();
-  }, [loadSubLevelData]);
+    if (!hierarchy) return;
+    const hierarchyData = hierarchy;
+    let active = true;
+
+    async function load() {
+      const latestDate = hierarchyData.timestamp ? new Date(hierarchyData.timestamp).toISOString().split("T")[0] : null;
+      const baseOptions = latestDate ? { endDate: latestDate } : { latest: true };
+
+      const [subDim, asp, subAsp, subDimCoeff, aspCoeff, subAspCoeff] = await Promise.allSettled([
+        fetchSubDimensionTrend(30, "NASDAQ", baseOptions),
+        fetchAspectTrend(30, "NASDAQ", baseOptions),
+        fetchSubAspectTrend(30, "NASDAQ", baseOptions),
+        fetchCoefficientHistoryByLevel("sub_dimension", 30, "NASDAQ", drill.level >= 2 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
+        fetchCoefficientHistoryByLevel("aspect", 30, "NASDAQ", drill.level >= 3 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
+        fetchCoefficientHistoryByLevel("sub_aspect", 30, "NASDAQ", drill.level >= 4 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
+      ]);
+
+      if (!active) return;
+      if (subDim.status === "fulfilled") setSubDimTrend(subDim.value);
+      if (asp.status === "fulfilled") setAspectTrend(asp.value);
+      if (subAsp.status === "fulfilled") setSubAspectTrend(subAsp.value);
+      if (subDimCoeff.status === "fulfilled") setSubDimCoeffHistory(subDimCoeff.value);
+      if (aspCoeff.status === "fulfilled") setAspectCoeffHistory(aspCoeff.value);
+      if (subAspCoeff.status === "fulfilled") setSubAspectCoeffHistory(subAspCoeff.value);
+    }
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, [hierarchy, drill.level, drill.selectedKey]);
 
   const itemsForLevel = useMemo(() => {
     if (!hierarchy) return [];
@@ -142,12 +150,6 @@ export default function StockScoringPage() {
     return hierarchy.level4;
   }, [hierarchy, drill.level]);
 
-  useEffect(() => {
-    if (itemsForLevel.length > 0 && !itemsForLevel.find((i) => i.key === trendFilter)) {
-      setTrendFilter(itemsForLevel[0].key);
-    }
-  }, [itemsForLevel, trendFilter]);
-
   const currentCoefficients = useMemo(() => {
     if (!coefficients) return [];
     if (drill.level === 1) return coefficients.filter((c) => c.level === 1);
@@ -156,30 +158,134 @@ export default function StockScoringPage() {
     return coefficients.filter((c) => c.level === 4 && c.key.startsWith(drill.selectedKey || ""));
   }, [coefficients, drill.level, drill.selectedKey]);
 
-  const trendSeries = useMemo(() => {
-    if (!history) return [];
-    return [
-      {
-        key: trendFilter,
-        label: itemsForLevel.find((i) => i.key === trendFilter)?.label || trendFilter,
-        color: "#2563EB",
-        data: history.map((pt) => ({
-          time: pt.date,
-          value: num(pt[trendFilter] !== undefined ? pt[trendFilter] : pt.overall),
-        })),
-      },
-    ];
-  }, [history, trendFilter, itemsForLevel]);
-
   const spiderData = useMemo(() => itemsForLevel.map((i) => ({ label: i.label, value: i.score })), [itemsForLevel]);
 
-  const scoreDeltas = useMemo(() => {
-    if (!history || history.length < 2) return [];
-    return history.slice(1).map((pt, i) => ({
-      date: pt.date,
-      value: num(pt[trendFilter] !== undefined ? pt[trendFilter] : pt.overall) - num(history[i][trendFilter] !== undefined ? history[i][trendFilter] : history[i].overall),
+  const l1TrendSeries = useMemo(() => {
+    if (!history || !hierarchy || drill.level !== 1) return [];
+    return hierarchy.level1.map((dim, i) => ({
+      key: dim.key,
+      label: dim.label,
+      color: PALETTE[i % PALETTE.length],
+      data: history.map((pt) => ({
+        time: pt.date,
+        value: num(pt.dimension_scores?.[dim.key] ?? pt.overall),
+      })),
     }));
-  }, [history, trendFilter]);
+  }, [history, hierarchy, drill.level]);
+
+  const l1ChangeData = useMemo(() => {
+    if (!history || !hierarchy || history.length < 2 || drill.level !== 1) return [];
+    return hierarchy.level1.map((dim, i) => ({
+      key: dim.key,
+      label: dim.label,
+      color: PALETTE[i % PALETTE.length],
+      data: history.slice(1).map((pt, j) => ({
+        time: pt.date,
+        value: num(pt.dimension_scores?.[dim.key] ?? pt.overall) - num(history[j].dimension_scores?.[dim.key] ?? history[j].overall),
+      })),
+    }));
+  }, [history, hierarchy, drill.level]);
+
+  const scoreMapForLevel = (pt: ScoreHistoryPoint): Record<string, number | string> | undefined => {
+    if (drill.level === 1) return pt.dimension_scores;
+    if (drill.level === 2) return pt.sub_dimension_scores;
+    if (drill.level === 3) return pt.aspect_scores;
+    return pt.sub_aspect_scores;
+  };
+
+  const perStockTrendSeries = useMemo(() => {
+    if (!history || !itemsForLevel.length) return [];
+    return itemsForLevel.map((item, i) => ({
+      key: item.key,
+      label: item.label,
+      color: PALETTE[i % PALETTE.length],
+      data: history.map((pt) => ({
+        time: pt.date,
+        value: num(scoreMapForLevel(pt)?.[item.key] ?? pt.overall),
+      })),
+    }));
+  }, [history, itemsForLevel, drill.level]);
+
+  const perStockChangeSeries = useMemo(() => {
+    if (!history || history.length < 2 || !itemsForLevel.length) return [];
+    return itemsForLevel.map((item, i) => ({
+      key: item.key,
+      label: item.label,
+      color: PALETTE[i % PALETTE.length],
+      data: history.slice(1).map((pt, j) => ({
+        time: pt.date,
+        value: num(scoreMapForLevel(pt)?.[item.key] ?? pt.overall) - num(scoreMapForLevel(history[j])?.[item.key] ?? history[j].overall),
+      })),
+    }));
+  }, [history, itemsForLevel, drill.level]);
+
+  const perStockChangeFlat = useMemo(() => {
+    if (!perStockChangeSeries.length) return [];
+    const selected = perStockChangeSeries[0];
+    return selected.data.map((pt) => ({
+      time: pt.time,
+      value: pt.value,
+      color: pt.value >= 0 ? "#10b981" : "#ef4444",
+    }));
+  }, [perStockChangeSeries]);
+
+  const getTrendResponse = (): LevelTrendResponse | null => {
+    if (drill.level === 1) return null;
+    if (drill.level === 2) return subDimTrend;
+    if (drill.level === 3) return aspectTrend;
+    return subAspectTrend;
+  };
+
+  const getCoeffHistory = (): CoefficientHistoryByLevelResponse | null => {
+    if (drill.level === 1) return null;
+    if (drill.level === 2) return subDimCoeffHistory;
+    if (drill.level === 3) return aspectCoeffHistory;
+    return subAspectCoeffHistory;
+  };
+
+  const trendResponse = getTrendResponse();
+  const coeffHistoryResponse = getCoeffHistory();
+
+  const trendSeriesForLevel = useMemo(() => {
+    if (!trendResponse || trendResponse.series.length === 0) return [];
+    const keys = trendResponse.keys.filter((k) => trendResponse.series.some((pt: LevelTrendPoint) => (pt.avg_scores[k] ?? 0) > 0));
+    return keys.map((key, i) => ({
+      key,
+      label: key,
+      color: PALETTE[i % PALETTE.length],
+      data: trendResponse.series.map((pt: LevelTrendPoint) => ({ time: pt.date, value: pt.avg_scores[key] ?? 0 })),
+    }));
+  }, [trendResponse]);
+
+  const changeSeriesForLevel = useMemo(() => {
+    if (!trendResponse || trendResponse.series.length === 0) return [];
+    return trendResponse.series.map((pt: LevelTrendPoint) => {
+      const total = Object.values(pt.score_changes ?? {}).reduce((sum, v) => sum + v, 0);
+      return { time: pt.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
+    });
+  }, [trendResponse]);
+
+  const coeffSeriesForLevel = useMemo(() => {
+    if (!coeffHistoryResponse || coeffHistoryResponse.series.length === 0) return [];
+    const dims = coeffHistoryResponse.series[0]?.metrics ? Object.keys(coeffHistoryResponse.series[0].metrics) : [];
+    return dims.map((dim, i) => ({
+      key: dim,
+      label: dim,
+      color: PALETTE[i % PALETTE.length],
+      data: coeffHistoryResponse.series.map((p) => ({
+        time: p.date,
+        value: p.metrics?.[dim] ?? 0,
+      })),
+    }));
+  }, [coeffHistoryResponse]);
+
+  const coeffChangeSeries = useMemo(() => {
+    if (!coeffHistoryResponse || coeffHistoryResponse.series.length === 0) return [];
+    return coeffHistoryResponse.series.map((p) => {
+      const total = Object.values(p.metric_changes ?? {}).reduce((sum, v) => sum + v, 0);
+      return { time: p.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
+    });
+  }, [coeffHistoryResponse]);
 
   const handleDrillDown = (item: { key: string; label: string }) => {
     setDrill({
@@ -211,64 +317,6 @@ export default function StockScoringPage() {
       </TarotCard>
     );
   }
-
-  const getTrendResponse = (): LevelTrendResponse | null => {
-    if (drill.level === 1) return null;
-    if (drill.level === 2) return subDimTrend;
-    if (drill.level === 3) return aspectTrend;
-    return subAspectTrend;
-  };
-
-  const getCoeffHistory = (): CoefficientHistoryByLevelResponse | null => {
-    if (drill.level === 1) return null;
-    if (drill.level === 2) return subDimCoeffHistory;
-    if (drill.level === 3) return aspectCoeffHistory;
-    return subAspectCoeffHistory;
-  };
-
-  const trendResponse = getTrendResponse();
-  const coeffHistoryResponse = getCoeffHistory();
-
-  const trendSeriesForLevel = useMemo(() => {
-    if (!trendResponse || trendResponse.series.length === 0) return [];
-    const keys = trendResponse.keys.filter((k) => trendResponse.series.some((pt) => (pt.avg_scores[k] ?? 0) > 0));
-    return keys.map((key, i) => ({
-      key,
-      label: key,
-      color: PALETTE[i % PALETTE.length],
-      data: trendResponse.series.map((pt) => ({ time: pt.date, value: pt.avg_scores[key] ?? 0 })),
-    }));
-  }, [trendResponse]);
-
-  const changeSeriesForLevel = useMemo(() => {
-    if (!trendResponse || trendResponse.series.length === 0) return [];
-    return trendResponse.series.map((pt) => {
-      const total = Object.values(pt.score_changes ?? {}).reduce((sum, v) => sum + v, 0);
-      return { time: pt.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
-    });
-  }, [trendResponse]);
-
-  const coeffSeriesForLevel = useMemo(() => {
-    if (!coeffHistoryResponse || coeffHistoryResponse.series.length === 0) return [];
-    const dims = coeffHistoryResponse.series[0]?.metrics ? Object.keys(coeffHistoryResponse.series[0].metrics) : [];
-    return dims.map((dim, i) => ({
-      key: dim,
-      label: dim,
-      color: PALETTE[i % PALETTE.length],
-      data: coeffHistoryResponse.series.map((p) => ({
-        time: p.date,
-        value: p.metrics?.[dim] ?? 0,
-      })),
-    }));
-  }, [coeffHistoryResponse]);
-
-  const coeffChangeSeries = useMemo(() => {
-    if (!coeffHistoryResponse || coeffHistoryResponse.series.length === 0) return [];
-    return coeffHistoryResponse.series.map((p) => {
-      const total = Object.values(p.metric_changes ?? {}).reduce((sum, v) => sum + v, 0);
-      return { time: p.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
-    });
-  }, [coeffHistoryResponse]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -375,8 +423,57 @@ export default function StockScoringPage() {
           )}
         </TarotCard>
 
-        {trendSeriesForLevel.length > 0 && (
+        {l1TrendSeries.length > 0 && drill.level === 1 && (
+          <TarotCard title={`${LEVEL_LABELS[1]} — Score Trend (30-Day)`}>
+            <ScoreTrendChart
+              showLegend
+              series={l1TrendSeries}
+              height={280}
+            />
+          </TarotCard>
+        )}
+
+        {l1ChangeData.length > 0 && drill.level === 1 && (
+          <TarotCard title={`${LEVEL_LABELS[1]} — Score Changes (Daily Delta)`}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {l1ChangeData.map((series) => (
+                <div key={series.key} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: series.color }} />
+                    <span className="text-xs font-medium text-[var(--color-text-secondary)]">{series.label}</span>
+                  </div>
+                  <ColumnChart
+                    data={series.data}
+                    height={140}
+                  />
+                </div>
+              ))}
+            </div>
+          </TarotCard>
+        )}
+
+        {perStockTrendSeries.length > 0 && drill.level > 1 && (
           <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (30-Day)`}>
+            <ScoreTrendChart
+              showLegend
+              series={perStockTrendSeries}
+              height={280}
+            />
+          </TarotCard>
+        )}
+
+        {perStockChangeFlat.length > 0 && drill.level > 1 && (
+          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (Daily Delta)`}>
+            <ColumnChart
+              data={perStockChangeFlat}
+              height={220}
+              valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+            />
+          </TarotCard>
+        )}
+
+        {trendSeriesForLevel.length > 0 && drill.level > 1 && perStockTrendSeries.length === 0 && (
+          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (30-Day) — Market`}>
             <ScoreTrendChart
               showLegend
               series={trendSeriesForLevel}
@@ -385,8 +482,8 @@ export default function StockScoringPage() {
           </TarotCard>
         )}
 
-        {changeSeriesForLevel.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (Daily Delta)`}>
+        {changeSeriesForLevel.length > 0 && drill.level > 1 && perStockChangeSeries.length === 0 && (
+          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (Daily Delta) — Market`}>
             <ColumnChart
               data={changeSeriesForLevel}
               height={220}
