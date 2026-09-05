@@ -95,6 +95,7 @@ export default function StockScoringPage() {
 
   useEffect(() => {
     if (itemsForLevel.length > 0 && !itemsForLevel.find((i) => i.key === trendFilter)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTrendFilter(itemsForLevel[0].key);
     }
   }, [itemsForLevel, trendFilter]);

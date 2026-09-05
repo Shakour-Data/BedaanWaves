@@ -75,22 +75,20 @@ export default function AlertsPage() {
             );
             const prices = pricesRes.data?.data || {};
 
-            const watchAssets: AssetRow[] = defaultWatchlist.items
-              .filter((item): item is WatchlistItem & { asset: NonNullable<WatchlistItem["asset"]> } => {
-                const sym = item.asset?.symbol;
-                return Boolean(sym && prices[sym]);
-              })
-              .map((item) => {
-                const sym = item.asset.symbol;
-                const priceData = prices[sym];
-                return {
-                  symbol: sym,
-                  name: item.asset.name,
-                  market: item.asset.market as "NASDAQ",
-                  price: priceData.price ?? 0,
-                  changePct: priceData.change_pct ?? 0,
-                };
+            const watchAssets: AssetRow[] = [];
+            for (const item of defaultWatchlist.items) {
+              const sym = item.asset?.symbol;
+              if (!sym) continue;
+              const priceData = prices[sym];
+              if (!priceData) continue;
+              watchAssets.push({
+                symbol: sym,
+                name: item.asset!.name ?? "",
+                market: item.asset!.market as "NASDAQ",
+                price: priceData.price ?? 0,
+                changePct: priceData.change_pct ?? 0,
               });
+            }
             setWatchlistAlerts(watchAssets);
           }
         }
@@ -108,7 +106,7 @@ export default function AlertsPage() {
           }));
         setAlertHistory(history);
 
-      } catch (error) {
+      } catch {
         // Handle error silently
       } finally {
         if (active) setLoading(false);
@@ -117,7 +115,7 @@ export default function AlertsPage() {
 
     loadAlerts();
     return () => { active = false; };
-  }, ["en"]);
+  }, []);
 
   if (loading) {
     return (

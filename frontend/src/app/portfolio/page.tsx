@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { PageLoading } from "@/components/ui/PageLoading";
-import { StatCard } from "@/components/dashboard/StatCard";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
@@ -14,7 +14,30 @@ import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 
 import { t } from "@/lib/i18n";
 
+interface PortfolioSummary {
+  id: string;
+}
+
+interface Holding {
+  asset_id: string;
+  quantity: number;
+  entry_price: number;
+}
+
+interface SymbolItem {
+  id: string;
+  symbol: string;
+  name: string;
+  market: string;
+}
+
+interface PriceItem {
+  price?: number;
+  change_pct?: number;
+}
+
 export default function PortfolioPage() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const [holdings, setHoldings] = useState<AssetRow[]>([]);
   const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
@@ -25,40 +48,47 @@ export default function PortfolioPage() {
     setLoading(true);
     setError(null);
     try {
-      const portfoliosRes = await apiClient.get<any[]>("/portfolio/");
+      const portfoliosRes = await apiClient.get<PortfolioSummary[]>("/portfolio/");
       const portfolios = portfoliosRes.data;
       
       if (portfolios && portfolios.length > 0) {
         const portfolioId = portfolios[0].id;
         
-        const holdingsRes = await apiClient.get<any[]>(`/portfolio/${portfolioId}/holdings`);
+        const holdingsRes = await apiClient.get<Holding[]>(`/portfolio/${portfolioId}/holdings`);
         const holdingsData = holdingsRes.data;
         
-        const symbolsRes = await apiClient.get<any[]>("/market/symbols");
+        const symbolsRes = await apiClient.get<SymbolItem[]>("/market/symbols");
         const allAssets = symbolsRes.data;
-        const assetMap = new Map(allAssets.map((a: any) => [a.id, a]));
+        const assetMap = new Map(allAssets.map((a) => [a.id, a]));
         
         if (holdingsData.length > 0) {
-          const symbols = holdingsData.map((h: any) => assetMap.get(h.asset_id)?.symbol).filter(Boolean);
-          const pricesRes = await apiClient.get<any>(
-            `/market/latest-prices?${symbols.map((s: string) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+          const symbols = holdingsData
+            .map((h) => assetMap.get(h.asset_id)?.symbol)
+            .filter((symbol): symbol is string => Boolean(symbol));
+          const pricesRes = await apiClient.get<{ data: Record<string, PriceItem> }>(
+            `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
           );
           
           const prices = pricesRes.data?.data || {};
           
           const enrichedHoldings: AssetRow[] = holdingsData
-            .map((h: any) => {
+            .map((h) => {
               const asset = assetMap.get(h.asset_id);
-              return {
-                symbol: asset?.symbol || "Unknown",
+              const symbol = asset?.symbol;
+              if (!symbol) return null;
+              const priceData = prices[symbol];
+              const row: AssetRow = {
+                symbol,
                 name: asset?.name || "Unknown",
-                market: asset?.market || "NASDAQ",
-                price: prices[asset?.symbol]?.price ?? h.entry_price ?? 0,
-                changePct: prices[asset?.symbol]?.change_pct ?? 0,
+                market: "NASDAQ",
+                price: priceData?.price ?? h.entry_price ?? 0,
+                changePct: priceData?.change_pct ?? 0,
                 quantity: Number(h.quantity),
-                avg_price: Number(h.entry_price) };
+                avg_price: Number(h.entry_price),
+              };
+              return isNasdaqEquityLike(row) ? row : null;
             })
-            .filter((h: AssetRow) => isNasdaqEquityLike(h));
+            .filter((h): h is AssetRow => h !== null);
           
           setHoldings(enrichedHoldings);
           
@@ -86,15 +116,16 @@ export default function PortfolioPage() {
         setHoldings([]);
         setStats([]);
       }
-    } catch (err) {
+    } catch {
       setError(t("app.portfolio.error_loading", "en"));
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadPortfolio();
     } else {
       setLoading(false);
@@ -162,7 +193,7 @@ export default function PortfolioPage() {
                 <div className="text-4xl mb-4">📭</div>
                 <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">{t("app.portfolio.empty_title", "en")}</p>
                 <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc", "en")}</p>
-                <button onClick={() => window.location.href = "/stocks"} className="rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
+                <button onClick={() => router.push("/stocks")} className="rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
                   {t("app.portfolio.view_stocks", "en")}
                 </button>
               </div>
