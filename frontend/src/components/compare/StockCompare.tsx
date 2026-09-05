@@ -20,8 +20,6 @@ import { cn } from "@/lib/cn";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { useUXStore } from "@/store/useUXStore";
 import { SpiderChart } from "@/components/charts/SpiderChart";
-import { BarChart } from "@/components/charts/BarChart";
-import { LineChart } from "@/components/charts/LineChart";
 import { ComparisonTable } from "./ComparisonTable";
 
 // Types

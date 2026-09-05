@@ -7,7 +7,6 @@ import {
   ColorType,
   CrosshairMode,
   type IChartApi,
-  type UTCTimestamp,
 } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
 import { toTimestamp, createDateTickMarkFormatter, createOrdinalTickMarkFormatter } from "@/components/charts/chart-time";
