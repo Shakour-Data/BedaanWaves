@@ -10,6 +10,7 @@ interface CardProps {
   onClick?: () => void;
   hoverable?: boolean;
   padding?: "sm" | "md" | "lg";
+  icon?: ReactNode;
 }
 
 export function Card({
@@ -21,6 +22,7 @@ export function Card({
   onClick,
   hoverable = false,
   padding = "md",
+  icon,
 }: CardProps) {
   const paddingClasses = {
     sm: "p-4",
@@ -40,6 +42,7 @@ export function Card({
     >
       {(title || subtitle) && (
         <div className="border-b border-border px-6 py-4">
+          {icon && <div className="mb-2 text-muted-foreground">{icon}</div>}
           {title && (
             <h3 className="text-base font-semibold text-foreground">{title}</h3>
           )}
