@@ -70,20 +70,25 @@ export default function AlertsPage() {
             .map((item) => item.asset?.symbol)
             .filter((symbol): symbol is string => Boolean(symbol));
           if (symbols.length) {
-            const pricesRes = await apiClient.get<PriceMap>(
+            const pricesRes = await apiClient.get<{ data: PriceMap }>(
               `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
             );
-            const prices = pricesRes.data?.data || pricesRes.data || {};
+            const prices = pricesRes.data?.data || {};
 
-            const watchAssets = defaultWatchlist.items
-              .filter((item) => prices[item.asset?.symbol as string])
-              .map((item) => ({
-                symbol: item.asset!.symbol,
-                name: item.asset!.name,
+            const watchAssets: AssetRow[] = [];
+            for (const item of defaultWatchlist.items) {
+              const sym = item.asset?.symbol;
+              if (!sym) continue;
+              const priceData = prices[sym];
+              if (!priceData) continue;
+              watchAssets.push({
+                symbol: sym,
+                name: item.asset!.name ?? "",
                 market: item.asset!.market as "NASDAQ",
-                price: prices[item.asset!.symbol].price,
-                changePct: prices[item.asset!.symbol].change_pct,
-              }));
+                price: priceData.price ?? 0,
+                changePct: priceData.change_pct ?? 0,
+              });
+            }
             setWatchlistAlerts(watchAssets);
           }
         }
@@ -101,7 +106,7 @@ export default function AlertsPage() {
           }));
         setAlertHistory(history);
 
-      } catch (error) {
+      } catch {
         // Handle error silently
       } finally {
         if (active) setLoading(false);
@@ -110,7 +115,7 @@ export default function AlertsPage() {
 
     loadAlerts();
     return () => { active = false; };
-  }, ["en"]);
+  }, []);
 
   if (loading) {
     return (

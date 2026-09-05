@@ -457,6 +457,16 @@ BedaanWaves/
    - Use HTTPS (`ENABLE_HTTPS=True`)
    - Configure proper `CORS_ORIGINS`
 
+## Documentation
+
+| Document | Path |
+|----------|------|
+| End-User Guide | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
+| API Reference (all endpoints) | [`docs/05_api/API_REFERENCE.md`](docs/05_api/API_REFERENCE.md) |
+| Swagger UI (interactive) | `http://localhost:3000/api/v1/docs` |
+| ReDoc | `http://localhost:3000/api/v1/redoc` |
+| Architecture Overview | [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md) |
+
 ## Support
 
 For issues and questions:

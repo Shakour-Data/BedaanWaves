@@ -8,7 +8,8 @@ vi.mock('@/lib/password-recovery-api', () => ({
 }));
 
 vi.mock('@/store/useUXStore', () => ({
-  useUXStore: () => ({ addToast: vi.fn() }),
+  useUXStore: (selector: (state: { addToast: ReturnType<typeof vi.fn> }) => unknown) =>
+    selector({ addToast: vi.fn() }),
 }));
 
 vi.mock('next/navigation', () => ({

@@ -61,19 +61,7 @@ SUB_DIMENSION_TO_PARENT: Dict[str, str] = {
 
 
 def _is_sub_dimension_key(key: str) -> bool:
-    """Heuristic: a sub-dimension key is ``<parent>_<sub>``.
-
-    The existing ``RawPerformanceScore`` rows use a flat naming convention
-    (e.g. ``fundamental_price_history``) so we can identify level-2 keys by
-    counting underscores. This avoids accidentally treating aspect names like
-    ``fundamental_aspect_1`` as sub-dimensions even though they also have
-    two underscores.
-    """
-    if key not in SUB_DIMENSION_TO_PARENT:
-        return False
-    parts = key.split("_")
-    # sub-dim keys: ``fundamental_price_history`` (3 parts)
-    return len(parts) == 3
+    return key in SUB_DIMENSION_TO_PARENT
 
 
 def _is_aspect_key(key: str) -> bool:
@@ -318,11 +306,23 @@ class HierarchicalScoreTrendService(BaseService):
         symbol_counts: Dict[date, int] = {}
 
         for row in rows:
-            capture_date = row.capture_date
+            if hasattr(row, "capture_date"):
+                capture_date = row.capture_date
+            elif hasattr(row, "day"):
+                capture_date = row.day
+            else:
+                continue
             if isinstance(capture_date, datetime):
                 capture_date = capture_date.date()
+            if hasattr(capture_date, "isoformat"):
+                capture_date = capture_date.isoformat()
 
-            scores = row._mapping[column_name] or {}
+            if hasattr(row, "_mapping"):
+                scores = row._mapping[column_name] or {}
+            elif hasattr(row, "raw_scores"):
+                scores = row.raw_scores
+            else:
+                scores = {}
             bucket = by_date.setdefault(capture_date, {})
             has_contributing_score = False
 
@@ -348,8 +348,9 @@ class HierarchicalScoreTrendService(BaseService):
                 for key, values in by_date[capture_date].items()
                 if values
             }
+            date_str = capture_date if isinstance(capture_date, str) else capture_date.isoformat()
             series.append({
-                "date": capture_date.isoformat(),
+                "date": date_str,
                 "metrics": metrics,
                 "symbol_count": symbol_counts.get(capture_date, 0),
             })

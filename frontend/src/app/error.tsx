@@ -1,7 +1,6 @@
 "use client";
 
 import { TarotCard } from "@/components/ui/TarotCard";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
 
 export default function Error({

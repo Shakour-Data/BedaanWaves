@@ -68,15 +68,15 @@ export default function AnalysisPage() {
 
         if (!active) return;
 
-        const symbolMap = new Map(symbolsRes.data.map((s) => [s.symbol, s.name]));
+        const symbolMap = new Map(symbolsRes.data.data.map((s) => [s.symbol, s.name]));
         const movers: AssetRow[] = (performersRes.data.data ?? [])
           .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
           .map((p) => ({
             symbol: p.symbol,
             name: symbolMap.get(p.symbol) || p.name || "",
             market: "NASDAQ",
-            price: p.current_price,
-            changePct: p.change_percent,
+            price: p.current_price ?? 0,
+            changePct: p.change_percent ?? 0,
           }));
         setTopMovers(movers.slice(0, 5));
 
@@ -204,11 +204,11 @@ export default function AnalysisPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {Object.entries(analysisData?.fundamental || {}).slice(0, 8).map(([key, value]: [string, any], i) => (
+              {Object.entries(analysisData?.fundamental || {}).slice(0, 8).map(([key, value]: [string, unknown], i) => (
                 <div key={i} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4 text-center">
                   <div className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{key.replace(/_/g, " ")}</div>
                   <div className="text-sm font-bold mt-1 text-[var(--color-text-primary)]">
-                    {typeof value === "number" ? value.toLocaleString("en-US") : value || "—"}
+                     {typeof value === "number" ? value.toLocaleString("en-US") : typeof value === "string" ? value : "—"}
                   </div>
                 </div>
               ))}
@@ -291,7 +291,7 @@ export default function AnalysisPage() {
                   },
                   {
                     label: t("app.analysis.sentiment_labels.confidence", "en"),
-                    value: `${(analysisData.sentiment.confidence * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}%`,
+                     value: `${((analysisData.sentiment.confidence ?? 0) * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}%`,
                     score: null,
                     color: "text-[var(--color-primary)]"
                   },

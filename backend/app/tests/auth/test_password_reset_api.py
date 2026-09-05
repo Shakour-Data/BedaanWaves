@@ -149,3 +149,40 @@ class TestLanguageSupport:
         assert resp.status_code == 400
         detail = resp.json()["detail"]
         assert "link" in detail.lower() or "recovery" in detail.lower()
+
+    def test_request_returns_persian_message(self, client, mock_service):
+        """With lang=fa the response message should be in Persian."""
+        mock_service["create"].return_value = "token"
+        resp = client.post(
+            "/api/v1/auth/password-reset/request?lang=fa",
+            json={"email": "user@example.com"},
+        )
+        assert resp.status_code == 200
+        msg = resp.json()["message"]
+        assert "ایمیل" in msg or "لینک" in msg  # Persian: link / email
+
+    def test_confirm_returns_persian_on_invalid_token(self, client, mock_service):
+        mock_service["reset"].return_value = False
+        resp = client.post(
+            "/api/v1/auth/password-reset/confirm?lang=fa",
+            json={"token": "expired", "new_password": "newpass123"},
+        )
+        assert resp.status_code == 400
+        detail = resp.json()["detail"]
+        assert "لینک" in detail or "جدید" in detail  # Persian: link / new
+
+    def test_confirm_returns_persian_on_short_password(self, client, mock_service):
+        """Schema validation (min_length=8) returns 422 before the handler runs."""
+        resp = client.post(
+            "/api/v1/auth/password-reset/confirm?lang=fa",
+            json={"token": "valid", "new_password": "short"},
+        )
+        assert resp.status_code == 422
+
+    def test_invalid_lang_rejected(self, client, mock_service):
+        """lang=de doesn't match ^en|fa$ pattern — FastAPI returns 422."""
+        resp = client.post(
+            "/api/v1/auth/password-reset/request?lang=de",
+            json={"email": "user@example.com"},
+        )
+        assert resp.status_code == 422

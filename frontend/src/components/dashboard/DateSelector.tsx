@@ -34,6 +34,7 @@ export function DateSelector({ className, variant = "compact" }: DateSelectorPro
   // Sync input with store
   useEffect(() => {
     if (selectedDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDateInput(selectedDate);
     }
   }, [selectedDate]);

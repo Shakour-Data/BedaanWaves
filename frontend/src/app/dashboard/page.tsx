@@ -4,15 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchNewsDashboard, fetchRiskDashboard, fetchBoardDashboard, fetchAiDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchGeneralDashboard, fetchTechnicalDashboard, fetchFundamentalDashboard, fetchRiskDashboard, fetchScoreTrend, fetchCoefficientHistory, fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend } from "@/lib/api/dashboard";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
-import type { GeneralDashboardResponse, DimensionDashboardResponse, NewsDashboardResponse, BoardDashboardResponse, AiDashboardResponse, ScoreTrendResponse, LevelTrendResponse, CoefficientHistoryResponse } from "@/lib/api/dashboard";
+import type { GeneralDashboardResponse, ScoreTrendResponse, LevelTrendResponse, CoefficientHistoryResponse } from "@/lib/api/dashboard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
-import { useDateStore, useSelectedDate, useLatestAvailableDate, useEffectiveDate } from "@/store/useDateStore";
-import { DateSelector } from "@/components/dashboard/DateSelector";
+import { useDateStore, useEffectiveDate } from "@/store/useDateStore";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
@@ -25,6 +23,11 @@ import { BoardDashboard } from "@/components/dashboard/BoardDashboard";
 import { AiDashboard } from "@/components/dashboard/AiDashboard";
 
 type Tab = "general" | "technical" | "fundamental" | "news" | "risk" | "board" | "ai";
+
+type ScoreTrendOptions = {
+  latest?: boolean;
+  endDate?: string;
+};
 
 const tabs: { id: Tab; label: string; shortcut: string }[] = [
   { id: "general", label: "General", shortcut: "G" },
@@ -262,15 +265,13 @@ export default function DashboardPage() {
   const [subAspectTrend, setSubAspectTrend] = useState<LevelTrendResponse | null>(null);
   const [subLevelChartsOpen, setSubLevelChartsOpen] = useState(false);
   const [coefficientHistory, setCoefficientHistory] = useState<CoefficientHistoryResponse | null>(null);
-  const [coefficientHistoryLoading, setCoefficientHistoryLoading] = useState(true);
+  const [, setCoefficientHistoryLoading] = useState(true);
   const [coefficientFilter, setCoefficientFilter] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const addToast = useUXStore((state) => state.addToast);
   
   // Date Store Integration - Fix for data inconsistency
-  const selectedDate = useSelectedDate();
-  const latestAvailableDate = useLatestAvailableDate();
   const setLatestAvailableDate = useDateStore((state) => state.setLatestAvailableDate);
   const effectiveDate = useEffectiveDate();
 
@@ -279,10 +280,8 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      // Fetch general dashboard with effective date if available
       const general = await fetchGeneralDashboard(!!effectiveDate).catch(() => null);
       
-      // Update latest date from general data
       if (general?.latest_date) {
         setLatestAvailableDate(general.latest_date);
       }
@@ -304,7 +303,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, effectiveDate, setLatestAvailableDate]);
 
   const loadScoreTrend = useCallback(async () => {
     setScoreTrendLoading(true);
@@ -351,15 +350,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as Tab | null;
-    if (tab && tabs.some(t => t.id === tab)) {
+    if (tab && tabs.some(t => t.id === tab) && tab !== activeTab) {
       setActiveTab(tab);
     }
-  }, [searchParams]);
+  }, [searchParams, activeTab]);
 
   useEffect(() => {
     const sub = searchParams.get("sub");
-    setActiveSub(sub);
-  }, [searchParams]);
+    if (sub !== activeSub) {
+      setActiveSub(sub);
+    }
+  }, [searchParams, activeSub]);
 
   const loadSubLevelTrends = useCallback(async (latestDate: string | null) => {
     const options: ScoreTrendOptions = latestDate
@@ -370,9 +371,15 @@ export default function DashboardPage() {
       fetchAspectTrend(30, "NASDAQ", options),
       fetchSubAspectTrend(30, "NASDAQ", options),
     ]);
-    if (subDim.status === "fulfilled") setSubDimensionTrend(subDim.value);
-    if (asp.status === "fulfilled") setAspectTrend(asp.value);
-    if (subAsp.status === "fulfilled") setSubAspectTrend(subAsp.value);
+    if (subDim.status === "fulfilled") {
+      setSubDimensionTrend(subDim.value);
+    }
+    if (asp.status === "fulfilled") {
+      setAspectTrend(asp.value);
+    }
+    if (subAsp.status === "fulfilled") {
+      setSubAspectTrend(subAsp.value);
+    }
   }, []);
 
   useEffect(() => {

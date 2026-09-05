@@ -51,8 +51,9 @@ export function NewsDashboard() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
-  }, []);
+  }, [loadData]);
 
   const chartData = useMemo(() => {
     if (!data) return [];
