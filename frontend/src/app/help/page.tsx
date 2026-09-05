@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { TarotCard } from "@/components/ui/TarotCard";
