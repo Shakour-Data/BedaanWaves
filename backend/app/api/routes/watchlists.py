@@ -111,3 +111,25 @@ async def remove_item(
     if not deleted:
         raise HTTPException(status_code=404, detail="Watchlist item not found")
     return {"status": "success", "id": str(item_id)}
+
+
+@router.put(
+    "/{watchlist_id}/items/{item_id}",
+    response_model=WatchlistItemResponse,
+)
+async def update_item(
+    watchlist_id: UUID,
+    item_id: UUID,
+    data: WatchlistItemUpdate,
+    user_id: UUID = Depends(get_route_user_id),
+):
+    item = await _watchlist_service.update_item(
+        watchlist_id=watchlist_id,
+        item_id=item_id,
+        user_id=user_id,
+        note=data.note,
+        alert_threshold_pct=data.alert_threshold_pct,
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Watchlist item not found")
+    return item

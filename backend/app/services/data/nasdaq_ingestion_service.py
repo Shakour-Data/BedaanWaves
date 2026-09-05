@@ -436,8 +436,14 @@ class NasdaqIngestionService(DataService):
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
-                asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
                 info = ticker.info or {}
+                asset = await self._ensure_asset(
+                    symbol,
+                    info.get("longName", symbol),
+                    "EQUITY",
+                    sector=info.get("sector", ""),
+                    industry=info.get("industry", ""),
+                )
                 officers = info.get("companyOfficers", [])
 
                 leaders = []
@@ -482,9 +488,16 @@ class NasdaqIngestionService(DataService):
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
+                info = ticker.info or {}
                 raw_news = ticker.news
                 if raw_news:
-                    asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
+                    asset = await self._ensure_asset(
+                        symbol,
+                        info.get("longName", symbol),
+                        "EQUITY",
+                        sector=info.get("sector", ""),
+                        industry=info.get("industry", ""),
+                    )
                     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
                     for item in raw_news:
