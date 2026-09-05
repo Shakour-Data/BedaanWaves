@@ -185,7 +185,7 @@ export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick 
 
     canvas.addEventListener("click", handleClick);
     return () => canvas.removeEventListener("click", handleClick);
-  }, [onLabelClick, data]);
+  }, [onLabelClick, data, getLabelAtPosition]);
 
   return (
     <div className="relative inline-flex items-center justify-center">
