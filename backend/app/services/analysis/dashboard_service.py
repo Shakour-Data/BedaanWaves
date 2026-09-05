@@ -11,7 +11,7 @@ Provides real data from:
 - Anomaly (risk anomalies)
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from typing import Any, Dict, List, Optional
 import logging
 from sqlalchemy import select, func, and_, desc, case
@@ -1401,3 +1401,560 @@ class DashboardService:
             return await self.get_ai_dashboard(db, latest=latest)
         else:
             return await self.get_dimension_dashboard(db, dimension, latest=latest)
+
+    async def get_top_performers(
+        self,
+        db: AsyncSession,
+        level: str = "overall",
+        dimension: Optional[str] = None,
+        limit: int = 10,
+    ) -> Dict[str, Any]:
+        """Return top assets by score at the specified level."""
+        level = level.lower().strip()
+        valid_levels = {"overall", "dimension", "sub_dimension", "aspect", "sub_aspect"}
+        if level not in valid_levels:
+            raise ValueError(f"Invalid level: {level}. Must be one of {valid_levels}")
+
+        if level in ("dimension", "sub_dimension", "aspect", "sub_aspect") and not dimension:
+            raise ValueError(f"dimension is required when level is {level}")
+
+        active_assets_subq = (
+            select(Asset.id)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .subquery()
+        )
+
+        latest_date = await self._get_latest_score_date(db)
+
+        if level == "overall":
+            latest_sh_subq = (
+                select(
+                    ScoreHistory.asset_id,
+                    ScoreHistory.overall_score,
+                    ScoreHistory.grade,
+                    ScoreHistory.dimension_scores,
+                    ScoreHistory.date,
+                )
+                .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+                .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+                .distinct(ScoreHistory.asset_id)
+                .subquery()
+            )
+            sh_query = select(
+                latest_sh_subq.c.asset_id,
+                latest_sh_subq.c.overall_score,
+                latest_sh_subq.c.grade,
+                latest_sh_subq.c.dimension_scores,
+                latest_sh_subq.c.date,
+            )
+            sh_result = await db.execute(sh_query)
+            sh_rows = sh_result.all()
+            sh_map = {row.asset_id: row for row in sh_rows}
+
+            rows = []
+            for asset_id, sh in sh_map.items():
+                asset_query = select(Asset.symbol, Asset.name, Asset.sector).where(Asset.id == asset_id)
+                asset_result = await db.execute(asset_query)
+                asset_row = asset_result.first()
+                if not asset_row:
+                    continue
+                score = float(sh.overall_score) if sh.overall_score is not None else 0.0
+                rows.append({
+                    "asset_id": asset_id,
+                    "symbol": asset_row.symbol,
+                    "name": asset_row.name,
+                    "sector": asset_row.sector,
+                    "score": round(score, 2),
+                    "grade": sh.grade or "",
+                    "dimension_scores": dict(sh.dimension_scores) if sh.dimension_scores else {},
+                    "sub_dimensions": {},
+                    "aspects": {},
+                    "sub_aspects": {},
+                })
+
+            rows.sort(key=lambda x: x["score"], reverse=True)
+            total_universe = len(rows)
+            return {
+                "status": "success",
+                "level": level,
+                "limit": limit,
+                "latest_date": latest_date,
+                "total_universe": total_universe,
+                "entries": rows[:limit],
+                "timestamp": utc_now_iso(),
+            }
+
+        if level in ("dimension", "sub_dimension", "aspect", "sub_aspect"):
+            rps_ranked = (
+                select(
+                    RawPerformanceScore.asset_id,
+                    RawPerformanceScore.dimension_scores,
+                    RawPerformanceScore.sub_dimension_scores,
+                    RawPerformanceScore.aspect_scores,
+                    RawPerformanceScore.sub_aspect_scores,
+                    func.row_number()
+                    .over(
+                        partition_by=RawPerformanceScore.asset_id,
+                        order_by=desc(RawPerformanceScore.captured_at),
+                    )
+                    .label("rn"),
+                )
+                .join(active_assets_subq, RawPerformanceScore.asset_id == active_assets_subq.c.id)
+                .subquery()
+            )
+            rps_query = select(
+                rps_ranked.c.asset_id,
+                rps_ranked.c.dimension_scores,
+                rps_ranked.c.sub_dimension_scores,
+                rps_ranked.c.aspect_scores,
+                rps_ranked.c.sub_aspect_scores,
+            ).where(rps_ranked.c.rn == 1)
+            rps_result = await db.execute(rps_query)
+            rps_rows = rps_result.all()
+            rps_map = {row.asset_id: row for row in rps_rows}
+
+            latest_sh_subq = (
+                select(
+                    ScoreHistory.asset_id,
+                    ScoreHistory.overall_score,
+                    ScoreHistory.grade,
+                    ScoreHistory.dimension_scores,
+                )
+                .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+                .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+                .distinct(ScoreHistory.asset_id)
+                .subquery()
+            )
+            sh_result = await db.execute(select(latest_sh_subq))
+            sh_rows = sh_result.all()
+            sh_map = {row.asset_id: row for row in sh_rows}
+
+            rows = []
+            for asset_id, rps in rps_map.items():
+                sh = sh_map.get(asset_id)
+                asset_query = select(Asset.symbol, Asset.name, Asset.sector).where(Asset.id == asset_id)
+                asset_result = await db.execute(asset_query)
+                asset_row = asset_result.first()
+                if not asset_row:
+                    continue
+
+                score = 0.0
+                if level == "dimension" and rps.dimension_scores:
+                    score = float(rps.dimension_scores.get(dimension, 0.0))
+                elif level == "sub_dimension" and rps.sub_dimension_scores:
+                    score = float(rps.sub_dimension_scores.get(dimension, 0.0))
+                elif level == "aspect" and rps.aspect_scores:
+                    score = float(rps.aspect_scores.get(dimension, 0.0))
+                elif level == "sub_aspect" and rps.sub_aspect_scores:
+                    score = float(rps.sub_aspect_scores.get(dimension, 0.0))
+
+                dim_scores = dict(sh.dimension_scores) if sh and sh.dimension_scores else {}
+                sub_dim_scores = {}
+                aspect_scores = {}
+                sub_aspect_scores = {}
+                if rps.sub_dimension_scores:
+                    sub_dim_scores = {k: float(v) for k, v in rps.sub_dimension_scores.items() if _belongs_to_dimension(k, dimension)}
+                if rps.aspect_scores:
+                    aspect_scores = {k: float(v) for k, v in rps.aspect_scores.items() if _belongs_to_dimension(k, dimension)}
+                if rps.sub_aspect_scores:
+                    sub_aspect_scores = {k: float(v) for k, v in rps.sub_aspect_scores.items() if _belongs_to_dimension(k, dimension)}
+
+                rows.append({
+                    "asset_id": asset_id,
+                    "symbol": asset_row.symbol,
+                    "name": asset_row.name,
+                    "sector": asset_row.sector,
+                    "score": round(score, 2),
+                    "grade": sh.grade if sh else "",
+                    "dimension_scores": dim_scores,
+                    "sub_dimensions": {_strip_dimension_prefix(k, dimension): v for k, v in sub_dim_scores.items()},
+                    "aspects": {_strip_dimension_prefix(k, dimension): v for k, v in aspect_scores.items()},
+                    "sub_aspects": {_strip_dimension_prefix(k, dimension): v for k, v in sub_aspect_scores.items()},
+                })
+
+            rows.sort(key=lambda x: x["score"], reverse=True)
+            total_universe = len(rows)
+            return {
+                "status": "success",
+                "level": level,
+                "dimension": dimension,
+                "limit": limit,
+                "latest_date": latest_date,
+                "total_universe": total_universe,
+                "entries": rows[:limit],
+                "timestamp": utc_now_iso(),
+            }
+
+        return {
+            "status": "success",
+            "level": level,
+            "limit": limit,
+            "latest_date": latest_date,
+            "total_universe": 0,
+            "entries": [],
+            "timestamp": utc_now_iso(),
+        }
+
+    async def get_biggest_movers(
+        self,
+        db: AsyncSession,
+        level: str = "overall",
+        dimension: Optional[str] = None,
+        limit: int = 10,
+        days: int = 1,
+    ) -> Dict[str, Any]:
+        """Return top assets by score change over the last `days` trading days."""
+        level = level.lower().strip()
+        valid_levels = {"overall", "dimension", "sub_dimension", "aspect", "sub_aspect"}
+        if level not in valid_levels:
+            raise ValueError(f"Invalid level: {level}. Must be one of {valid_levels}")
+
+        if level in ("dimension", "sub_dimension", "aspect", "sub_aspect") and not dimension:
+            raise ValueError(f"dimension is required when level is {level}")
+
+        active_assets_subq = (
+            select(Asset.id)
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .subquery()
+        )
+
+        latest_date = await self._get_latest_score_date(db)
+        if not latest_date:
+            return {
+                "status": "success",
+                "level": level,
+                "dimension": dimension,
+                "limit": limit,
+                "days": days,
+                "latest_date": None,
+                "previous_date": None,
+                "total_universe": 0,
+                "entries": [],
+                "timestamp": utc_now_iso(),
+            }
+
+        latest_dt = datetime.fromisoformat(latest_date).date() if isinstance(latest_date, str) else latest_date
+        if hasattr(latest_dt, "date"):
+            latest_dt = latest_dt.date() if not isinstance(latest_dt, (date,)) else latest_dt
+
+        previous_dt = latest_dt - timedelta(days=days)
+        previous_date_str = previous_dt.isoformat()
+
+        if level == "overall":
+            latest_sh_subq = (
+                select(
+                    ScoreHistory.asset_id,
+                    ScoreHistory.overall_score,
+                    ScoreHistory.grade,
+                    ScoreHistory.dimension_scores,
+                    ScoreHistory.date,
+                )
+                .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+                .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+                .distinct(ScoreHistory.asset_id)
+                .subquery()
+            )
+            latest_sh_result = await db.execute(select(latest_sh_subq))
+            latest_sh_rows = latest_sh_result.all()
+            latest_sh_map = {row.asset_id: row for row in latest_sh_rows}
+
+            prev_sh_subq = (
+                select(
+                    ScoreHistory.asset_id,
+                    ScoreHistory.overall_score,
+                    ScoreHistory.date,
+                )
+                .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+                .where(ScoreHistory.date <= previous_dt)
+                .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+                .distinct(ScoreHistory.asset_id)
+                .subquery()
+            )
+            prev_sh_result = await db.execute(select(prev_sh_subq))
+            prev_sh_rows = prev_sh_result.all()
+            prev_sh_map = {row.asset_id: row for row in prev_sh_rows}
+
+            rows = []
+            for asset_id, latest_sh in latest_sh_map.items():
+                prev_sh = prev_sh_map.get(asset_id)
+                if not prev_sh:
+                    continue
+                latest_score = float(latest_sh.overall_score) if latest_sh.overall_score is not None else 0.0
+                prev_score = float(prev_sh.overall_score) if prev_sh.overall_score is not None else 0.0
+                change = round(latest_score - prev_score, 2)
+                change_pct = round((change / prev_score * 100) if prev_score != 0 else 0.0, 2)
+
+                asset_query = select(Asset.symbol, Asset.name, Asset.sector).where(Asset.id == asset_id)
+                asset_result = await db.execute(asset_query)
+                asset_row = asset_result.first()
+                if not asset_row:
+                    continue
+
+                rows.append({
+                    "symbol": asset_row.symbol,
+                    "name": asset_row.name,
+                    "sector": asset_row.sector,
+                    "current_score": latest_score,
+                    "previous_score": prev_score,
+                    "change": change,
+                    "change_pct": change_pct,
+                    "grade": latest_sh.grade or "",
+                    "dimension_scores": dict(latest_sh.dimension_scores) if latest_sh.dimension_scores else {},
+                    "sub_dimensions": {},
+                    "aspects": {},
+                    "sub_aspects": {},
+                })
+
+            rows.sort(key=lambda x: abs(x["change"]), reverse=True)
+            previous_date = prev_sh_rows[0].date.isoformat() if prev_sh_rows else previous_date_str
+            total_universe = len(rows)
+            return {
+                "status": "success",
+                "level": level,
+                "limit": limit,
+                "days": days,
+                "latest_date": latest_date,
+                "previous_date": previous_date,
+                "total_universe": total_universe,
+                "entries": rows[:limit],
+                "timestamp": utc_now_iso(),
+            }
+
+        if level in ("dimension", "sub_dimension", "aspect", "sub_aspect"):
+            rps_ranked = (
+                select(
+                    RawPerformanceScore.asset_id,
+                    RawPerformanceScore.dimension_scores,
+                    RawPerformanceScore.sub_dimension_scores,
+                    RawPerformanceScore.aspect_scores,
+                    RawPerformanceScore.sub_aspect_scores,
+                    RawPerformanceScore.captured_at,
+                    func.row_number()
+                    .over(
+                        partition_by=RawPerformanceScore.asset_id,
+                        order_by=desc(RawPerformanceScore.captured_at),
+                    )
+                    .label("rn"),
+                )
+                .join(active_assets_subq, RawPerformanceScore.asset_id == active_assets_subq.c.id)
+                .subquery()
+            )
+            latest_rps_query = select(
+                rps_ranked.c.asset_id,
+                rps_ranked.c.dimension_scores,
+                rps_ranked.c.sub_dimension_scores,
+                rps_ranked.c.aspect_scores,
+                rps_ranked.c.sub_aspect_scores,
+                rps_ranked.c.captured_at,
+            ).where(rps_ranked.c.rn == 1)
+            latest_rps_result = await db.execute(latest_rps_query)
+            latest_rps_rows = latest_rps_result.all()
+            latest_rps_map = {row.asset_id: row for row in latest_rps_rows}
+
+            prev_rps_ranked = (
+                select(
+                    RawPerformanceScore.asset_id,
+                    RawPerformanceScore.sub_dimension_scores,
+                    RawPerformanceScore.aspect_scores,
+                    RawPerformanceScore.sub_aspect_scores,
+                    RawPerformanceScore.captured_at,
+                    func.row_number()
+                    .over(
+                        partition_by=RawPerformanceScore.asset_id,
+                        order_by=desc(RawPerformanceScore.captured_at),
+                    )
+                    .label("rn"),
+                )
+                .join(active_assets_subq, RawPerformanceScore.asset_id == active_assets_subq.c.id)
+                .where(RawPerformanceScore.captured_at <= datetime.combine(previous_dt, datetime.min.time()))
+                .subquery()
+            )
+            prev_rps_query = select(
+                prev_rps_ranked.c.asset_id,
+                prev_rps_ranked.c.sub_dimension_scores,
+                prev_rps_ranked.c.aspect_scores,
+                prev_rps_ranked.c.sub_aspect_scores,
+                prev_rps_ranked.c.captured_at,
+            ).where(prev_rps_ranked.c.rn == 1)
+            prev_rps_result = await db.execute(prev_rps_query)
+            prev_rps_rows = prev_rps_result.all()
+            prev_rps_map = {row.asset_id: row for row in prev_rps_rows}
+
+            latest_sh_subq = (
+                select(
+                    ScoreHistory.asset_id,
+                    ScoreHistory.grade,
+                )
+                .join(active_assets_subq, ScoreHistory.asset_id == active_assets_subq.c.id)
+                .order_by(ScoreHistory.asset_id, desc(ScoreHistory.date))
+                .distinct(ScoreHistory.asset_id)
+                .subquery()
+            )
+            sh_result = await db.execute(select(latest_sh_subq))
+            sh_rows = sh_result.all()
+            sh_map = {row.asset_id: row for row in sh_rows}
+
+            def _extract_score(rps, lvl: str, dim: str) -> float:
+                if not rps:
+                    return 0.0
+                if lvl == "dimension" and rps.dimension_scores:
+                    return float(rps.dimension_scores.get(dim, 0.0))
+                if lvl == "sub_dimension" and rps.sub_dimension_scores:
+                    return float(rps.sub_dimension_scores.get(dim, 0.0))
+                if lvl == "aspect" and rps.aspect_scores:
+                    return float(rps.aspect_scores.get(dim, 0.0))
+                if lvl == "sub_aspect" and rps.sub_aspect_scores:
+                    return float(rps.sub_aspect_scores.get(dim, 0.0))
+                return 0.0
+
+            rows = []
+            for asset_id, latest_rps in latest_rps_map.items():
+                prev_rps = prev_rps_map.get(asset_id)
+                if not prev_rps:
+                    continue
+
+                latest_score = _extract_score(latest_rps, level, dimension)
+                prev_score = _extract_score(prev_rps, level, dimension)
+                change = round(latest_score - prev_score, 2)
+                change_pct = round((change / prev_score * 100) if prev_score != 0 else 0.0, 2)
+
+                asset_query = select(Asset.symbol, Asset.name, Asset.sector).where(Asset.id == asset_id)
+                asset_result = await db.execute(asset_query)
+                asset_row = asset_result.first()
+                if not asset_row:
+                    continue
+
+                sh = sh_map.get(asset_id)
+                sub_dim_scores = {}
+                aspect_scores = {}
+                sub_aspect_scores = {}
+                if latest_rps.sub_dimension_scores:
+                    sub_dim_scores = {k: float(v) for k, v in latest_rps.sub_dimension_scores.items() if _belongs_to_dimension(k, dimension)}
+                if latest_rps.aspect_scores:
+                    aspect_scores = {k: float(v) for k, v in latest_rps.aspect_scores.items() if _belongs_to_dimension(k, dimension)}
+                if latest_rps.sub_aspect_scores:
+                    sub_aspect_scores = {k: float(v) for k, v in latest_rps.sub_aspect_scores.items() if _belongs_to_dimension(k, dimension)}
+
+                rows.append({
+                    "symbol": asset_row.symbol,
+                    "name": asset_row.name,
+                    "sector": asset_row.sector,
+                    "current_score": latest_score,
+                    "previous_score": prev_score,
+                    "change": change,
+                    "change_pct": change_pct,
+                    "grade": sh.grade if sh else "",
+                    "dimension_scores": dict(latest_rps.dimension_scores) if latest_rps.dimension_scores else {},
+                    "sub_dimensions": {_strip_dimension_prefix(k, dimension): v for k, v in sub_dim_scores.items()},
+                    "aspects": {_strip_dimension_prefix(k, dimension): v for k, v in aspect_scores.items()},
+                    "sub_aspects": {_strip_dimension_prefix(k, dimension): v for k, v in sub_aspect_scores.items()},
+                })
+
+            rows.sort(key=lambda x: abs(x["change"]), reverse=True)
+            previous_date = prev_rps_rows[0].captured_at.date().isoformat() if prev_rps_rows else previous_date_str
+            total_universe = len(rows)
+            return {
+                "status": "success",
+                "level": level,
+                "dimension": dimension,
+                "limit": limit,
+                "days": days,
+                "latest_date": latest_date,
+                "previous_date": previous_date,
+                "total_universe": total_universe,
+                "entries": rows[:limit],
+                "timestamp": utc_now_iso(),
+            }
+
+        return {
+            "status": "success",
+            "level": level,
+            "dimension": dimension,
+            "limit": limit,
+            "days": days,
+            "latest_date": latest_date,
+            "previous_date": previous_date_str,
+            "total_universe": 0,
+            "entries": [],
+            "timestamp": utc_now_iso(),
+        }
+
+
+async def _aggregate_score_trend_on_the_fly(db: AsyncSession, days: int) -> list:
+    """Fallback aggregator: same SQL as the original endpoint.
+
+    Used only when the precomputed ``market_score_trend`` table has no rows
+    for the requested window. Kept as a module-level function so the
+    response shape stays identical to the precomputed path.
+    """
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import select, func, and_, case, Numeric
+    from app.models.models import Asset, ScoreHistory
+
+    DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
+    cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    market_filter = and_(
+        Asset.market == "NASDAQ",
+        Asset.asset_class.in_(["EQUITY", "ETF"]),
+    )
+
+    dim_exprs = []
+    for dim in DIMENSIONS:
+        expr = func.coalesce(
+            func.avg(
+                case(
+                    (
+                        ScoreHistory.dimension_scores.has_key(dim),
+                        func.cast(ScoreHistory.dimension_scores[dim], Numeric(10, 4)),
+                    ),
+                    else_=None,
+                )
+            ),
+            0.0,
+        ).label(f"avg_{dim}")
+        dim_exprs.append(expr)
+
+    query = (
+        select(
+            ScoreHistory.date.label("date"),
+            func.avg(ScoreHistory.overall_score).label("avg_score"),
+            *dim_exprs,
+            func.count(func.distinct(ScoreHistory.asset_id)).label("symbol_count"),
+        )
+        .join(Asset, Asset.id == ScoreHistory.asset_id)
+        .where(
+            and_(
+                Asset.active,
+                market_filter,
+                ScoreHistory.date >= cutoff,
+            )
+        )
+        .group_by(ScoreHistory.date)
+        .order_by(ScoreHistory.date.asc())
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    series = []
+    for row in rows:
+        avg_dims = {
+            dim: round(float(getattr(row, f"avg_{dim}") or 0.0), 4)
+            for dim in DIMENSIONS
+        }
+        series.append({
+            "date": row.date.isoformat(),
+            "avg_score": round(float(row.avg_score or 0.0), 4),
+            "avg_dimensions": avg_dims,
+            "symbol_count": int(row.symbol_count or 0),
+        })
+
+    median_count = (
+        sorted([p.get("symbol_count", 0) for p in series])[len(series) // 2]
+        if series
+        else 0
+    )
+    min_acceptable_count = max(median_count * 0.1, 100)
+    series = [p for p in series if (p.get("symbol_count", 0) or 0) >= min_acceptable_count]
+    return series

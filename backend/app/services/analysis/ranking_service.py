@@ -318,6 +318,9 @@ class RankingService:
                     "overall_score": float(record.overall_score),
                     "grade": record.grade,
                     "dimension_scores": record.dimension_scores or {},
+                    "sub_dimension_scores": record.sub_dimension_scores or {},
+                    "aspect_scores": record.aspect_scores or {},
+                    "sub_aspect_scores": record.sub_aspect_scores or {},
                 }
             )
 

@@ -11,7 +11,10 @@ import hashlib
 import json
 import asyncio
 from app.services.core.base_service import CachedService
-from app.services.data.intl_api_client import IntlApiClient
+try:
+    from app.services.data.intl_api_client import IntlApiClient
+except Exception:
+    IntlApiClient = None
 from app.services.data.market_service import MarketService
 from app.services.data.stock_service import StockService
 import logging
