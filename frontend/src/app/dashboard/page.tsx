@@ -375,11 +375,9 @@ export default function DashboardPage() {
       setSubDimensionTrend(subDim.value);
     }
     if (asp.status === "fulfilled") {
-      // eslint-disable-next-line
       setAspectTrend(asp.value);
     }
     if (subAsp.status === "fulfilled") {
-      // eslint-disable-next-line
       setSubAspectTrend(subAsp.value);
     }
   }, []);
@@ -387,10 +385,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!subLevelChartsOpen) return;
     if (generalData?.latest_date) {
-      // eslint-disable-next-line
       loadSubLevelTrends(generalData.latest_date);
     } else {
-      // eslint-disable-next-line
       loadSubLevelTrends(null);
     }
   }, [generalData?.latest_date, subLevelChartsOpen, loadSubLevelTrends]);
