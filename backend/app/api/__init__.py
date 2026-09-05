@@ -17,7 +17,6 @@ from .routes import (
     specialized,
     health,
     symbols,
-    intl,
 )
 
 # Export routers with explicit names
@@ -35,7 +34,6 @@ notifications_router = notifications.router
 specialized_router = specialized.router
 system_router = system.router
 symbols_router = symbols.router
-intl_router = intl.router
 live_router = live.router
 health_router = health.router
 
@@ -43,10 +41,10 @@ health_router = health.router
 __all__ = [
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "users", "watchlists", "notifications",
-    "system", "specialized", "health", "symbols", "intl",
+    "system", "specialized", "health", "symbols",
     "auth_router", "stocks_router", "market_router", "analysis_router",
     "portfolio_router", "history_router", "news_router", "ml_router",
     "users_router", "watchlists_router", "notifications_router",
     "specialized_router", "system_router",
-    "symbols_router", "intl_router", "live_router", "health_router",
+    "symbols_router", "live_router", "health_router",
 ]

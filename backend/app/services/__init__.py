@@ -29,7 +29,10 @@ from .data.market_service import MarketService
 from .data.portfolio_service import PortfolioService
 from .data.history_service import HistoryService
 from .data.news_service import NewsService
-from .data.intl_api_client import IntlApiClient
+try:
+    from .data.intl_api_client import IntlApiClient
+except Exception:
+    pass
 try:
     from .data.data_validation_service import DataValidationService
 except Exception:
