@@ -32,8 +32,8 @@ describe('fetchNasdaqRankings', () => {
         status: 'success',
         total: 2,
         data: [
-          { symbol: 'AAPL', name: 'Apple', rank: 1, overall_score: 90, grade: 'A_STRONG_BUY', fundamental: 80, technical: 95, sentiment: 85, risk: 90, macro: 70, ai: 88 },
-          { symbol: 'MSFT', name: 'Microsoft', rank: 2, overall_score: 85, grade: 'B_BUY' }
+          { symbol: 'AAPL', name: 'Apple', rank: 1, overall_score: 90, grade: 'STRONG_BULLISH', fundamental: 80, technical: 95, sentiment: 85, risk: 90, macro: 70, ai: 88 },
+          { symbol: 'MSFT', name: 'Microsoft', rank: 2, overall_score: 85, grade: 'BULLISH' }
         ] } });
 
     const result = await fetchNasdaqRankings({ limit: 2, offset: 0 });
@@ -42,7 +42,7 @@ describe('fetchNasdaqRankings', () => {
     expect(result.items[0].symbol).toBe('AAPL');
     expect(result.items[0].name).toBe('Apple');
     expect(result.items[0].overall_score).toBe(90);
-    expect(result.items[0].grade).toBe('A_STRONG_BUY');
+    expect(result.items[0].grade).toBe('STRONG_BULLISH');
     expect(result.items[1].name).toBe('Microsoft');
     expect(result.total).toBe(2);
   });
@@ -56,7 +56,7 @@ describe('fetchNasdaqRankings', () => {
         status: 'success',
         total: 1,
         items: [
-          { symbol: 'GOOGL', overall_score: 70, grade: 'C_HOLD' }
+          { symbol: 'GOOGL', overall_score: 70, grade: 'BULLISH' }
         ] } });
 
     const result = await fetchNasdaqRankings();
@@ -73,7 +73,7 @@ describe('fetchNasdaqRankings', () => {
     };
     mock.mockResolvedValue({
       data: [
-        { symbol: 'TSLA', rank: 3, overall_score: 60, grade: 'D_SELL' }
+        { symbol: 'TSLA', rank: 3, overall_score: 60, grade: 'BEARISH' }
       ] });
 
     const result = await fetchNasdaqRankings();
@@ -83,7 +83,7 @@ describe('fetchNasdaqRankings', () => {
     expect(result.total).toBe(1);
   });
 
-  it('should default missing numeric fields to 0 and grade to C_HOLD', async () => {
+  it('should default missing numeric fields to 0 and grade to NEUTRAL', async () => {
     const mock = apiClient.get as unknown as {
       mockResolvedValue: (value: unknown) => void;
     };
@@ -99,7 +99,7 @@ describe('fetchNasdaqRankings', () => {
     expect(result.items[0].name).toBe('NVDA');
     expect(result.items[0].rank).toBe(0);
     expect(result.items[0].overall_score).toBe(0);
-    expect(result.items[0].grade).toBe('C_HOLD');
+    expect(result.items[0].grade).toBe('NEUTRAL');
     expect(result.items[0].fundamental).toBe(0);
     expect(result.items[0].technical).toBe(0);
   });

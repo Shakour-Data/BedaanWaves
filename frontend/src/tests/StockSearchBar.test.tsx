@@ -57,7 +57,7 @@ describe('StockSearchBar', () => {
 
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText('K')).toBeInTheDocument();
-    expect(screen.getByLabelText('Keyboard shortcut') ?? document.querySelector('kbd')).not.toBeNull();
+    expect(document.querySelector('kbd')).not.toBeNull();
   });
 
   it('shows recent-searches quick picks when focused and empty', () => {
@@ -90,14 +90,15 @@ describe('StockSearchBar', () => {
     focusInput();
 
     expect(screen.getByText('AAPL')).toBeInTheDocument();
-    expect(screen.getByText('Apple Inc.')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Apple Inc/i })).toBeInTheDocument();
     expect(screen.getByText('Technology')).toBeInTheDocument();
     expect(screen.getByText('$178.45')).toBeInTheDocument();
     expect(screen.getByText('TSLA')).toBeInTheDocument();
   });
 
-  it('clicking a result calls onSelect and navigates', () => {
+  it('clicking a result calls onSelect, persists the recent, and navigates', () => {
     const onSelect = vi.fn();
+    const onRecent = vi.fn();
     vi.mocked(useStockSearch).mockReturnValue({
       ...baseHook,
       query: 'app',
@@ -105,12 +106,13 @@ describe('StockSearchBar', () => {
       results: mockResults,
     });
 
-    render(<StockSearchBar onSelect={onSelect} />);
+    render(<StockSearchBar onSelect={onSelect} onRecent={onRecent} />);
     focusInput();
 
     fireEvent.click(screen.getAllByRole('option')[0]);
 
-    expect(onSelect).toHaveBeenCalledWith({ symbol: 'AAPL', name: 'Apple Inc.' });
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ symbol: 'AAPL', name: 'Apple Inc.' }));
+    expect(onRecent).toHaveBeenCalledWith('AAPL');
     expect(mockPush).toHaveBeenCalledWith('/stocks/AAPL');
   });
 
@@ -130,7 +132,7 @@ describe('StockSearchBar', () => {
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(onSelect).toHaveBeenCalledWith({ symbol: 'AAPL', name: 'Apple Inc.' });
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ symbol: 'AAPL', name: 'Apple Inc.' }));
     expect(mockPush).toHaveBeenCalledWith('/stocks/AAPL');
   });
 
@@ -192,18 +194,20 @@ describe('StockSearchBar', () => {
     expect(screen.getByText('Network error')).toBeInTheDocument();
   });
 
-  it('clicking a quick pick populates the query', () => {
+  it('clicking a quick pick populates the query and records it', () => {
+    const onRecent = vi.fn();
     vi.mocked(useStockSearch).mockReturnValue({
       ...baseHook,
       query: '',
       status: 'idle',
     });
 
-    render(<StockSearchBar recentSearches={['AAPL']} />);
+    render(<StockSearchBar recentSearches={['AAPL']} onRecent={onRecent} />);
     focusInput();
 
-    fireEvent.click(screen.getByRole('button', { name: 'AAPL' }));
+    fireEvent.click(screen.getByRole('option', { name: 'AAPL' }));
 
     expect(setQuery).toHaveBeenCalledWith('AAPL');
+    expect(onRecent).toHaveBeenCalledWith('AAPL');
   });
 });

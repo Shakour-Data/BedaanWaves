@@ -242,7 +242,7 @@ class RankingService:
                     "symbol": asset.symbol,
                     "name": asset.name,
                     "overall_score": 0,
-                    "grade": "E_STRONG_SELL",
+                    "grade": "STRONG_BEARISH",
                     "dimension_scores": {},
                     "fundamental": 0,
                     "technical": 0,

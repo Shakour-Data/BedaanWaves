@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { StockSearchBar } from "@/components/search/StockSearchBar";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { useRouter } from "next/navigation";
 import { useUXStore } from "@/store/useUXStore";
 
@@ -146,6 +147,7 @@ export default function StocksPage() {
   const searchQuery = searchParams.get("search") || "";
   const router = useRouter();
   const addToast = useUXStore((state) => state.addToast);
+  const { recent: recentSearches, addRecent } = useRecentSearches();
 
   useEffect(() => {
     async function loadStocks() {
@@ -240,6 +242,8 @@ export default function StocksPage() {
 
       <StockSearchBar
         placeholder="Search stocks, tickers..."
+        recentSearches={recentSearches.length > 0 ? recentSearches : POPULAR_TICKERS}
+        onRecent={addRecent}
         onSelect={(stock) => router.push(`/stocks/${stock.symbol}`)}
       />
 

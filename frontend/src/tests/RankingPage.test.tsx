@@ -47,8 +47,8 @@ describe('RankingPage', () => {
   it('should render rankings when data loads', async () => {
     (fetchNasdaqRankings as unknown as { mockResolvedValue: (value: { items: Array<{ symbol: string; name: string; rank: number; overall_score: number; grade: string; fundamental: number; technical: number; sentiment: number; risk: number; macro: number; ai: number }>; total: number }) => void }).mockResolvedValue({
       items: [
-        { symbol: 'AAPL', name: 'Apple Inc.', rank: 1, overall_score: 95, grade: 'A_STRONG_BUY', fundamental: 90, technical: 95, sentiment: 92, risk: 88, macro: 80, ai: 94 },
-        { symbol: 'MSFT', name: 'Microsoft Corp.', rank: 2, overall_score: 88, grade: 'B_BUY', fundamental: 85, technical: 87, sentiment: 86, risk: 82, macro: 78, ai: 90 }
+        { symbol: 'AAPL', name: 'Apple Inc.', rank: 1, overall_score: 95, grade: 'STRONG_BULLISH', fundamental: 90, technical: 95, sentiment: 92, risk: 88, macro: 80, ai: 94 },
+        { symbol: 'MSFT', name: 'Microsoft Corp.', rank: 2, overall_score: 88, grade: 'BULLISH', fundamental: 85, technical: 87, sentiment: 86, risk: 82, macro: 78, ai: 90 }
       ],
       total: 2
     });
@@ -57,8 +57,8 @@ describe('RankingPage', () => {
 
     await waitFor(() => expect(screen.getByText('Apple Inc.')).toBeInTheDocument());
     expect(screen.getByText('Microsoft Corp.')).toBeInTheDocument();
-    expect(screen.getByText('Strong Buy')).toBeInTheDocument();
-    expect(screen.getByText('Buy')).toBeInTheDocument();
+    expect(screen.getByText('Strong Bullish')).toBeInTheDocument();
+    expect(screen.getByText('Bullish')).toBeInTheDocument();
   });
 
   it('should show error message on fetch failure', async () => {
@@ -81,7 +81,7 @@ describe('RankingPage', () => {
   it('should change page when next button is clicked', async () => {
     (fetchNasdaqRankings as unknown as { mockResolvedValue: (value: { items: Array<{ symbol: string; name: string; rank: number; overall_score: number; grade: string; fundamental: number; technical: number; sentiment: number; risk: number; macro: number; ai: number }>; total: number }) => void }).mockResolvedValue({
       items: Array.from({ length: 20 }).map((_, i) => ({
-        symbol: `SYM${i}`, name: `Symbol ${i}`, rank: i + 1, overall_score: 50, grade: 'C_HOLD', fundamental: 50, technical: 50, sentiment: 50, risk: 50, macro: 50, ai: 50
+        symbol: `SYM${i}`, name: `Symbol ${i}`, rank: i + 1, overall_score: 50, grade: 'NEUTRAL', fundamental: 50, technical: 50, sentiment: 50, risk: 50, macro: 50, ai: 50
       })),
       total: 40
     });

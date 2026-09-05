@@ -68,7 +68,7 @@ function normalize(item: RawNasdaqRanking): NasdaqRanking {
     name: item.name ?? item.symbol,
     rank: num(item.rank),
     overall_score: num(item.overall_score),
-    grade: item.grade ?? "C_HOLD",
+    grade: item.grade ?? "NEUTRAL",
     fundamental: num(item.fundamental ?? dims?.fundamental),
     technical: num(item.technical ?? dims?.technical),
     sentiment: num(item.sentiment ?? dims?.sentiment),

@@ -6,4 +6,8 @@ export interface StockSearchResult {
   change: number;
   changePct: number;
   marketCap?: number;
+  peRatio?: number;
+  industry?: string;
+  exchange?: string;
+  currency?: string;
 }

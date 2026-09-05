@@ -53,7 +53,7 @@ export default function ScoringPage() {
             const scoring = await fetchScoring(asset.symbol);
             if (!scoring) return null;
             const overallScore = typeof scoring.overall_score === "number" ? scoring.overall_score : 0;
-            const grade = String(scoring.grade || "C_HOLD");
+            const grade = String(scoring.grade || "NEUTRAL");
             let recommendation: ScoredStock["recommendation"] = "Neutral";
             if (overallScore >= 85) recommendation = "Strong Bullish";
             else if (overallScore >= 70) recommendation = "Bullish";
@@ -164,8 +164,8 @@ export default function ScoringPage() {
           </div>
           <div className="h-8 w-px bg-[var(--color-border)]" />
           <div className="text-center">
-            <p className="text-xs text-[var(--color-text-secondary)]">Strong Buy</p>
-            <p className="text-xl font-bold text-[var(--color-success)]">{stocks.filter((s) => s.recommendation === "Strong Buy").length}</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">Strong Bullish</p>
+            <p className="text-xl font-bold text-[var(--color-success)]">{stocks.filter((s) => s.recommendation === "Strong Bullish").length}</p>
           </div>
           <div className="h-8 w-px bg-[var(--color-border)]" />
           <div className="text-center">
