@@ -70,20 +70,27 @@ export default function AlertsPage() {
             .map((item) => item.asset?.symbol)
             .filter((symbol): symbol is string => Boolean(symbol));
           if (symbols.length) {
-            const pricesRes = await apiClient.get<PriceMap>(
+            const pricesRes = await apiClient.get<{ data: PriceMap }>(
               `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
             );
-            const prices = pricesRes.data?.data || pricesRes.data || {};
+            const prices = pricesRes.data?.data || {};
 
-            const watchAssets = defaultWatchlist.items
-              .filter((item) => prices[item.asset?.symbol as string])
-              .map((item) => ({
-                symbol: item.asset!.symbol,
-                name: item.asset!.name,
-                market: item.asset!.market as "NASDAQ",
-                price: prices[item.asset!.symbol].price,
-                changePct: prices[item.asset!.symbol].change_pct,
-              }));
+            const watchAssets: AssetRow[] = defaultWatchlist.items
+              .filter((item): item is WatchlistItem & { asset: NonNullable<WatchlistItem["asset"]> } => {
+                const sym = item.asset?.symbol;
+                return Boolean(sym && prices[sym]);
+              })
+              .map((item) => {
+                const sym = item.asset.symbol;
+                const priceData = prices[sym];
+                return {
+                  symbol: sym,
+                  name: item.asset.name,
+                  market: item.asset.market as "NASDAQ",
+                  price: priceData.price ?? 0,
+                  changePct: priceData.change_pct ?? 0,
+                };
+              });
             setWatchlistAlerts(watchAssets);
           }
         }
