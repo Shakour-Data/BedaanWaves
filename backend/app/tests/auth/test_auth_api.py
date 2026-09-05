@@ -1,7 +1,5 @@
 """Unit tests for the auth API layer (register / login / refresh).
 
-Tests both English (lang=en) and Persian (lang=fa) error messages, since the
-lang parameter is validated with the pattern ``^(en|fa)$`` in auth.py.
 All service-layer functions are mocked — no database or real JWT required.
 """
 from unittest.mock import patch, AsyncMock, MagicMock
@@ -92,10 +90,10 @@ class TestRegister:
         assert body["refresh_token"] == "refresh.jwt.token"
         assert body["token_type"] == "bearer"
 
-    def test_register_rejects_duplicate_username_en(self, client, mock_service):
+    def test_register_rejects_duplicate_username(self, client, mock_service):
         mock_service["username"].return_value = mock_user
         resp = client.post(
-            "/api/v1/auth/register?lang=en",
+            "/api/v1/auth/register",
             json={
                 "username": "existing",
                 "email": "new@example.com",
@@ -106,25 +104,10 @@ class TestRegister:
         assert resp.status_code == 400
         assert "already registered" in resp.json()["detail"]
 
-    def test_register_rejects_duplicate_username_fa(self, client, mock_service):
-        """Persian: 'نام کاربری قبلاً ثبت شده است'"""
-        mock_service["username"].return_value = mock_user
-        resp = client.post(
-            "/api/v1/auth/register?lang=fa",
-            json={
-                "username": "existing",
-                "email": "new@example.com",
-                "password": "securepass123",
-                "full_name": "کاربر جدید",
-            },
-        )
-        assert resp.status_code == 400
-        assert "نام کاربری" in resp.json()["detail"]
-
-    def test_register_rejects_duplicate_email_en(self, client, mock_service):
+    def test_register_rejects_duplicate_email(self, client, mock_service):
         mock_service["email"].return_value = mock_user
         resp = client.post(
-            "/api/v1/auth/register?lang=en",
+            "/api/v1/auth/register",
             json={
                 "username": "newuser",
                 "email": "existing@example.com",
@@ -134,36 +117,11 @@ class TestRegister:
         assert resp.status_code == 400
         assert "Email already registered" in resp.json()["detail"]
 
-    def test_register_rejects_duplicate_email_fa(self, client, mock_service):
-        """Persian: 'ایمیل قبلاً ثبت شده است'"""
-        mock_service["email"].return_value = mock_user
-        resp = client.post(
-            "/api/v1/auth/register?lang=fa",
-            json={
-                "username": "newuser",
-                "email": "existing@example.com",
-                "password": "securepass123",
-            },
-        )
-        assert resp.status_code == 400
-        assert "ایمیل" in resp.json()["detail"]
-
     def test_register_rejects_short_username(self, client, mock_service):
         resp = client.post(
             "/api/v1/auth/register",
             json={
                 "username": "ab",
-                "email": "new@example.com",
-                "password": "securepass123",
-            },
-        )
-        assert resp.status_code == 422
-
-    def test_register_rejects_invalid_lang(self, client, mock_service):
-        resp = client.post(
-            "/api/v1/auth/register?lang=de",
-            json={
-                "username": "newuser",
                 "email": "new@example.com",
                 "password": "securepass123",
             },
@@ -203,24 +161,14 @@ class TestLogin:
         assert body["access_token"] == "access.jwt.token"
         assert body["refresh_token"] == "refresh.jwt.token"
 
-    def test_login_invalid_credentials_en(self, client, mock_service):
+    def test_login_invalid_credentials(self, client, mock_service):
         mock_service["auth"].return_value = None
         resp = client.post(
-            "/api/v1/auth/login?lang=en",
+            "/api/v1/auth/login",
             json={"username": "testuser", "password": "wrong"},
         )
         assert resp.status_code == 401
         assert "Incorrect username or password" in resp.json()["detail"]
-
-    def test_login_invalid_credentials_fa(self, client, mock_service):
-        """Persian: 'نام کاربری یا رمز عبور اشتباه است'"""
-        mock_service["auth"].return_value = None
-        resp = client.post(
-            "/api/v1/auth/login?lang=fa",
-            json={"username": "testuser", "password": "wrong"},
-        )
-        assert resp.status_code == 401
-        assert "رمز عبور" in resp.json()["detail"]
 
     def test_login_missing_password(self, client, mock_service):
         resp = client.post(
@@ -277,32 +225,24 @@ class TestRefreshToken:
         assert body["access_token"] == "new.access"
         assert body["refresh_token"] == "new.refresh"
 
-    def test_refresh_invalid_token_en(self, client):
-        """An invalid (undecodable) refresh token should return 401 with English message."""
+    def test_refresh_invalid_token(self, client):
+        """An invalid (undecodable) refresh token should return 401."""
         with patch("app.api.routes.auth.jwt.decode", side_effect=Exception("Invalid token")):
-            resp = client.post("/api/v1/auth/refresh?lang=en&token=garbage")
+            resp = client.post("/api/v1/auth/refresh?token=garbage")
         assert resp.status_code == 401
         assert "refresh token" in resp.json()["detail"].lower()
-
-    def test_refresh_invalid_token_fa(self, client):
-        """Persian: 'توکن ریفرش نامعتبر یا منقضی شده است'"""
-        with patch("app.api.routes.auth.jwt.decode", side_effect=Exception("Invalid token")):
-            resp = client.post("/api/v1/auth/refresh?lang=fa&token=garbage")
-        assert resp.status_code == 401
-        detail = resp.json()["detail"]
-        assert "توکن" in detail or "ریفرش" in detail
 
     def test_refresh_wrong_token_type(self, client):
         """A token with type != 'refresh' should be rejected."""
         with patch("app.api.routes.auth.jwt.decode", return_value={"sub": "testuser", "type": "access"}):
-            resp = client.post("/api/v1/auth/refresh?lang=en&token=some-token")
+            resp = client.post("/api/v1/auth/refresh?token=some-token")
         assert resp.status_code == 401
         assert "refresh token" in resp.json()["detail"].lower()
 
-    def test_refresh_user_not_found_fa(self, client):
-        """Persian: 'کاربر یافت نشد' — username in token doesn't exist."""
+    def test_refresh_user_not_found(self, client):
+        """Username in token doesn't exist."""
         with patch("app.api.routes.auth.jwt.decode", return_value={"sub": "ghost", "type": "refresh"}), \
              patch("app.api.routes.auth.get_user_by_username", new_callable=AsyncMock, return_value=None):
-            resp = client.post("/api/v1/auth/refresh?lang=fa&token=valid-but-ghost")
+            resp = client.post("/api/v1/auth/refresh?token=valid-but-ghost")
         assert resp.status_code == 401
-        assert "کاربر" in resp.json()["detail"]
+        assert "User not found" in resp.json()["detail"]

@@ -45,13 +45,31 @@ async function apiSearch(query: string): Promise<StockSearchResult[]> {
   const params = new URLSearchParams({ q: query, limit: "20" });
   const res = await apiClient.get(`/stocks/search?${params.toString()}`);
   const items = res.data?.data ?? [];
-  return items.map((item: Record<string, unknown>) => ({
-    symbol: (item.symbol ?? item.ticker ?? "") as string,
-    name: (item.name ?? item.security_name ?? "") as string,
-    sector: (item.sector ?? "") as string,
-    price: typeof item.price === "number" ? item.price : 0,
-    change: typeof item.change === "number" ? item.change : 0,
-  }));
+  return items.map((item: Record<string, unknown>) => {
+    const price = typeof item.price === "number" ? item.price : 0;
+    const change = typeof item.change === "number" ? item.change : 0;
+    const changePct =
+      typeof item.change_percent === "number"
+        ? item.change_percent
+        : typeof item.changePct === "number"
+        ? item.changePct
+        : price > 0
+        ? (change / price) * 100
+        : 0;
+    return {
+      symbol: (item.symbol ?? item.ticker ?? "") as string,
+      name: (item.name ?? item.security_name ?? "") as string,
+      sector: (item.sector ?? "") as string,
+      industry: (item.industry ?? "") as string,
+      exchange: (item.exchange ?? "") as string,
+      currency: (item.currency ?? "USD") as string,
+      price,
+      change,
+      changePct,
+      marketCap: typeof item.market_cap === "number" ? item.market_cap : undefined,
+      peRatio: typeof item.pe_ratio === "number" ? item.pe_ratio : undefined,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -7,8 +7,10 @@ from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import (
     WatchlistResponse,
     WatchlistCreate,
+    WatchlistUpdate,
     WatchlistItemResponse,
     WatchlistItemCreate,
+    WatchlistItemUpdate,
 )
 from app.services.user.watchlist_service import WatchlistService
 
@@ -54,6 +56,24 @@ async def delete_watchlist(
     if not deleted:
         raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"status": "success", "id": str(watchlist_id)}
+
+
+@router.put("/{watchlist_id}", response_model=WatchlistResponse)
+async def update_watchlist(
+    watchlist_id: UUID,
+    data: WatchlistUpdate,
+    user_id: UUID = Depends(get_route_user_id),
+):
+    watchlist = await _watchlist_service.update_watchlist(
+        watchlist_id=watchlist_id,
+        user_id=user_id,
+        name=data.name,
+        description=data.description,
+        is_default=data.is_default,
+    )
+    if watchlist is None:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    return watchlist
 
 
 @router.post(

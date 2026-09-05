@@ -144,6 +144,71 @@ class WatchlistService:
             if owns:
                 await session.close()
 
+    async def update_watchlist(
+        self,
+        watchlist_id: UUID,
+        user_id: UUID,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        is_default: Optional[bool] = None,
+        session=None,
+    ) -> Optional[Watchlist]:
+        owns = session is None
+        session = session or self.session_factory()
+        try:
+            watchlist = await self.get_watchlist(watchlist_id, user_id, session=session)
+            if watchlist is None:
+                return None
+            if name is not None:
+                watchlist.name = name
+            if description is not None:
+                watchlist.description = description
+            if is_default is not None:
+                watchlist.is_default = is_default
+            await session.commit()
+            await session.refresh(watchlist)
+            return watchlist
+        finally:
+            if owns:
+                await session.close()
+
+    async def update_item(
+        self,
+        watchlist_id: UUID,
+        item_id: UUID,
+        user_id: UUID,
+        note: Optional[str] = None,
+        alert_threshold_pct: Optional[float] = None,
+        session=None,
+    ) -> Optional[WatchlistItem]:
+        owns = session is None
+        session = session or self.session_factory()
+        try:
+            result = await session.execute(
+                select(WatchlistItem).where(
+                    WatchlistItem.id == item_id,
+                    WatchlistItem.watchlist_id == watchlist_id,
+                )
+            )
+            item = result.scalars().first()
+            if item is None:
+                return None
+            watchlist = await self.get_watchlist(
+                watchlist_id, user_id, session=session
+            )
+            if watchlist is None:
+                return None
+            if note is not None:
+                item.note = note
+            if alert_threshold_pct is not None:
+                item.alert_threshold_pct = alert_threshold_pct
+            await session.commit()
+            await session.refresh(item)
+            return item
+        finally:
+            if owns:
+                await session.close()
+
 
 # Global instance
 watchlist_service = WatchlistService()

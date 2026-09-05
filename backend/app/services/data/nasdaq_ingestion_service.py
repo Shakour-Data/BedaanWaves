@@ -160,6 +160,17 @@ class NasdaqIngestionService(DataService):
                     await session.rollback()
                     result = await session.execute(select(Asset).where(Asset.symbol == symbol))
                     asset = result.scalar_one_or_none()
+            else:
+                updated = False
+                if sector and not asset.sector:
+                    asset.sector = sector
+                    updated = True
+                if industry and not asset.industry:
+                    asset.industry = industry
+                    updated = True
+                if updated:
+                    await session.commit()
+                    await session.refresh(asset)
             return asset
 
     async def _bulk_upsert_candles(self, candles: List[IntlPriceCandle]) -> int:
@@ -221,11 +232,18 @@ class NasdaqIngestionService(DataService):
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
+                info = ticker.info or {}
                 hist = ticker.history(period=period, interval="1d", auto_adjust=True)
                 if hist.empty:
                     return 0
 
-                asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
+                asset = await self._ensure_asset(
+                    symbol,
+                    info.get("longName", symbol),
+                    "EQUITY",
+                    sector=info.get("sector", ""),
+                    industry=info.get("industry", ""),
+                )
                 
             candles = []
             for timestamp, row in hist.iterrows():
@@ -272,12 +290,18 @@ class NasdaqIngestionService(DataService):
         try:
             async with self._semaphore:
                 ticker = yf.Ticker(symbol)
-                asset = await self._ensure_asset(symbol, ticker.info.get("longName", symbol), "EQUITY")
+                info = ticker.info or {}
+                asset = await self._ensure_asset(
+                    symbol,
+                    info.get("longName", symbol),
+                    "EQUITY",
+                    sector=info.get("sector", ""),
+                    industry=info.get("industry", ""),
+                )
 
                 income_stmt = ticker.quarterly_financials
                 balance_sheet = ticker.quarterly_balance_sheet
                 cashflow = ticker.quarterly_cashflow
-                info = ticker.info or {}
 
                 statements = []
                 ratios = []

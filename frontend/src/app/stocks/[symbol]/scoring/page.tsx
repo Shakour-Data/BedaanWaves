@@ -186,12 +186,12 @@ export default function StockScoringPage() {
     }));
   }, [history, hierarchy, drill.level]);
 
-  const scoreMapForLevel = (pt: ScoreHistoryPoint): Record<string, number | string> | undefined => {
+  const scoreMapForLevel = useCallback((pt: ScoreHistoryPoint): Record<string, number | string> | undefined => {
     if (drill.level === 1) return pt.dimension_scores;
     if (drill.level === 2) return pt.sub_dimension_scores;
     if (drill.level === 3) return pt.aspect_scores;
     return pt.sub_aspect_scores;
-  };
+  }, [drill.level]);
 
   const perStockTrendSeries = useMemo(() => {
     if (!history || !itemsForLevel.length) return [];

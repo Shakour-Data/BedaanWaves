@@ -26,6 +26,7 @@ import {
 
 export interface StockSearchBarProps {
   onSelect?: (stock: { symbol: string; name: string }) => void;
+  onRecent?: (query: string) => void;
   placeholder?: string;
   className?: string;
   minQueryLength?: number;
@@ -101,6 +102,7 @@ function MarketTrendIcon({ change }: { change: number }) {
 
 export function StockSearchBar({
   onSelect,
+  onRecent,
   placeholder = "Search stocks, tickers...",
   className,
   minQueryLength = 1,
@@ -143,7 +145,7 @@ export function StockSearchBar({
     if (activeIndex >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll("[role='option'], [role='button']");
       const active = items[activeIndex] as HTMLElement | undefined;
-      active?.scrollIntoView({ block: "nearest" });
+      active?.scrollIntoView?.({ block: "nearest" });
     }
   }, [activeIndex]);
 
@@ -166,8 +168,16 @@ export function StockSearchBar({
     inputRef.current?.focus();
   }, [clearResults]);
 
+  const recordRecent = useCallback(
+    (query: string) => {
+      onRecent?.(query.trim());
+    },
+    [onRecent]
+  );
+
   const handleSelect = useCallback(
     (stock: { symbol: string; name: string }) => {
+      recordRecent(stock.symbol);
       setIsOpen(false);
       setIsFocused(false);
       setActiveIndex(-1);
@@ -175,18 +185,19 @@ export function StockSearchBar({
       onSelect?.(stock);
       router.push(`/stocks/${stock.symbol}`);
     },
-    [onSelect, router]
+    [onSelect, router, recordRecent]
   );
 
   const handleQuickPick = useCallback(
     (value: string) => {
+      recordRecent(value);
       setQuery(value);
       setIsOpen(true);
       setIsFocused(true);
       setActiveIndex(0);
       inputRef.current?.focus();
     },
-    [setQuery]
+    [setQuery, recordRecent]
   );
 
   const handleKeyDown = useCallback(
