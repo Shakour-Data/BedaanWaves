@@ -8,7 +8,6 @@ import { useAppStore } from "@/store/useAppStore";
 import { useUXStore } from "@/store/useUXStore";
 import { useConfirmDialog } from "@/components/ux/useConfirmDialog";
 import { Button } from "@/components/ui/Button";
-import { Menu, Search, Bell, ChevronDown, X } from "lucide-react";
 
 interface NewTopbarProps {
   title?: string;
@@ -70,7 +69,7 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
               className="lg:hidden h-9 w-9"
               aria-label="Toggle menu"
             >
-              <Menu className="h-5 w-5" />
+              <span className="text-lg font-mono">\u2261</span>
             </Button>
 
             <div className="hidden md:block">
@@ -94,13 +93,15 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
 
           <div className="hidden flex-1 max-w-xl px-8 lg:block" data-search-input>
             <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <span className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)] text-xs font-bold">
+                S
+              </span>
               <input
                 type="text"
                 placeholder="Search stocks, tickers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] pl-10 pr-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] pl-9 pr-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
               />
             </form>
           </div>
@@ -113,7 +114,7 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
               className="md:hidden h-9 w-9"
               aria-label="Open search"
             >
-              <Search className="h-4 w-4" />
+              <span className="text-xs font-bold">S</span>
             </Button>
 
             <div className="relative">
@@ -124,10 +125,10 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
                   setShowNotifications(!showNotifications);
                   setShowUserMenu(false);
                 }}
-                className="relative h-9 w-9"
+                className="relative h-9 px-2"
                 aria-label="Notifications"
               >
-                <Bell className="h-4 w-4" />
+                <span className="text-xs font-semibold">Notif</span>
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-error)] text-[10px] font-medium text-white ring-2 ring-[var(--color-surface)]">
                   3
                 </span>
@@ -164,7 +165,9 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white">
                   {user?.full_name?.[0] || user?.username?.[0] || "U"}
                 </div>
-                <ChevronDown className="h-3 w-3 text-[var(--color-text-muted)] hidden sm:block" />
+                <span className="h-3 w-3 text-[var(--color-text-muted)] hidden sm:block text-xs font-mono">
+                  {showUserMenu ? "\u25B2" : "\u25BC"}
+                </span>
               </Button>
 
               {showUserMenu && (
@@ -195,7 +198,7 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
         <div className="fixed inset-0 z-50 bg-[var(--color-background)]/95 backdrop-blur-xl md:hidden">
           <div className="flex h-16 items-center justify-between border-b border-[var(--color-border)] px-4">
             <form onSubmit={handleSearch} className="flex flex-1 items-center gap-3">
-              <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
+              <span className="h-4 w-4 text-[var(--color-text-muted)] text-xs font-bold">S</span>
               <input
                 type="text"
                 placeholder="Search stocks..."
@@ -205,8 +208,8 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
                 autoFocus
               />
             </form>
-            <button onClick={() => setShowSearch(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" aria-label="Close search">
-              <X className="h-5 w-5" />
+            <button onClick={() => setShowSearch(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg font-mono" aria-label="Close search">
+              \u00D7
             </button>
           </div>
           <div className="p-4">
