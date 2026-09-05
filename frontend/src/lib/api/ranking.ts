@@ -62,18 +62,19 @@ interface NasdaqRankingEnvelope {
 }
 
 function normalize(item: RawNasdaqRanking): NasdaqRanking {
+  const dims = (item as RawNasdaqRanking & { dimension_scores?: Record<string, number> }).dimension_scores;
   return {
     symbol: item.symbol,
     name: item.name ?? item.symbol,
     rank: num(item.rank),
     overall_score: num(item.overall_score),
     grade: item.grade ?? "C_HOLD",
-    fundamental: num(item.fundamental),
-    technical: num(item.technical),
-    sentiment: num(item.sentiment),
-    risk: num(item.risk),
-    macro: num(item.macro),
-    ai: num(item.ai) };
+    fundamental: num(item.fundamental ?? dims?.fundamental),
+    technical: num(item.technical ?? dims?.technical),
+    sentiment: num(item.sentiment ?? dims?.sentiment),
+    risk: num(item.risk ?? dims?.risk),
+    macro: num(item.macro ?? dims?.macro),
+    ai: num(item.ai ?? dims?.ai) };
 }
 
 function normalizeList(rows: RawNasdaqRanking[] | undefined): NasdaqRanking[] {

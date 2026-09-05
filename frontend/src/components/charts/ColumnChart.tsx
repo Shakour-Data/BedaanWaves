@@ -50,6 +50,21 @@ export function ColumnChart({ data, height = 240, valueFormatter, yAxisLabel = "
       value: d.value,
       color: d.color,
     }));
+
+    if (ordinalLabels.size === 0) {
+      normalized.sort((a, b) => (a.time as number) - (b.time as number));
+      const seen = new Set<number>();
+      const unique: typeof normalized = [];
+      for (const point of normalized) {
+        const t = point.time as number;
+        if (!seen.has(t)) {
+          seen.add(t);
+          unique.push(point);
+        }
+      }
+      return { data: unique, ordinalLabels: new Map() };
+    }
+
     return { data: normalized, ordinalLabels };
   }, [data]);
 

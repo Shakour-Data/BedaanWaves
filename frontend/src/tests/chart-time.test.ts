@@ -60,6 +60,50 @@ describe("normalizeChartData", () => {
     expect(ordinalLabels.get(0)).toBe("ACONW");
     expect(ordinalLabels.get(1)).toBe("AAPL");
   });
+
+  it("sorts date-based series in ascending order", () => {
+    const { data } = normalizeChartData([
+      { time: "2024-01-16", value: 80.0 },
+      { time: "2024-01-14", value: 70.0 },
+      { time: "2024-01-15", value: 75.0 },
+    ]);
+    expect(data).toHaveLength(3);
+    expect(data[0].time).toBe(Math.floor(Date.parse("2024-01-14") / 1000));
+    expect(data[1].time).toBe(Math.floor(Date.parse("2024-01-15") / 1000));
+    expect(data[2].time).toBe(Math.floor(Date.parse("2024-01-16") / 1000));
+    expect(data[0].value).toBe(70.0);
+    expect(data[1].value).toBe(75.0);
+    expect(data[2].value).toBe(80.0);
+  });
+
+  it("deduplicates date-based series keeping the first occurrence", () => {
+    const { data } = normalizeChartData([
+      { time: "2024-01-15", value: 72.5 },
+      { time: "2024-01-15", value: 99.0 },
+      { time: "2024-01-16", value: 80.0 },
+    ]);
+    expect(data).toHaveLength(2);
+    expect(data[0].time).toBe(Math.floor(Date.parse("2024-01-15") / 1000));
+    expect(data[0].value).toBe(72.5);
+    expect(data[1].time).toBe(Math.floor(Date.parse("2024-01-16") / 1000));
+    expect(data[1].value).toBe(80.0);
+  });
+
+  it("sorts and deduplicates out-of-order duplicate dates", () => {
+    const { data } = normalizeChartData([
+      { time: "2024-01-16", value: 80.0 },
+      { time: "2024-01-15", value: 75.0 },
+      { time: "2024-01-15", value: 99.0 },
+      { time: "2024-01-14", value: 70.0 },
+    ]);
+    expect(data).toHaveLength(3);
+    expect(data[0].time).toBe(Math.floor(Date.parse("2024-01-14") / 1000));
+    expect(data[0].value).toBe(70.0);
+    expect(data[1].time).toBe(Math.floor(Date.parse("2024-01-15") / 1000));
+    expect(data[1].value).toBe(75.0);
+    expect(data[2].time).toBe(Math.floor(Date.parse("2024-01-16") / 1000));
+    expect(data[2].value).toBe(80.0);
+  });
 });
 
 describe("createOrdinalTickMarkFormatter", () => {

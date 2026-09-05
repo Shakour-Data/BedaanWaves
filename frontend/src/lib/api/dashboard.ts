@@ -351,8 +351,11 @@ export async function fetchDashboardData(generalOverride?: GeneralDashboardRespo
     live };
 }
 
-export async function fetchGeneralDashboard(latest: boolean = false): Promise<GeneralDashboardResponse> {
-  const url = latest ? "/analysis/dashboard/general?latest=true" : "/analysis/dashboard/general";
+export async function fetchGeneralDashboard(options?: { latest?: boolean; endDate?: string }): Promise<GeneralDashboardResponse> {
+  const params = new URLSearchParams();
+  if (options?.latest) params.set("latest", "true");
+  if (options?.endDate) params.set("end_date", options.endDate);
+  const url = params.toString() ? `/analysis/dashboard/general?${params.toString()}` : "/analysis/dashboard/general";
   const res = await apiClient.get<GeneralDashboardResponse>(url, { timeout: 120000 });
   return res.data;
 }

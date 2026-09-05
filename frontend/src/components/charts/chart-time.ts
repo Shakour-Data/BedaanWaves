@@ -38,6 +38,21 @@ export function normalizeChartData(
     time: toTimestamp(p.time, i, ordinalLabels),
     value: p.value,
   }));
+
+  if (ordinalLabels.size === 0) {
+    data.sort((a, b) => (a.time as number) - (b.time as number));
+    const seen = new Set<number>();
+    const unique: NormalizedChartPoint[] = [];
+    for (const point of data) {
+      const t = point.time as number;
+      if (!seen.has(t)) {
+        seen.add(t);
+        unique.push(point);
+      }
+    }
+    return { data: unique, ordinalLabels: new Map() };
+  }
+
   return { data, ordinalLabels };
 }
 
