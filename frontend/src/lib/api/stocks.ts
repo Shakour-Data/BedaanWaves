@@ -177,10 +177,39 @@ export async function fetchLatestPrice(symbol: string): Promise<LatestPrice | nu
   }
 }
 
+/* ---------------------------- Analysis payloads -------------------------------- */
+
+export interface ScoringResponse {
+  overall_score?: number | string;
+  grade?: string;
+  dimension_scores?: Record<string, number | string>;
+  sub_dimension_scores?: Record<string, number | string>;
+  signals?: string[];
+  timestamp?: string;
+}
+
+export interface FundamentalResponse {
+  [key: string]: unknown;
+}
+
+export interface TechnicalResponse {
+  indicators?: Record<string, unknown>;
+}
+
+export interface RiskResponse {
+  [key: string]: unknown;
+}
+
+export interface SentimentResponse {
+  label?: string;
+  confidence?: number;
+  news_count?: number;
+}
+
 /** 6-dimensional scoring of a symbol. */
-export async function fetchScoring(symbol: string): Promise<any | null> {
+export async function fetchScoring(symbol: string): Promise<ScoringResponse | null> {
   try {
-    const res = await apiClient.get<any>(`analysis/scoring/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<{ scoring?: ScoringResponse }>(`analysis/scoring/${encodeURIComponent(symbol)}`);
     return res.data?.scoring ?? null;
   } catch {
     return null;
@@ -188,9 +217,9 @@ export async function fetchScoring(symbol: string): Promise<any | null> {
 }
 
 /** Fundamental analysis of a symbol. */
-export async function fetchFundamental(symbol: string): Promise<any | null> {
+export async function fetchFundamental(symbol: string): Promise<FundamentalResponse | null> {
   try {
-    const res = await apiClient.get<any>(`analysis/fundamental/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<{ fundamental?: FundamentalResponse }>(`analysis/fundamental/${encodeURIComponent(symbol)}`);
     return res.data?.fundamental ?? null;
   } catch {
     return null;
@@ -198,9 +227,9 @@ export async function fetchFundamental(symbol: string): Promise<any | null> {
 }
 
 /** Technical analysis of a symbol. */
-export async function fetchTechnical(symbol: string): Promise<any | null> {
+export async function fetchTechnical(symbol: string): Promise<TechnicalResponse | null> {
   try {
-    const res = await apiClient.get<any>(`analysis/technical/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<{ indicators?: TechnicalResponse }>(`analysis/technical/${encodeURIComponent(symbol)}`);
     return res.data?.indicators ?? null;
   } catch {
     return null;
@@ -208,9 +237,9 @@ export async function fetchTechnical(symbol: string): Promise<any | null> {
 }
 
 /** Risk analysis of a symbol. */
-export async function fetchRisk(symbol: string): Promise<any | null> {
+export async function fetchRisk(symbol: string): Promise<RiskResponse | null> {
   try {
-    const res = await apiClient.get<any>(`analysis/risk/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<{ risk?: RiskResponse }>(`analysis/risk/${encodeURIComponent(symbol)}`);
     return res.data?.risk ?? null;
   } catch {
     return null;
@@ -218,9 +247,9 @@ export async function fetchRisk(symbol: string): Promise<any | null> {
 }
 
 /** Sentiment analysis of a symbol. */
-export async function fetchSentiment(symbol: string): Promise<any | null> {
+export async function fetchSentiment(symbol: string): Promise<SentimentResponse | null> {
   try {
-    const res = await apiClient.get<any>(`analysis/sentiment/${encodeURIComponent(symbol)}`);
+    const res = await apiClient.get<{ sentiment?: SentimentResponse }>(`analysis/sentiment/${encodeURIComponent(symbol)}`);
     return res.data?.sentiment ?? null;
   } catch {
     return null;

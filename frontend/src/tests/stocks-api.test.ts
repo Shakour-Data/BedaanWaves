@@ -42,7 +42,7 @@ describe('Stocks API Service', () => {
 
   describe('fetchSymbols', () => {
     it('should return mock assets when called', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockAssets })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockAssets })
       
       const result = await fetchSymbols({ 
         assetClass: 'EQUITY',
@@ -56,7 +56,7 @@ describe('Stocks API Service', () => {
     })
 
     it('should fetch symbols without filters', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockAssets })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockAssets })
       
       const result = await fetchSymbols()
       
@@ -66,7 +66,7 @@ describe('Stocks API Service', () => {
 
   describe('fetchAsset', () => {
     it('should find asset when it exists', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockAssets })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockAssets })
       
       const result = await fetchAsset('AAPL')
       
@@ -74,7 +74,7 @@ describe('Stocks API Service', () => {
     })
 
     it('should return null when asset not found', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockAssets })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockAssets })
       
       const result = await fetchAsset('INVALID')
       
@@ -96,7 +96,7 @@ describe('Stocks API Service', () => {
         transactions: 1500
       }]
 
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockRawCandles })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockRawCandles })
       
       const result = await fetchPriceHistory({ symbol: 'AAPL', timeframe: '1d', limit: 100 })
       
@@ -131,7 +131,7 @@ describe('Stocks API Service', () => {
         transactions: null
       }]
 
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockDataWithNulls })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockDataWithNulls })
       
       const result = await fetchPriceHistory({ symbol: 'TEST' })
       
@@ -172,7 +172,7 @@ describe('Stocks API Service', () => {
         }
       }
       
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockResponse })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockResponse })
       
       const result = await fetchLatestPrices(['AAPL', 'GOOGL'])
       
@@ -219,7 +219,7 @@ describe('Stocks API Service', () => {
         }
       }
       
-      ;(apiClient.get as any).mockResolvedValueOnce({ data: mockResponse })
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ data: mockResponse })
       
       const result = await fetchLatestPrice('AAPL')
       
@@ -234,7 +234,7 @@ describe('Stocks API Service', () => {
     })
 
     it('should return null when symbol not found', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ 
+      ;(apiClient.get as unknown as typeof apiClient.get).mockResolvedValueOnce({ 
         data: { status: 'success', timestamp: '', data: {} } 
       })
       

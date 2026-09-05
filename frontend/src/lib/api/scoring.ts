@@ -38,7 +38,11 @@ export interface HierarchyScores {
 export interface ScoreHistoryPoint {
   date: string;
   overall: number;
-  [dimension: string]: number | string;
+  dimension_scores?: Record<string, number | string>;
+  sub_dimension_scores?: Record<string, number | string>;
+  aspect_scores?: Record<string, number | string>;
+  sub_aspect_scores?: Record<string, number | string>;
+  [key: string]: unknown;
 }
 
 export interface CoefficientItem {
@@ -109,7 +113,7 @@ export const SUB_DIMENSIONS: Record<string, { key: string; label: string; weight
 
 export const SUB_ASPECTS: Record<string, { key: string; label: string; weight: number }[]> = {};
 
-Object.entries(SUB_DIMENSIONS).forEach(([dim, subs]) => {
+Object.entries(SUB_DIMENSIONS).forEach(([, subs]) => {
   subs.forEach((sub) => {
     const base = sub.key;
     SUB_ASPECTS[base] = [
@@ -154,6 +158,9 @@ interface RawScoreHistoryEntry {
   overall_score: number | string;
   grade?: string;
   dimension_scores?: Record<string, number | string> | null;
+  sub_dimension_scores?: Record<string, number | string> | null;
+  aspect_scores?: Record<string, number | string> | null;
+  sub_aspect_scores?: Record<string, number | string> | null;
 }
 
 interface RawScoreHistoryResponse {
@@ -322,17 +329,14 @@ export async function fetchScoreHistory(symbol: string, days = 30): Promise<Scor
     }
 
     return data.history.map((entry) => {
-      const dims = entry.dimension_scores || {};
       const point: ScoreHistoryPoint = {
         date: String(entry.date),
         overall: clamp(num(entry.overall_score)),
+        dimension_scores: entry.dimension_scores || {},
+        sub_dimension_scores: entry.sub_dimension_scores || {},
+        aspect_scores: entry.aspect_scores || {},
+        sub_aspect_scores: entry.sub_aspect_scores || {},
       };
-      for (const key of Object.keys(DIMENSION_LABELS)) {
-        const raw = dims[key];
-        if (raw !== undefined && raw !== null) {
-          point[key] = clamp(num(raw));
-        }
-      }
       return point;
     });
   } catch {

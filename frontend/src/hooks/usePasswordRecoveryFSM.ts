@@ -30,7 +30,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   requestPasswordReset,
   isValidEmail,
-  type RequestResetResult } from "@/lib/password-recovery-api";
+} from "@/lib/password-recovery-api";
 
 export type RecoveryState =
   | "Welcome"

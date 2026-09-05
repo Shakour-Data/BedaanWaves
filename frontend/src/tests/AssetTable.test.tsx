@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { AssetTable } from '@/components/dashboard/AssetTable'
+import { AssetTable } from '@/components/shared/AssetTable'
 import type { AssetRow } from '@/lib/dashboard-data'
 
 describe('AssetTable', () => {

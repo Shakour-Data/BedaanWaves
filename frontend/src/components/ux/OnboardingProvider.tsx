@@ -63,7 +63,7 @@ export function OnboardingProvider() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const completed = localStorage.getItem(STORAGE_KEY) === "true";
-    if (!completed && pathname === "/dashboard") {
+    if (!completed && (pathname === "/leaderboard" || pathname === "/")) {
       const timer = setTimeout(() => setActive(true), 800);
       return () => clearTimeout(timer);
     }

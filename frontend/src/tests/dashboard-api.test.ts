@@ -196,7 +196,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     const latestDate = '2026-08-31'
     await fetchScoreTrend(30, 'NASDAQ', { endDate: latestDate })
@@ -221,7 +221,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     await fetchScoreTrend(30, 'NASDAQ', { latest: true })
 
@@ -243,7 +243,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     await fetchCoefficientHistory(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
 
@@ -272,7 +272,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     await fetchSubDimensionTrend(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
 
@@ -301,7 +301,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     await fetchAspectTrend(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
 
@@ -330,7 +330,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     await fetchSubAspectTrend(30, 'NASDAQ', { endDate: '2026-08-31', latest: true })
 
@@ -359,7 +359,7 @@ describe('Dashboard API Service', () => {
         timestamp: '2026-08-31T22:00:00Z',
       },
     })
-    ;(apiClient.get as any) = spy
+    ;(apiClient.get as unknown as typeof apiClient.get) = spy
 
     await fetchHierarchicalTrend('sub_dimension', 30, 'NASDAQ', {
       endDate: '2026-08-31',

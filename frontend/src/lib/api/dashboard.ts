@@ -1,13 +1,42 @@
 /**
  * dashboard-api.ts
  * ---------------------------------------------------------------------------
- * Data access layer for the dashboard. Fetches live data from the backend.
+ * Data access layer for the leaderboard and movers pages.
  */
 
 import { apiClient } from "@/lib/api";
 import type { AssetRow, MarketStat, NewsItem } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 import { formatTimeAgo } from "@/lib/utils";
+
+export type Level = "overall" | "dimension" | "sub_dimension" | "aspect" | "sub_aspect";
+
+export interface LeaderboardEntry {
+  rank: number;
+  symbol: string;
+  name: string;
+  sector: string | null;
+  score: number;
+  grade: string;
+  change?: number;
+  change_pct?: number;
+  dimensions?: Record<string, number>;
+  sub_dimensions?: Record<string, number>;
+  aspects?: Record<string, number>;
+  sub_aspects?: Record<string, number>;
+}
+
+export interface LeaderboardResponse {
+  status: string;
+  level: string;
+  dimension?: string;
+  limit: number;
+  latest_date: string | null;
+  previous_date?: string | null;
+  total_universe: number;
+  entries: LeaderboardEntry[];
+  timestamp: string;
+}
 
 export interface DashboardData {
   marketStats: MarketStat[];
@@ -193,16 +222,6 @@ export interface GeneralDashboardResponse {
   timestamp: string;
 }
 
-interface NasdaqDashboardResponse {
-  status: string;
-  market: string;
-  total_symbols: number;
-  average_change_pct: number;
-  top_gainers: { symbol: string; name: string; last_close: number; change_pct: number }[];
-  top_losers: { symbol: string; name: string; last_close: number; change_pct: number }[];
-  timestamp: string;
-}
-
 interface MarketOverviewResponse {
   status: string;
   market: string;
@@ -275,10 +294,6 @@ async function fetchTopMovers(generalPromise: Promise<GeneralDashboardResponse> 
     changePct: 0,
   });
 
-  // Defense in depth: even if the backend ever returns a non-Nasdaq row,
-  // we drop it before it reaches the dashboard. The backend already
-  // filters to market=NASDAQ, but a stale cache or a future regression
-  // would otherwise leak crypto/non-Nasdaq tickers into the UI.
   const ranked = [...(data.top_performers ?? []), ...(data.bottom_performers ?? [])]
     .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
     .sort((a, b) => b.overall_score - a.overall_score);
@@ -414,6 +429,7 @@ export interface ScoreTrendResponse {
 export interface ScoreTrendOptions {
   latest?: boolean;
   endDate?: string;
+  parent?: string;
 }
 
 export async function fetchScoreTrend(
@@ -562,6 +578,7 @@ function buildLevelTrendFetcher(path: string) {
     if (market) params.set("market", market);
     if (options?.latest) params.set("latest", "true");
     if (options?.endDate) params.set("end_date", options.endDate);
+    if (options?.parent) params.set("parent", options.parent);
     const url = `${path}?${params.toString()}`;
     const res = await apiClient.get<LevelTrendResponse>(url, { timeout: 60000 });
     return res.data;
@@ -579,3 +596,35 @@ export const fetchAspectTrend = buildLevelTrendFetcher(
 export const fetchSubAspectTrend = buildLevelTrendFetcher(
   "/analysis/dashboard/sub-aspect-trend",
 );
+
+// Leaderboard / Movers fetchers
+
+export async function fetchTopPerformers(options: {
+  level?: string;
+  dimension?: string;
+  limit?: number;
+}): Promise<LeaderboardResponse> {
+  const params = new URLSearchParams();
+  if (options.level) params.set("level", options.level);
+  if (options.dimension) params.set("dimension", options.dimension);
+  if (options.limit) params.set("limit", String(options.limit));
+  const url = `/analysis/dashboard/top-performers?${params.toString()}`;
+  const res = await apiClient.get<LeaderboardResponse>(url, { timeout: 60000 });
+  return res.data;
+}
+
+export async function fetchBiggestMovers(options: {
+  level?: string;
+  dimension?: string;
+  limit?: number;
+  days?: number;
+}): Promise<LeaderboardResponse> {
+  const params = new URLSearchParams();
+  if (options.level) params.set("level", options.level);
+  if (options.dimension) params.set("dimension", options.dimension);
+  if (options.limit) params.set("limit", String(options.limit));
+  if (options.days) params.set("days", String(options.days));
+  const url = `/analysis/dashboard/biggest-movers?${params.toString()}`;
+  const res = await apiClient.get<LeaderboardResponse>(url, { timeout: 60000 });
+  return res.data;
+}

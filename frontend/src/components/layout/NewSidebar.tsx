@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
 
@@ -22,20 +22,10 @@ const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boole
 
 const categories: NavCategory[] = [
   {
-    label: "Dashboard",
+    label: "Analytics",
     items: [
-      { label: "General", href: "/dashboard?tab=general", marker: "D" },
-      { label: "Technical", href: "/dashboard?tab=technical", marker: "T" },
-      { label: "Fundamental", href: "/dashboard?tab=fundamental", marker: "F" },
-      { label: "News Feed", href: "/dashboard?tab=news", marker: "N" },
-      { label: "Risk Metrics", href: "/dashboard?tab=risk", marker: "R" },
-      { label: "Board & Governance", href: "/dashboard?tab=board", marker: "B" },
-      { label: "AI Insights", href: "/dashboard?tab=ai", marker: "AI" },
-    ],
-  },
-  {
-    label: "Markets",
-    items: [
+      { label: "Leaderboard", href: "/leaderboard", marker: "LB" },
+      { label: "Biggest Movers", href: "/movers", marker: "MV" },
       { label: "Stocks", href: "/stocks", marker: "S" },
       { label: "Analysis", href: "/analysis", marker: "A" },
       { label: "Scoring", href: "/scoring", marker: "SC" },
@@ -67,31 +57,17 @@ const bottomItems: NavItem[] = [
 
 export function NewSidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentTab = searchParams.get("tab") || "general";
-  const currentSub = searchParams.get("sub");
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
 
-  const [userExpanded, setUserExpanded] = useState<Set<string>>(new Set(["Dashboard", "Markets"]));
+  const [userExpanded, setUserExpanded] = useState<Set<string>>(new Set(["Analytics"]));
 
   const isActive = useCallback((href: string) => {
-    if (href.startsWith("/dashboard?") && !href.includes("sub=")) {
-      const url = new URL(href, "http://x");
-      const tab = url.searchParams.get("tab") || "general";
-      return pathname === "/dashboard" && currentTab === tab;
-    }
-    if (href === "/dashboard") {
-      return pathname === href && currentTab === "general";
-    }
-    if (href.startsWith("/dashboard?") && href.includes("sub=")) {
-      const url = new URL(href, "http://x");
-      const tab = url.searchParams.get("tab") || "general";
-      const sub = url.searchParams.get("sub");
-      return pathname === "/dashboard" && currentTab === tab && currentSub === sub;
+    if (href.startsWith("/dashboard?")) {
+      return false;
     }
     return pathname.startsWith(href);
-  }, [pathname, currentTab, currentSub]);
+  }, [pathname]);
 
   const autoExpanded = useMemo(() => {
     const auto = new Set<string>();
@@ -146,7 +122,7 @@ export function NewSidebar() {
       >
         <div className="flex h-screen flex-col">
           <div className="flex h-16 items-center border-b border-[var(--color-border)] px-5 shrink-0">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link href="/leaderboard" className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
                 <span className="font-bold text-lg">B</span>
               </div>
