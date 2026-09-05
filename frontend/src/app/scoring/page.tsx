@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { t } from "@/lib/i18n";
 import { fetchSymbols, fetchScoring, fetchPriceHistory } from "@/lib/api/stocks";
 import type { Candle } from "@/lib/api/stocks";
 
@@ -38,7 +37,6 @@ function getRecommendationColor(rec: string) {
 }
 
 export default function ScoringPage() {
-  const [search, setSearch] = useState("");
   const [stocks, setStocks] = useState<ScoredStock[]>([]);
   const [stocksLoading, setStocksLoading] = useState(true);
   const [filterRec, setFilterRec] = useState<string>("all");
