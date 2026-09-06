@@ -173,7 +173,22 @@ class Settings(BaseSettings):
     HISTORICAL_DATA_CACHE_TTL_SECONDS: int = 3600
     INTRADAY_DATA_CACHE_TTL_SECONDS: int = 120
     MARKET_STATUS_CACHE_TTL_SECONDS: int = 60
-    
+
+    LIVE_POLL_INTERVAL_OPEN_S: int = 4
+    LIVE_POLL_INTERVAL_CLOSED_S: int = 30
+    LIVE_INTRADAY_POLL_INTERVAL_OPEN_S: int = 15
+    LIVE_PING_INTERVAL_S: int = 10
+    LIVE_IDLE_UNSUBSCRIBE_S: int = 60
+    LIVE_MAX_QUOTE_AGE_OPEN_S: int = 120
+    LIVE_MAX_QUOTE_AGE_CLOSED_S: int = 900
+    LIVE_CIRCUIT_BREAKER_FAILURES: int = 5
+    LIVE_CIRCUIT_BREAKER_HALFOPEN_S: int = 30
+    LIVE_POLL_EXECUTOR_MAX: int = 8
+    LIVE_BACKOFF_BASE_S: float = 1.0
+    LIVE_BACKOFF_MAX_S: float = 60.0
+    LIVE_SLO_WARN_MULTIPLIER: float = 1.5
+    LIVE_SLO_ERROR_MULTIPLIER: float = 3.0
+
     # ============================================================
     # MARKET HOURS CONFIGURATION
     # ============================================================
