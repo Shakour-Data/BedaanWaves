@@ -28,7 +28,7 @@ class FilterService:
         parsed_root: Union[ParsedGroup, ParsedCondition],
         limit: int = 100,
         offset: int = 0,
-        sort_by: str = "score",
+        sort_by: str = "overall_score",
         sort_dir: str = "desc",
     ) -> Dict[str, Any]:
         start = time.perf_counter()
@@ -65,12 +65,19 @@ class FilterService:
         }
 
     def _row_to_dict(self, row: ScoringSnapshot) -> Dict[str, Any]:
+        def _safe_iso(val):
+            if val is None:
+                return None
+            if isinstance(val, str):
+                return val
+            return val.isoformat()
+
         return {
             "id": str(row.id),
             "asset_id": str(row.asset_id),
             "symbol": row.asset.symbol if row.asset else None,
             "name": row.asset.name if row.asset else None,
-            "date": row.date.isoformat() if row.date else None,
+            "date": _safe_iso(row.date),
             "level": row.level.value if isinstance(row.level, SnapshotLevel) else str(row.level),
             "level_key": row.level_key,
             "level_name": row.level_name,
@@ -78,8 +85,8 @@ class FilterService:
             "score_change": float(row.score_change) if row.score_change is not None else None,
             "industry": row.industry,
             "company_id": row.company_id,
-            "timestamp": row.timestamp.isoformat() if row.timestamp else None,
-            "extra_fields": dict(row.metadata) if row.metadata else {},
+            "timestamp": _safe_iso(row.timestamp),
+            "extra_fields": dict(row.metadata) if hasattr(row, "metadata") and row.metadata else {},
         }
 
     def _extract_applied_filters(self, root: Union[ParsedGroup, ParsedCondition]) -> List[Dict[str, Any]]:

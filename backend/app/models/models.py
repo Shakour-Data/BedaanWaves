@@ -474,6 +474,7 @@ class WatchlistItem(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     watchlist = relationship("Watchlist", back_populates="items")
+    asset = relationship("Asset")
 
     __table_args__ = (
         UniqueConstraint('watchlist_id', 'asset_id', name='uix_watchlist_asset'),

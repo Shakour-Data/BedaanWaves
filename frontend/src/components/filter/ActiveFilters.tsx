@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { AdvancedFilterResponse } from "@/types/filter";
-import { LEVEL_LABELS, LEVEL_COLORS } from "@/types/filter";
+import { LEVEL_COLORS } from "@/types/filter";
 
 interface ActiveFiltersProps {
   applied: AdvancedFilterResponse["applied_filters"];

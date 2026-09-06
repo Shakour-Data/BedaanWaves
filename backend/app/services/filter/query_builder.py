@@ -183,5 +183,8 @@ def apply_filter_to_query(
 
 
 def get_sort_column(sort_by: str, registry):
-    column = _column_for_field(sort_by, registry)
-    return column
+    try:
+        return _column_for_field(sort_by, registry)
+    except QueryBuildError:
+        from app.models.scoring_snapshot import ScoringSnapshot
+        return ScoringSnapshot.score
