@@ -86,3 +86,110 @@ class DashboardOverview(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class HierarchyScores(BaseModel):
+    """Scores at a specific snapshot tier (daily/hourly/current)."""
+    overall: Optional[float] = None
+    dimensions: Optional[dict] = None
+    sub_dimensions: Optional[dict] = None
+    aspects: Optional[dict] = None
+    sub_aspects: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DeltaFrame(BaseModel):
+    """Deltas between two snapshot tiers."""
+    overall: Optional[float] = None
+    overall_pct: Optional[float] = None
+    dimensions: Optional[dict] = None
+    sub_dimensions: Optional[dict] = None
+    aspects: Optional[dict] = None
+    sub_aspects: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WeightSnapshot(BaseModel):
+    """Current weights across 4 hierarchy levels."""
+    dimension: Optional[dict] = None
+    sub_dimension: Optional[dict] = None
+    aspect: Optional[dict] = None
+    sub_aspect: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WeightTrendPoint(BaseModel):
+    """Historical weight for one day / hour."""
+    date: str
+    weights: dict
+
+    class Config:
+        from_attributes = True
+
+
+class WeightDeltaPoint(BaseModel):
+    """Weight delta vs. prior reference."""
+    key: str
+    value: float
+
+    class Config:
+        from_attributes = True
+
+
+class TrendPoint(BaseModel):
+    """Historical trend point (daily or intraday cadence)."""
+    timestamp: str
+    avg_score: Optional[float] = None
+    dimensions: Optional[dict] = None
+    symbol_count: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SnapshotResponse(BaseModel):
+    """Unified temporal snapshot payload per FR1."""
+    snapshotId: str
+    tier: str
+    effectiveAt: str
+    fetchedAt: str
+    scores: dict  # {daily, hourly, current} -> HierarchyScores
+    deltas: dict  # {hourly_vs_daily, current_vs_hourly, current_vs_daily} -> DeltaFrame
+    weights: WeightSnapshot
+    weightTrends: List[WeightTrendPoint]
+    weightDeltas: List[WeightDeltaPoint]
+    trends: dict  # {daily: [...], intraday: [...]}
+    universe: dict  # {total, market: "NASDAQ"}
+    symbol: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SnapshotIndexEntry(BaseModel):
+    """Enumerated past snapshot entry for time-slider."""
+    snapshotId: Optional[str] = None
+    tier: str
+    effectiveAt: str
+    label: str
+    symbolCount: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SnapshotIndexResponse(BaseModel):
+    """Paginated index of snapshots."""
+    status: str = "success"
+    count: int
+    entries: List[SnapshotIndexEntry]
+    timestamp: str
+
+    class Config:
+        from_attributes = True
