@@ -96,14 +96,14 @@ export default function LoginPage() {
             <InputField
               id="username"
               type="text"
-              label={t("login.username")}
+              label={t("auth.username")}
               required
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value);
                 setUsernameValid(validateUsername(e.target.value));
               }}
-              placeholder={t("login.username_placeholder") || t("login.username")}
+              placeholder={t("auth.username")}
               disabled={loading}
               validationState={usernameValid}
               validationMessage={usernameValid === "invalid" ? "Username must be at least 3 characters." : undefined}

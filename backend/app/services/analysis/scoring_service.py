@@ -94,7 +94,7 @@ class ScoringService(AnalysisService):
     
     def _build_level1_dimensions(self) -> List[Dict[str, Any]]:
         """Build level 1 dimension definitions."""
-        return [
+        raw = [
             {"id": "d1", "name": "fundamental_price", "group": "fundamental", "weight": 0.15},
             {"id": "d2", "name": "technical_moving_avg", "group": "technical", "weight": 0.10},
             {"id": "d3", "name": "sentiment_news", "group": "sentiment", "weight": 0.08},
@@ -108,6 +108,11 @@ class ScoringService(AnalysisService):
             {"id": "d11", "name": "fundamental_valuation", "group": "fundamental", "weight": 0.07},
             {"id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
         ]
+        total = sum(item["weight"] for item in raw)
+        if total > 0:
+            for item in raw:
+                item["weight"] = item["weight"] / total
+        return raw
     
     def _build_sub_dimension_map(self) -> Dict[str, List[str]]:
         """Build sub-dimension mapping for level 2."""
@@ -354,16 +359,6 @@ class ScoringService(AnalysisService):
         
         # Market-specific thresholds
         if market in ("NYSE", "NASDAQ", "AMEX"):
-            if dimension == "technical":
-                if "rsi" in key:
-                    return self._score_rsi_global(value)
-                if "macd" in key:
-                    return self._score_macd_global(value)
-            if dimension == "fundamental":
-                if "pe_ratio" in key:
-                    return self._score_pe_global(value)
-                if "roe" in key:
-                    return self._score_roe_global(value)
             if dimension == "technical":
                 if "rsi" in key:
                     return self._score_rsi_global(value)

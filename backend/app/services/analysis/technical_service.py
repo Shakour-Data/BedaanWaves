@@ -180,10 +180,21 @@ class TechnicalAnalysisService(AnalysisService):
         return 100 - (100 / (1 + rs))
 
     def _macd(self, values: List[float]) -> Dict[str, float]:
+        if len(values) < 26:
+            return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
         ema12 = self._ema(values, 12)
         ema26 = self._ema(values, 26)
         macd_line = ema12 - ema26
-        signal = self._ema(values[-9:], 9) if len(values) >= 9 else macd_line
+
+        macd_series: List[float] = []
+        for i in range(26, len(values) + 1):
+            subset = values[:i]
+            f = self._ema(subset, 12)
+            s = self._ema(subset, 26)
+            if f is not None and s is not None:
+                macd_series.append(f - s)
+
+        signal = self._ema(macd_series, 9) if len(macd_series) >= 9 else macd_line
         histogram = macd_line - signal
         return {"macd": macd_line, "signal": signal, "histogram": histogram}
 
@@ -205,7 +216,7 @@ class TechnicalAnalysisService(AnalysisService):
     def _cci(self, values: List[float], period: int = 20) -> float:
         if len(values) < period:
             return 0.0
-        typical = [(values[i] + values[i] + values[i]) / 3 for i in range(len(values))]
+        typical = list(values)
         sma = sum(typical[-period:]) / period
         mean_dev = sum(abs(t - sma) for t in typical[-period:]) / period
         if mean_dev == 0:
@@ -232,9 +243,9 @@ class TechnicalAnalysisService(AnalysisService):
         ema1 = self._ema(values, period)
         ema2 = self._ema(values[-period:], period) if len(values) >= period else ema1
         ema3 = self._ema(values[-period:], period) if len(values) >= period else ema1
-        if len(values) < 2:
+        if ema2 == 0:
             return 0.0
-        return (ema3 - ema3) / ema3 * 100 if ema3 != 0 else 0.0
+        return (ema3 - ema2) / ema2 * 100
 
     def _stoch_rsi(self, values: List[float], period: int = 14) -> Dict[str, float]:
         if len(values) < period:
@@ -344,7 +355,65 @@ class TechnicalAnalysisService(AnalysisService):
     def _adx(self, highs: List[float], lows: List[float], closes: List[float], period: int = 14) -> Dict[str, float]:
         if len(highs) < period + 1:
             return {"adx": 0.0, "plus_di": 0.0, "minus_di": 0.0}
-        return {"adx": 25.0, "plus_di": 20.0, "minus_di": 20.0}
+
+        plus_dm_list: List[float] = []
+        minus_dm_list: List[float] = []
+        tr_list: List[float] = []
+
+        for i in range(1, len(highs)):
+            up_move = highs[i] - highs[i - 1]
+            down_move = lows[i - 1] - lows[i]
+            plus_dm = up_move if up_move > down_move and up_move > 0 else 0.0
+            minus_dm = down_move if down_move > up_move and down_move > 0 else 0.0
+            plus_dm_list.append(plus_dm)
+            minus_dm_list.append(minus_dm)
+
+            tr = max(
+                highs[i] - lows[i],
+                abs(highs[i] - closes[i - 1]),
+                abs(lows[i] - closes[i - 1]),
+            )
+            tr_list.append(tr)
+
+        def wilder_smooth(values: List[float], p: int) -> float:
+            if len(values) < p:
+                return sum(values) / len(values) if values else 0.0
+            smooth = sum(values[:p])
+            for i in range(p, len(values)):
+                smooth = smooth - (smooth / p) + values[i]
+            return smooth
+
+        atr = wilder_smooth(tr_list, period)
+        smooth_plus = wilder_smooth(plus_dm_list, period)
+        smooth_minus = wilder_smooth(minus_dm_list, period)
+
+        plus_di = (100.0 * smooth_plus / atr) if atr != 0 else 0.0
+        minus_di = (100.0 * smooth_minus / atr) if atr != 0 else 0.0
+
+        di_sum = plus_di + minus_di
+        dx = (100.0 * abs(plus_di - minus_di) / di_sum) if di_sum != 0 else 0.0
+
+        dx_list = []
+        for i in range(period - 1, len(tr_list)):
+            up = highs[i] - highs[i - 1]
+            down = lows[i - 1] - lows[i]
+            pdm = up if up > down and up > 0 else 0.0
+            mdm = down if down > up and down > 0 else 0.0
+            tr = max(
+                highs[i] - lows[i],
+                abs(highs[i] - closes[i - 1]),
+                abs(lows[i] - closes[i - 1]),
+            )
+            sp = wilder_smooth(plus_dm_list[: i + 1], period)
+            sm = wilder_smooth(minus_dm_list[: i + 1], period)
+            a = wilder_smooth(tr_list[: i + 1], period)
+            pdi = (100.0 * sp / a) if a != 0 else 0.0
+            mdi = (100.0 * sm / a) if a != 0 else 0.0
+            s = pdi + mdi
+            dx_list.append((100.0 * abs(pdi - mdi) / s) if s != 0 else 0.0)
+
+        adx = sum(dx_list[:period]) / period if len(dx_list) >= period else (dx_list[-1] if dx_list else 0.0)
+        return {"adx": adx, "plus_di": plus_di, "minus_di": minus_di}
 
     def _ichimoku(self, highs: List[float], lows: List[float], closes: List[float]) -> Dict[str, float]:
         if len(highs) < 52:
@@ -363,7 +432,41 @@ class TechnicalAnalysisService(AnalysisService):
     def _parabolic_sar(self, highs: List[float], lows: List[float], closes: List[float]) -> Dict[str, Any]:
         if len(highs) < 2:
             return {"sar": 0.0, "trend": "neutral"}
-        return {"sar": lows[-1], "trend": "up"}
+
+        af = 0.02
+        max_af = 0.2
+        sar = lows[0]
+        trend = 1
+        ep = highs[0]
+        sar_list = [sar]
+
+        for i in range(1, len(highs)):
+            sar = sar + af * (ep - sar)
+            if trend == 1:
+                sar = min(sar, lows[i - 1], lows[i - 2] if i >= 2 else lows[i - 1])
+                if lows[i] < sar:
+                    trend = -1
+                    sar = ep
+                    ep = lows[i]
+                    af = 0.02
+                else:
+                    if highs[i] > ep:
+                        ep = highs[i]
+                        af = min(af + 0.02, max_af)
+            else:
+                sar = max(sar, highs[i - 1], highs[i - 2] if i >= 2 else highs[i - 1])
+                if highs[i] > sar:
+                    trend = 1
+                    sar = ep
+                    ep = highs[i]
+                    af = 0.02
+                else:
+                    if lows[i] < ep:
+                        ep = lows[i]
+                        af = min(af + 0.02, max_af)
+            sar_list.append(sar)
+
+        return {"sar": sar_list[-1], "trend": "up" if trend == 1 else "down"}
 
     def _aroon(self, highs: List[float], lows: List[float], period: int = 25) -> Dict[str, Any]:
         if len(highs) < period:
@@ -520,7 +623,22 @@ class TechnicalAnalysisService(AnalysisService):
     def _ultimate_oscillator(self, highs: List[float], lows: List[float], closes: List[float], volumes: List[float]) -> float:
         if len(closes) < 28:
             return 50.0
-        return 50.0
+
+        def bp(idx: int) -> float:
+            return closes[idx] - min(lows[idx], closes[idx - 1]) if idx > 0 else closes[idx] - lows[idx]
+
+        def tr(idx: int) -> float:
+            return max(highs[idx], closes[idx - 1]) - min(lows[idx], closes[idx - 1]) if idx > 0 else highs[idx] - lows[idx]
+
+        def avg(period: int) -> float:
+            raw_bp = sum(bp(i) for i in range(len(closes) - period, len(closes)))
+            raw_tr = sum(tr(i) for i in range(len(closes) - period, len(closes)))
+            return raw_bp / raw_tr if raw_tr != 0 else 0.0
+
+        avg7 = avg(7)
+        avg14 = avg(14)
+        avg28 = avg(28)
+        return 100.0 * ((4.0 * avg7) + (2.0 * avg14) + avg28) / 7.0
 
     async def _oscillators(self, prices: List[float], highs: List[float], lows: List[float], volumes: List[float]) -> Dict[str, Any]:
         return {

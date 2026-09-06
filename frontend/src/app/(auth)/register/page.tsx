@@ -74,11 +74,11 @@ export default function RegisterPage() {
           <InputField
             id="username"
             type="text"
-            label={t("signup.username")}
+            label={t("auth.username")}
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder={t("signup.username_placeholder") || t("signup.username")}
+            placeholder={t("auth.username")}
             disabled={loading}
             validationState={username ? validateUsername(username) : "idle"}
             validationMessage={username && validateUsername(username) === "invalid" ? "Username must be at least 3 characters." : undefined}

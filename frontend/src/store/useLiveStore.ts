@@ -178,43 +178,43 @@ export function isStaleByAge(ageMs: number | null, timestamp: number | null): bo
 }
 
 export function getStreamEndpoint(key: LiveStreamKey): string {
-  if (key === 'market') return '/api/v1/live-sse/market/stream';
-  if (key === 'scores') return '/api/v1/live-sse/scores/stream?scope=NASDAQ';
-  if (key === 'news') return '/api/v1/live-sse/news/stream';
+  if (key === 'market') return '/live-sse/market/stream';
+  if (key === 'scores') return '/live-sse/scores/stream?scope=NASDAQ';
+  if (key === 'news') return '/live-sse/news/stream';
   if (key.startsWith('quote:')) {
     const symbol = key.slice('quote:'.length);
-    return `/api/v1/live-sse/quote/${encodeURIComponent(symbol)}/stream`;
+    return `/live-sse/quote/${encodeURIComponent(symbol)}/stream`;
   }
   if (key.startsWith('intraday:')) {
     const rest = key.slice('intraday:'.length);
     const colon = rest.indexOf(':');
     if (colon === -1) {
-      return `/api/v1/live-sse/intraday/${encodeURIComponent(rest)}/stream?interval=5m`;
+      return `/live-sse/intraday/${encodeURIComponent(rest)}/stream?interval=5m`;
     }
     const symbol = rest.slice(0, colon);
     const interval = rest.slice(colon + 1);
-    return `/api/v1/live-sse/intraday/${encodeURIComponent(symbol)}/stream?interval=${encodeURIComponent(interval)}`;
+    return `/live-sse/intraday/${encodeURIComponent(symbol)}/stream?interval=${encodeURIComponent(interval)}`;
   }
   return '';
 }
 
 export function getSnapshotEndpoint(key: LiveStreamKey): string {
-  if (key === 'market') return '/api/v1/live/market';
-  if (key === 'scores') return '/api/v1/live/scores?scope=NASDAQ';
-  if (key === 'news') return '/api/v1/live/news';
+  if (key === 'market') return '/live/market';
+  if (key === 'scores') return '/live/scores?scope=NASDAQ';
+  if (key === 'news') return '/live/news';
   if (key.startsWith('quote:')) {
     const symbol = key.slice('quote:'.length);
-    return `/api/v1/live/quote/${encodeURIComponent(symbol)}`;
+    return `/live/quote/${encodeURIComponent(symbol)}`;
   }
   if (key.startsWith('intraday:')) {
     const rest = key.slice('intraday:'.length);
     const colon = rest.indexOf(':');
     if (colon === -1) {
-      return `/api/v1/live/intraday/${encodeURIComponent(rest)}?interval=5m`;
+      return `/live/intraday/${encodeURIComponent(rest)}?interval=5m`;
     }
     const symbol = rest.slice(0, colon);
     const interval = rest.slice(colon + 1);
-    return `/api/v1/live/intraday/${encodeURIComponent(symbol)}?interval=${encodeURIComponent(interval)}`;
+    return `/live/intraday/${encodeURIComponent(symbol)}?interval=${encodeURIComponent(interval)}`;
   }
   return '';
 }

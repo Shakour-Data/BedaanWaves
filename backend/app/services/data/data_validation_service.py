@@ -239,7 +239,7 @@ class DataValidationService(CachedService):
             
             if data_points:
                 # Analyze date range
-                dates = [dp.get('date') for dp in data_points if dp.get('date')]
+                dates = [dp.get('timestamp') for dp in data_points if dp.get('timestamp')]
                 if dates:
                     # Convert to datetime objects for comparison
                     date_objects = []

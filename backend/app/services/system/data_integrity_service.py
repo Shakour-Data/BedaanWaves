@@ -15,6 +15,10 @@ try:
 except Exception:
     IntlApiClient = None
 from app.services.data.market_service import MarketService
+try:
+    from app.services.data.stock_service import StockService
+except Exception:
+    StockService = None
 import logging
 from app.core.utils import utc_now_iso
 
@@ -35,6 +39,7 @@ class DataIntegrityService(BaseService):
                  validation_service: Optional[DataValidationService] = None,
                  intl_client: Optional[IntlApiClient] = None,
                  market_service: Optional[MarketService] = None,
+                 stock_service: Optional[StockService] = None,
                  logger: Optional[logging.Logger] = None):
         """
         Initialize data integrity service.
@@ -44,6 +49,7 @@ class DataIntegrityService(BaseService):
             validation_service: Data validation service instance
             intl_client: International API client instance
             market_service: Market data service instance
+            stock_service: Stock service instance
             logger: Optional logger instance
         """
         super().__init__(service_name, logger=logger)
@@ -53,6 +59,7 @@ class DataIntegrityService(BaseService):
         )
         self.intl_client = intl_client
         self.market_service = market_service
+        self.stock_service = stock_service
         
         # Monitoring configuration
         self.monitoring_interval = 3600  # 1 hour
@@ -571,6 +578,7 @@ class DataIntegrityService(BaseService):
 def get_data_integrity_service(validation_service=None,
                                intl_client=None,
                                market_service=None,
+                               stock_service=None,
                                logger=None) -> DataIntegrityService:
     """Factory function to create DataIntegrityService instance."""
     return DataIntegrityService(
@@ -578,5 +586,6 @@ def get_data_integrity_service(validation_service=None,
         validation_service=validation_service,
                 intl_client=intl_client,
         market_service=market_service,
+        stock_service=stock_service,
         logger=logger
     )
