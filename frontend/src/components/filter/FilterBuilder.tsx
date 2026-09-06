@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import {
   FilterGroup as FilterGroupType,
