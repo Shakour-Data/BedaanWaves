@@ -17,24 +17,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface DateState {
-  // The currently selected date (used as end_date for all queries)
   selectedDate: string | null;
-  
-  // The latest available date in the database
   latestAvailableDate: string | null;
-  
-  // Whether to use the latest date automatically
   useLatestDate: boolean;
-  
-  // Actions
   setSelectedDate: (date: string | null) => void;
   setLatestAvailableDate: (date: string | null) => void;
   setUseLatestDate: (use: boolean) => void;
-  
-  // Get the effective date (selected or latest)
+  setLiveLatestFromStream: (timestampIso: string) => void;
   getEffectiveDate: () => string | null;
-  
-  // Reset to defaults
   reset: () => void;
 }
 
@@ -70,6 +60,21 @@ export const useDateStore = create<DateState>()(
         set({ useLatestDate: use });
         if (use && get().latestAvailableDate) {
           set({ selectedDate: get().latestAvailableDate });
+        }
+      },
+
+      setLiveLatestFromStream: (timestampIso) => {
+        if (!timestampIso) return;
+        let dateOnly = timestampIso;
+        if (timestampIso.includes('T')) {
+          dateOnly = timestampIso.split('T')[0];
+        }
+        const current = get().latestAvailableDate;
+        if (current !== dateOnly) {
+          set({ latestAvailableDate: dateOnly });
+          if (get().useLatestDate) {
+            set({ selectedDate: dateOnly });
+          }
         }
       },
 
