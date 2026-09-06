@@ -1,0 +1,14 @@
+
+backend\mypy_output.log:30:app\services\live\pipeline_metrics.py:240: error: Incompatible return value type (got "list[tuple[str, float, float]]", expected "list[tuple[str, int, float]]")  [return-value]
+backend\mypy_output.log:75:app\services\live\freshness_validator.py:101: error: Argument 1 to "float" has incompatible type "Any | None"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+backend\mypy_output.log:76:app\services\live\freshness_validator.py:102: error: Argument 1 to "float" has incompatible type "Any | None"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+backend\mypy_output.log:77:app\services\live\freshness_validator.py:103: error: Argument 1 to "float" has incompatible type "Any | None"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+backend\mypy_output.log:202:app\services\live\orchestrator.py:490: error: Argument "event" to "LiveEventEnvelope" has incompatible type "str"; expected "Literal['quote', 'intraday', 'market_pulse', 'score_delta', 'news_item', 'health', 'ping']"  [arg-type]
+backend\mypy_output.log:203:app\services\live\orchestrator.py:522: error: Argument "event" to "LiveEventEnvelope" has incompatible type "str"; expected "Literal['quote', 'intraday', 'market_pulse', 'score_delta', 'news_item', 'health', 'ping']"  [arg-type]
+backend\mypy_output.log:204:app\services\live\orchestrator.py:574: error: Argument "event" to "LiveEventEnvelope" has incompatible type "str"; expected "Literal['quote', 'intraday', 'market_pulse', 'score_delta', 'news_item', 'health', 'ping']"  [arg-type]
+backend\mypy_output.log:405:app\api\routes\live_sse.py:142: error: Name "Any" is not defined  [name-defined]
+backend\mypy_output.log:406:app\api\routes\live_sse.py:142: note: Did you forget to import it from "typing"? (Suggestion: "from typing import Any")
+backend\mypy_output.log:407:app\api\routes\live_sse.py:144: error: Name "Any" is not defined  [name-defined]
+backend\mypy_output.log:408:app\api\routes\live_sse.py:144: note: Did you forget to import it from "typing"? (Suggestion: "from typing import Any")
+backend\mypy_output.log:409:app\api\routes\live_sse.py:209: error: Name "asyncio" is not defined  [name-defined]
+
