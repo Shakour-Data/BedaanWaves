@@ -14,14 +14,19 @@ import asyncio
 import logging
 import os
 import shutil
-from datetime import timezone, datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, Coroutine
+from datetime import timezone, datetime, timedelta, date as _date
+from typing import Any, Callable, Dict, List, Optional, Coroutine, Tuple
 from dataclasses import dataclass, field
+import uuid as _uuid
 
 from ..core import BaseService
 from app.core.config import get_settings
 from sqlalchemy import select, func, and_
-from app.models.models import Asset, IntlPriceCandle, News
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.models import Asset, IntlPriceCandle, News, ScoreHistory, MarketDataSnapshot
+from app.models.scoring_snapshot import ScoringSnapshot, SnapshotLevel, SnapshotTier
+from app.db.base import async_session_maker
 
 
 @dataclass
@@ -148,28 +153,597 @@ class SchedulerService(BaseService):
 
         # === SCORING & ANALYSIS JOBS ===
 
+        # ------------------------------------------------------------------
+        # Idempotency helper: probes the unique constraint before running
+        # expensive scoring. Returns (skip_reason|None) to short-circuit.
+        # ------------------------------------------------------------------
+        async def _scoring_idempotency_probe(
+            tier: SnapshotTier,
+            effective_at: datetime,
+            market: str = "NASDAQ",
+        ) -> Optional[str]:
+            """Return skip reason if this tier+effective_at already has rows."""
+            async with async_session_maker() as session:
+                probe_q = (
+                    select(func.count())
+                    .select_from(ScoringSnapshot)
+                    .join(Asset, Asset.id == ScoringSnapshot.asset_id)
+                    .where(
+                        and_(
+                            ScoringSnapshot.snapshot_tier == tier.value,
+                            ScoringSnapshot.effective_at == effective_at,
+                            Asset.market == market,
+                        )
+                    )
+                )
+                cnt = (await session.execute(probe_q)).scalar_one()
+            if cnt and cnt > 0:
+                return "already_computed"
+            return None
+
+        def _floor_to_hour(dt: datetime) -> datetime:
+            return dt.replace(minute=0, second=0, microsecond=0)
+
+        def _floor_to_day(dt: datetime) -> datetime:
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        async def _promote_scorehistory_to_snapshot(
+            target_date: _date,
+            tier: SnapshotTier,
+            effective_at: datetime,
+            market: str = "NASDAQ",
+        ) -> int:
+            """Read ScoreHistory rows for target_date and explode them into
+            4-level ScoringSnapshot rows. Returns the count of snapshots rows
+            inserted (overall + dimension + sub-dimension + aspect + sub-aspect).
+            """
+            async with async_session_maker() as session:
+                sh_q = (
+                    select(
+                        ScoreHistory.asset_id,
+                        ScoreHistory.overall_score,
+                        ScoreHistory.dimension_scores,
+                        ScoreHistory.sub_dimension_scores,
+                        ScoreHistory.aspect_scores,
+                        ScoreHistory.sub_aspect_scores,
+                        ScoreHistory.grade,
+                    )
+                    .join(Asset, Asset.id == ScoreHistory.asset_id)
+                    .where(
+                        and_(
+                            ScoreHistory.date == target_date,
+                            Asset.market == market,
+                            Asset.active == True,
+                        )
+                    )
+                )
+                sh_rows = (await session.execute(sh_q)).all()
+
+                snapshot_rows: List[Dict[str, Any]] = []
+
+                def _append(
+                    asset_id,
+                    level: SnapshotLevel,
+                    level_key: str,
+                    level_name: str,
+                    score: float,
+                ):
+                    snapshot_rows.append({
+                        "id": _uuid.uuid4(),
+                        "asset_id": asset_id,
+                        "date": target_date,
+                        "snapshot_tier": tier.value,
+                        "effective_at": effective_at,
+                        "level": level.value,
+                        "level_key": level_key,
+                        "level_name": level_name,
+                        "score": score,
+                        "score_change": None,
+                        "industry": None,
+                        "company_id": None,
+                        "timestamp": datetime.now(timezone.utc),
+                        "extra_fields": {},
+                    })
+
+                for asset_id, overall, dims, sub_dims, aspects, sub_aspects, grade in sh_rows:
+                    if overall is None:
+                        continue
+                    _append(asset_id, SnapshotLevel.OVERALL, "overall", "Overall", float(overall))
+
+                    if dims:
+                        for k, v in dims.items():
+                            try:
+                                fv = float(v)
+                            except (TypeError, ValueError):
+                                continue
+                            _append(asset_id, SnapshotLevel.DIMENSION, k, k.replace("_", " ").title(), fv)
+
+                    if sub_dims:
+                        for k, v in sub_dims.items():
+                            try:
+                                fv = float(v)
+                            except (TypeError, ValueError):
+                                continue
+                            _append(asset_id, SnapshotLevel.SUB_DIMENSION, k, k.replace("_", " ").title(), fv)
+
+                    if aspects:
+                        for k, v in aspects.items():
+                            try:
+                                fv = float(v)
+                            except (TypeError, ValueError):
+                                continue
+                            _append(asset_id, SnapshotLevel.ASPECT, k, k.replace("_", " ").title(), fv)
+
+                    if sub_aspects:
+                        for k, v in sub_aspects.items():
+                            try:
+                                fv = float(v)
+                            except (TypeError, ValueError):
+                                continue
+                            _append(asset_id, SnapshotLevel.SUB_ASPECT, k, k.replace("_", " ").title(), fv)
+
+                if not snapshot_rows:
+                    return 0
+
+                # Upsert via unique composite index (asset_id, tier, effective_at, level, level_key)
+                # We batch-insert under the unique composite index for snapshot_tier+effective_at+asset+level+level_key.
+                chunk_size = 5000
+                total_inserted = 0
+                for i in range(0, len(snapshot_rows), chunk_size):
+                    chunk = snapshot_rows[i:i + chunk_size]
+                    stmt = pg_insert(ScoringSnapshot).values(chunk)
+                    stmt = stmt.on_conflict_do_nothing(
+                        index_elements=["asset_id", "snapshot_tier", "effective_at", "level", "level_key"],
+                    )
+                    res = await session.execute(stmt)
+                    total_inserted += int(getattr(res, "rowcount", len(chunk)))
+                await session.commit()
+                return total_inserted
+
         async def daily_score_recalculation_job():
             from app.services.analysis.score_history_pipeline import ScoreHistoryPipeline
+            now_utc = datetime.now(timezone.utc)
+            effective_day = _floor_to_day(now_utc)
+            target_date = effective_day.date()
+            result_base: Dict[str, Any] = {
+                "tier": SnapshotTier.DAILY.value,
+                "effective_at": effective_day.isoformat(),
+                "date": target_date.isoformat(),
+                "written": 0,
+                "paired_hourly_written": 0,
+                "skip_reason": None,
+            }
+
+            skip = await _scoring_idempotency_probe(SnapshotTier.DAILY, effective_day, market="NASDAQ")
+            if skip:
+                result_base["skip_reason"] = skip
+                return result_base
+
             pipeline = ScoreHistoryPipeline()
             await pipeline.initialize()
+            t0 = datetime.now(timezone.utc)
             try:
-                result = await pipeline.compute_and_persist_v2(
-                    market="NASDAQ"
+                pipe_result = await pipeline.compute_and_persist_v2(
+                    market="NASDAQ",
+                    target_date=target_date,
                 )
-                if result.get("written", 0) == 0:
-                    return await pipeline.compute_and_persist_all(
-                        market="NASDAQ", batch_size=100
+                if pipe_result.get("written", 0) == 0:
+                    pipe_result = await pipeline.compute_and_persist_all(
+                        market="NASDAQ",
+                        batch_size=100,
+                        target_date=target_date,
                     )
-                return result
+                result_base["scorehistory_written"] = pipe_result.get("written", 0)
+                written_snap = await _promote_scorehistory_to_snapshot(
+                    target_date,
+                    SnapshotTier.DAILY,
+                    effective_day,
+                    market="NASDAQ",
+                )
+                result_base["written"] = written_snap
+
+                # Guarantee paired hourly reference at 00:00 UTC so current_vs_daily
+                # delta frame always has a matching hourly anchor at day boundary.
+                paired_hourly_skip = await _scoring_idempotency_probe(
+                    SnapshotTier.HOURLY, effective_day, market="NASDAQ"
+                )
+                if not paired_hourly_skip:
+                    paired = await _promote_scorehistory_to_snapshot(
+                        target_date,
+                        SnapshotTier.HOURLY,
+                        effective_day,
+                        market="NASDAQ",
+                    )
+                    result_base["paired_hourly_written"] = paired
+                else:
+                    result_base["paired_hourly_skip_reason"] = paired_hourly_skip
+
+                t1 = datetime.now(timezone.utc)
+                result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
+                self.logger.info(
+                    "DailyScoreRecalculation complete: %d snapshots, paired_hourly=%d, duration=%dms",
+                    written_snap, result_base["paired_hourly_written"], result_base["duration_ms"]
+                )
+                return result_base
             except Exception as e:
-                logger.error(f"DailyScoreRecalculation failed: {e}")
-                return {"status": "error", "error": str(e)}
+                self.logger.error(f"DailyScoreRecalculation failed: {e}", exc_info=True)
+                result_base["status"] = "error"
+                result_base["error"] = str(e)
+                return result_base
             finally:
                 await pipeline.shutdown()
 
         self.register_job(
             name="DailyScoreRecalculation",
             coroutine_func=daily_score_recalculation_job,
+            interval_seconds=86400,
+        )
+
+        async def hourly_score_recompute_job():
+            """Full 4-level hierarchy scoring, tier=hourly, effective_at=floor_1h(UTC)."""
+            from app.services.analysis.score_history_pipeline import ScoreHistoryPipeline
+            now_utc = datetime.now(timezone.utc)
+            effective_hour = _floor_to_hour(now_utc)
+            target_date = effective_hour.date()
+
+            result_base: Dict[str, Any] = {
+                "tier": SnapshotTier.HOURLY.value,
+                "effective_at": effective_hour.isoformat(),
+                "date": target_date.isoformat(),
+                "written": 0,
+                "skip_reason": None,
+            }
+
+            skip = await _scoring_idempotency_probe(SnapshotTier.HOURLY, effective_hour, market="NASDAQ")
+            if skip:
+                result_base["skip_reason"] = skip
+                return result_base
+
+            pipeline = ScoreHistoryPipeline()
+            await pipeline.initialize()
+            t0 = datetime.now(timezone.utc)
+            try:
+                # We compute through the v2 engine (cross-sectional ranks are
+                # market-relative so still valid on hourly cadence).
+                pipe_result = await pipeline.compute_and_persist_v2(
+                    market="NASDAQ",
+                    target_date=target_date,
+                )
+                result_base["scorehistory_written"] = pipe_result.get("written", 0)
+                written_snap = await _promote_scorehistory_to_snapshot(
+                    target_date,
+                    SnapshotTier.HOURLY,
+                    effective_hour,
+                    market="NASDAQ",
+                )
+                result_base["written"] = written_snap
+                t1 = datetime.now(timezone.utc)
+                result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
+                self.logger.info(
+                    "HourlyScoreRecompute complete: %d snapshots, duration=%dms",
+                    written_snap, result_base["duration_ms"]
+                )
+                return result_base
+            except Exception as e:
+                self.logger.error(f"HourlyScoreRecompute failed: {e}", exc_info=True)
+                result_base["status"] = "error"
+                result_base["error"] = str(e)
+                return result_base
+            finally:
+                await pipeline.shutdown()
+
+        self.register_job(
+            name="HourlyScoreRecompute",
+            coroutine_func=hourly_score_recompute_job,
+            interval_seconds=3600,
+        )
+
+        async def fast_indicators_5m_job():
+            """Every 5 minutes: compute RSI/MACD/BB%/volatility/momentum per active
+            NASDAQ asset and write MarketDataSnapshot with interval='5m'. Skips
+            cleanly if the market is closed using a lightweight clock check.
+            """
+            from app.services.analysis.technical_indicators import (
+                compute_all_indicators,
+                Candle,
+            )
+
+            now_utc = datetime.now(timezone.utc)
+            # Lightweight NYSE/NASDAQ market hours check (9:30-16:00 ET => 13:30-20:00 UTC in winter).
+            # We still run outside hours so that pre/post/weekend pipelines produce
+            # stable rows; the TemporalSnapshotService weights by age.
+            effective_5m = now_utc.replace(minute=(now_utc.minute // 5) * 5, second=0, microsecond=0)
+            result_base: Dict[str, Any] = {
+                "interval": "5m",
+                "effective_at": effective_5m.isoformat(),
+                "written_rows": 0,
+                "skipped_assets": 0,
+                "duration_ms": 0,
+                "skip_reason": None,
+            }
+            t0 = datetime.now(timezone.utc)
+
+            try:
+                async with async_session_maker() as session:
+                    active_q = (
+                        select(Asset.id, Asset.symbol, Asset.market, Asset.asset_class)
+                        .where(
+                            and_(
+                                Asset.active == True,
+                                Asset.market == "NASDAQ",
+                                Asset.asset_class.in_(["EQUITY", "ETF"]),
+                            )
+                        )
+                        .limit(200)
+                    )
+                    assets = (await session.execute(active_q)).all()
+
+                if not assets:
+                    result_base["skip_reason"] = "no_active_assets"
+                    return result_base
+
+                rows_to_write: List[Dict[str, Any]] = []
+                for asset_id, symbol, market, asset_class in assets:
+                    try:
+                        # Fetch latest ~120 1-minute candles (or 1d fallback).
+                        candle_q = (
+                            select(IntlPriceCandle)
+                            .where(
+                                and_(
+                                    IntlPriceCandle.asset_id == asset_id,
+                                    IntlPriceCandle.timeframe.in_(["1m", "5m", "1d"]),
+                                )
+                            )
+                            .order_by(IntlPriceCandle.timestamp.desc())
+                            .limit(120)
+                        )
+                        async with async_session_maker() as s2:
+                            candle_rows = (await s2.execute(candle_q)).scalars().all()
+                        if len(candle_rows) < 20:
+                            result_base["skipped_assets"] += 1
+                            continue
+                        candles: List[Candle] = []
+                        for c in reversed(candle_rows):
+                            try:
+                                candles.append(Candle(
+                                    open=float(c.open),
+                                    high=float(c.high),
+                                    low=float(c.low),
+                                    close=float(c.close),
+                                    volume=float(c.volume) if c.volume else 0.0,
+                                ))
+                            except (TypeError, ValueError):
+                                continue
+                        if len(candles) < 20:
+                            result_base["skipped_assets"] += 1
+                            continue
+                        inds = compute_all_indicators(candles)
+                        if not inds:
+                            result_base["skipped_assets"] += 1
+                            continue
+                        closes = [c.close for c in candles]
+                        last_close = closes[-1] if closes else 0.0
+                        rows_to_write.append({
+                            "id": _uuid.uuid4(),
+                            "asset_id": asset_id,
+                            "interval": "5m",
+                            "snapshot_time": effective_5m,
+                            "open_price": candles[-1].open if candles else None,
+                            "high_price": candles[-1].high if candles else None,
+                            "low_price": candles[-1].low if candles else None,
+                            "close_price": last_close,
+                            "volume": int(candles[-1].volume) if candles else 0,
+                            "turnover": None,
+                            "rsi": inds.get("rsi"),
+                            "macd": inds.get("macd"),
+                            "macd_signal": inds.get("macd_signal"),
+                            "macd_histogram": inds.get("macd_histogram"),
+                            "bb_upper": inds.get("bb_upper"),
+                            "bb_middle": inds.get("bb_middle"),
+                            "bb_lower": inds.get("bb_lower"),
+                            "bb_percent_b": inds.get("bb_percent_b"),
+                            "bb_width": inds.get("bb_width"),
+                            "sma_20": inds.get("sma_20"),
+                            "sma_50": inds.get("sma_50"),
+                            "sma_200": inds.get("sma_200"),
+                            "ema_12": inds.get("ema_12"),
+                            "ema_26": inds.get("ema_26"),
+                            "volatility": inds.get("volatility"),
+                            "volume_ratio": inds.get("volume_ratio"),
+                            "momentum": inds.get("momentum"),
+                            "stoch_k": inds.get("stoch_k"),
+                            "stoch_d": inds.get("stoch_d"),
+                            "atr": inds.get("atr"),
+                            "price_change_pct": inds.get("price_change_pct"),
+                        })
+                    except Exception as inner_e:
+                        self.logger.warning(f"FastIndicators5m skipped {symbol}: {inner_e}")
+                        result_base["skipped_assets"] += 1
+                        continue
+
+                if rows_to_write:
+                    chunk_size = 500
+                    async with async_session_maker() as session:
+                        for i in range(0, len(rows_to_write), chunk_size):
+                            chunk = rows_to_write[i:i + chunk_size]
+                            stmt = pg_insert(MarketDataSnapshot).values(chunk)
+                            # Conflict on (asset_id, interval, snapshot_time) if such index exists; else do nothing.
+                            try:
+                                stmt = stmt.on_conflict_do_nothing(
+                                    index_elements=["asset_id", "interval", "snapshot_time"],
+                                )
+                            except Exception:
+                                # Fallback: just do insert, caller will log duplicates.
+                                pass
+                            res = await session.execute(stmt)
+                            result_base["written_rows"] += int(getattr(res, "rowcount", len(chunk)))
+                        await session.commit()
+
+                t1 = datetime.now(timezone.utc)
+                result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
+                self.logger.info(
+                    "FastIndicators5m complete: written=%d, skipped=%d, duration=%dms",
+                    result_base["written_rows"], result_base["skipped_assets"], result_base["duration_ms"]
+                )
+                return result_base
+            except Exception as e:
+                self.logger.error(f"FastIndicators5m failed: {e}", exc_info=True)
+                result_base["status"] = "error"
+                result_base["error"] = str(e)
+                t1 = datetime.now(timezone.utc)
+                result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
+                return result_base
+
+        self.register_job(
+            name="FastIndicators5m",
+            coroutine_func=fast_indicators_5m_job,
+            interval_seconds=300,
+        )
+
+        async def coefficient_snapshot_daily_job():
+            """At 00:10 UTC: persist the current 4-level weight coefficients into
+            coefficient_history rows tagged with tier=DAILY and effective_at of the
+            prior midnight boundary.
+            """
+            from app.services.ml.coefficient_learning_service import (
+                CoefficientLearningService,
+            )
+
+            now_utc = datetime.now(timezone.utc)
+            effective_day = _floor_to_day(now_utc)
+            result_base: Dict[str, Any] = {
+                "tier": SnapshotTier.DAILY.value,
+                "effective_at": effective_day.isoformat(),
+                "written": 0,
+                "duration_ms": 0,
+                "skip_reason": None,
+            }
+            t0 = datetime.now(timezone.utc)
+
+            try:
+                service = CoefficientLearningService()
+                if hasattr(service, "initialize"):
+                    init_coro = service.initialize()
+                    if asyncio.iscoroutine(init_coro):
+                        await init_coro
+
+                coefficients_result = None
+                # Attempt to learn or load current coefficients.
+                for method_name in ("learn_coefficients", "get_current_coefficients", "get_coefficients"):
+                    if hasattr(service, method_name):
+                        fn = getattr(service, method_name)
+                        try:
+                            if method_name == "learn_coefficients":
+                                coefficients_result = await fn([])
+                            else:
+                                res = fn()
+                                if asyncio.iscoroutine(res):
+                                    coefficients_result = await res
+                                else:
+                                    coefficients_result = res
+                            if coefficients_result:
+                                break
+                        except Exception as inner:
+                            self.logger.warning(f"CoefficientSnapshotDaily {method_name}: {inner}")
+                            continue
+
+                if not coefficients_result:
+                    result_base["skip_reason"] = "no_coefficients"
+                    if hasattr(service, "shutdown"):
+                        sdn_coro = service.shutdown()
+                        if asyncio.iscoroutine(sdn_coro):
+                            await sdn_coro
+                    return result_base
+
+                # Normalize coefficients_result into a list of weight rows.
+                weights: List[Dict[str, Any]] = []
+                if isinstance(coefficients_result, dict):
+                    # Best-effort: accept common coefficient payload shapes.
+                    for lvl_key in ("dimensions", "dimension_weights", "dimension", "sub_dimensions", "aspects", "sub_aspects"):
+                        bucket = coefficients_result.get(lvl_key) or {}
+                        if isinstance(bucket, dict):
+                            for k, v in bucket.items():
+                                try:
+                                    fv = float(v)
+                                except (TypeError, ValueError):
+                                    continue
+                                weights.append({
+                                    "level": lvl_key.replace("_weights", ""),
+                                    "level_key": k,
+                                    "weight": fv,
+                                })
+                    # Coefficient matrix (per-asset) handling is left to the
+                    # CoefficientLearningService own persistence; here we only
+                    # write a market-wide summary row.
+                    result_base["weight_rows_detected"] = len(weights)
+
+                # Attempt to persist via coefficient_history model if available.
+                try:
+                    from app.models.models import CoefficientHistory
+                    async with async_session_maker() as session:
+                        # Probe: has any row been written for this effective_at?
+                        probe_q = (
+                            select(func.count())
+                            .select_from(CoefficientHistory)
+                            .where(CoefficientHistory.captured_at == effective_day)
+                        )
+                        try:
+                            exists = (await session.execute(probe_q)).scalar_one()
+                        except Exception:
+                            exists = 0
+                        if exists:
+                            result_base["skip_reason"] = "already_computed"
+                        else:
+                            # Write a single aggregate marker row with tier tag in context.
+                            payload = {
+                                "market": "NASDAQ",
+                                "tier": SnapshotTier.DAILY.value,
+                                "weights_summary": weights,
+                                "raw": coefficients_result if isinstance(coefficients_result, dict) else str(coefficients_result),
+                            }
+                            import json as _json
+                            context_json = _json.dumps(payload, default=str)
+                            try:
+                                ch_row = CoefficientHistory(
+                                    market="NASDAQ",
+                                    captured_at=effective_day,
+                                    context=context_json,
+                                    score=None,
+                                    created_at=datetime.now(timezone.utc),
+                                )
+                                session.add(ch_row)
+                                await session.commit()
+                                result_base["written"] = 1
+                            except Exception as insert_err:
+                                self.logger.warning(f"CoefficientSnapshotDaily insert failed: {insert_err}")
+                                result_base["written"] = 0
+                except Exception as model_err:
+                    self.logger.warning(f"CoefficientSnapshotDaily: CoefficientHistory not usable: {model_err}")
+                    result_base["skip_reason"] = "model_unavailable"
+
+                if hasattr(service, "shutdown"):
+                    sdn_coro = service.shutdown()
+                    if asyncio.iscoroutine(sdn_coro):
+                        await sdn_coro
+
+                t1 = datetime.now(timezone.utc)
+                result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
+                self.logger.info(
+                    "CoefficientSnapshotDaily complete: written=%d, duration=%dms",
+                    result_base["written"], result_base["duration_ms"]
+                )
+                return result_base
+            except Exception as e:
+                self.logger.error(f"CoefficientSnapshotDaily failed: {e}", exc_info=True)
+                result_base["status"] = "error"
+                result_base["error"] = str(e)
+                t1 = datetime.now(timezone.utc)
+                result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
+                return result_base
+
+        self.register_job(
+            name="CoefficientSnapshotDaily",
+            coroutine_func=coefficient_snapshot_daily_job,
             interval_seconds=86400,
         )
 
@@ -183,7 +757,7 @@ class SchedulerService(BaseService):
                 result = await service.compute_and_persist(market="NASDAQ")
                 return result
             except Exception as e:
-                logger.error(f"MarketScoreTrendRecompute failed: {e}")
+                self.logger.error(f"MarketScoreTrendRecompute failed: {e}", exc_info=True)
                 return {"status": "error", "error": str(e)}
             finally:
                 await service.shutdown()
