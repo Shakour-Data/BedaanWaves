@@ -114,10 +114,10 @@ export default function AnalysisPage() {
 
   const analysisTabs = useMemo(() => [
     { id: "general" as Tab, label: "GENERAL", icon: "≡" },
-    { id: "technical" as Tab, label: t("app.analysis.tabs.technical"), icon: "📈" },
-    { id: "fundamental" as Tab, label: t("app.analysis.tabs.fundamental"), icon: "🏦" },
-    { id: "scoring" as Tab, label: t("app.analysis.tabs.scoring"), icon: "💯" },
-    { id: "sentiment" as Tab, label: t("app.analysis.tabs.sentiment"), icon: "🎭" },
+    { id: "technical" as Tab, label: t("app.analysis.tabs.technical"), icon: "T" },
+    { id: "fundamental" as Tab, label: t("app.analysis.tabs.fundamental"), icon: "F" },
+    { id: "scoring" as Tab, label: t("app.analysis.tabs.scoring"), icon: "S" },
+    { id: "sentiment" as Tab, label: t("app.analysis.tabs.sentiment"), icon: "N" },
   ], []);
 
   const liveMarket = useLiveData<MarketPulsePayload>("market" as LiveStreamKey, {
@@ -574,7 +574,7 @@ export default function AnalysisPage() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-lg">🚀</span>
+                <span className="text-lg font-mono text-sm font-bold tracking-tight">[MO]</span>
               </div>
               <div>
                 <h3 className="font-semibold text-[var(--color-text-primary)]">
@@ -604,7 +604,7 @@ export default function AnalysisPage() {
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-lg">📈</span>
+                <span className="text-lg font-mono text-sm font-bold tracking-tight">[TR]</span>
               </div>
               <div>
                 <h3 className="font-semibold text-[var(--color-text-primary)]">
@@ -668,7 +668,7 @@ export default function AnalysisPage() {
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-lg">🏦</span>
+                <span className="text-lg font-mono text-sm font-bold tracking-tight">[FU]</span>
               </div>
               <div>
                 <h3 className="font-semibold text-[var(--color-text-primary)]">
@@ -717,7 +717,7 @@ export default function AnalysisPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                  <span className="text-lg">💯</span>
+                  <span className="text-lg font-mono text-sm font-bold tracking-tight">[SC]</span>
                 </div>
                 <div>
                   <h3 className="font-semibold text-[var(--color-text-primary)]">
@@ -804,7 +804,7 @@ export default function AnalysisPage() {
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-lg">🎭</span>
+                <span className="text-lg font-mono text-sm font-bold tracking-tight">[SE]</span>
               </div>
               <div>
                 <h3 className="font-semibold text-[var(--color-text-primary)]">
