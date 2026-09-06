@@ -13,6 +13,8 @@ from app.models.models import Asset, ScoreHistory
 from app.services.analysis.dashboard_service import DashboardService
 from app.services.analysis.hierarchical_score_trend_service import SUB_DIMENSION_TO_PARENT
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
+from app.services.analysis.temporal_snapshot_service import TemporalSnapshotService
+from app.schemas.dashboard import SnapshotResponse, SnapshotIndexResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
@@ -31,6 +33,72 @@ SUB_ASPECT_TREND_KEYS = tuple(
 
 VALID_LEVELS = ("overall", "dimension", "sub_dimension", "aspect", "sub_aspect")
 CANONICAL_DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
+
+
+@router.get("/dashboard/snapshot", response_model=dict)
+async def get_dashboard_snapshot(
+    symbol: Optional[str] = Query(None, min_length=1, max_length=16),
+    snapshotId: Optional[str] = Query(None),
+    window_daily: int = Query(30, ge=1, le=365),
+    window_intraday: str = Query("24h", pattern="^(6h|24h|7d)$"),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Unified 3-tier snapshot endpoint (FR1).
+
+    Returns daily / hourly / current scores, deltas, weights, weight trends/deltas,
+    and both daily + intraday trend series, all tied to a single `snapshotId`.
+    """
+    service = TemporalSnapshotService()
+    try:
+        await service.initialize()
+        try:
+            result = await service.get_market_snapshot(
+                db=db,
+                window_daily=window_daily,
+                window_intraday=window_intraday,
+                symbol=symbol,
+                snapshot_id=snapshotId,
+            )
+        finally:
+            await service.shutdown()
+        # ensure we return status + timestamp envelope for legacy parity of consumer
+        result.setdefault("status", "success")
+        result.setdefault("timestamp", utc_now_iso())
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"Dashboard snapshot error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/dashboard/snapshots", response_model=SnapshotIndexResponse)
+async def get_dashboard_snapshots_index(
+    hourly_limit: int = Query(168, ge=24, le=720),
+    daily_limit: int = Query(365, ge=30, le=1095),
+    db: AsyncSession = Depends(get_async_session),
+) -> SnapshotIndexResponse:
+    """Enumerate recent hourly + daily snapshots for time-slider (FR1, FR8)."""
+    service = TemporalSnapshotService()
+    try:
+        await service.initialize()
+        try:
+            entries = await service.enumerate_snapshots(
+                db=db,
+                hourly_limit=hourly_limit,
+                daily_limit=daily_limit,
+            )
+        finally:
+            await service.shutdown()
+        return SnapshotIndexResponse(
+            status="success",
+            count=len(entries),
+            entries=entries,
+            timestamp=utc_now_iso(),
+        )
+    except Exception as exc:
+        logger.error(f"Snapshot index error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/dashboard/top-performers", response_model=dict)
