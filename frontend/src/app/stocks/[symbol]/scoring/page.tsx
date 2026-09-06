@@ -27,11 +27,29 @@ import {
   type LevelTrendPoint,
   type CoefficientHistoryByLevelResponse,
 } from "@/lib/api/dashboard";
+import { ScoreTripleBadge } from "@/components/scoring/ScoreTripleBadge";
+import { AsOfStamp } from "@/components/scoring/AsOfStamp";
+import {
+  useSnapshot,
+  useSnapshotId,
+  useSnapshotTimestamp,
+  useSnapshotLoading,
+  useSnapshotIndex,
+  useLoadSnapshot,
+  useLoadSnapshotIndex,
+  useSelectSnapshotById,
+  type SnapshotResponse,
+  type SnapshotIndexEntry,
+} from "@/store/useDateStore";
 
 import { t } from "@/lib/i18n";
 import { num } from "@/lib/utils";
 
 type Level = 1 | 2 | 3 | 4;
+type ScoringTab = "HISTORICAL" | "INTRADAY";
+type ViewMode = "SIMPLE" | "EXPERT";
+type IntradayWindow = "6h" | "24h" | "7d";
+type DailyWindow = 30 | 90 | 365;
 
 interface DrillState {
   level: Level;
@@ -57,11 +75,96 @@ const PALETTE = [
   "#F97316",
 ];
 
+const DAILY_WINDOW_OPTIONS: DailyWindow[] = [30, 90, 365];
+const INTRADAY_WINDOW_OPTIONS: IntradayWindow[] = ["6h", "24h", "7d"];
+
+function snapshotHierarchyToLegacy(snap: SnapshotResponse, tab: ScoringTab): HierarchyScores | null {
+  const scores = tab === "HISTORICAL" ? snap.scores.daily : snap.scores.current;
+  if (!scores) return null;
+  const overall =
+    (scores as any).overall?.score ??
+    (scores as any).overallScore ??
+    (scores as any).OVERALL?.score ??
+    0;
+  const grade =
+    (scores as any).overall?.grade ??
+    (scores as any).grade ??
+    (overall >= 70 ? "STRONG_BUY" : overall >= 40 ? "HOLD" : "STRONG_SELL");
+  return {
+    overallScore: num(overall),
+    grade,
+    timestamp: snap.timestamp,
+    level1: (scores as any).level1 ?? (scores as any).dimensions ?? [],
+    level2: (scores as any).level2 ?? (scores as any).sub_dimensions ?? [],
+    level3: (scores as any).level3 ?? (scores as any).aspects ?? [],
+    level4: (scores as any).level4 ?? (scores as any).sub_aspects ?? [],
+  } as HierarchyScores;
+}
+
+function snapshotTrendsToLegacy(snap: SnapshotResponse, tab: ScoringTab): ScoreHistoryPoint[] {
+  const series = tab === "HISTORICAL" ? snap.trends?.daily ?? [] : snap.trends?.intraday ?? [];
+  return series.map((pt) => {
+    const levelScores = (pt as any).level_scores ?? (pt as any).scores ?? {};
+    const dimScores: Record<string, number> = {};
+    const subDimScores: Record<string, number> = {};
+    const aspectScores: Record<string, number> = {};
+    const subAspectScores: Record<string, number> = {};
+    Object.entries(levelScores).forEach(([k, v]) => {
+      const val = typeof v === "number" ? v : num(v);
+      if (k.startsWith("L1_") || k.startsWith("dim_") || !/^(L2|L3|L4|sd_|asp|sa_)/.test(k)) dimScores[k] = val;
+      if (k.startsWith("L2_") || k.startsWith("sd_")) subDimScores[k] = val;
+      if (k.startsWith("L3_") || k.startsWith("asp_") || /^aspect_/.test(k)) aspectScores[k] = val;
+      if (k.startsWith("L4_") || k.startsWith("sa_") || /^sub_aspect_/.test(k)) subAspectScores[k] = val;
+    });
+    const legacy = snap as unknown as { trends?: { daily?: any[]; intraday?: any[] } };
+    const rawSeries = tab === "HISTORICAL" ? legacy.trends?.daily ?? [] : legacy.trends?.intraday ?? [];
+    const rawPt = rawSeries.find((r: any) => (r.date ?? r.effective_at ?? r.time) === (pt.date ?? pt.effective_at)) ?? {};
+    return {
+      date: pt.date ?? pt.effective_at,
+      overall: num(pt.overall ?? 0),
+      dimension_scores: (rawPt as any).dimension_scores ?? Object.keys(dimScores).length > 0 ? dimScores : {},
+      sub_dimension_scores: (rawPt as any).sub_dimension_scores ?? subDimScores,
+      aspect_scores: (rawPt as any).aspect_scores ?? aspectScores,
+      sub_aspect_scores: (rawPt as any).sub_aspect_scores ?? subAspectScores,
+    } as ScoreHistoryPoint;
+  });
+}
+
+function snapshotWeightsToLegacy(snap: SnapshotResponse): CoefficientItem[] {
+  const weights = snap.weights;
+  if (!weights) return [];
+  const result: CoefficientItem[] = [];
+  const levels = ["level1", "level2", "level3", "level4"] as const;
+  levels.forEach((lvlKey, lvlIdx) => {
+    const arr = (weights as any)[lvlKey] as Array<{ key?: string; label?: string; weight?: number; level_key?: string; name?: string; value?: number }> | undefined;
+    if (Array.isArray(arr)) {
+      arr.forEach((it) => {
+        result.push({
+          level: (lvlIdx + 1) as 1 | 2 | 3 | 4,
+          key: it.key ?? it.level_key ?? it.label ?? "",
+          label: it.label ?? it.name ?? it.key ?? "",
+          weight: num(it.weight ?? it.value ?? 0),
+        });
+      });
+    }
+  });
+  return result;
+}
+
 export default function StockScoringPage() {
   const params = useParams<{ symbol: string }>();
   const symbol = decodeURIComponent(
     Array.isArray(params.symbol) ? params.symbol[0] : params.symbol ?? ""
   );
+
+  const snapshot = useSnapshot();
+  const snapshotId = useSnapshotId();
+  const snapshotTimestamp = useSnapshotTimestamp();
+  const snapshotLoading = useSnapshotLoading();
+  const snapshotIndex = useSnapshotIndex();
+  const loadSnapshot = useLoadSnapshot();
+  const loadSnapshotIndex = useLoadSnapshotIndex();
+  const selectSnapshotById = useSelectSnapshotById();
 
   const [hierarchy, setHierarchy] = useState<HierarchyScores | null>(null);
   const [history, setHistory] = useState<ScoreHistoryPoint[] | null>(null);
@@ -69,6 +172,12 @@ export default function StockScoringPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [drill, setDrill] = useState<DrillState>({ level: 1, selectedKey: null, selectedLabel: null });
+
+  const [scoringTab, setScoringTab] = useState<ScoringTab>("HISTORICAL");
+  const [viewMode, setViewMode] = useState<ViewMode>("SIMPLE");
+  const [windowDaily, setWindowDaily] = useState<DailyWindow>(30);
+  const [windowIntraday, setWindowIntraday] = useState<IntradayWindow>("24h");
+  const [sliderIndex, setSliderIndex] = useState(0);
 
   const [subDimTrend, setSubDimTrend] = useState<LevelTrendResponse | null>(null);
   const [aspectTrend, setAspectTrend] = useState<LevelTrendResponse | null>(null);
@@ -79,21 +188,43 @@ export default function StockScoringPage() {
 
   useEffect(() => {
     if (!symbol) return;
+    loadSnapshotIndex({ hourly_limit: 168, daily_limit: 90 });
+  }, [symbol, loadSnapshotIndex]);
+
+  useEffect(() => {
+    if (!symbol) return;
     let active = true;
 
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const [h, hist, coeff] = await Promise.all([
+        const winDaily = windowDaily;
+        const winIntra = windowIntraday;
+        const snapPromise = loadSnapshot({ symbol, window_daily: winDaily, window_intraday: winIntra });
+        const legacyPromise = Promise.all([
           fetchHierarchyScores(symbol),
-          fetchScoreHistory(symbol, 30),
+          fetchScoreHistory(symbol, winDaily),
           fetchCoefficients(symbol),
         ]);
+
+        const [snap, legacy] = await Promise.all([snapPromise, legacyPromise]);
+
         if (!active) return;
-        setHierarchy(h);
-        setHistory(hist);
-        setCoefficients(coeff);
+
+        if (snap) {
+          const derivedHierarchy = snapshotHierarchyToLegacy(snap, scoringTab);
+          const derivedHistory = snapshotTrendsToLegacy(snap, scoringTab);
+          const derivedCoeff = snapshotWeightsToLegacy(snap);
+          setHierarchy(derivedHierarchy ?? legacy[0]);
+          setHistory(derivedHistory.length > 0 ? derivedHistory : legacy[1]);
+          setCoefficients(derivedCoeff.length > 0 ? derivedCoeff : legacy[2]);
+        } else {
+          const [h, hist, coeff] = legacy;
+          setHierarchy(h);
+          setHistory(hist);
+          setCoefficients(coeff);
+        }
       } catch (e: unknown) {
         if (active) setError(e instanceof Error ? e.message : "Failed to load scoring data");
       } finally {
@@ -106,7 +237,7 @@ export default function StockScoringPage() {
     return () => {
       active = false;
     };
-  }, [symbol]);
+  }, [symbol, windowDaily, windowIntraday, loadSnapshot, scoringTab]);
 
   useEffect(() => {
     if (!hierarchy) return;
@@ -118,12 +249,12 @@ export default function StockScoringPage() {
       const baseOptions = latestDate ? { endDate: latestDate } : { latest: true };
 
       const [subDim, asp, subAsp, subDimCoeff, aspCoeff, subAspCoeff] = await Promise.allSettled([
-        fetchSubDimensionTrend(30, "NASDAQ", baseOptions),
-        fetchAspectTrend(30, "NASDAQ", baseOptions),
-        fetchSubAspectTrend(30, "NASDAQ", baseOptions),
-        fetchCoefficientHistoryByLevel("sub_dimension", 30, "NASDAQ", drill.level >= 2 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-        fetchCoefficientHistoryByLevel("aspect", 30, "NASDAQ", drill.level >= 3 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-        fetchCoefficientHistoryByLevel("sub_aspect", 30, "NASDAQ", drill.level >= 4 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
+        fetchSubDimensionTrend(windowDaily, "NASDAQ", baseOptions),
+        fetchAspectTrend(windowDaily, "NASDAQ", baseOptions),
+        fetchSubAspectTrend(windowDaily, "NASDAQ", baseOptions),
+        fetchCoefficientHistoryByLevel("sub_dimension", windowDaily, "NASDAQ", drill.level >= 2 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
+        fetchCoefficientHistoryByLevel("aspect", windowDaily, "NASDAQ", drill.level >= 3 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
+        fetchCoefficientHistoryByLevel("sub_aspect", windowDaily, "NASDAQ", drill.level >= 4 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
       ]);
 
       if (!active) return;
@@ -140,7 +271,28 @@ export default function StockScoringPage() {
     return () => {
       active = false;
     };
-  }, [hierarchy, drill.level, drill.selectedKey]);
+  }, [hierarchy, drill.level, drill.selectedKey, windowDaily]);
+
+  const mergedSnapshotIndex: SnapshotIndexEntry[] = useMemo(() => {
+    if (!snapshotIndex) return [];
+    const hourly = Array.isArray(snapshotIndex.hourly) ? snapshotIndex.hourly : [];
+    const daily = Array.isArray(snapshotIndex.daily) ? snapshotIndex.daily : [];
+    const all = [...hourly, ...daily].filter(
+      (e) => e && typeof e.effectiveAt === "string" && typeof e.snapshotId === "string"
+    );
+    all.sort((a, b) => new Date(b.effectiveAt).getTime() - new Date(a.effectiveAt).getTime());
+    return all;
+  }, [snapshotIndex]);
+
+  useEffect(() => {
+    if (!mergedSnapshotIndex || mergedSnapshotIndex.length === 0) return;
+    if (sliderIndex >= 0 && sliderIndex < mergedSnapshotIndex.length) {
+      const entry = mergedSnapshotIndex[sliderIndex];
+      if (entry.snapshotId && entry.snapshotId !== snapshotId) {
+        selectSnapshotById(entry.snapshotId);
+      }
+    }
+  }, [sliderIndex, mergedSnapshotIndex, snapshotId, selectSnapshotById]);
 
   const itemsForLevel = useMemo(() => {
     if (!hierarchy) return [];
@@ -303,7 +455,15 @@ export default function StockScoringPage() {
     });
   };
 
-  if (loading) {
+  const overallScoreText = scoringTab === "HISTORICAL"
+    ? `${windowDaily}-DAY ${LEVEL_LABELS[1]} TREND`
+    : `${windowIntraday} INTRADAY ${LEVEL_LABELS[1]} TREND`;
+
+  const trendWindowLabel = scoringTab === "HISTORICAL" ? `${windowDaily}-Day` : windowIntraday;
+
+  const showSimpleL1Only = viewMode === "SIMPLE";
+
+  if (loading || snapshotLoading) {
     return <PageLoading />;
   }
 
@@ -320,21 +480,214 @@ export default function StockScoringPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href={`/stocks/${symbol}`} className="hover:text-foreground">
-          {symbol}
-        </Link>
-        <span>/</span>
-        <span className="text-foreground">{t("app.scoring.title")}</span>
+      <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Link href={`/stocks/${symbol}`} className="hover:text-foreground">
+            {symbol}
+          </Link>
+          <span>/</span>
+          <span className="text-foreground">{t("app.scoring.title")}</span>
+        </div>
+        <AsOfStamp
+          timestamp={snapshotTimestamp ?? hierarchy.timestamp ?? null}
+          snapshotId={snapshotId ?? null}
+          variant="compact"
+        />
       </div>
 
-      <TarotCard icon="💎" title={t("app.scoring.overall_score")}>
-        <div className="flex items-center gap-4">
+      <div
+        role="tablist"
+        aria-label="Scoring view mode"
+        className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3"
+      >
+        <div className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1">
+          {(["HISTORICAL", "INTRADAY"] as ScoringTab[]).map((tab) => (
+            <button
+              key={tab}
+              role="tab"
+              type="button"
+              aria-selected={scoringTab === tab}
+              aria-controls={`scoring-panel-${tab}`}
+              id={`scoring-tab-${tab}`}
+              onClick={() => setScoringTab(tab)}
+              className={cn(
+                "rounded-md px-4 py-1.5 text-sm font-semibold transition",
+                scoringTab === tab
+                  ? "bg-[var(--color-background)] text-[var(--color-primary)] shadow-sm border border-[var(--color-border)]"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab === "HISTORICAL" ? "◷ HISTORICAL" : "⚡ INTRADAY"}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {scoringTab === "HISTORICAL" ? (
+            <div className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1" role="group" aria-label="Historical window">
+              {DAILY_WINDOW_OPTIONS.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setWindowDaily(w)}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-xs font-semibold transition",
+                    windowDaily === w
+                      ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-pressed={windowDaily === w}
+                >
+                  {w}D
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1" role="group" aria-label="Intraday window">
+              {INTRADAY_WINDOW_OPTIONS.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setWindowIntraday(w)}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-xs font-semibold transition",
+                    windowIntraday === w
+                      ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-pressed={windowIntraday === w}
+                >
+                  {w.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1" role="group" aria-label="View complexity">
+            {(["SIMPLE", "EXPERT"] as ViewMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setViewMode(m)}
+                className={cn(
+                  "rounded-md px-3 py-1 text-xs font-semibold transition",
+                  viewMode === m
+                    ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                aria-pressed={viewMode === m}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {mergedSnapshotIndex && mergedSnapshotIndex.length > 0 && (
+        <TarotCard title="⏱ SNAPSHOT REPLAY — Drag to travel in time">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span className="font-mono text-muted-foreground">
+                EARLIEST · {mergedSnapshotIndex[mergedSnapshotIndex.length - 1]?.effectiveAt?.slice(0, 16)?.replace("T", " ") ?? "—"}
+                <span className="ml-2 uppercase text-[10px] text-[var(--color-text-secondary)]">
+                  {mergedSnapshotIndex[mergedSnapshotIndex.length - 1]?.tier ?? ""}
+                </span>
+              </span>
+              <span className="font-semibold text-[var(--color-primary)]">
+                {mergedSnapshotIndex[sliderIndex]?.effectiveAt?.slice(0, 16)?.replace("T", " ") ?? "NOW"}
+                {mergedSnapshotIndex[sliderIndex]?.snapshotId && (
+                  <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                    #{mergedSnapshotIndex[sliderIndex].snapshotId.slice(0, 8)}
+                  </span>
+                )}
+                <span className="ml-2 uppercase text-[10px] text-[var(--color-text-secondary)]">
+                  {mergedSnapshotIndex[sliderIndex]?.tier ?? ""}
+                </span>
+              </span>
+              <span className="font-mono text-muted-foreground">
+                LATEST · {mergedSnapshotIndex[0]?.effectiveAt?.slice(0, 16)?.replace("T", " ") ?? "—"}
+                <span className="ml-2 uppercase text-[10px] text-[var(--color-text-secondary)]">
+                  {mergedSnapshotIndex[0]?.tier ?? ""}
+                </span>
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={mergedSnapshotIndex.length - 1}
+              value={sliderIndex}
+              onChange={(e) => setSliderIndex(parseInt(e.target.value, 10))}
+              aria-label="Snapshot time travel slider"
+              aria-valuemin={0}
+              aria-valuemax={mergedSnapshotIndex.length - 1}
+              aria-valuenow={sliderIndex}
+              className="w-full h-2 bg-[var(--color-neutral)] rounded-full appearance-none cursor-pointer accent-[var(--color-primary)]"
+            />
+            <div className="text-[10px] text-muted-foreground">
+              {mergedSnapshotIndex.length} snapshots available · Drag slider to replay historical scoring states at exact parity across all widgets.
+            </div>
+          </div>
+        </TarotCard>
+      )}
+
+      <TarotCard title="✦ THREE-FRAME SCORE REFERENCE">
+        <div className="flex flex-col gap-3">
+          {snapshot ? (
+            <ScoreTripleBadge
+              scores={snapshot.scores}
+              deltas={snapshot.deltas}
+              showDailyDelta={scoringTab === "HISTORICAL"}
+              size="lg"
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {["PREV DAY", "PREV HOUR", "CURRENT"].map((lbl, i) => (
+                <div
+                  key={lbl}
+                  role="group"
+                  aria-label={`${lbl} score frame. Snapshot pipeline pending.`}
+                  className={cn(
+                    "flex flex-col items-start rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-neutral)]/30 px-5 py-4",
+                    i === 2 && "border-[var(--color-primary)]/20 ring-1 ring-[var(--color-primary)]/5"
+                  )}
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span className="text-sm uppercase tracking-wider font-semibold text-[var(--color-text-secondary)]">{lbl}</span>
+                    {i === 2 && (
+                      <span className="rounded px-1.5 py-0.5 bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold text-sm">
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-3xl font-bold tabular-nums text-[var(--color-text-secondary)]">
+                    {i === 2 && hierarchy ? hierarchy.overallScore : "—"}
+                  </div>
+                  <div className="mt-1 text-sm text-[var(--color-text-secondary)]/80">
+                    {i === 2
+                      ? hierarchy?.grade?.replace("_", " ") ?? "Pending snapshot"
+                      : "Pending snapshot pipeline"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!snapshot && (
+            <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-neutral)]/40 p-3 text-xs text-muted-foreground">
+              ◇ NOTE: Snapshot pipeline has not yet produced rows for this symbol. The CURRENT frame above is derived from the legacy daily REST endpoint (single-frame score only). Three-frame PREV-DAY / PREV-HOUR / CURRENT parity activates once HourlyScoreRecompute and DailyScoreRecalculation scheduler jobs populate ScoringSnapshot tier rows.
+            </div>
+          )}
+        </div>
+      </TarotCard>
+
+      <TarotCard icon="💎" title={`${symbol} · ${overallScoreText}`}>
+        <div className="flex items-center gap-4 flex-wrap">
           <div
             className={cn(
               "text-4xl font-black rounded-full h-24 w-24 flex items-center justify-center border-8 shadow-inner",
               hierarchy.overallScore >= 70 ? "text-success border-success/20" : hierarchy.overallScore >= 40 ? "text-warning border-warning/20" : "text-error border-error/20"
             )}
+            aria-label={`Overall score ${hierarchy.overallScore}`}
           >
             {hierarchy.overallScore}
           </div>
@@ -402,127 +755,244 @@ export default function StockScoringPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <TarotCard title={`${LEVEL_LABELS[drill.level]} — Spider Chart`}>
-          {spiderData.length > 0 ? (
-            <div className="flex justify-center">
-              <SpiderChart
-                data={spiderData}
-                size={360}
-                color={PALETTE[0]}
-                onLabelClick={drill.level < 4 ? (label) => {
-                  const item = itemsForLevel.find((i) => i.label === label);
-                  if (item) handleDrillDown(item);
-                } : undefined}
-              />
-            </div>
-          ) : (
-            <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-              No data available
-            </div>
-          )}
-        </TarotCard>
+      <div
+        id={`scoring-panel-${scoringTab}`}
+        role="tabpanel"
+        aria-labelledby={`scoring-tab-${scoringTab}`}
+        className="grid grid-cols-1 gap-4"
+      >
+        {viewMode === "EXPERT" ? (
+          <>
+            {([1, 2, 3, 4] as Level[]).map((lvl) => {
+              const levelItems = lvl === 1 ? hierarchy.level1 : lvl === 2 ? hierarchy.level2 : lvl === 3 ? hierarchy.level3 : hierarchy.level4;
+              if (!levelItems || levelItems.length === 0) return null;
+              const levelSpider = levelItems.map((i) => ({ label: i.label, value: i.score }));
+              const levelTrend = history && history.length > 0 ? levelItems.map((item, i) => ({
+                key: item.key,
+                label: item.label,
+                color: PALETTE[i % PALETTE.length],
+                data: history.map((pt) => ({
+                  time: pt.date,
+                  value: num(
+                    lvl === 1 ? pt.dimension_scores?.[item.key] :
+                    lvl === 2 ? pt.sub_dimension_scores?.[item.key] :
+                    lvl === 3 ? pt.aspect_scores?.[item.key] :
+                    pt.sub_aspect_scores?.[item.key] ?? pt.overall
+                  ),
+                })),
+              })) : [];
+              const levelChange = history && history.length >= 2 ? levelItems.map((item, i) => ({
+                key: item.key,
+                label: item.label,
+                color: PALETTE[i % PALETTE.length],
+                data: history.slice(1).map((pt, j) => {
+                  const getVal = (p: ScoreHistoryPoint) => num(
+                    lvl === 1 ? p.dimension_scores?.[item.key] :
+                    lvl === 2 ? p.sub_dimension_scores?.[item.key] :
+                    lvl === 3 ? p.aspect_scores?.[item.key] :
+                    p.sub_aspect_scores?.[item.key] ?? p.overall
+                  );
+                  return { time: pt.date, value: getVal(pt) - getVal(history[j]) };
+                }),
+              })) : [];
+              const levelWeights = lvl === 1 ? coefficients?.filter((c) => c.level === 1) :
+                lvl === 2 ? coefficients?.filter((c) => c.level === 2) :
+                lvl === 3 ? coefficients?.filter((c) => c.level === 3) :
+                coefficients?.filter((c) => c.level === 4);
 
-        {l1TrendSeries.length > 0 && drill.level === 1 && (
-          <TarotCard title={`${LEVEL_LABELS[1]} — Score Trend (30-Day)`}>
-            <ScoreTrendChart
-              showLegend
-              series={l1TrendSeries}
-              height={280}
-            />
-          </TarotCard>
-        )}
+              return (
+                <div key={lvl} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <TarotCard title={`${LEVEL_LABELS[lvl]} · Spider`}>
+                    {levelSpider.length > 0 ? (
+                      <div className="flex justify-center">
+                        <SpiderChart
+                          data={levelSpider}
+                          size={320}
+                          color={PALETTE[lvl - 1]}
+                          onLabelClick={lvl < 4 ? (label) => {
+                            const it = levelItems.find((i) => i.label === label);
+                            if (it) handleDrillDown(it);
+                          } : undefined}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">No data</div>
+                    )}
+                  </TarotCard>
 
-        {l1ChangeData.length > 0 && drill.level === 1 && (
-          <TarotCard title={`${LEVEL_LABELS[1]} — Score Changes (Daily Delta)`}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {l1ChangeData.map((series) => (
-                <div key={series.key} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
-                  <div className="mb-1 flex items-center gap-2">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: series.color }} />
-                    <span className="text-xs font-medium text-[var(--color-text-secondary)]">{series.label}</span>
-                  </div>
-                  <ColumnChart
-                    data={series.data}
-                    height={140}
+                  <TarotCard title={`${LEVEL_LABELS[lvl]} · Trend (${trendWindowLabel})`}>
+                    {levelTrend.length > 0 ? (
+                      <ScoreTrendChart series={levelTrend} height={260} showLegend />
+                    ) : (
+                      <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">No data</div>
+                    )}
+                  </TarotCard>
+
+                  <TarotCard title={`${LEVEL_LABELS[lvl]} · Delta`}>
+                    {levelChange.length > 0 ? (
+                      lvl === 1 ? (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          {levelChange.slice(0, 6).map((series) => (
+                            <div key={series.key} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+                              <div className="mb-1 flex items-center gap-2">
+                                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: series.color }} />
+                                <span className="text-xs font-medium text-[var(--color-text-secondary)]">{series.label}</span>
+                              </div>
+                              <ColumnChart data={series.data} height={120} valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <ColumnChart
+                          data={(levelChange[0]?.data ?? []).map((pt) => ({ time: pt.time, value: pt.value, color: pt.value >= 0 ? "#10b981" : "#ef4444" }))}
+                          height={200}
+                          valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+                        />
+                      )
+                    ) : (
+                      <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">No data</div>
+                    )}
+                  </TarotCard>
+
+                  <TarotCard title={`${LEVEL_LABELS[lvl]} · Weights`}>
+                    {levelWeights && levelWeights.length > 0 ? (
+                      <CoefficientChart
+                        data={levelWeights.map((c) => ({ key: c.key, label: c.label, weight: c.weight }))}
+                        height={260}
+                      />
+                    ) : (
+                      <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">No data</div>
+                    )}
+                  </TarotCard>
+                </div>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            <TarotCard title={`${LEVEL_LABELS[drill.level]} — Spider Chart`}>
+              {spiderData.length > 0 ? (
+                <div className="flex justify-center">
+                  <SpiderChart
+                    data={spiderData}
+                    size={360}
+                    color={PALETTE[0]}
+                    onLabelClick={drill.level < 4 ? (label) => {
+                      const item = itemsForLevel.find((i) => i.label === label);
+                      if (item) handleDrillDown(item);
+                    } : undefined}
                   />
                 </div>
-              ))}
-            </div>
-          </TarotCard>
-        )}
+              ) : (
+                <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
+                  No data available
+                </div>
+              )}
+            </TarotCard>
 
-        {perStockTrendSeries.length > 0 && drill.level > 1 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (30-Day)`}>
-            <ScoreTrendChart
-              showLegend
-              series={perStockTrendSeries}
-              height={280}
-            />
-          </TarotCard>
-        )}
+            {l1TrendSeries.length > 0 && drill.level === 1 && (
+              <TarotCard title={`${LEVEL_LABELS[1]} — Score Trend (${trendWindowLabel})`}>
+                <ScoreTrendChart
+                  showLegend
+                  series={l1TrendSeries}
+                  height={280}
+                />
+              </TarotCard>
+            )}
 
-        {perStockChangeFlat.length > 0 && drill.level > 1 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (Daily Delta)`}>
-            <ColumnChart
-              data={perStockChangeFlat}
-              height={220}
-              valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
-            />
-          </TarotCard>
-        )}
+            {l1ChangeData.length > 0 && drill.level === 1 && (
+              <TarotCard title={`${LEVEL_LABELS[1]} — Score Changes (${scoringTab === "HISTORICAL" ? "Daily" : "Periodic"} Delta)`}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {l1ChangeData.map((series) => (
+                    <div key={series.key} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: series.color }} />
+                        <span className="text-xs font-medium text-[var(--color-text-secondary)]">{series.label}</span>
+                      </div>
+                      <ColumnChart
+                        data={series.data}
+                        height={140}
+                        valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </TarotCard>
+            )}
 
-        {trendSeriesForLevel.length > 0 && drill.level > 1 && perStockTrendSeries.length === 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (30-Day) — Market`}>
-            <ScoreTrendChart
-              showLegend
-              series={trendSeriesForLevel}
-              height={280}
-            />
-          </TarotCard>
-        )}
+            {perStockTrendSeries.length > 0 && drill.level > 1 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (${trendWindowLabel})`}>
+                <ScoreTrendChart
+                  showLegend
+                  series={perStockTrendSeries}
+                  height={280}
+                />
+              </TarotCard>
+            )}
 
-        {changeSeriesForLevel.length > 0 && drill.level > 1 && perStockChangeSeries.length === 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (Daily Delta) — Market`}>
-            <ColumnChart
-              data={changeSeriesForLevel}
-              height={220}
-              valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
-            />
-          </TarotCard>
-        )}
+            {perStockChangeFlat.length > 0 && drill.level > 1 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (${scoringTab === "HISTORICAL" ? "Daily" : "Periodic"} Delta)`}>
+                <ColumnChart
+                  data={perStockChangeFlat}
+                  height={220}
+                  valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+                />
+              </TarotCard>
+            )}
 
-        {currentCoefficients.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficients (Weights)`}>
-            <CoefficientChart
-              data={currentCoefficients.map((c) => ({
-                key: c.key,
-                label: c.label,
-                weight: c.weight,
-              }))}
-              height={280}
-            />
-          </TarotCard>
-        )}
+            {trendSeriesForLevel.length > 0 && drill.level > 1 && perStockTrendSeries.length === 0 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (${trendWindowLabel}) — Market`}>
+                <ScoreTrendChart
+                  showLegend
+                  series={trendSeriesForLevel}
+                  height={280}
+                />
+              </TarotCard>
+            )}
 
-        {coeffSeriesForLevel.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficient Trend (30-Day)`}>
-            <ScoreTrendChart
-              showLegend
-              series={coeffSeriesForLevel}
-              height={260}
-            />
-          </TarotCard>
-        )}
+            {changeSeriesForLevel.length > 0 && drill.level > 1 && perStockChangeSeries.length === 0 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (${scoringTab === "HISTORICAL" ? "Daily" : "Periodic"} Delta) — Market`}>
+                <ColumnChart
+                  data={changeSeriesForLevel}
+                  height={220}
+                  valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+                />
+              </TarotCard>
+            )}
 
-        {coeffChangeSeries.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficient Changes (Daily Delta)`}>
-            <ColumnChart
-              data={coeffChangeSeries}
-              height={200}
-              valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(4)}
-            />
-          </TarotCard>
+            {currentCoefficients.length > 0 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficients (Weights)`}>
+                <CoefficientChart
+                  data={currentCoefficients.map((c) => ({
+                    key: c.key,
+                    label: c.label,
+                    weight: c.weight,
+                  }))}
+                  height={280}
+                />
+              </TarotCard>
+            )}
+
+            {coeffSeriesForLevel.length > 0 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficient Trend (${trendWindowLabel})`}>
+                <ScoreTrendChart
+                  showLegend
+                  series={coeffSeriesForLevel}
+                  height={260}
+                />
+              </TarotCard>
+            )}
+
+            {coeffChangeSeries.length > 0 && (
+              <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficient Changes (${scoringTab === "HISTORICAL" ? "Daily" : "Periodic"} Delta)`}>
+                <ColumnChart
+                  data={coeffChangeSeries}
+                  height={200}
+                  valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(4)}
+                />
+              </TarotCard>
+            )}
+          </>
         )}
       </div>
 
@@ -532,6 +1002,7 @@ export default function StockScoringPage() {
             key={item.key}
             className="cursor-pointer transition hover:border-[var(--color-primary)]/30"
             onClick={() => handleDrillDown(item)}
+            aria-label={`Drill down into ${item.label}`}
           >
             <div className="flex items-center justify-between">
               <div>
