@@ -4,11 +4,11 @@ import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { AssetTable } from "@/components/shared/AssetTable";
 import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "@/lib/api";
-import { 
-  fetchFundamental, 
-  fetchTechnical, 
-  fetchSentiment, 
-  fetchScoring 
+import {
+  fetchFundamental,
+  fetchTechnical,
+  fetchSentiment,
+  fetchScoring,
 } from "@/lib/api/stocks";
 import type { AssetRow } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
@@ -17,13 +17,25 @@ import { t } from "@/lib/i18n";
 import { StatCard, ChangeBadge } from "@/components/shared/StatCard";
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
-import { fetchScoreTrend, fetchGeneralDashboard, type GeneralDashboardResponse } from "@/lib/api/dashboard";
+import {
+  fetchScoreTrend,
+  fetchGeneralDashboard,
+  type GeneralDashboardResponse,
+} from "@/lib/api/dashboard";
 import {
   useLiveData,
   LiveConnectionIndicator,
   type LiveStreamKey,
 } from "@/hooks/useLiveData";
-import { useDateStore } from "@/store/useDateStore";
+import { useDateStore, useSnapshotLoading, useSnapshotError } from "@/store/useDateStore";
+import {
+  useLoadSnapshot,
+  useSnapshot,
+  useSnapshotId,
+  useSnapshotTimestamp,
+} from "@/store/useDateStore";
+import { ScoreTripleBadge } from "@/components/scoring/ScoreTripleBadge";
+import { AsOfStamp } from "@/components/scoring/AsOfStamp";
 
 interface Performer {
   symbol: string;
@@ -64,11 +76,10 @@ interface ScoresPayload {
   }>;
 }
 
-type Tab = "technical" | "fundamental" | "scoring" | "sentiment";
+type Tab = "general" | "technical" | "fundamental" | "scoring" | "sentiment";
 
 export default function AnalysisPage() {
-  
-  const [activeTab, setActiveTab] = useState<Tab>("technical");
+  const [activeTab, setActiveTab] = useState<Tab>("general");
   const [topMovers, setTopMovers] = useState<AssetRow[]>([]);
   const [marketStats, setMarketStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
   const [overallScore, setOverallScore] = useState<number | null>(null);
@@ -91,9 +102,18 @@ export default function AnalysisPage() {
     symbol?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Snapshot Zustand integration
   const setLiveLatestFromStream = useDateStore((s) => s.setLiveLatestFromStream);
+  const loadSnapshot = useLoadSnapshot();
+  const snapshot = useSnapshot();
+  const snapshotId = useSnapshotId();
+  const snapshotTs = useSnapshotTimestamp();
+  const snapLoading = useSnapshotLoading();
+  const snapError = useSnapshotError();
 
   const analysisTabs = useMemo(() => [
+    { id: "general" as Tab, label: "GENERAL", icon: "≡" },
     { id: "technical" as Tab, label: t("app.analysis.tabs.technical"), icon: "📈" },
     { id: "fundamental" as Tab, label: t("app.analysis.tabs.fundamental"), icon: "🏦" },
     { id: "scoring" as Tab, label: t("app.analysis.tabs.scoring"), icon: "💯" },
@@ -154,6 +174,13 @@ export default function AnalysisPage() {
     async function loadAnalysisData() {
       setLoading(true);
       try {
+        // ------- UNIFIED SNAPSHOT (preferred, parity-first path) -------
+        const snapPromise = loadSnapshot({
+          window_daily: 30,
+          window_intraday: "24h",
+        }).catch(() => null);
+
+        // ------- LEGACY FALLBACKS (execute anyway for non-snapshot data) -------
         const performersPromise = apiClient.get<{ data: Performer[] }>(
           "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ",
           { timeout: 60000 }
@@ -162,10 +189,15 @@ export default function AnalysisPage() {
           "/market/symbols?market=NASDAQ&limit=50",
           { timeout: 60000 }
         );
-        const generalPromise = fetchGeneralDashboard({ latest: true }).catch(() => null as GeneralDashboardResponse | null);
-        const trendPromise = fetchScoreTrend(30, "NASDAQ", { latest: true }).catch(() => null);
+        const generalPromise = fetchGeneralDashboard({ latest: true }).catch(
+          () => null as GeneralDashboardResponse | null,
+        );
+        const trendPromise = fetchScoreTrend(30, "NASDAQ", { latest: true }).catch(
+          () => null,
+        );
 
-        const [performersRes, symbolsRes, generalRes, trendRes] = await Promise.all([
+        const [snap, performersRes, symbolsRes, generalRes, trendRes] = await Promise.all([
+          snapPromise,
           performersPromise,
           symbolsPromise,
           generalPromise,
@@ -174,8 +206,148 @@ export default function AnalysisPage() {
 
         if (!active) return;
 
-        const symbolMap = new Map(symbolsRes.data.data.map((s) => [s.symbol, s.name]));
-        const movers: AssetRow[] = (performersRes.data.data ?? [])
+        // ------- Populate parity data from snapshot if available -------
+        if (snap) {
+          // Dimension scores from CURRENT tier
+          const currentDims = snap.scores?.current?.dimension ?? {};
+          if (Object.keys(currentDims).length > 0) {
+            setDimensionScores(currentDims);
+          }
+          if (typeof snap.scores?.current?.overall === "number") {
+            setOverallScore(snap.scores.current.overall);
+          }
+          // Trend: use daily series (30-day default from window_daily)
+          if (Array.isArray(snap.trends?.daily) && snap.trends.daily.length > 0) {
+            setScoreTrend(
+              snap.trends.daily.map((p) => ({
+                time: p.date,
+                value: typeof p.overall === "number" ? p.overall : NaN,
+              })).filter((p) => Number.isFinite(p.value)),
+            );
+          }
+          // Market stats: derive Active Symbols count from snapshot or keep legacy
+          const snapshotSymbolCount =
+            snap.scores?.current?.symbol_map
+              ? Object.keys(snap.scores.current.symbol_map).length
+              : null;
+          // Legacy top/bottom performers - if not available we build from symbol_map top/bottom
+          const topFromSnap = (() => {
+            if (!snap.scores?.current?.symbol_map) return null;
+            const entries = Object.entries(snap.scores.current.symbol_map);
+            entries.sort(
+              (a, b) => (b[1].overall ?? -Infinity) - (a[1].overall ?? -Infinity),
+            );
+            return entries.length ? entries[0] : null;
+          })();
+          const bottomFromSnap = (() => {
+            if (!snap.scores?.current?.symbol_map) return null;
+            const entries = Object.entries(snap.scores.current.symbol_map);
+            entries.sort(
+              (a, b) => (a[1].overall ?? Infinity) - (b[1].overall ?? Infinity),
+            );
+            return entries.length ? entries[0] : null;
+          })();
+          const statsFromSnap: typeof marketStats = [];
+          statsFromSnap.push({
+            label: "Active Symbols",
+            value: (
+              snapshotSymbolCount ??
+              generalRes?.summary?.total_symbols ??
+              0
+            ).toLocaleString("en-US"),
+            changePct: 0,
+          });
+          if (topFromSnap) {
+            const [sym, data] = topFromSnap;
+            statsFromSnap.push({
+              label: "Top Scorer",
+              value: `${sym} ${typeof data.overall === "number" ? data.overall.toFixed(1) : "0"}`,
+              changePct: 0,
+            });
+          } else if (generalRes?.top_performers?.[0]) {
+            const top = generalRes.top_performers[0];
+            statsFromSnap.push({
+              label: "Top Scorer",
+              value: `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}`,
+              changePct: 0,
+            });
+          }
+          if (bottomFromSnap) {
+            const [sym, data] = bottomFromSnap;
+            statsFromSnap.push({
+              label: "Lowest Scorer",
+              value: `${sym} ${typeof data.overall === "number" ? data.overall.toFixed(1) : "0"}`,
+              changePct: 0,
+            });
+          } else if (generalRes?.bottom_performers?.[0]) {
+            const bottom = generalRes.bottom_performers[0];
+            statsFromSnap.push({
+              label: "Lowest Scorer",
+              value: `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}`,
+              changePct: 0,
+            });
+          }
+          if (statsFromSnap.length > 0) {
+            setMarketStats(statsFromSnap);
+          }
+          if (snap.timestamp) {
+            setLiveLatestFromStream(snap.timestamp);
+          }
+        } else {
+          // ------- FALLBACK: Populate from legacy REST endpoints -------
+          if (generalRes?.status === "success") {
+            const top = generalRes.top_performers?.[0];
+            const bottom = generalRes.bottom_performers?.[0];
+            const totalSymbols = generalRes.summary?.total_symbols ?? 0;
+            setMarketStats([
+              {
+                label: "Active Symbols",
+                value: totalSymbols.toLocaleString("en-US"),
+                changePct: 0,
+              },
+              {
+                label: "Top Scorer",
+                value: top
+                  ? `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}`
+                  : "—",
+                changePct: 0,
+              },
+              {
+                label: "Lowest Scorer",
+                value: bottom
+                  ? `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}`
+                  : "—",
+                changePct: 0,
+              },
+            ]);
+
+            const dims: Record<string, number> = {};
+            if (generalRes.dimensions) {
+              Object.entries(generalRes.dimensions).forEach(([k, v]) => {
+                if (v && typeof v.avg_score === "number") dims[k] = v.avg_score;
+              });
+            }
+            if (Object.keys(dims).length > 0) setDimensionScores(dims);
+            if (generalRes.latest_date) {
+              setLiveLatestFromStream(generalRes.latest_date);
+            }
+          }
+
+          if (trendRes?.status === "success" && trendRes.series) {
+            setScoreTrend(
+              trendRes.series.map((p) => ({
+                time: p.date,
+                value: p.avg_score,
+              })),
+            );
+          }
+        }
+
+        // ------- Top movers + per-symbol deep analysis (non-snapshot, legacy path) -------
+        const symbolMap = new Map(
+          (symbolsRes.data?.data ?? []).map((s) => [s.symbol, s.name]),
+        );
+        const movers: AssetRow[] = (performersRes.data?.data ?? [])
           .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
           .map((p) => ({
             symbol: p.symbol,
@@ -185,37 +357,6 @@ export default function AnalysisPage() {
             changePct: p.change_percent ?? 0,
           }));
         setTopMovers(movers.slice(0, 10));
-
-        if (generalRes?.status === "success") {
-          const top = generalRes.top_performers?.[0];
-          const bottom = generalRes.bottom_performers?.[0];
-          const totalSymbols = generalRes.summary?.total_symbols ?? 0;
-          setMarketStats([
-            { label: "Active Symbols", value: totalSymbols.toLocaleString("en-US"), changePct: 0 },
-            { label: "Top Scorer", value: top ? `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}` : "—", changePct: 0 },
-            { label: "Lowest Scorer", value: bottom ? `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}` : "—", changePct: 0 },
-          ]);
-
-          const dims: Record<string, number> = {};
-          if (generalRes.dimensions) {
-            Object.entries(generalRes.dimensions).forEach(([k, v]) => {
-              if (v && typeof v.avg_score === "number") dims[k] = v.avg_score;
-            });
-          }
-          if (Object.keys(dims).length > 0) setDimensionScores(dims);
-          if (generalRes.latest_date) {
-            setLiveLatestFromStream(generalRes.latest_date);
-          }
-        }
-
-        if (trendRes?.status === "success" && trendRes.series) {
-          setScoreTrend(
-            trendRes.series.map((p) => ({
-              time: p.date,
-              value: p.avg_score,
-            }))
-          );
-        }
 
         if (movers.length > 0) {
           const topSymbol = movers[0].symbol;
@@ -241,8 +382,10 @@ export default function AnalysisPage() {
     }
 
     loadAnalysisData();
-    return () => { active = false; };
-  }, [setLiveLatestFromStream]);
+    return () => {
+      active = false;
+    };
+  }, [setLiveLatestFromStream, loadSnapshot]);
 
   const lastMarketEventTs =
     liveMarket.data === liveMarket.latest
@@ -264,13 +407,22 @@ export default function AnalysisPage() {
   return (
     <NewDashboardShell title={t("app.analysis.title")}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
               {t("app.analysis.title")}
             </h1>
-            {overallScore !== null && (
-              <div className="mt-1 flex items-center gap-3">
+            <div className="mt-2">
+              <AsOfStamp
+                timestamp={snapshotTs ?? null}
+                snapshotId={snapshotId ?? null}
+                loading={snapLoading}
+                error={snapError ?? null}
+                variant="emphasis"
+              />
+            </div>
+            {overallScore !== null && activeTab !== "general" && (
+              <div className="mt-2 flex items-center gap-3">
                 <span className="text-sm text-[var(--color-text-secondary)]">
                   Overall Market Score
                 </span>
@@ -280,8 +432,8 @@ export default function AnalysisPage() {
                     overallScore >= 70
                       ? "bg-success/15 text-success"
                       : overallScore >= 40
-                      ? "bg-warning/15 text-warning"
-                      : "bg-error/15 text-error"
+                        ? "bg-warning/15 text-warning"
+                        : "bg-error/15 text-error",
                   )}
                 >
                   {overallScore.toFixed(0)}
@@ -305,6 +457,54 @@ export default function AnalysisPage() {
             />
           </div>
         </div>
+
+        {activeTab === "general" && snapshot && (
+          <section className="flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+                  THREE-FRAME SCORE REFERENCE
+                </h2>
+                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                  PREV DAY (00:00 UTC) · PREV HOUR · CURRENT LIVE · source snapshot #{snapshotId?.slice(0, 8) ?? "—"}
+                </p>
+              </div>
+              {overallScore !== null && (
+                <span
+                  className={cn(
+                    "rounded-full px-3 py-1 text-lg font-bold",
+                    overallScore >= 70
+                      ? "bg-[var(--color-success)]/15 text-[var(--color-success)]"
+                      : overallScore >= 40
+                        ? "bg-[var(--color-warning)]/15 text-[var(--color-warning)]"
+                        : "bg-[var(--color-error)]/15 text-[var(--color-error)]",
+                  )}
+                >
+                  {overallScore.toFixed(0)}
+                  {overallGrade ? ` · ${overallGrade.replace(/_/g, " ")}` : ""}
+                </span>
+              )}
+            </div>
+            <ScoreTripleBadge
+              scores={snapshot.scores}
+              deltas={snapshot.deltas}
+              showDailyDelta
+              size="md"
+            />
+          </section>
+        )}
+
+        {activeTab === "general" && !snapshot && (
+          <section className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-center shadow-sm">
+            <p className="text-sm font-semibold text-[var(--color-text-secondary)]">
+              Unified snapshot not loaded yet
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]/80">
+              Legacy fallback feeds power the dashboard below. Reload once the
+              scheduler has produced the first hourly snapshot.
+            </p>
+          </section>
+        )}
 
         {marketStats.length > 0 ? (
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
