@@ -2,9 +2,12 @@ import { API_BASE_URL } from './utils';
 
 export interface SSEEvent<T = unknown> {
   type: string;
+  event: string;
   data: T;
   timestamp: number;
   eventId?: string;
+  sequence: number | null;
+  data_age_ms: number | null;
 }
 
 export interface SSEConnectionOptions<T = unknown> {
@@ -12,6 +15,8 @@ export interface SSEConnectionOptions<T = unknown> {
   onMessage?: (event: SSEEvent<T>) => void;
   onError?: (error: Event) => void;
   onOpen?: () => void;
+  onDisconnect?: () => void;
+  onReconnect?: (attempt: number) => void;
   reconnect?: boolean;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
@@ -46,6 +51,8 @@ export function createSSEConnection<T = unknown>(
     onMessage,
     onError,
     onOpen,
+    onDisconnect,
+    onReconnect,
     reconnect = true,
     reconnectInterval = 5000,
     maxReconnectAttempts = 10 } = options;
@@ -53,6 +60,25 @@ export function createSSEConnection<T = unknown>(
   let eventSource: EventSource | null = null;
   let reconnectAttempts = 0;
   let isConnected = false;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearReconnectTimer = () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
+
+  const scheduleReconnect = () => {
+    if (reconnect && reconnectAttempts < maxReconnectAttempts) {
+      reconnectAttempts++;
+      onReconnect?.(reconnectAttempts);
+      clearReconnectTimer();
+      const jitter = Math.random() * 0.3 * reconnectInterval;
+      const delay = reconnectInterval + jitter;
+      reconnectTimer = setTimeout(connect, delay);
+    }
+  };
 
   const connect = () => {
     if (eventSource) {
@@ -63,17 +89,14 @@ export function createSSEConnection<T = unknown>(
     const token = getAuthToken();
 
     const url = token
-      ? `${fullUrl}?token=${encodeURIComponent(token)}`
+      ? `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
       : fullUrl;
 
     try {
       eventSource = new EventSource(url);
     } catch (err) {
       console.error('Failed to create EventSource:', err);
-      if (reconnect && reconnectAttempts < maxReconnectAttempts) {
-        setTimeout(connect, reconnectInterval);
-        reconnectAttempts++;
-      }
+      scheduleReconnect();
       return;
     }
 
@@ -85,27 +108,191 @@ export function createSSEConnection<T = unknown>(
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const parsed = JSON.parse(event.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
         const sseEvent: SSEEvent<T> = {
           type: event.type || 'message',
-          data: data.data ?? data,
+          event: parsed.event || event.type || 'message',
+          data,
           timestamp: Date.now(),
-          eventId: event.lastEventId || undefined };
+          eventId: event.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
         onMessage?.(sseEvent);
       } catch (err) {
         console.error('Failed to parse SSE message:', err, event.data);
       }
     };
 
+    eventSource.addEventListener('quote', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'quote',
+          event: parsed.event || 'quote',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE quote event:', err, ev.data);
+      }
+    }) as EventListener);
+
+    eventSource.addEventListener('intraday', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'intraday',
+          event: parsed.event || 'intraday',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE intraday event:', err, ev.data);
+      }
+    }) as EventListener);
+
+    eventSource.addEventListener('market_pulse', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'market_pulse',
+          event: parsed.event || 'market_pulse',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE market_pulse event:', err, ev.data);
+      }
+    }) as EventListener);
+
+    eventSource.addEventListener('score_delta', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'score_delta',
+          event: parsed.event || 'score_delta',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE score_delta event:', err, ev.data);
+      }
+    }) as EventListener);
+
+    eventSource.addEventListener('news_item', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'news_item',
+          event: parsed.event || 'news_item',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE news_item event:', err, ev.data);
+      }
+    }) as EventListener);
+
+    eventSource.addEventListener('health', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'health',
+          event: parsed.event || 'health',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE health event:', err, ev.data);
+      }
+    }) as EventListener);
+
+    eventSource.addEventListener('ping', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = ev.data ? JSON.parse(ev.data) : {};
+        const data = parsed.data ?? {};
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'ping',
+          event: parsed.event || 'ping',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        const sseEvent: SSEEvent<T> = {
+          type: 'ping',
+          event: 'ping',
+          data: {} as T,
+          timestamp: Date.now(),
+          sequence: null,
+          data_age_ms: null,
+        };
+        onMessage?.(sseEvent);
+      }
+    }) as EventListener);
+
     eventSource.onerror = (error) => {
+      const wasConnected = isConnected;
       isConnected = false;
       onError?.(error);
-      
-      if (reconnect && reconnectAttempts < maxReconnectAttempts) {
-        eventSource?.close();
-        setTimeout(connect, reconnectInterval);
-        reconnectAttempts++;
+
+      if (wasConnected) {
+        onDisconnect?.();
       }
+
+      eventSource?.close();
+      scheduleReconnect();
     };
   };
 
@@ -116,18 +303,24 @@ export function createSSEConnection<T = unknown>(
       return eventSource;
     },
     disconnect: () => {
+      clearReconnectTimer();
       eventSource?.close();
       eventSource = null;
-      isConnected = false;
+      if (isConnected) {
+        isConnected = false;
+        onDisconnect?.();
+      }
       activeConnections.delete(key);
     },
     reconnect: () => {
+      clearReconnectTimer();
       reconnectAttempts = 0;
       connect();
     },
     get isConnected() {
       return isConnected;
-    } };
+    },
+  };
 
   activeConnections.set(key, connection);
   return connection;
@@ -151,4 +344,8 @@ export function getSSEConnection(key: string): SSEConnection | undefined {
 
 export function isSSEConnected(key: string): boolean {
   return activeConnections.get(key)?.isConnected ?? false;
+}
+
+export function getActiveConnectionKeys(): string[] {
+  return Array.from(activeConnections.keys());
 }
