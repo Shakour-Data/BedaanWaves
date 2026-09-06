@@ -39,7 +39,7 @@ export function StockPicker({ onSelect, placeholder = "Search stocks...", classN
       const el = document.getElementById(`stock-picker-option-${activeIndex}`);
       el?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [activeIndex]);
+  }, [activeIndex, results.length]);
 
   const handleSelect = useCallback(
     (stock: { symbol: string; name: string }) => {

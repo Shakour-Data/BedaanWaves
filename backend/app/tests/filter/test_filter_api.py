@@ -2,12 +2,13 @@
 
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.routes.filter import router as filter_router
+from app.api.routes.filter import get_async_session as real_get_session
 from app.services.filter.filter_service import FilterService
 from app.services.filter.filter_parser import parse_filter_tree
 from app.services.filter.field_registry import FieldRegistry
@@ -19,18 +20,29 @@ class FakeRow:
         self.asset = MagicMock()
         self.asset.symbol = kwargs.get("symbol", "TEST")
         self.asset.name = kwargs.get("name", "Test Inc")
+        self.extra_fields = kwargs.get("extra_fields", {})
         for k, v in kwargs.items():
-            if k not in ("symbol", "name"):
+            if k not in ("symbol", "name", "extra_fields"):
                 setattr(self, k, v)
 
 
 def _make_session(rows):
     session = MagicMock()
-    result = MagicMock()
-    result.scalars = MagicMock(return_value=result)
-    result.all = MagicMock(return_value=rows)
-    result.mappings = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
-    session.execute = AsyncMock(return_value=result)
+
+    rows_result = MagicMock()
+    rows_result.scalars.return_value = rows_result
+    rows_result.all.return_value = rows
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = len(rows)
+
+    async def execute_mock(query, *args, **kwargs):
+        stmt_str = str(query)
+        if "count()" in stmt_str or "count(*)" in stmt_str:
+            return count_result
+        return rows_result
+
+    session.execute = execute_mock
     return session
 
 
@@ -61,13 +73,12 @@ class TestAdvancedFilterAPI(unittest.TestCase):
         default.update(overrides)
         return default
 
-    @patch("app.api.routes.filter.get_async_session")
-    def test_advanced_filter_success(self, mock_get_session):
+    def test_advanced_filter_success(self):
         rows = [
-            FakeRow(id="1", symbol="AAPL", name="Apple", date="2024-01-01", level="overall", level_key="overall", level_name="Overall", score=85.0, score_change=2.5, industry="Technology", company_id="C001", timestamp="2024-01-01T00:00:00"),
+            FakeRow(id="1", asset_id="a1", symbol="AAPL", name="Apple", date="2024-01-01", level="overall", level_key="overall", level_name="Overall", score=85.0, score_change=2.5, industry="Technology", company_id="C001", timestamp="2024-01-01T00:00:00"),
         ]
         mock_session = _make_session(rows)
-        mock_get_session.return_value = mock_session
+        self.client.app.dependency_overrides[real_get_session] = lambda: mock_session
 
         payload = self._build_payload()
         response = self.client.post("/api/v1/filter/advanced", json=payload)
@@ -77,20 +88,18 @@ class TestAdvancedFilterAPI(unittest.TestCase):
         self.assertEqual(data["total"], 1)
         self.assertEqual(data["results"][0]["symbol"], "AAPL")
 
-    @patch("app.api.routes.filter.get_async_session")
-    def test_advanced_filter_invalid_operator(self, mock_get_session):
+    def test_advanced_filter_invalid_operator(self):
         mock_session = _make_session([])
-        mock_get_session.return_value = mock_session
+        self.client.app.dependency_overrides[real_get_session] = lambda: mock_session
 
         payload = self._build_payload()
         payload["query"]["conditions"][0]["operator"] = "invalid_op"
         response = self.client.post("/api/v1/filter/advanced", json=payload)
         self.assertEqual(response.status_code, 400)
 
-    @patch("app.api.routes.filter.get_async_session")
-    def test_advanced_filter_empty_results(self, mock_get_session):
+    def test_advanced_filter_empty_results(self):
         mock_session = _make_session([])
-        mock_get_session.return_value = mock_session
+        self.client.app.dependency_overrides[real_get_session] = lambda: mock_session
 
         payload = self._build_payload()
         payload["query"]["conditions"][0]["value"] = 9999
