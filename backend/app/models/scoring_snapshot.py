@@ -28,6 +28,11 @@ class SnapshotLevel(str, enum.Enum):
     SUB_ASPECT = "sub_aspect"
 
 
+class SnapshotTier(str, enum.Enum):
+    DAILY = "daily"
+    HOURLY = "hourly"
+
+
 class ScoringSnapshot(Base):
     """One row per (asset, date, level, level_key)."""
 
@@ -37,6 +42,8 @@ class ScoringSnapshot(Base):
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
     date = Column(Date, nullable=False, index=True)
+    snapshot_tier = Column(Enum(SnapshotTier, name="snapshot_tier"), nullable=True, default=SnapshotTier.DAILY)
+    effective_at = Column(DateTime(timezone=True), nullable=True, index=True)
     level = Column(Enum(SnapshotLevel, name="snapshot_level"), nullable=False, index=True)
     level_key = Column(String(100), nullable=False, index=True)
     level_name = Column(String(255), nullable=False)
@@ -58,10 +65,17 @@ class ScoringSnapshot(Base):
         Index("idx_scoring_snapshot_asset_level_date", "asset_id", "level", "date"),
         Index("idx_scoring_snapshot_score_change", "score_change"),
         Index("idx_scoring_snapshot_metadata", "extra_fields", postgresql_using="gin"),
+        Index("uq_snapshot_asset_tier_effective", "asset_id", "snapshot_tier", "effective_at", unique=True),
     )
 
     @validates("level")
     def _validate_level(self, key: str, value: SnapshotLevel) -> SnapshotLevel:
         if isinstance(value, str):
             return SnapshotLevel(value)
+        return value
+
+    @validates("snapshot_tier")
+    def _validate_snapshot_tier(self, key: str, value: SnapshotTier) -> SnapshotTier:
+        if isinstance(value, str):
+            return SnapshotTier(value)
         return value

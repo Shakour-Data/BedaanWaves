@@ -44,6 +44,7 @@ from app.services.system.metrics_service import MetricsService
 from app.services.system.backup_service import BackupService
 from app.services.system.data_integrity_service import DataIntegrityService
 from app.services.system.queue_service import QueueService
+from app.services.system.notification_dispatcher_service import NotificationDispatcher
 from app.services.analysis.scoring_service import ScoringService
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
@@ -51,6 +52,14 @@ from app.services.data.real_time_market_data_service import RealTimeMarketDataSe
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.ingestion_service import IntelligentIngestionService
 from app.services.data.news_service import NewsService
+from app.services.live import (
+    FreshnessValidator,
+    LiveDataOrchestrator,
+    LivePipelineMetrics,
+    PerSymbolCircuitBreaker,
+    SLOMonitor,
+)
+from app.core.config import get_settings as _live_settings_get
 
 from app.services.user.auth_service import ensure_admin_user
 
@@ -246,30 +255,37 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting BedaanWaves application...")
 
+    # DB/lifecycle bypass flag used by the SSE-lag performance benchmark to
+    # keep startup fast and independent of Postgres provisioning.
+    skip_db = os.environ.get("LIVE_BENCH_SKIP_DB_LIFESPAN", "").lower() in ("1", "true", "yes")
+
     # Step 1: Ensure directories exist
     _ensure_directories()
 
-    # Step 2: Auto-create database if missing
-    try:
-        _ensure_database()
-    except Exception as e:
-        logger.warning(f"Database auto-creation failed: {e}")
+    if not skip_db:
+        # Step 2: Auto-create database if missing
+        try:
+            _ensure_database()
+        except Exception as e:
+            logger.warning(f"Database auto-creation failed: {e}")
 
-    # Step 3: Auto-run migrations
-    try:
-        _run_migrations()
-    except Exception as e:
-        logger.warning(f"Auto-migration failed: {e}")
+        # Step 3: Auto-run migrations
+        try:
+            _run_migrations()
+        except Exception as e:
+            logger.warning(f"Auto-migration failed: {e}")
 
-    # Step 4: Auto-seed if database is empty
-    if _needs_seeding():
-        _run_seed()
+        # Step 4: Auto-seed if database is empty
+        if _needs_seeding():
+            _run_seed()
 
-    try:
-        await ensure_admin_user()
-        logger.info("Admin user ensured")
-    except Exception as e:
-        logger.warning(f"Could not ensure admin user: {e}")
+        try:
+            await ensure_admin_user()
+            logger.info("Admin user ensured")
+        except Exception as e:
+            logger.warning(f"Could not ensure admin user: {e}")
+    else:
+        logger.info("LIVE_BENCH_SKIP_DB_LIFESPAN=true: skipping DB create/migrate/seed/admin steps.")
 
     try:
         # Step 6: Initialize dependency container with real services
@@ -337,6 +353,76 @@ async def lifespan(app: FastAPI):
 
         await scheduler_svc.initialize()
         logger.info("SchedulerService started")
+
+        # Notification dispatcher (shared, used by SLOMonitor)
+        notification_dispatcher_svc = NotificationDispatcher()
+        container.register_instance("notification_dispatcher_service", notification_dispatcher_svc)
+
+        # Live streaming services (Tasks 2-6, 13-14)
+        _live_settings = _live_settings_get()
+
+        # Task 2 components
+        live_freshness_validator = FreshnessValidator(
+            market_hours=market_hours_svc,
+            settings=_live_settings,
+        )
+        live_circuit_breaker = PerSymbolCircuitBreaker(
+            failure_threshold=_live_settings.LIVE_CIRCUIT_BREAKER_FAILURES,
+            halfopen_s=float(_live_settings.LIVE_CIRCUIT_BREAKER_HALFOPEN_S),
+        )
+        container.register_instance("live_freshness_validator", live_freshness_validator)
+        container.register_instance("live_circuit_breaker", live_circuit_breaker)
+
+        # Task 5: Live pipeline metrics
+        live_pipeline_metrics = LivePipelineMetrics()
+        container.register_instance("live_pipeline_metrics", live_pipeline_metrics)
+        # Register with MetricsService registry so /system/metrics can scrape it
+        try:
+            _metrics_service = container.get("metrics_service")
+            if hasattr(_metrics_service, "register_service"):
+                _metrics_service.register_service(live_pipeline_metrics.service_name, live_pipeline_metrics)
+                live_pipeline_metrics.register_with_metrics_service(_metrics_service)
+        except Exception as _e:
+            logger.warning(f"Could not register live metrics with MetricsService: {_e}")
+
+        # Task 3: Orchestrator with per-key polling + reference counting + derived producers
+        live_orchestrator = LiveDataOrchestrator(
+            market_data_service=realtime_market_svc,
+            market_hours_service=market_hours_svc,
+            freshness_validator=live_freshness_validator,
+            circuit_breaker=live_circuit_breaker,
+            settings=_live_settings,
+            metrics_service=live_pipeline_metrics,
+            scoring_service=scoring_svc,
+            news_service=news_svc,
+        )
+        container.register_instance("live_orchestrator", live_orchestrator)
+
+        # Task 6: SLO monitor with notification dispatch + debounce + recovery
+        slo_monitor = SLOMonitor(
+            notification_dispatcher=notification_dispatcher_svc,
+            settings=_live_settings,
+        )
+        slo_monitor.bind_orchestrator(live_orchestrator)
+        # Wire observe_envelope hook so every emitted envelope flows into the SLO monitor
+        live_orchestrator.slo_monitor_hook = (
+            lambda envelope, age, thresh: slo_monitor.observe_envelope(
+                envelope, data_age_ms=age, threshold_s=thresh
+            )
+        )
+        container.register_instance("slo_monitor", slo_monitor)
+
+        # Initialize live services (must be in dependency order)
+        await notification_dispatcher_svc.initialize()
+        await live_pipeline_metrics.initialize()
+        await live_orchestrator.initialize()
+        await slo_monitor.initialize()
+        logger.info(
+            "Live services initialized: orchestrator=%s metrics=%s slo_monitor=%s",
+            live_orchestrator.service_name,
+            live_pipeline_metrics.service_name,
+            slo_monitor.service_name,
+        )
 
         app.state.container = container
         _container = container
