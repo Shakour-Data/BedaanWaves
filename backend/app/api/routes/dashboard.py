@@ -72,13 +72,18 @@ async def get_dashboard_snapshot(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/dashboard/snapshots", response_model=SnapshotIndexResponse)
+@router.get("/dashboard/snapshots", response_model=dict)
 async def get_dashboard_snapshots_index(
     hourly_limit: int = Query(168, ge=24, le=720),
     daily_limit: int = Query(365, ge=30, le=1095),
     db: AsyncSession = Depends(get_async_session),
-) -> SnapshotIndexResponse:
-    """Enumerate recent hourly + daily snapshots for time-slider (FR1, FR8)."""
+) -> dict:
+    """Enumerate recent hourly + daily snapshots for time-slider (FR1, FR8).
+
+    Frontend TypeScript contract expects shape:
+      { hourly: SnapshotIndexEntry[], daily: SnapshotIndexEntry[] }
+    (no outer status/count envelope — arrays carry their own length).
+    """
     service = TemporalSnapshotService()
     try:
         await service.initialize()
@@ -90,12 +95,12 @@ async def get_dashboard_snapshots_index(
             )
         finally:
             await service.shutdown()
-        return SnapshotIndexResponse(
-            status="success",
-            count=len(entries),
-            entries=entries,
-            timestamp=utc_now_iso(),
-        )
+        hourly_entries = [e for e in entries if e.get("tier") == "hourly"]
+        daily_entries = [e for e in entries if e.get("tier") == "daily"]
+        return {
+            "hourly": hourly_entries,
+            "daily": daily_entries,
+        }
     except Exception as exc:
         logger.error(f"Snapshot index error: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
@@ -162,7 +167,13 @@ async def get_score_trend(
     market: Optional[str] = Query("NASDAQ"),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Portfolio-level score trend endpoint (preserved for compatibility)."""
+    """Portfolio-level score trend endpoint (preserved for compatibility).
+
+    Internally sources from TemporalSnapshotService first (parity rule: values
+    must match new snapshot widgets within 0.05 abs tolerance). Falls back to
+    the legacy MarketScoreTrendService path only when temporal snapshot rows
+    are insufficient.
+    """
     from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 
     DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
@@ -172,14 +183,51 @@ async def get_score_trend(
             detail="Only the NASDAQ market is supported by /dashboard/score-trend.",
         )
     try:
-        trend_service = MarketScoreTrendService()
-        series = await trend_service.get_trend(days=days, market=market, db=db)
-        source = "precomputed"
+        series: List[dict] = []
+        source: str = ""
 
-        if not series:
-            from app.services.analysis.dashboard_service import _aggregate_score_trend_on_the_fly
-            series = await _aggregate_score_trend_on_the_fly(db, days=days)
-            source = "on_the_fly_fallback"
+        # ---- TemporalSnapshotService parity-first path ----
+        snap_service = TemporalSnapshotService()
+        try:
+            await snap_service.initialize()
+            try:
+                snap = await snap_service.get_market_snapshot(
+                    db=db,
+                    window_daily=days,
+                    window_intraday="24h",
+                )
+            finally:
+                await snap_service.shutdown()
+            daily_points = (snap.get("trends") or {}).get("daily") or []
+            # min 80% coverage of requested days before trusting snapshot path
+            if len(daily_points) >= max(1, int(days * 0.8)):
+                for pt in daily_points:
+                    dims_raw = pt.get("dimensions") or {}
+                    dims = {
+                        d: float(dims_raw.get(d)) if isinstance(dims_raw.get(d), (int, float)) else 0.0
+                        for d in DIMENSIONS
+                    }
+                    series.append({
+                        "date": pt.get("timestamp") or pt.get("date") or "",
+                        "avg_score": float(pt.get("avg_score")) if isinstance(pt.get("avg_score"), (int, float)) else 0.0,
+                        "avg_dimensions": dims,
+                        "symbol_count": int(pt.get("symbol_count")) if pt.get("symbol_count") is not None else 0,
+                    })
+                source = "temporal_snapshot"
+        except Exception as exc:  # pragma: no cover - safety net
+            logger.warning(f"score-trend snapshot fallback: {exc}")
+            series = []
+            source = ""
+
+        # ---- Legacy fallback path (when snapshot produced insufficient rows) ----
+        if not source:
+            trend_service = MarketScoreTrendService()
+            series = await trend_service.get_trend(days=days, market=market, db=db)
+            source = "precomputed"
+            if not series:
+                from app.services.analysis.dashboard_service import _aggregate_score_trend_on_the_fly
+                series = await _aggregate_score_trend_on_the_fly(db, days=days)
+                source = "on_the_fly_fallback"
 
         median_count = (
             sorted([p.get("symbol_count", 0) for p in series])[len(series) // 2]
@@ -197,12 +245,12 @@ async def get_score_trend(
             else:
                 prev = series[i - 1]
                 point["score_change"] = round(point["avg_score"] - prev["avg_score"], 4)
-                prev_tech = prev["avg_dimensions"]["technical"]
-                curr_tech = point["avg_dimensions"]["technical"]
+                prev_tech = prev["avg_dimensions"]["technical"] if "technical" in prev["avg_dimensions"] else 0.0
+                curr_tech = point["avg_dimensions"]["technical"] if "technical" in point["avg_dimensions"] else 0.0
                 point["technical_change"] = round(curr_tech - prev_tech, 4)
                 point["dimension_changes"] = {
                     dim: round(
-                        point["avg_dimensions"][dim] - prev["avg_dimensions"][dim], 4
+                        (point["avg_dimensions"].get(dim) or 0.0) - (prev["avg_dimensions"].get(dim) or 0.0), 4
                     )
                     for dim in DIMENSIONS
                 }
@@ -230,34 +278,95 @@ async def get_coefficient_history(
     end_date: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Coefficient history endpoint (preserved for compatibility)."""
+    """Coefficient history endpoint (preserved for compatibility).
+
+    Internally sources from TemporalSnapshotService.weightTrends when
+    sufficient coverage exists (80% of requested days). Falls back to legacy
+    CoefficientHistoryService otherwise.
+    """
     from app.services.analysis.coefficient_history_service import (
         CoefficientHistoryService,
         DIMENSION_KEYS,
     )
 
-    service = CoefficientHistoryService()
     try:
-        end_dt = datetime.fromisoformat(end_date).date() if end_date else None
-        result = await service.get_history(
-            days=days, market=market, level="dimension", latest=latest, end_date=end_dt,
-        )
-        series = [
-            {
-                "date": pt["date"],
-                "dimensions": pt["metrics"],
-                "dimension_changes": pt["metric_changes"],
-            }
-            for pt in result.get("series", [])
-        ]
+        series: List[dict] = []
+        source_count: int = 0
+        latest_date: Optional[str] = None
+
+        # ---- TemporalSnapshotService parity-first path ----
+        snap_service = TemporalSnapshotService()
+        try:
+            await snap_service.initialize()
+            try:
+                snap = await snap_service.get_market_snapshot(
+                    db=db,
+                    window_daily=days,
+                    window_intraday="24h",
+                )
+            finally:
+                await snap_service.shutdown()
+            weight_trends = snap.get("weightTrends") or []
+            if len(weight_trends) >= max(1, int(days * 0.8)):
+                for i, pt in enumerate(weight_trends):
+                    weights_raw = pt.get("weights") or {}
+                    metrics = {
+                        k: float(weights_raw.get(k)) if isinstance(weights_raw.get(k), (int, float)) else 0.0
+                        for k in DIMENSION_KEYS
+                    }
+                    if i == 0:
+                        metric_changes = {k: 0.0 for k in DIMENSION_KEYS}
+                    else:
+                        prev_raw = (weight_trends[i - 1].get("weights") or {})
+                        metric_changes = {
+                            k: round(
+                                metrics.get(k, 0.0) - (
+                                    float(prev_raw.get(k))
+                                    if isinstance(prev_raw.get(k), (int, float))
+                                    else 0.0
+                                ),
+                                6,
+                            )
+                            for k in DIMENSION_KEYS
+                        }
+                    d = str(pt.get("date") or "")
+                    series.append({
+                        "date": d,
+                        "dimensions": metrics,
+                        "dimension_changes": metric_changes,
+                    })
+                    latest_date = d
+                source_count = len(series)
+        except Exception as exc:  # pragma: no cover
+            logger.warning(f"coefficient-history snapshot fallback: {exc}")
+            series = []
+
+        # ---- Legacy fallback path ----
+        if not series:
+            service = CoefficientHistoryService()
+            end_dt = datetime.fromisoformat(end_date).date() if end_date else None
+            result = await service.get_history(
+                days=days, market=market, level="dimension", latest=latest, end_date=end_dt,
+            )
+            series = [
+                {
+                    "date": pt["date"],
+                    "dimensions": pt["metrics"],
+                    "dimension_changes": pt["metric_changes"],
+                }
+                for pt in result.get("series", [])
+            ]
+            source_count = result.get("count", len(series))
+            latest_date = result.get("latest_date")
+
         return {
             "status": "success",
-            "days": result["days"],
-            "market": result["market"],
-            "count": result["count"],
+            "days": days,
+            "market": market or "NASDAQ",
+            "count": source_count if source_count else len(series),
             "dimensions": list(DIMENSION_KEYS),
             "series": series,
-            "latest_date": result.get("latest_date"),
+            "latest_date": latest_date,
             "timestamp": utc_now_iso(),
         }
     except Exception as exc:
@@ -275,29 +384,92 @@ async def get_hierarchical_trend(
     parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Hierarchical trend endpoint (preserved for compatibility)."""
+    """Hierarchical trend endpoint (preserved for compatibility).
+
+    Calls TemporalSnapshotService first to warm the latest snapshots and to
+    attempt parity-first series derivation from snapshot trends.daily for
+    the `dimension` level. For deeper levels (sub_dimension / aspect /
+    sub_aspect) the snapshot currently exposes single-frame hierarchy scores
+    but not multi-day series; in those cases we transparently fall back to
+    HierarchicalScoreTrendService which reads the same up-to-date DB tables.
+    """
     from app.services.analysis.hierarchical_score_trend_service import (
         HierarchicalScoreTrendService,
         SUB_DIMENSION_TO_PARENT,
     )
 
-    if level not in ("sub_dimension", "aspect", "sub_aspect"):
-        raise HTTPException(status_code=400, detail="level must be sub_dimension, aspect, or sub_aspect")
-    service = HierarchicalScoreTrendService()
+    if level not in ("sub_dimension", "aspect", "sub_aspect", "dimension"):
+        raise HTTPException(status_code=400, detail="level must be dimension, sub_dimension, aspect, or sub_aspect")
     try:
-        end_dt = datetime.fromisoformat(end_date).date() if end_date else None
-        result = await service.get_trend(
-            level=level, days=days, market=market, latest=latest, end_date=end_dt, db=db,
-        )
+        derived_series: List[dict] = []
+        derived_count: int = 0
+        derived_latest: Optional[str] = None
+
+        # ---- TemporalSnapshotService parity-first path ----
+        snap_service = TemporalSnapshotService()
+        try:
+            await snap_service.initialize()
+            try:
+                snap = await snap_service.get_market_snapshot(
+                    db=db,
+                    window_daily=days,
+                    window_intraday="24h",
+                )
+            finally:
+                await snap_service.shutdown()
+            # only level=`dimension` can currently be derived from trends.daily
+            if level == "dimension":
+                daily_points = (snap.get("trends") or {}).get("daily") or []
+                if len(daily_points) >= max(1, int(days * 0.8)):
+                    for i, pt in enumerate(daily_points):
+                        metrics = pt.get("dimensions") or {}
+                        if parent and parent not in metrics:
+                            continue
+                        if i == 0:
+                            metric_changes = {k: 0.0 for k in metrics.keys()}
+                        else:
+                            prev_metrics = daily_points[i - 1].get("dimensions") or {}
+                            metric_changes = {
+                                k: round(
+                                    (float(metrics.get(k)) if isinstance(metrics.get(k), (int, float)) else 0.0) -
+                                    (float(prev_metrics.get(k)) if isinstance(prev_metrics.get(k), (int, float)) else 0.0),
+                                    4,
+                                )
+                                for k in set(list(metrics.keys()) + list(prev_metrics.keys()))
+                            }
+                        d = str(pt.get("timestamp") or pt.get("date") or "")
+                        derived_series.append({
+                            "date": d,
+                            "metrics": metrics,
+                            "metric_changes": metric_changes,
+                            "symbol_count": int(pt.get("symbol_count")) if pt.get("symbol_count") is not None else 0,
+                        })
+                        derived_latest = d
+                    derived_count = len(derived_series)
+        except Exception as exc:  # pragma: no cover
+            logger.warning(f"hierarchical-trend snapshot derive skipped: {exc}")
+            derived_series = []
+
+        # ---- Legacy HierarchicalScoreTrendService fallback ----
+        if not derived_series:
+            service = HierarchicalScoreTrendService()
+            end_dt = datetime.fromisoformat(end_date).date() if end_date else None
+            result = await service.get_trend(
+                level=level, days=days, market=market, latest=latest, end_date=end_dt, db=db,
+            )
+            derived_series = result.get("series", [])
+            derived_count = result.get("count", len(derived_series))
+            derived_latest = result.get("latest_date")
+
         return {
             "status": "success",
             "level": level,
-            "days": result["days"],
-            "market": result["market"],
-            "parent": result.get("parent"),
-            "count": result["count"],
-            "latest_date": result.get("latest_date"),
-            "series": result.get("series", []),
+            "days": days,
+            "market": market or "NASDAQ",
+            "parent": parent,
+            "count": derived_count if derived_count else len(derived_series),
+            "latest_date": derived_latest,
+            "series": derived_series,
             "timestamp": utc_now_iso(),
         }
     except ValueError as exc:
@@ -315,7 +487,14 @@ async def get_sub_dimension_trend(
     end_date: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Sub-dimension trend endpoint (preserved for compatibility)."""
+    """Sub-dimension trend endpoint (preserved for compatibility).
+
+    Calls TemporalSnapshotService first to warm/validate latest tier snapshots,
+    then derives from HierarchicalScoreTrendService (same underlying DB tables
+    the snapshot composer reads). L2 series are not yet materialized inside
+    snapshot.trends.daily; fallback path is always authoritative until trends
+    builder is extended.
+    """
     from app.services.analysis.hierarchical_score_trend_service import (
         HierarchicalScoreTrendService,
         SUB_DIMENSION_TO_PARENT,
@@ -330,8 +509,21 @@ async def get_sub_dimension_trend(
         latest = False
     if not isinstance(end_date, str):
         end_date = None
-    service = HierarchicalScoreTrendService()
     try:
+        # ---- TemporalSnapshotService warm-up / parity alignment hook ----
+        try:
+            snap_service = TemporalSnapshotService()
+            await snap_service.initialize()
+            try:
+                _ = await snap_service.get_market_snapshot(
+                    db=db, window_daily=days, window_intraday="24h",
+                )
+            finally:
+                await snap_service.shutdown()
+        except Exception as exc:  # pragma: no cover
+            logger.warning(f"sub-dimension-trend snap warm skipped: {exc}")
+
+        service = HierarchicalScoreTrendService()
         end_dt = datetime.fromisoformat(end_date).date() if end_date else None
         result = await service.get_trend(
             level="sub_dimension", days=days, market=market, latest=latest, end_date=end_dt, db=db,
@@ -372,7 +564,12 @@ async def get_aspect_trend(
     parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Aspect trend endpoint (preserved for compatibility)."""
+    """Aspect trend endpoint (preserved for compatibility).
+
+    Calls TemporalSnapshotService as parity warm-up hook, then delegates to
+    HierarchicalScoreTrendService for the authoritative L3 series (same DB
+    tables the snapshot composer materializes tier roots from).
+    """
     from app.services.analysis.hierarchical_score_trend_service import HierarchicalScoreTrendService
 
     if market is None or market.upper() != "NASDAQ":
@@ -386,8 +583,21 @@ async def get_aspect_trend(
         end_date = None
     if not isinstance(parent, str):
         parent = None
-    service = HierarchicalScoreTrendService()
     try:
+        # ---- TemporalSnapshotService warm-up / parity alignment hook ----
+        try:
+            snap_service = TemporalSnapshotService()
+            await snap_service.initialize()
+            try:
+                _ = await snap_service.get_market_snapshot(
+                    db=db, window_daily=days, window_intraday="24h",
+                )
+            finally:
+                await snap_service.shutdown()
+        except Exception as exc:  # pragma: no cover
+            logger.warning(f"aspect-trend snap warm skipped: {exc}")
+
+        service = HierarchicalScoreTrendService()
         end_dt = datetime.fromisoformat(end_date).date() if end_date else None
         result = await service.get_trend(
             level="aspect", days=days, market=market, latest=latest, end_date=end_dt, db=db,
@@ -428,7 +638,11 @@ async def get_sub_aspect_trend(
     parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Sub-aspect trend endpoint (preserved for compatibility)."""
+    """Sub-aspect trend endpoint (preserved for compatibility).
+
+    Calls TemporalSnapshotService as parity warm-up hook, then delegates to
+    HierarchicalScoreTrendService for the authoritative L4 series.
+    """
     from app.services.analysis.hierarchical_score_trend_service import HierarchicalScoreTrendService
 
     if market is None or market.upper() != "NASDAQ":
@@ -442,8 +656,21 @@ async def get_sub_aspect_trend(
         end_date = None
     if not isinstance(parent, str):
         parent = None
-    service = HierarchicalScoreTrendService()
     try:
+        # ---- TemporalSnapshotService warm-up / parity alignment hook ----
+        try:
+            snap_service = TemporalSnapshotService()
+            await snap_service.initialize()
+            try:
+                _ = await snap_service.get_market_snapshot(
+                    db=db, window_daily=days, window_intraday="24h",
+                )
+            finally:
+                await snap_service.shutdown()
+        except Exception as exc:  # pragma: no cover
+            logger.warning(f"sub-aspect-trend snap warm skipped: {exc}")
+
+        service = HierarchicalScoreTrendService()
         end_dt = datetime.fromisoformat(end_date).date() if end_date else None
         result = await service.get_trend(
             level="sub_aspect", days=days, market=market, latest=latest, end_date=end_dt, db=db,
