@@ -29,6 +29,7 @@ const categories: NavCategory[] = [
       { label: "Stocks", href: "/stocks", marker: "S" },
       { label: "Analysis", href: "/analysis", marker: "A" },
       { label: "Scoring", href: "/scoring", marker: "SC" },
+      { label: "Scoring Filter", href: "/scoring-filter", marker: "SF" },
       { label: "Portfolio", href: "/portfolio", marker: "P" },
       { label: "Rankings", href: "/ranking", marker: "RN" },
     ],

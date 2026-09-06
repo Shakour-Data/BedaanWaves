@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { FilterableField } from "@/types/filter";
@@ -12,11 +11,10 @@ interface IndustryQuickFilterProps {
   onChange: (industries: string[]) => void;
 }
 
-export function IndustryQuickFilter({ fields, selected, onChange }: IndustryQuickFilterProps) {
+export function IndustryQuickFilter({ selected, onChange }: IndustryQuickFilterProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const industryField = fields.find((f) => f.name === "industry");
   const allIndustries = [
     "Technology",
     "Healthcare",

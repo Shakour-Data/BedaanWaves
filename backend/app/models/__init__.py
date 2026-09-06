@@ -56,6 +56,7 @@ from .models import (
     UserFavorite,
     UserAlert,
 )
+from .scoring_snapshot import ScoringSnapshot
 
 __all__ = [
     "Asset",
@@ -112,4 +113,5 @@ __all__ = [
     "MarketIndex",
     "UserFavorite",
     "UserAlert",
+    "ScoringSnapshot",
 ]

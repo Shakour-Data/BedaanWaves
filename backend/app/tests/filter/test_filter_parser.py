@@ -14,7 +14,7 @@ Covers:
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from app.services.filter.field_registry import FieldRegistry
 from app.services.filter.filter_parser import parse_filter_tree, FilterParseError
@@ -28,17 +28,29 @@ class FakeRow:
         self.asset = MagicMock()
         self.asset.symbol = kwargs.get("symbol", "TEST")
         self.asset.name = kwargs.get("name", "Test Inc")
+        self.metadata = kwargs.get("metadata", {})
         for k, v in kwargs.items():
-            if k not in ("symbol", "name"):
+            if k not in ("symbol", "name", "metadata"):
                 setattr(self, k, v)
 
 
 def _make_session(rows):
     session = MagicMock()
-    result = MagicMock()
-    result.scalars = MagicMock(return_value=result)
-    result.all = MagicMock(return_value=rows)
-    session.execute = AsyncMock(return_value=result)
+
+    rows_result = MagicMock()
+    rows_result.scalars.return_value = rows_result
+    rows_result.all.return_value = rows
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = len(rows)
+
+    async def execute_mock(query, *args, **kwargs):
+        stmt_str = str(query)
+        if "count()" in stmt_str or "count(*)" in stmt_str:
+            return count_result
+        return rows_result
+
+    session.execute = execute_mock
     return session
 
 
@@ -208,7 +220,7 @@ class TestFilterService(unittest.TestCase):
 
     def test_execute_filter_returns_results(self):
         rows = [
-            self._row(id="1", symbol="AAPL", name="Apple", date=date.today(), level="overall", level_key="overall", level_name="Overall", score=85.0, score_change=2.5, industry="Technology", company_id="C001", timestamp=datetime.now()),
+            self._row(id="1", asset_id="a1", symbol="AAPL", name="Apple", date=date.today(), level="overall", level_key="overall", level_name="Overall", score=85.0, score_change=2.5, industry="Technology", company_id="C001", timestamp=datetime.now(), extra_fields={}),
         ]
         session = _make_session(rows)
 

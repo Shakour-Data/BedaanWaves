@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/InputField";
 import { Modal } from "@/components/ui/Modal";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { PageLoading } from "@/components/ui/PageLoading";
 import { TarotCard } from "@/components/ui/TarotCard";

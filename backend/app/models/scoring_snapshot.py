@@ -9,7 +9,7 @@ on one date.
 """
 
 from sqlalchemy import (
-    Column, String, Numeric, DateTime, Date, ForeignKey, Index, Enum
+    Column, String, Numeric, DateTime, Date, ForeignKey, Index, Enum, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, validates
@@ -53,6 +53,7 @@ class ScoringSnapshot(Base):
     asset = relationship("Asset")
 
     __table_args__ = (
+        UniqueConstraint('asset_id', 'date', 'level', 'level_key', name='uix_scoring_snapshots_asset_date_level_key'),
         Index("idx_scoring_snapshot_level_key", "level", "level_key"),
         Index("idx_scoring_snapshot_asset_level_date", "asset_id", "level", "date"),
         Index("idx_scoring_snapshot_score_change", "score_change"),

@@ -49,6 +49,9 @@ export default function ScoringFilterPage() {
   const debouncedQuery = useDebounce(query, 500);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setError(null);
+
     let cancelled = false;
     (async () => {
       try {
@@ -58,38 +61,36 @@ export default function ScoringFilterPage() {
         if (!cancelled) addToast({ type: "error", message: "Failed to load filter fields" });
       }
     })();
+
     return () => { cancelled = true; };
   }, [addToast]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const applyFilter = useCallback(async () => {
     setLoading(true);
     setError(null);
-
-    (async () => {
-      try {
-        const payload = {
-          query: debouncedQuery,
-          limit: 50,
-          offset: 0,
-          sort_by: "score",
-          sort_dir: "desc" as const,
-        };
-        const data = await fetchAdvancedFilter(payload);
-        if (!cancelled) setResults(data);
-      } catch (err) {
-        if (!cancelled) {
-          const message = err instanceof Error ? err.message : "Filter failed";
-          setError(message);
-          addToast({ type: "error", message });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
+    try {
+      const payload = {
+        query: debouncedQuery,
+        limit: 50,
+        offset: 0,
+        sort_by: "score",
+        sort_dir: "desc" as const,
+      };
+      const data = await fetchAdvancedFilter(payload);
+      setResults(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Filter failed";
+      setError(message);
+      addToast({ type: "error", message });
+    } finally {
+      setLoading(false);
+    }
   }, [debouncedQuery, addToast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    applyFilter();
+  }, [applyFilter]);
 
   const handleApply = useCallback(() => {
     setQuery((q) => ({ ...q }));
@@ -104,9 +105,6 @@ export default function ScoringFilterPage() {
     setIndustryFilter(industries);
     if (industries.length === 0) return;
     setQuery((q) => {
-      const existingIndustryConditions = q.conditions.filter(
-        (c) => !("logic" in c) && c.field === "industry",
-      );
       const withoutIndustry = q.conditions.filter(
         (c) => "logic" in c || c.field !== "industry",
       );
