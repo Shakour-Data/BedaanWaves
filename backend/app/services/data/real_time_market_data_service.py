@@ -248,6 +248,126 @@ class RealTimeMarketDataService(BaseService):
         hist = await self.get_adjusted_historical(symbol, start_date, end_date, interval="1d")
         return [c.adjusted_close for c in hist.candles]
 
+    async def fetch_quote_no_cache(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch a real-time quote WITHOUT touching the cache layer.
+
+        Intended EXCLUSIVELY for the LiveDataOrchestrator polling loops.
+        REST consumers MUST call get_realtime_quote (which reads/writes the
+        quote:<symbol> cache keys).
+
+        Returns a dict suitable for FreshnessValidator.validate_quote
+        (raw fields plus freshness_ts as a UTC datetime).
+
+        Raises DataProviderException on provider failure.
+        """
+        sym = symbol.upper()
+        start_ts = time.perf_counter()
+
+        raw = await self._run_blocking(self._fetch_yfinance_quote, sym)
+        if raw is None:
+            raise DataProviderException(
+                "Provider failed to return quote",
+                details={"symbol": sym, "provider": self._provider},
+            )
+
+        market_status = self._market_hours.get_market_status()
+        freshness_ts = datetime.fromtimestamp(raw["timestamp"], tz=timezone.utc)
+
+        self._last_fetch_latency_ms = (time.perf_counter() - start_ts) * 1000.0
+        self._last_fetch_ts[sym] = datetime.now(timezone.utc)
+
+        return {
+            "symbol": sym,
+            "current_price": float(raw["current_price"]),
+            "change_value": float(raw["change_value"]),
+            "change_percent": float(raw["change_percent"]),
+            "open": float(raw["open"]),
+            "high": float(raw["high"]),
+            "low": float(raw["low"]),
+            "previous_close": float(raw["previous_close"]),
+            "volume": int(raw["volume"]),
+            "adjusted_close": (
+                float(raw["adjusted_close"]) if raw.get("adjusted_close") is not None else None
+            ),
+            "market_status": market_status["status"],
+            "freshness_label": market_status["freshness_label"],
+            "is_delayed": market_status["is_delayed"],
+            "data_source": "yfinance",
+            "freshness_ts": freshness_ts,
+        }
+
+    async def fetch_intraday_no_cache(
+        self,
+        symbol: str,
+        interval: str = "5m",
+    ) -> Dict[str, Any]:
+        """
+        Fetch intraday bars WITHOUT touching the cache layer.
+
+        Intended EXCLUSIVELY for the LiveDataOrchestrator polling loops.
+        REST consumers MUST call get_intraday (which reads/writes the
+        intraday:<symbol>:<interval> cache keys).
+
+        Raises DataProviderException on provider failure.
+        """
+        sym = symbol.upper()
+        valid_intervals = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+        safe_interval = interval if interval in valid_intervals else "5m"
+        start_ts = time.perf_counter()
+
+        raw_candles = await self._run_blocking(
+            self._fetch_yfinance_intraday,
+            sym,
+            safe_interval,
+        )
+        if not raw_candles:
+            raise DataProviderException(
+                "Provider failed to return intraday bars",
+                details={"symbol": sym, "interval": safe_interval, "provider": self._provider},
+            )
+
+        market_status = self._market_hours.get_market_status()
+        candles_out: List[Dict[str, Any]] = []
+        for c in raw_candles:
+            ts_raw = c["timestamp"]
+            if isinstance(ts_raw, datetime):
+                if ts_raw.tzinfo is None:
+                    ts = ts_raw.replace(tzinfo=timezone.utc)
+                else:
+                    ts = ts_raw.astimezone(timezone.utc)
+            else:
+                ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                else:
+                    ts = ts.astimezone(timezone.utc)
+            candles_out.append({
+                "timestamp": ts,
+                "open": float(c["open"]),
+                "high": float(c["high"]),
+                "low": float(c["low"]),
+                "close": float(c["close"]),
+                "adjusted_close": float(c["adjusted_close"]),
+                "volume": int(c["volume"]),
+                "split_ratio": (float(c["split_ratio"]) if c.get("split_ratio") is not None else None),
+                "source": "yfinance",
+            })
+
+        freshness_ts = candles_out[-1]["timestamp"] if candles_out else datetime.now(timezone.utc)
+        self._last_fetch_latency_ms = (time.perf_counter() - start_ts) * 1000.0
+        self._last_fetch_ts[sym] = datetime.now(timezone.utc)
+
+        return {
+            "symbol": sym,
+            "interval": safe_interval,
+            "candles": candles_out,
+            "market_status": market_status["status"],
+            "freshness_label": market_status["freshness_label"],
+            "data_source": "yfinance",
+            "freshness_ts": freshness_ts,
+        }
+
     async def health_check(self) -> Dict[str, Any]:
         """Return data provider health status."""
         status = "healthy"

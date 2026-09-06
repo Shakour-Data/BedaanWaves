@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -11,6 +11,11 @@ import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
+import {
+  useLiveData,
+  LiveConnectionIndicator,
+  type SSEEvent,
+} from "@/hooks/useLiveData";
 
 import { t } from "@/lib/i18n";
 
@@ -36,6 +41,17 @@ interface PriceItem {
   change_pct?: number;
 }
 
+interface MarketStreamPayload {
+  top_movers?: Array<{
+    symbol: string;
+    price?: number;
+    change_pct?: number;
+  }>;
+  quotes?: Record<string, { price?: number; change_pct?: number }>;
+}
+
+type LiveQuotesMap = Record<string, { price: number; changePct: number; ts: number }>;
+
 export default function PortfolioPage() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -43,6 +59,92 @@ export default function PortfolioPage() {
   const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
+  const lastQuoteEventRef = useRef<number | null>(null);
+
+  const applyQuotePatch = useCallback((symbol: string, price?: number, changePct?: number) => {
+    const sym = symbol.toUpperCase();
+    const now = Date.now();
+    setLiveQuotes((prev) => {
+      const existing = prev[sym];
+      const nextPrice = typeof price === "number" ? price : existing?.price ?? 0;
+      const nextChange = typeof changePct === "number" ? changePct : existing?.changePct ?? 0;
+      if (
+        existing &&
+        existing.price === nextPrice &&
+        existing.changePct === nextChange
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [sym]: { price: nextPrice, changePct: nextChange, ts: now },
+      };
+    });
+    lastQuoteEventRef.current = now;
+  }, []);
+
+  const handleMarketData = useCallback(
+    (payload: MarketStreamPayload, _event: SSEEvent<MarketStreamPayload>) => {
+      if (payload?.top_movers && Array.isArray(payload.top_movers)) {
+        for (const m of payload.top_movers) {
+          applyQuotePatch(m.symbol, m.price, m.change_pct);
+        }
+      }
+      if (payload?.quotes && typeof payload.quotes === "object") {
+        for (const [sym, q] of Object.entries(payload.quotes)) {
+          applyQuotePatch(sym, q?.price, q?.change_pct);
+        }
+      }
+    },
+    [applyQuotePatch]
+  );
+
+  const holdingSymbols = useMemo(
+    () => holdings.map((h) => h.symbol.toUpperCase()),
+    [holdings]
+  );
+
+  const marketLive = useLiveData<MarketStreamPayload>("market", {
+    enabled: holdingSymbols.length > 0,
+    onData: handleMarketData,
+  });
+
+  const liveHoldings = useMemo<AssetRow[]>(() => {
+    if (holdings.length === 0) return holdings;
+    let anyChange = false;
+    const next = holdings.map((h) => {
+      const live = liveQuotes[h.symbol.toUpperCase()];
+      if (!live) return h;
+      if (live.price === h.price && live.changePct === h.changePct) return h;
+      anyChange = true;
+      return { ...h, price: live.price ?? h.price, changePct: live.changePct ?? h.changePct };
+    });
+    return anyChange ? next : holdings;
+  }, [holdings, liveQuotes]);
+
+  useEffect(() => {
+    if (liveHoldings.length === 0) return;
+    const totalValue = liveHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
+    const totalCost = liveHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
+    const totalPnL = totalValue - totalCost;
+    const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
+    setStats((prev) => {
+      const next = [
+        { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+        { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
+        { label: t("app.portfolio.symbols_count"), value: String(liveHoldings.length), changePct: 0 },
+        { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
+      ];
+      if (
+        prev.length === next.length &&
+        prev.every((s, i) => s.label === next[i].label && s.value === next[i].value)
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [liveHoldings]);
 
   const loadPortfolio = useCallback(async () => {
     setLoading(true);
@@ -159,7 +261,20 @@ export default function PortfolioPage() {
   return (
     <NewDashboardShell title={t("app.portfolio.title")}>
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        {/* Portfolio Summary */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+              {t("app.portfolio.title")}
+            </h1>
+          </div>
+          <LiveConnectionIndicator
+            health={marketLive.connectionHealth}
+            dataAgeMs={marketLive.lastDataAgeMs}
+            lastEventTs={lastQuoteEventRef.current}
+            label="Quotes"
+          />
+        </div>
+
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {stats.map((stat, i) => (
             <div key={i} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm transition-all hover:shadow-md">
@@ -174,20 +289,19 @@ export default function PortfolioPage() {
           ))}
         </section>
 
-        {/* Holdings */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
           <div className="flex items-center gap-3 p-6 border-b border-[var(--color-border)]">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
               <span className="text-lg">💼</span>
             </div>
-            <div>
+            <div className="flex-1">
               <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.current_holdings")}</h3>
               <p className="text-xs text-[var(--color-text-muted)]">Your current portfolio holdings</p>
             </div>
           </div>
           <div className="p-6">
-            {holdings.length > 0 ? (
-              <AssetTable rows={holdings} />
+            {liveHoldings.length > 0 ? (
+              <AssetTable rows={liveHoldings} />
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
                 <div className="text-4xl mb-4">📭</div>
@@ -201,7 +315,6 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        {/* Performance & Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">

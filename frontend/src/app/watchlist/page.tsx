@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +28,39 @@ import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUXStore } from "@/store/useUXStore";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
+import {
+  useLiveData,
+  LiveConnectionIndicator,
+  type LiveStreamKey,
+  type SSEEvent,
+} from "@/hooks/useLiveData";
+
+interface QuotePayload {
+  symbol?: string;
+  price?: number;
+  change_pct?: number;
+  change?: number;
+}
+
+interface MarketStreamPayload {
+  top_movers?: Array<{
+    symbol: string;
+    price?: number;
+    change_pct?: number;
+  }>;
+  quotes?: Record<string, { price?: number; change_pct?: number }>;
+}
+
+interface EnrichedWatchlistRow {
+  symbol: string;
+  name: string;
+  market: "NASDAQ";
+  price: number;
+  changePct: number;
+  watchlistItemId: string;
+}
+
+type LiveQuotesMap = Record<string, { price: number; changePct: number; ts: number }>;
 
 export default function WatchlistPage() {
   const addToast = useUXStore((state) => state.addToast);
@@ -39,6 +72,8 @@ export default function WatchlistPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetMap, setAssetMap] = useState<Map<string, string>>(new Map());
+  const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
+  const lastQuoteEventRef = useRef<number | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -90,6 +125,87 @@ export default function WatchlistPage() {
       setError(t("app.watchlist.login_required"));
     }
   }, [user, loadWatchlists]);
+
+  const applyQuotePatch = useCallback((symbol: string, price?: number, changePct?: number) => {
+    const sym = symbol.toUpperCase();
+    const now = Date.now();
+    setLiveQuotes((prev) => {
+      const existing = prev[sym];
+      const nextPrice = typeof price === "number" ? price : existing?.price ?? 0;
+      const nextChange = typeof changePct === "number" ? changePct : existing?.changePct ?? 0;
+      if (
+        existing &&
+        existing.price === nextPrice &&
+        existing.changePct === nextChange
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [sym]: { price: nextPrice, changePct: nextChange, ts: now },
+      };
+    });
+    lastQuoteEventRef.current = now;
+  }, []);
+
+  const handleMarketData = useCallback(
+    (payload: MarketStreamPayload, _event: SSEEvent<MarketStreamPayload>) => {
+      if (payload?.top_movers && Array.isArray(payload.top_movers)) {
+        for (const m of payload.top_movers) {
+          applyQuotePatch(m.symbol, m.price, m.change_pct);
+        }
+      }
+      if (payload?.quotes && typeof payload.quotes === "object") {
+        for (const [sym, q] of Object.entries(payload.quotes)) {
+          applyQuotePatch(sym, q?.price, q?.change_pct);
+        }
+      }
+    },
+    [applyQuotePatch]
+  );
+
+  const enrichedSymbols = useMemo(() => {
+    if (!selectedWatchlist) return [] as string[];
+    return selectedWatchlist.items
+      .filter((item) => item.asset && isNasdaqEquityLike(item.asset))
+      .map((item) => item.asset!.symbol.toUpperCase());
+  }, [selectedWatchlist]);
+
+  const handleQuoteDataFactory = useCallback(
+    (symbol: string) =>
+      (payload: QuotePayload, _event: SSEEvent<QuotePayload>) => {
+        applyQuotePatch(
+          payload?.symbol || symbol,
+          payload?.price,
+          payload?.change_pct
+        );
+      },
+    [applyQuotePatch]
+  );
+
+  const marketLive = useLiveData<MarketStreamPayload>("market", {
+    enabled: enrichedSymbols.length > 0,
+    onData: handleMarketData,
+  });
+
+  const enrichedItems = useMemo<EnrichedWatchlistRow[]>(() => {
+    if (!selectedWatchlist) return [];
+    return selectedWatchlist.items
+      .filter((item) => item.asset && isNasdaqEquityLike(item.asset))
+      .map((item) => {
+        const asset = item.asset!;
+        const sym = asset.symbol.toUpperCase();
+        const live = liveQuotes[sym];
+        return {
+          symbol: sym,
+          name: asset.name,
+          market: "NASDAQ" as const,
+          price: live?.price ?? 0,
+          changePct: live?.changePct ?? 0,
+          watchlistItemId: item.id,
+        };
+      });
+  }, [selectedWatchlist, liveQuotes]);
 
   async function handleCreateWatchlist(e: React.FormEvent) {
     e.preventDefault();
@@ -220,23 +336,6 @@ export default function WatchlistPage() {
     setIsDeleteConfirmOpen(true);
   }
 
-  const enrichedItems = useMemo(() => {
-    if (!selectedWatchlist) return [];
-    return selectedWatchlist.items
-      .filter((item) => item.asset && isNasdaqEquityLike(item.asset))
-      .map((item) => {
-        const asset = item.asset!;
-        return {
-          symbol: asset.symbol,
-          name: asset.name,
-          market: "NASDAQ" as const,
-          price: 0,
-          changePct: 0,
-          watchlistItemId: item.id,
-        };
-      });
-  }, [selectedWatchlist]);
-
   if (loading) {
     return (
       <NewDashboardShell title={t("app.watchlist.title")}>
@@ -272,9 +371,17 @@ export default function WatchlistPage() {
               {t("app.watchlist.subtitle")}
             </p>
           </div>
-          <PrimaryButton onClick={() => setIsCreateModalOpen(true)}>
-            {t("app.watchlist.create_button")}
-          </PrimaryButton>
+          <div className="flex items-center gap-3">
+            <LiveConnectionIndicator
+              health={marketLive.connectionHealth}
+              dataAgeMs={marketLive.lastDataAgeMs}
+              lastEventTs={lastQuoteEventRef.current}
+              label="Quotes"
+            />
+            <PrimaryButton onClick={() => setIsCreateModalOpen(true)}>
+              {t("app.watchlist.create_button")}
+            </PrimaryButton>
+          </div>
         </div>
 
         {watchlists.length === 0 ? (
@@ -399,7 +506,10 @@ export default function WatchlistPage() {
                             </thead>
                             <tbody>
                               {enrichedItems.map((row) => (
-                                <tr key={row.watchlistItemId} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]">
+                                <tr
+                                  key={row.watchlistItemId}
+                                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)] transition-colors"
+                                >
                                   <td className="px-4 py-3 font-medium text-[var(--color-text-primary)]">{row.symbol}</td>
                                   <td className="px-4 py-3 text-[var(--color-text-secondary)]">{row.name}</td>
                                   <td className="px-4 py-3 text-[var(--color-text-secondary)]">{row.market}</td>

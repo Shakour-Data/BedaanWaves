@@ -44,22 +44,34 @@ export function useSSE<T = unknown>(
     optionsRef.current?.onError?.(err);
   }, []);
 
+  const handleDisconnect = useCallback(() => {
+    setIsConnected(false);
+    optionsRef.current?.onDisconnect?.();
+  }, []);
+
+  const handleReconnect = useCallback((attempt: number) => {
+    optionsRef.current?.onReconnect?.(attempt);
+  }, []);
+
   useEffect(() => {
     connectionRef.current = createSSEConnection<T>(key, {
       endpoint,
       onMessage: handleMessage,
       onOpen: handleOpen,
       onError: handleError,
+      onDisconnect: handleDisconnect,
+      onReconnect: handleReconnect,
       reconnect: options?.reconnect ?? true,
       reconnectInterval: options?.reconnectInterval ?? 5000,
       maxReconnectAttempts: options?.maxReconnectAttempts ?? 10,
-      headers: options?.headers });
+      headers: options?.headers,
+    });
 
     return () => {
       connectionRef.current?.disconnect();
       connectionRef.current = null;
     };
-  }, [key, endpoint, handleMessage, handleOpen, handleError, options?.reconnect, options?.reconnectInterval, options?.maxReconnectAttempts, options?.headers]);
+  }, [key, endpoint, handleMessage, handleOpen, handleError, handleDisconnect, handleReconnect, options?.reconnect, options?.reconnectInterval, options?.maxReconnectAttempts, options?.headers]);
 
   const reconnect = useCallback(() => {
     connectionRef.current?.reconnect();
@@ -82,7 +94,8 @@ export function useSSE<T = unknown>(
     error,
     reconnect,
     disconnect,
-    clearEvents };
+    clearEvents,
+  };
 }
 
 export function useSSELatest<T = unknown>(

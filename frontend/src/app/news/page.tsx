@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { NewsList } from "@/components/shared/NewsList";
 import { cn } from "@/lib/cn";
@@ -8,12 +8,92 @@ import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import type { NewsItem } from "@/lib/dashboard-data";
 import { formatTimeAgo } from "@/lib/utils";
+import {
+  useLiveData,
+  LiveConnectionIndicator,
+  type SSEEvent,
+} from "@/hooks/useLiveData";
+
+interface LiveNewsItem extends NewsItem {
+  isNewLive?: boolean;
+  liveAddedAt?: number;
+  id?: string;
+}
+
+interface NewsStreamPayload {
+  items?: LiveNewsItem[];
+  item?: LiveNewsItem;
+}
+
+function getTopTopics(newsItems: NewsItem[]): { topic: string; count: number }[] {
+  const wordCounts: Record<string, number> = {};
+  newsItems.forEach((item) => {
+    const words = item.title.split(/\s+/);
+    words.forEach((word) => {
+      const cleaned = word.replace(/[^\u0600-\u06FFa-zA-Z]/g, "").toLowerCase();
+      if (cleaned.length > 3) {
+        wordCounts[cleaned] = (wordCounts[cleaned] || 0) + 1;
+      }
+    });
+  });
+  return Object.entries(wordCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([topic, count]) => ({ topic, count }));
+}
+
+interface NewsListWithBadgesProps {
+  items: LiveNewsItem[];
+}
+
+function NewsListWithBadges({ items }: NewsListWithBadgesProps) {
+  if (items.length === 0) {
+    return <ul className="space-y-0" />;
+  }
+
+  return (
+    <ul className="space-y-0">
+      {items.map((item, index) => {
+        const stableKey =
+          (item as LiveNewsItem).id || `${item.title}-${item.source}-${index}`;
+        return (
+          <li
+            key={stableKey}
+            className={cn(
+              "border-b border-[var(--color-border)] px-4 py-3 last:border-b-0 hover:bg-[var(--color-background)] transition-colors",
+              item.isNewLive ? "bg-[var(--color-primary)]/5" : ""
+            )}
+          >
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[var(--color-text-primary)] text-sm">
+                  {item.title}
+                </p>
+                <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-secondary)]">
+                  <span>{item.source}</span>
+                  <span>•</span>
+                  <span>{item.time}</span>
+                </div>
+              </div>
+              {item.isNewLive ? (
+                <span className="shrink-0 inline-flex items-center rounded bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                  NEW
+                </span>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export default function NewsPage() {
-  
-  const [newItems, setNewItems] = useState<NewsItem[]>([]);
+  const [newsItems, setNewsItems] = useState<LiveNewsItem[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastNewsEventRef = useRef<number | null>(null);
+  const itemIdCounter = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -21,21 +101,21 @@ export default function NewsPage() {
     async function loadNews() {
       setLoading(true);
       try {
-        // Fetch market news
         const newsRes = await apiClient.get<{ data: NewsItem[] }>("/news/market?limit=20");
-        
+
         if (active) {
-          const newsItems: NewsItem[] = newsRes.data?.data || [];
-          const formattedNews: NewsItem[] = newsItems.map((item) => ({
+          const rawItems: NewsItem[] = newsRes.data?.data || [];
+          const formatted: LiveNewsItem[] = rawItems.map((item, idx) => ({
             title: item.title,
             source: item.source || "Unknown",
-            time: item.time || formatTimeAgo(new Date().toISOString())
+            time: item.time || formatTimeAgo(new Date().toISOString()),
+            id: `rest-${idx}-${Date.now()}`,
           }));
 
-          setNewItems(formattedNews);
+          setNewsItems(formatted);
         }
       } catch {
-        // Handle error silently
+        // ignore
       } finally {
         if (active) setLoading(false);
       }
@@ -45,9 +125,78 @@ export default function NewsPage() {
     return () => { active = false; };
   }, []);
 
-  const sources = Array.from(new Set(newItems.map((item) => item.source)));
-  const filteredNews = selectedSource ? newItems.filter((item) => item.source === selectedSource) : newItems;
-  const topTopics = getTopTopics(newItems);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setNewsItems((prev) => {
+        let changed = false;
+        const next = prev.map((it) => {
+          if (it.isNewLive && it.liveAddedAt && now - it.liveAddedAt >= 60_000) {
+            changed = true;
+            return { ...it, isNewLive: false, liveAddedAt: undefined };
+          }
+          return it;
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleNewsData = useCallback(
+    (payload: NewsStreamPayload, _event: SSEEvent<NewsStreamPayload>) => {
+      const incoming: LiveNewsItem[] = [];
+      if (payload?.item) incoming.push(payload.item);
+      if (payload?.items && Array.isArray(payload.items)) {
+        for (const it of payload.items) incoming.push(it);
+      }
+      if (incoming.length === 0) return;
+
+      const now = Date.now();
+      lastNewsEventRef.current = now;
+
+      setNewsItems((prev) => {
+        const next: LiveNewsItem[] = [];
+        const seenTitles = new Set<string>();
+
+        for (const inc of incoming) {
+          itemIdCounter.current += 1;
+          const enriched: LiveNewsItem = {
+            title: inc.title,
+            source: inc.source || "Unknown",
+            time: inc.time || "just now",
+            isNewLive: true,
+            liveAddedAt: now,
+            id: inc.id || `live-${itemIdCounter.current}-${now}`,
+          };
+          next.push(enriched);
+          seenTitles.add(enriched.title);
+        }
+
+        for (const existing of prev) {
+          if (seenTitles.has(existing.title)) continue;
+          next.push(existing);
+        }
+        return next.slice(0, 100);
+      });
+    },
+    []
+  );
+
+  const newsLive = useLiveData<NewsStreamPayload>("news", {
+    enabled: !loading,
+    onData: handleNewsData,
+  });
+
+  const sources = useMemo(
+    () => Array.from(new Set(newsItems.map((item) => item.source))),
+    [newsItems]
+  );
+  const filteredNews = useMemo(
+    () => (selectedSource ? newsItems.filter((item) => item.source === selectedSource) : newsItems),
+    [newsItems, selectedSource]
+  );
+  const topTopics = useMemo(() => getTopTopics(newsItems), [newsItems]);
 
   if (loading) {
     return (
@@ -62,21 +211,29 @@ export default function NewsPage() {
   return (
     <NewDashboardShell title={t("app.news.title")}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
-        {/* News Filters */}
         <div className="lg:col-span-1 space-y-4">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-sm font-bold">F</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                  <span className="text-sm font-bold">F</span>
+                </div>
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">Filters</h3>
               </div>
-              <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">Filters</h3>
+              <LiveConnectionIndicator
+                health={newsLive.connectionHealth}
+                dataAgeMs={newsLive.lastDataAgeMs}
+                lastEventTs={lastNewsEventRef.current}
+              />
             </div>
             <div className="space-y-1">
               <button
                 onClick={() => setSelectedSource(null)}
                 className={cn(
                   "w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                   selectedSource === null ? "bg-[var(--color-primary)] text-white shadow-md" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
+                  selectedSource === null
+                    ? "bg-[var(--color-primary)] text-white shadow-md"
+                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
                 )}
               >
                 All News
@@ -87,7 +244,9 @@ export default function NewsPage() {
                   onClick={() => setSelectedSource(source)}
                   className={cn(
                     "w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                     selectedSource === source ? "bg-[var(--color-primary)] text-white shadow-md" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
+                    selectedSource === source
+                      ? "bg-[var(--color-primary)] text-white shadow-md"
+                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
                   )}
                 >
                   {source}
@@ -96,7 +255,6 @@ export default function NewsPage() {
             </div>
           </div>
 
-          {/* Trending Topics */}
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
@@ -120,7 +278,6 @@ export default function NewsPage() {
           </div>
         </div>
 
-        {/* News List */}
         <div className="lg:col-span-3">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -130,8 +287,8 @@ export default function NewsPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-[var(--color-text-primary)] text-sm">
-                    {selectedSource 
-                      ? `News from ${selectedSource}` 
+                    {selectedSource
+                      ? `News from ${selectedSource}`
                       : "All News"
                     }
                   </h3>
@@ -139,27 +296,10 @@ export default function NewsPage() {
               </div>
               <span className="text-xs text-[var(--color-text-muted)]">{filteredNews.length} articles</span>
             </div>
-            <NewsList items={filteredNews} />
+            <NewsListWithBadges items={filteredNews} />
           </div>
         </div>
       </div>
     </NewDashboardShell>
   );
-}
-
-function getTopTopics(newsItems: NewsItem[]): { topic: string; count: number }[] {
-  const wordCounts: Record<string, number> = {};
-  newsItems.forEach((item) => {
-    const words = item.title.split(/\s+/);
-    words.forEach((word) => {
-      const cleaned = word.replace(/[^\u0600-\u06FFa-zA-Z]/g, "").toLowerCase();
-      if (cleaned.length > 3) {
-        wordCounts[cleaned] = (wordCounts[cleaned] || 0) + 1;
-      }
-    });
-  });
-  return Object.entries(wordCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([topic, count]) => ({ topic, count }));
 }
