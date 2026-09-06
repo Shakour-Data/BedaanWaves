@@ -1,8 +1,7 @@
-from typing import Dict, Any
 
 class ValuationEngine:
     """Domain service for calculating valuation ratios."""
-    
+
     def calculate_pe(self, stock_price: float, eps: float) -> float:
         if eps <= 0 or stock_price <= 0:
             return 0.0

@@ -1,17 +1,18 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 
 class DomainException(Exception):
     """
     Base class for all domain-specific exceptions.
     Ensures consistent logging and context for errors.
     """
-    
+
     def __init__(self, message: str, code: str, context: dict = None):
         super().__init__(message)
         self.message = message
         self.code = code
         self.context = context or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def __str__(self):
         return f"[{self.code}] {self.message} (Context: {self.context})"

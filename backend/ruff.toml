@@ -1,0 +1,31 @@
+# Ruff configuration for BedaanWaves backend
+# Selects core linting rules: pycodestyle (E, W), pyflakes (F), isort (I), pyupgrade (UP)
+# The more opinionated rules (BLE, B, SIM, ASYNC, DTZ, etc.) are not part of the
+# core linting standard and generate noise across the large codebase.
+target-version = "py311"
+line-length = 140
+
+[lint]
+select = ["E", "F", "W", "I", "UP"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**" = ["E501", "UP006", "UP045"]
+"app/tests/**" = ["E501", "UP006", "UP045"]
+"tests/**/conftest.py" = ["E501"]
+"app/tests/**/conftest.py" = ["E501"]
+"app/api/routes/ml.py" = ["E501"]
+"app/api/routes/market.py" = ["E501"]
+"app/api/routes/forecast.py" = ["E501"]
+"app/services/analysis/dashboard_service.py" = ["E501"]
+"app/services/analysis/score_history_pipeline.py" = ["E501"]
+"app/services/analysis/fundamental_service.py" = ["E501"]
+"app/services/analysis/monetary_policy_service.py" = ["E501"]
+"app/services/analysis/semantic_versioning_service.py" = ["E501"]
+"app/services/analysis/technical_service.py" = ["E501"]
+"app/services/analysis/temporal_snapshot_service.py" = ["E501"]
+"app/services/data/fetch_real_nasdaq_data.py" = ["E501"]
+"app/services/data/nasdaq_ingestion_service.py" = ["E501"]
+"app/services/ml/portfolio_optimization_service.py" = ["E501"]
+"app/services/system/backup_service.py" = ["E501"]
+"app/services/system/scheduler_service.py" = ["E501"]

@@ -31,16 +31,7 @@ import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 import {
   useLiveData,
   LiveConnectionIndicator,
-  type LiveStreamKey,
-  type SSEEvent,
 } from "@/hooks/useLiveData";
-
-interface QuotePayload {
-  symbol?: string;
-  price?: number;
-  change_pct?: number;
-  change?: number;
-}
 
 interface MarketStreamPayload {
   top_movers?: Array<{
@@ -74,6 +65,7 @@ export default function WatchlistPage() {
   const [assetMap, setAssetMap] = useState<Map<string, string>>(new Map());
   const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
   const lastQuoteEventRef = useRef<number | null>(null);
+  const [lastQuoteEventTs, setLastQuoteEventTs] = useState<number | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -146,10 +138,11 @@ export default function WatchlistPage() {
       };
     });
     lastQuoteEventRef.current = now;
+    setLastQuoteEventTs(now);
   }, []);
 
   const handleMarketData = useCallback(
-    (payload: MarketStreamPayload, _event: SSEEvent<MarketStreamPayload>) => {
+    (payload: MarketStreamPayload) => {
       if (payload?.top_movers && Array.isArray(payload.top_movers)) {
         for (const m of payload.top_movers) {
           applyQuotePatch(m.symbol, m.price, m.change_pct);
@@ -170,18 +163,6 @@ export default function WatchlistPage() {
       .filter((item) => item.asset && isNasdaqEquityLike(item.asset))
       .map((item) => item.asset!.symbol.toUpperCase());
   }, [selectedWatchlist]);
-
-  const handleQuoteDataFactory = useCallback(
-    (symbol: string) =>
-      (payload: QuotePayload, _event: SSEEvent<QuotePayload>) => {
-        applyQuotePatch(
-          payload?.symbol || symbol,
-          payload?.price,
-          payload?.change_pct
-        );
-      },
-    [applyQuotePatch]
-  );
 
   const marketLive = useLiveData<MarketStreamPayload>("market", {
     enabled: enrichedSymbols.length > 0,
@@ -375,7 +356,7 @@ export default function WatchlistPage() {
             <LiveConnectionIndicator
               health={marketLive.connectionHealth}
               dataAgeMs={marketLive.lastDataAgeMs}
-              lastEventTs={lastQuoteEventRef.current}
+              lastEventTs={lastQuoteEventTs}
               label="Quotes"
             />
             <PrimaryButton onClick={() => setIsCreateModalOpen(true)}>

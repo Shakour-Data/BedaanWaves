@@ -14,8 +14,8 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,14 +24,13 @@ from app.core.utils import utc_now_iso
 from app.models.models import Asset, ScoreHistory
 from app.models.scoring_snapshot import ScoringSnapshot, SnapshotTier
 from app.services.analysis.coefficient_history_service import (
-    CoefficientHistoryService,
     DIMENSION_KEYS,
+    CoefficientHistoryService,
 )
-from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 from app.services.analysis.hierarchical_score_trend_service import (
-    HierarchicalScoreTrendService,
     SUB_DIMENSION_TO_PARENT,
 )
+from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 
 try:
     from app.services.core.cache_service import CacheService
@@ -47,38 +46,38 @@ CANONICAL_DIMS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai"
 class TierRoot:
     tier: str  # "daily" | "hourly" | "current"
     effective_at: datetime
-    scores: Dict[str, Any]  # nested dict of overall, dimensions, sub_dimensions, ...
+    scores: dict[str, Any]  # nested dict of overall, dimensions, sub_dimensions, ...
 
 
 def _floor_to_hour(dt: datetime) -> datetime:
     """Return dt floored to the previous top-of-hour, UTC timezone-aware."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     else:
-        dt = dt.astimezone(timezone.utc)
+        dt = dt.astimezone(UTC)
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
 def _floor_to_day(dt: datetime) -> datetime:
     """Return dt floored to 00:00 UTC of the same calendar day."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     else:
-        dt = dt.astimezone(timezone.utc)
+        dt = dt.astimezone(UTC)
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def _iso(ts: Optional[datetime]) -> str:
+def _iso(ts: datetime | None) -> str:
     if ts is None:
         return ""
     if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
+        ts = ts.replace(tzinfo=UTC)
     else:
-        ts = ts.astimezone(timezone.utc)
+        ts = ts.astimezone(UTC)
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _compute_delta(a: Optional[float], b: Optional[float]) -> Tuple[Optional[float], Optional[float]]:
+def _compute_delta(a: float | None, b: float | None) -> tuple[float | None, float | None]:
     """Return (delta_abs, delta_pct) where delta = a - b (a is 'newer')."""
     if a is None or b is None:
         return None, None
@@ -90,8 +89,8 @@ def _compute_delta(a: Optional[float], b: Optional[float]) -> Tuple[Optional[flo
     return delta, pct
 
 
-def _dict_delta(new_map: Optional[dict], old_map: Optional[dict]) -> Dict[str, Tuple[Optional[float], Optional[float]]]:
-    out: Dict[str, Tuple[Optional[float], Optional[float]]] = {}
+def _dict_delta(new_map: dict | None, old_map: dict | None) -> dict[str, tuple[float | None, float | None]]:
+    out: dict[str, tuple[float | None, float | None]] = {}
     if not new_map or not old_map:
         return out
     for key in set(new_map.keys()) | set(old_map.keys()):
@@ -105,7 +104,7 @@ class TemporalSnapshotService:
     """Service that composes 3-tier snapshots into a unified response."""
 
     def __init__(self):
-        self.cache: Optional[Any] = None
+        self.cache: Any | None = None
         if CacheService is not None:
             try:
                 self.cache = CacheService()
@@ -128,7 +127,7 @@ class TemporalSnapshotService:
                 logger.warning(f"cache shutdown failed: {exc}")
 
     # ------------------------------------------------------------------ cache
-    async def _cache_get(self, key: str) -> Optional[Any]:
+    async def _cache_get(self, key: str) -> Any | None:
         if not self.cache or not hasattr(self.cache, "get"):
             return None
         try:
@@ -150,7 +149,7 @@ class TemporalSnapshotService:
             select(func.count(Asset.id))
             .where(
                 and_(
-                    Asset.active == True,  # noqa: E712
+                    Asset.active,
                     Asset.market == "NASDAQ",
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 )
@@ -164,8 +163,8 @@ class TemporalSnapshotService:
         self,
         db: AsyncSession,
         tier: SnapshotTier,
-        symbol: Optional[str] = None,
-    ) -> Optional[TierRoot]:
+        symbol: str | None = None,
+    ) -> TierRoot | None:
         """Return the latest ScoringSnapshot-derived row for a tier.
 
         Falls back to ScoreHistory when the desired ScoringSnapshot row
@@ -197,7 +196,7 @@ class TemporalSnapshotService:
         snap_row = res.scalar_one_or_none()
 
         # Construct effective_at + build aggregated scores from ScoreHistory
-        effective_at: Optional[datetime] = None
+        effective_at: datetime | None = None
         if snap_row and snap_row.effective_at:
             effective_at = snap_row.effective_at
 
@@ -208,7 +207,7 @@ class TemporalSnapshotService:
             .join(Asset, Asset.id == ScoreHistory.asset_id)
             .where(
                 and_(
-                    Asset.active == True,  # noqa: E712
+                    Asset.active,
                     Asset.market == "NASDAQ",
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 )
@@ -224,13 +223,13 @@ class TemporalSnapshotService:
         sh_res = await db.execute(sh_q)
         sh_rows = sh_res.all()
 
-        scores: Dict[str, Any] = {"dimensions": {}}
-        overall_list: List[float] = []
-        dim_map: Dict[str, List[float]] = {d: [] for d in CANONICAL_DIMS}
+        scores: dict[str, Any] = {"dimensions": {}}
+        overall_list: list[float] = []
+        dim_map: dict[str, list[float]] = {d: [] for d in CANONICAL_DIMS}
 
-        sub_dimensions: Dict[str, float] = {}
-        aspects: Dict[str, float] = {}
-        sub_aspects: Dict[str, float] = {}
+        sub_dimensions: dict[str, float] = {}
+        aspects: dict[str, float] = {}
+        sub_aspects: dict[str, float] = {}
 
         for sh, asset in sh_rows:
             if not sh_effective_date:
@@ -249,7 +248,7 @@ class TemporalSnapshotService:
                 month=sh_effective_date.month,
                 day=sh_effective_date.day,
                 hour=0 if tier == SnapshotTier.DAILY else 0,
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
 
         # Market-level aggregation: use mean
@@ -276,10 +275,10 @@ class TemporalSnapshotService:
     async def _resolve_current(
         self,
         db: AsyncSession,
-        symbol: Optional[str] = None,
+        symbol: str | None = None,
     ) -> TierRoot:
         """Current = freshest available (hourly if <5 min old, else latest daily)."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         hourly = await self._resolve_tier_root(db, SnapshotTier.HOURLY, symbol=symbol)
         if hourly and (now - hourly.effective_at).total_seconds() < 300:
             return TierRoot(
@@ -300,29 +299,29 @@ class TemporalSnapshotService:
             scores={"overall": 0.0, "dimensions": {}, "sub_dimensions": {}, "aspects": {}, "sub_aspects": {}},
         )
 
-    def _build_deltas(self, daily: TierRoot, hourly: TierRoot, current: TierRoot) -> Dict[str, Any]:
-        def _frame(newer: TierRoot, older: TierRoot) -> Dict[str, Any]:
+    def _build_deltas(self, daily: TierRoot, hourly: TierRoot, current: TierRoot) -> dict[str, Any]:
+        def _frame(newer: TierRoot, older: TierRoot) -> dict[str, Any]:
             overall_abs, overall_pct = _compute_delta(
                 float(newer.scores.get("overall")) if newer.scores.get("overall") is not None else None,
                 float(older.scores.get("overall")) if older.scores.get("overall") is not None else None,
             )
             dim_deltas = _dict_delta(newer.scores.get("dimensions"), older.scores.get("dimensions"))
-            dim_frame: Dict[str, Any] = {}
+            dim_frame: dict[str, Any] = {}
             for k, (vabs, vpct) in dim_deltas.items():
                 dim_frame[k] = {"delta": vabs, "delta_pct": vpct}
 
             sub_dim_deltas = _dict_delta(newer.scores.get("sub_dimensions"), older.scores.get("sub_dimensions"))
-            sub_dim_frame: Dict[str, Any] = {
+            sub_dim_frame: dict[str, Any] = {
                 k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in sub_dim_deltas.items()
             }
 
             aspect_deltas = _dict_delta(newer.scores.get("aspects"), older.scores.get("aspects"))
-            aspect_frame: Dict[str, Any] = {
+            aspect_frame: dict[str, Any] = {
                 k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in aspect_deltas.items()
             }
 
             sub_aspect_deltas = _dict_delta(newer.scores.get("sub_aspects"), older.scores.get("sub_aspects"))
-            sub_aspect_frame: Dict[str, Any] = {
+            sub_aspect_frame: dict[str, Any] = {
                 k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in sub_aspect_deltas.items()
             }
 
@@ -341,17 +340,17 @@ class TemporalSnapshotService:
             "current_vs_daily": _frame(current, daily),
         }
 
-    async def _build_weights(self, db: AsyncSession, days: int = 30) -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    async def _build_weights(self, db: AsyncSession, days: int = 30) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
         try:
             svc = CoefficientHistoryService()
             result = await svc.get_history(days=days, market="NASDAQ", level="dimension", latest=True)
-            series: List[dict] = result.get("series", []) or []
+            series: list[dict] = result.get("series", []) or []
 
-            weight_snapshot: Dict[str, Any] = {}
-            weight_trends: List[Dict[str, Any]] = []
-            weight_deltas: List[Dict[str, Any]] = []
+            weight_snapshot: dict[str, Any] = {}
+            weight_trends: list[dict[str, Any]] = []
+            weight_deltas: list[dict[str, Any]] = []
 
-            current_weights: Dict[str, float] = {}
+            current_weights: dict[str, float] = {}
             if series:
                 last = series[-1]
                 metrics = last.get("metrics") or {}
@@ -397,10 +396,10 @@ class TemporalSnapshotService:
         db: AsyncSession,
         window_daily: int = 30,
         window_intraday: str = "24h",
-        symbol: Optional[str] = None,
-    ) -> Dict[str, List[Dict[str, Any]]]:
-        daily_points: List[Dict[str, Any]] = []
-        intraday_points: List[Dict[str, Any]] = []
+        symbol: str | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        daily_points: list[dict[str, Any]] = []
+        intraday_points: list[dict[str, Any]] = []
 
         # Daily
         try:
@@ -418,13 +417,13 @@ class TemporalSnapshotService:
 
         # Intraday: reuse ScoringSnapshot hourly last 24 entries
         try:
-            hours: Dict[str, Any] = {
+            hours: dict[str, Any] = {
                 "6h": 6,
                 "24h": 24,
                 "7d": 24 * 7,
             }
             n = hours.get(window_intraday, 24)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             start = now - timedelta(hours=n)
             query = (
                 select(ScoringSnapshot)
@@ -444,7 +443,7 @@ class TemporalSnapshotService:
                 if aid:
                     query = query.where(ScoringSnapshot.asset_id == aid)
             res = await db.execute(query)
-            bucket: Dict[str, Dict[str, Any]] = {}
+            bucket: dict[str, dict[str, Any]] = {}
             for row in res.scalars().all():
                 ts = _iso(row.effective_at)
                 if ts not in bucket:
@@ -471,9 +470,9 @@ class TemporalSnapshotService:
         db: AsyncSession,
         window_daily: int = 30,
         window_intraday: str = "24h",
-        symbol: Optional[str] = None,
-        snapshot_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        symbol: str | None = None,
+        snapshot_id: str | None = None,
+    ) -> dict[str, Any]:
         """Compose the unified snapshot response (FR1).
 
         When snapshot_id is provided and present in the cache, return it
@@ -487,7 +486,7 @@ class TemporalSnapshotService:
             if cached and isinstance(cached, dict):
                 return cached
 
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
 
         # Stable cache key for the "latest" snapshot (same params → same key)
         latest_cache_key = None
@@ -525,7 +524,7 @@ class TemporalSnapshotService:
 
         universe_total = await self._active_assets_count(db)
 
-        def _tier_scores(tr: TierRoot) -> Dict[str, Any]:
+        def _tier_scores(tr: TierRoot) -> dict[str, Any]:
             return {
                 "overall": tr.scores.get("overall"),
                 "dimensions": tr.scores.get("dimensions") or {},
@@ -534,7 +533,7 @@ class TemporalSnapshotService:
                 "sub_aspects": tr.scores.get("sub_aspects") or {},
             }
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "snapshotId": snapshot_id_val,
             "tier": current.tier,
             "effectiveAt": _iso(current.effective_at),
@@ -570,11 +569,11 @@ class TemporalSnapshotService:
         db: AsyncSession,
         hourly_limit: int = 168,
         daily_limit: int = 365,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Return recent hourly + daily snapshot entries for slider."""
-        entries: List[Dict[str, Any]] = []
+        entries: list[dict[str, Any]] = []
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Hourly synthetic entries (last N hours)
         for i in range(hourly_limit, 0, -1):

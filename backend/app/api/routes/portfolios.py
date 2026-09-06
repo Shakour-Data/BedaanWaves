@@ -1,18 +1,21 @@
 """Portfolio Routes"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, and_
-from typing import List
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from app.db.base import get_async_session
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.dependencies import get_route_user_id
-from app.models.models import Portfolio, Position, Asset
+from app.db.base import get_async_session
+from app.models.models import Asset, Portfolio, Position
 from app.schemas.schemas import (
-    PortfolioCreate, PortfolioUpdate, PortfolioResponse,
-    PositionCreate, PositionResponse,
+    PortfolioCreate,
+    PortfolioResponse,
+    PortfolioUpdate,
+    PositionCreate,
+    PositionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,13 +43,13 @@ async def create_portfolio(
     return new_portfolio
 
 
-@router.get("/", response_model=List[PortfolioResponse])
+@router.get("/", response_model=list[PortfolioResponse])
 async def get_portfolios(
     request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_session),
-) -> List[PortfolioResponse]:
+) -> list[PortfolioResponse]:
     """Get all portfolios for a user."""
     user_id = await get_route_user_id(request)
     query = (
@@ -103,7 +106,7 @@ async def update_portfolio(
     if portfolio_update.portfolio_type is not None:
         portfolio.portfolio_type = portfolio_update.portfolio_type
 
-    portfolio.updated_at = datetime.now(timezone.utc)
+    portfolio.updated_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(portfolio)
     return portfolio
@@ -187,12 +190,12 @@ async def add_holding(
     return new_position
 
 
-@router.get("/{portfolio_id}/holdings", response_model=List[PositionResponse])
+@router.get("/{portfolio_id}/holdings", response_model=list[PositionResponse])
 async def get_holdings(
     portfolio_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-) -> List[PositionResponse]:
+) -> list[PositionResponse]:
     """Get portfolio holdings."""
     user_id = await get_route_user_id(request)
     # Verify ownership first

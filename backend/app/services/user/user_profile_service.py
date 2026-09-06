@@ -5,11 +5,11 @@ preferences such as language/theme/notifications). Kept intentionally thin so
 it can be unit-tested with an injected async session.
 """
 
-from typing import Dict, Optional
 from uuid import UUID
+
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException, status
 
 from app.db.base import async_session_maker
 from app.models.models import User
@@ -30,7 +30,7 @@ class UserProfileService:
     def __init__(self, session_factory=async_session_maker):
         self.session_factory = session_factory
 
-    async def get_profile(self, user_id: UUID, session=None) -> Optional[User]:
+    async def get_profile(self, user_id: UUID, session=None) -> User | None:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -41,8 +41,8 @@ class UserProfileService:
                 await session.close()
 
     async def update_profile(
-        self, user_id: UUID, data: Dict, session=None
-    ) -> Optional[User]:
+        self, user_id: UUID, data: dict, session=None
+    ) -> User | None:
         """Apply non-null ``data`` fields to the user and persist.
 
         Uses allow-list validation to prevent mass-assignment vulnerabilities.

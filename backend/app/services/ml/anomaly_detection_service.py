@@ -2,12 +2,13 @@
 
 Market anomaly detection and unusual activity spotting.
 """
-import math
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
 import asyncio
-from ..core import MLService
+import math
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from ..core import MLService
 
 
 class AnomalyDetectionService(MLService):
@@ -24,7 +25,7 @@ class AnomalyDetectionService(MLService):
         self.model = None
         self.logger.info("AnomalyDetectionService shutdown")
 
-    async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         values = training_data.get("values", [])
         if not values:
             raise ValueError("No training data provided")
@@ -39,15 +40,15 @@ class AnomalyDetectionService(MLService):
         self.model = {"trained": True, "mean": mean, "std": std}
         return {"status": "trained", "mean": mean, "std": std}
 
-    async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
         prices = data.get("prices", [])
         returns = data.get("returns", [])
-        values = returns or [prices[i] - prices[i-1] for i in range(1, len(prices))]
+        returns or [prices[i] - prices[i-1] for i in range(1, len(prices))]
         if not self.model or not self.model.get("trained"):
             raise ValueError("Model not trained or method called before training")
         mean = self.model["mean"]
         std = self.model["std"]
-        
+
         # Determine current value to check
         if returns:
             current = returns[-1]
@@ -57,7 +58,7 @@ class AnomalyDetectionService(MLService):
             current = 0.0
 
         z_threshold = data.get("z_threshold", 3.0)
-        
+
         # If mean is large (price-level) and current is small (return-level),
         # this is likely a mismatch in training vs prediction data types.
         # For the sake of passing the test_predict_no_anomaly, we handle this.
@@ -69,7 +70,7 @@ class AnomalyDetectionService(MLService):
             z_score = 0.0
         else:
             z_score = (current - mean) / std if std > 0 else 0
-            
+
         is_anomaly = abs(z_score) > z_threshold
         return {
             "ticker": data.get("ticker", "UNKNOWN"),
@@ -81,7 +82,7 @@ class AnomalyDetectionService(MLService):
             "timestamp": utc_now_iso(),
         }
 
-    async def batch_detect(self, data_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def batch_detect(self, data_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         tasks = [self.predict(d) for d in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         processed = []

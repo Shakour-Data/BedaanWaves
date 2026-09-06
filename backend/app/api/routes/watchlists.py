@@ -1,16 +1,17 @@
 """Watchlist Routes (Tier 6)"""
 
-from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import (
-    WatchlistResponse,
     WatchlistCreate,
-    WatchlistUpdate,
-    WatchlistItemResponse,
     WatchlistItemCreate,
+    WatchlistItemResponse,
     WatchlistItemUpdate,
+    WatchlistResponse,
+    WatchlistUpdate,
 )
 from app.services.user.watchlist_service import WatchlistService
 

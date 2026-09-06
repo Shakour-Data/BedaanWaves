@@ -18,6 +18,85 @@ import type {
   TrendPoint,
 } from "@/store/useDateStore";
 
+type RawScoreOverall = number | { score?: number; grade?: string } | null;
+
+interface RawHierarchyScoreShape {
+  overall?: RawScoreOverall;
+  overallScore?: number;
+  OVERALL?: { score?: number; grade?: string };
+  dimension?: Record<string, number>;
+  sub_dimension?: Record<string, number>;
+  aspect?: Record<string, number>;
+  sub_aspect?: Record<string, number>;
+  level1?: ScoreItemEntry[] | null;
+  level2?: ScoreItemEntry[] | null;
+  level3?: ScoreItemEntry[] | null;
+  level4?: ScoreItemEntry[] | null;
+  dimensions?: ScoreItemEntry[] | null;
+  sub_dimensions?: ScoreItemEntry[] | null;
+  aspects?: ScoreItemEntry[] | null;
+  sub_aspects?: ScoreItemEntry[] | null;
+  [key: string]: unknown;
+}
+
+interface ScoreItemEntry {
+  key?: string;
+  label?: string;
+  score?: number;
+  value?: number;
+  level_key?: string;
+  name?: string;
+  level_score?: number;
+  weight?: number;
+  coefficient?: number;
+  w?: number;
+}
+
+interface RawWeightShape {
+  level1?: ScoreItemEntry[];
+  level2?: ScoreItemEntry[];
+  level3?: ScoreItemEntry[];
+  level4?: ScoreItemEntry[];
+  dimension?: Record<string, number>;
+  sub_dimension?: Record<string, number>;
+  aspect?: Record<string, number>;
+  sub_aspect?: Record<string, number>;
+  overall?: number;
+  [key: string]: unknown;
+}
+
+interface RawTrendPointShape {
+  date?: string;
+  effective_at?: string;
+  time?: string;
+  overall?: number | null;
+  level_scores?: Record<string, number>;
+  scores?: Record<string, number>;
+  dimension_scores?: Record<string, number | string>;
+  sub_dimension_scores?: Record<string, number | string>;
+  aspect_scores?: Record<string, number | string>;
+  sub_aspect_scores?: Record<string, number | string>;
+  value?: number;
+  weights?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface RawWeightDeltaEntry {
+  delta?: number;
+  delta_pct?: number;
+  change?: number;
+  weight?: number;
+  value?: number;
+}
+
+interface RawWeightDeltaShape {
+  delta?: number | null;
+  delta_pct?: number | null;
+  overall?: { delta?: number; delta_pct?: number };
+  weights?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export type ScoringLevel = 0 | 1 | 2 | 3 | 4;
 
 export const LEVEL_META: Record<ScoringLevel, { label: string; short: string; key: string }> = {
@@ -40,7 +119,11 @@ const PALETTE = [
 ];
 
 function pickOverall(h: HierarchyScores): number {
-  const v = (h as any).overall ?? (h as any).overallScore ?? (h as any).OVERALL?.score ?? 0;
+  const raw = h as unknown as RawHierarchyScoreShape;
+  const overallVal = raw.overall;
+  const objScore = typeof overallVal === 'object' && overallVal !== null ? overallVal.score : undefined;
+  const numScore = typeof overallVal === 'number' ? overallVal : undefined;
+  const v = objScore ?? raw.overallScore ?? raw.OVERALL?.score ?? numScore ?? 0;
   return num(v);
 }
 
@@ -55,9 +138,10 @@ export function levelItemsFromHierarchy(
     all = [{ key: "overall", label: "Overall", score: pickOverall(hierarchy), weight: 1.0 }];
   } else {
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const arr = (hierarchy as any)[k];
+    const raw = hierarchy as unknown as RawHierarchyScoreShape;
+    const arr = raw[k];
     if (Array.isArray(arr)) {
-      all = arr.map((it: any) => ({
+      all = arr.map((it) => ({
         key: it.key ?? it.level_key ?? it.label ?? String(Math.random()).slice(2),
         label: it.label ?? it.name ?? it.key ?? "Item",
         score: num(it.score ?? it.value ?? it.level_score ?? 0),
@@ -71,7 +155,7 @@ export function levelItemsFromHierarchy(
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = (hierarchy as any)[dimKeyMap[level]] as Record<string, number> | undefined;
+      const bucket = raw[dimKeyMap[level]] as Record<string, number> | undefined;
       if (bucket && typeof bucket === "object") {
         all = Object.entries(bucket).map(([k2, v]) => ({
           key: k2,
@@ -186,7 +270,10 @@ export function ScoreTrendWrapper({
         key: "overall",
         label: "Overall",
         color: PALETTE[0],
-        data: series.map((pt) => ({ time: pt.date ?? pt.effective_at, value: num(pt.overall ?? (pt as any).value ?? 0) })),
+        data: series.map((pt) => {
+          const rawPt = pt as unknown as RawTrendPointShape;
+          return { time: pt.date ?? pt.effective_at, value: num(pt.overall ?? rawPt.value ?? 0) };
+        }),
       }];
     }
     const scoreKeyMap: Record<ScoringLevel, string> = {
@@ -201,10 +288,11 @@ export function ScoreTrendWrapper({
       key: item.key,
       label: item.label,
       color: PALETTE[i % PALETTE.length],
-      data: series.map((pt) => {
-        const bucket = (pt as any)[sk] ?? (pt as any).level_scores ?? (pt as any).scores ?? {};
-        const val = bucket && typeof bucket === "object" ? bucket[item.key] : undefined;
-        return { time: pt.date ?? pt.effective_at, value: num(val ?? pt.overall ?? (pt as any).value ?? 0) };
+         data: series.map((pt) => {
+           const rawPt = pt as unknown as RawTrendPointShape;
+           const bucket = rawPt[sk] ?? rawPt.level_scores ?? rawPt.scores ?? {};
+           const val = bucket && typeof bucket === "object" ? (bucket as Record<string, number>)[item.key] : undefined;
+           return { time: pt.date ?? pt.effective_at, value: num(val ?? pt.overall ?? rawPt.value ?? 0) };
       }),
     }));
   }, [series, items, level]);
@@ -358,10 +446,9 @@ export function WeightCurrentWrapper({
     if (level === 0) {
       return [{ key: "overall", label: "Overall", weight: 1.0 }];
     }
+    const raw = weights as unknown as RawWeightShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = (weights as any)[k] as
-      | Array<{ key?: string; label?: string; weight?: number; level_key?: string; name?: string; value?: number }>
-      | undefined;
+    const rawLevel = raw[k] as ScoreItemEntry[] | undefined;
     let normalized: Array<{ key: string; label: string; weight: number }> = [];
     if (Array.isArray(rawLevel)) {
       normalized = rawLevel.map((it) => ({
@@ -376,9 +463,7 @@ export function WeightCurrentWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
-        | Record<string, number>
-        | undefined;
+      const bucket = raw[weightShortKey[level as Exclude<ScoringLevel, 0>]] as Record<string, number> | undefined;
       if (bucket && typeof bucket === "object") {
         normalized = Object.entries(bucket).map(([wk, wv]) => ({
           key: wk,
@@ -439,10 +524,9 @@ export function WeightTrendWrapper({
   const weightArr = useMemo(() => {
     if (!weights) return [];
     if (level === 0) return [{ key: "overall", label: "Overall", weight: 1.0 }];
+    const raw = weights as unknown as RawWeightShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = (weights as any)[k] as
-      | Array<{ key?: string; label?: string; weight?: number; level_key?: string }>
-      | undefined;
+    const rawLevel = raw[k] as ScoreItemEntry[] | undefined;
     let norm: Array<{ key: string; label: string; weight: number }> = [];
     if (Array.isArray(rawLevel)) {
       norm = rawLevel.map((it) => ({
@@ -457,9 +541,7 @@ export function WeightTrendWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
-        | Record<string, number>
-        | undefined;
+      const bucket = raw[weightShortKey[level as Exclude<ScoringLevel, 0>]] as Record<string, number> | undefined;
       if (bucket && typeof bucket === "object") {
         norm = Object.entries(bucket).map(([wk, wv]) => ({
           key: wk,
@@ -478,10 +560,14 @@ export function WeightTrendWrapper({
         key: "overall",
         label: "Overall",
         color: PALETTE[0],
-        data: weightTrends.map((pt) => ({
-          time: pt.date ?? pt.effective_at,
-          value: num((weights as any)?.overall ?? (pt.weights as any)?.overall ?? 0),
-        })),
+        data: weightTrends.map((pt) => {
+          const rawPt = pt as unknown as RawTrendPointShape;
+          const rawWeights = weights as unknown as RawWeightShape;
+          return {
+            time: pt.date ?? pt.effective_at,
+            value: num(rawWeights?.overall ?? rawPt.weights?.overall ?? 0),
+          };
+        }),
       }];
     }
     return weightArr.map((w, i) => ({
@@ -489,13 +575,14 @@ export function WeightTrendWrapper({
       label: w.label,
       color: PALETTE[i % PALETTE.length],
       data: weightTrends.map((pt) => {
+        const rawPt = pt as unknown as RawTrendPointShape;
         const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-        const bucket = (pt.weights as any)?.[k];
-        let entry: any;
+        const bucket = (rawPt.weights as Record<string, unknown>)[k];
+        let entry: unknown;
         if (Array.isArray(bucket)) {
-          entry = bucket.find((b: any) => (b.key ?? b.level_key) === w.key);
+          entry = (bucket as ScoreItemEntry[]).find((b) => (b.key ?? b.level_key) === w.key);
         } else if (bucket && typeof bucket === "object") {
-          entry = bucket[w.key];
+          entry = (bucket as Record<string, unknown>)[w.key];
         }
         const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
           1: "dimension",
@@ -503,14 +590,17 @@ export function WeightTrendWrapper({
           3: "aspect",
           4: "sub_aspect",
         };
-        const altBucket = (pt.weights as any)?.[weightShortKey[level as Exclude<ScoringLevel, 0>]];
+        const altKey = weightShortKey[level as Exclude<ScoringLevel, 0>];
+        const rawWeights = rawPt.weights as Record<string, unknown> | undefined;
+        const altBucket = rawWeights?.[altKey];
         let v = 0;
         if (entry && typeof entry === "object") {
-          v = num(entry.weight ?? entry.value ?? 0);
+          const e = entry as RawWeightDeltaEntry;
+          v = num(e.weight ?? e.value ?? 0);
         } else if (typeof entry === "number") {
           v = entry;
-        } else if (altBucket && typeof altBucket === "object" && typeof altBucket[w.key] === "number") {
-          v = altBucket[w.key];
+        } else if (altBucket && typeof altBucket === "object" && typeof (altBucket as Record<string, unknown>)[w.key] === "number") {
+          v = (altBucket as Record<string, number>)[w.key];
         }
         return { time: pt.date ?? pt.effective_at, value: v };
       }),
@@ -557,10 +647,9 @@ export function WeightDeltaWrapper({
   const weightArr = useMemo(() => {
     if (!weights) return [];
     if (level === 0) return [{ key: "overall", label: "Overall", weight: 1.0 }];
+    const raw = weights as unknown as RawWeightShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = (weights as any)[k] as
-      | Array<{ key?: string; label?: string; weight?: number; level_key?: string }>
-      | undefined;
+    const rawLevel = raw[k] as ScoreItemEntry[] | undefined;
     let norm: Array<{ key: string; label: string; weight: number }> = [];
     if (Array.isArray(rawLevel)) {
       norm = rawLevel.map((it) => ({
@@ -575,9 +664,7 @@ export function WeightDeltaWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
-        | Record<string, number>
-        | undefined;
+      const bucket = raw[weightShortKey[level as Exclude<ScoringLevel, 0>]] as Record<string, number> | undefined;
       if (bucket && typeof bucket === "object") {
         norm = Object.entries(bucket).map(([wk, wv]) => ({
           key: wk,
@@ -591,9 +678,10 @@ export function WeightDeltaWrapper({
 
   const flatSeries = useMemo(() => {
     if (!weightDeltas) return [];
+    const rawWD = weightDeltas as unknown as RawWeightDeltaShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    let bucket: Record<string, { delta?: number; delta_pct?: number; change?: number }> | undefined =
-      (weightDeltas.weights as any)?.[k];
+    type DeltaBucket = Record<string, { delta?: number; delta_pct?: number; change?: number }>;
+    let bucket: DeltaBucket | undefined = rawWD.weights?.[k] as DeltaBucket | undefined;
     if (!bucket) {
       const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
         1: "dimension",
@@ -601,20 +689,20 @@ export function WeightDeltaWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      bucket = (weightDeltas as any)?.[`${weightShortKey[level as Exclude<ScoringLevel, 0>]}_deltas`];
+      bucket = rawWD[`${weightShortKey[level as Exclude<ScoringLevel, 0>]}_deltas`] as DeltaBucket | undefined;
     }
     if (!bucket && level !== 0) return [];
     if (level === 0) {
-      const delta = num(weightDeltas.delta ?? (weightDeltas as any).overall?.delta ?? 0);
+      const delta = num(weightDeltas.delta ?? rawWD.overall?.delta ?? 0);
       return delta !== 0 ? [{ time: "Overall", value: delta, color: delta >= 0 ? "#10b981" : "#ef4444" }] : [];
     }
     return weightArr
       .map((w) => {
-        const e = bucket?.[w.key];
+        const e = bucket?.[w.key] as RawWeightDeltaEntry | undefined;
         const v = num(e?.delta ?? e?.change ?? 0);
         return { time: w.label, value: v, color: v >= 0 ? "#10b981" : "#ef4444" };
       })
-      .filter((pt) => true);
+      .filter(() => true);
   }, [weightDeltas, weightArr, level]);
 
   const meta = LEVEL_META[level];

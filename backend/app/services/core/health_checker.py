@@ -5,24 +5,26 @@ Monitors health of all system components and services.
 Provides health status endpoints and alerts.
 """
 
-from typing import Any, Dict, List, Optional, Callable
-from datetime import timezone, datetime
 import asyncio
-from .base_service import BaseService
+from collections.abc import Callable
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from .base_service import BaseService
 
 
 class HealthChecker(BaseService):
     """
     System health monitoring service.
-    
+
     Provides:
     - Component health monitoring
     - Health aggregation
     - Alert triggering
     - Performance tracking
     """
-    
+
     def __init__(
         self,
         service_name: str = "HealthChecker",
@@ -30,46 +32,46 @@ class HealthChecker(BaseService):
     ):
         """
         Initialize health checker service.
-        
+
         Args:
             service_name: Service identifier
             check_interval_seconds: Interval for health checks
         """
         super().__init__(service_name)
         self.check_interval = check_interval_seconds
-        self._checks: Dict[str, Callable[..., Any]] = {}
-        self._last_results: Dict[str, Dict[str, Any]] = {}
+        self._checks: dict[str, Callable[..., Any]] = {}
+        self._last_results: dict[str, dict[str, Any]] = {}
         self._is_monitoring = False
         self._monitor_task = None
-    
+
     async def initialize(self) -> None:
         """Initialize health checker service"""
         self.logger.info("HealthChecker initialized")
         await self.start_monitoring()
-    
+
     async def shutdown(self) -> None:
         """Shutdown health checker service"""
         await self.stop_monitoring()
         self.logger.info("HealthChecker shutdown")
-    
+
     def register_check(self, name: str, check_func: callable) -> None:
         """
         Register a health check function.
-        
+
         Args:
             name: Check identifier
             check_func: Async callable that returns health status dict
         """
         self._checks[name] = check_func
         self.logger.info(f"Registered health check: {name}")
-    
-    async def run_check(self, name: str) -> Dict[str, Any]:
+
+    async def run_check(self, name: str) -> dict[str, Any]:
         """
         Run a single health check.
-        
+
         Args:
             name: Check identifier
-            
+
         Returns:
             Health check result
         """
@@ -79,17 +81,17 @@ class HealthChecker(BaseService):
                 "status": "unknown",
                 "error": "Check not registered",
             }
-        
+
         try:
             check_func = self._checks[name]
             result = check_func()
             if asyncio.iscoroutine(result):
                 result = await result
-            
+
             result['timestamp'] = utc_now_iso()
             self._last_results[name] = result
             return result
-        
+
         except Exception as e:
             result = {
                 "name": name,
@@ -100,36 +102,36 @@ class HealthChecker(BaseService):
             self._last_results[name] = result
             self.logger.error(f"Health check failed: {name} - {e}")
             return result
-    
-    async def run_all_checks(self) -> Dict[str, Any]:
+
+    async def run_all_checks(self) -> dict[str, Any]:
         """
         Run all registered health checks.
-        
+
         Returns:
             Aggregated health status
         """
         results = {}
         for check_name in self._checks:
             results[check_name] = await self.run_check(check_name)
-        
+
         return {
             "timestamp": utc_now_iso(),
             "checks": results,
             "overall_status": self._aggregate_status(results),
         }
-    
-    def _aggregate_status(self, results: Dict[str, Any]) -> str:
+
+    def _aggregate_status(self, results: dict[str, Any]) -> str:
         """
         Aggregate overall health status from check results.
-        
+
         Args:
             results: Check results dictionary
-            
+
         Returns:
             Overall status ('healthy', 'degraded', or 'unhealthy')
         """
         statuses = [r.get('status', 'unknown') for r in results.values()]
-        
+
         if 'error' in statuses or 'unhealthy' in statuses:
             return 'unhealthy'
         elif 'degraded' in statuses or 'warning' in statuses:
@@ -138,16 +140,16 @@ class HealthChecker(BaseService):
             return 'healthy'
         else:
             return 'unknown'
-    
+
     async def start_monitoring(self) -> None:
         """Start continuous health monitoring"""
         if self._is_monitoring:
             return
-        
+
         self._is_monitoring = True
         self._monitor_task = asyncio.create_task(self._monitor_loop())
         self.logger.info("Health monitoring started")
-    
+
     async def stop_monitoring(self) -> None:
         """Stop continuous health monitoring"""
         self._is_monitoring = False
@@ -158,7 +160,7 @@ class HealthChecker(BaseService):
             except asyncio.CancelledError:
                 pass
         self.logger.info("Health monitoring stopped")
-    
+
     async def _monitor_loop(self) -> None:
         """Continuous monitoring loop"""
         while self._is_monitoring:
@@ -170,16 +172,16 @@ class HealthChecker(BaseService):
             except Exception as e:
                 self.logger.error(f"Error in monitoring loop: {e}")
                 await asyncio.sleep(self.check_interval)
-    
-    def get_last_results(self) -> Dict[str, Any]:
+
+    def get_last_results(self) -> dict[str, Any]:
         """Get last health check results"""
         return self._last_results.copy()
-    
-    def get_check_status(self, name: str) -> Optional[Dict[str, Any]]:
+
+    def get_check_status(self, name: str) -> dict[str, Any] | None:
         """Get status of specific health check"""
         return self._last_results.get(name)
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get health checker statistics"""
         return {
             "service": self.service_name,
@@ -192,18 +194,18 @@ class HealthChecker(BaseService):
 
 # Common health check implementations
 
-async def check_database(db_service) -> Dict[str, Any]:
+async def check_database(db_service) -> dict[str, Any]:
     """Check database health"""
     return await db_service.health_check()
 
 
-async def check_cache(cache_service) -> Dict[str, Any]:
+async def check_cache(cache_service) -> dict[str, Any]:
     """Check cache health"""
     try:
         # Test cache operations
         await cache_service.set("health_check", "ok", namespace="system")
         value = await cache_service.get("health_check", namespace="system")
-        
+
         if value == "ok":
             return {
                 "name": "cache",
@@ -223,19 +225,19 @@ async def check_cache(cache_service) -> Dict[str, Any]:
         }
 
 
-async def check_memory() -> Dict[str, Any]:
+async def check_memory() -> dict[str, Any]:
     """Check system memory"""
     import psutil
-    
+
     try:
         memory = psutil.virtual_memory()
-        
+
         status = "healthy"
         if memory.percent > 90:
             status = "unhealthy"
         elif memory.percent > 80:
             status = "degraded"
-        
+
         return {
             "name": "memory",
             "status": status,
@@ -250,19 +252,19 @@ async def check_memory() -> Dict[str, Any]:
         }
 
 
-async def check_disk() -> Dict[str, Any]:
+async def check_disk() -> dict[str, Any]:
     """Check disk usage"""
     import psutil
-    
+
     try:
         disk = psutil.disk_usage('/')
-        
+
         status = "healthy"
         if disk.percent > 90:
             status = "unhealthy"
         elif disk.percent > 80:
             status = "degraded"
-        
+
         return {
             "name": "disk",
             "status": status,

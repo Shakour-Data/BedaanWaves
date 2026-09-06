@@ -4,8 +4,9 @@ Converts the JSON payload into an intermediate representation (IR) that the
 query builder can consume safely.
 """
 
-from typing import Union, List, Dict, Any
-from app.schemas.filter_schemas import FilterGroup, FilterCondition, LogicOperator
+from typing import Any, Union
+
+from app.schemas.filter_schemas import FilterCondition, FilterGroup
 from app.services.filter.field_registry import FieldRegistry
 
 
@@ -25,7 +26,7 @@ class ParsedCondition:
 class ParsedGroup:
     """Internal node in the parsed tree."""
 
-    def __init__(self, logic: str, children: List[Union["ParsedGroup", ParsedCondition]]):
+    def __init__(self, logic: str, children: list[Union["ParsedGroup", ParsedCondition]]):
         self.logic = logic.upper()
         self.children = children
 
@@ -37,7 +38,7 @@ class FilterParseError(Exception):
     pass
 
 
-def parse_filter_tree(node: Union[FilterGroup, Dict[str, Any]], registry: FieldRegistry) -> Union[ParsedGroup, ParsedCondition]:
+def parse_filter_tree(node: FilterGroup | dict[str, Any], registry: FieldRegistry) -> ParsedGroup | ParsedCondition:
     """Recursively parse a filter node into the internal IR.
 
     Accepts either a Pydantic model or a raw dict (useful for tests).

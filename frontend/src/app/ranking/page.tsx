@@ -15,7 +15,6 @@ import {
   useLiveData,
   LiveConnectionIndicator,
   type LiveStreamKey,
-  type SSEEvent,
 } from "@/hooks/useLiveData";
 import {
   fetchNasdaqRankings,
@@ -144,14 +143,19 @@ export default function RankingPage() {
   const [liveEnabled, setLiveEnabled] = useState(true);
   const [scoreBadges, setScoreBadges] = useState<ScoreBadgeMap>({});
   const lastEventTimestamp = useRef<number | null>(null);
+  const [lastEventTs, setLastEventTs] = useState<number | null>(null);
 
   const load = useCallback(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
-    fetchNasdaqRankings({ limit: PAGE_SIZE, offset, sort_by: sortBy, order })
-      .then((res) => {
+    Promise.resolve()
+      .then(() => {
         if (!active) return;
+        setLoading(true);
+        setError(null);
+        return fetchNasdaqRankings({ limit: PAGE_SIZE, offset, sort_by: sortBy, order });
+      })
+      .then((res) => {
+        if (!active || !res) return;
         setItems(res.items);
         setTotal(res.total);
       })
@@ -191,11 +195,12 @@ export default function RankingPage() {
   }, [liveEnabled]);
 
   const handleScoreData = useCallback(
-    (payload: ScoresStreamPayload, _event: SSEEvent<ScoresStreamPayload>) => {
+    (payload: ScoresStreamPayload) => {
       const deltas = payload?.deltas ?? [];
       if (deltas.length === 0) return;
       const now = Date.now();
       lastEventTimestamp.current = now;
+      setLastEventTs(now);
 
       setItems((prevItems) => {
         if (prevItems.length === 0) return prevItems;
@@ -295,7 +300,7 @@ export default function RankingPage() {
             <LiveConnectionIndicator
               health={scoresLive.connectionHealth}
               dataAgeMs={scoresLive.lastDataAgeMs}
-              lastEventTs={lastEventTimestamp.current}
+              lastEventTs={lastEventTs}
               label="Scores"
             />
             <label className="inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium">

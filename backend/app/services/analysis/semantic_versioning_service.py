@@ -1,14 +1,11 @@
-from typing import Any, Dict, List, Optional, Tuple
-from datetime import datetime, timezone
-import hashlib
-import json
 import logging
-from pathlib import Path
+from typing import Any
+
+from app.core.config import get_settings
 from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
-from app.core.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -19,11 +16,11 @@ class SemanticVersioningService(AnalysisService):
 
     def __init__(self, service_name: str = "SemanticVersioningService"):
         super().__init__(service_name)
-        self.version_history: Dict[str, List[Dict]] = {
+        self.version_history: dict[str, list[dict]] = {
             "regime_classification": [],  # MAJOR.MINOR.PATCH-regime
             "data_pipeline": []  # MAJOR.MINOR.PATCH-type
         }
-        self.current_version: Dict[str, str] = {
+        self.current_version: dict[str, str] = {
             "regime": "1.0.0-base",  # Initial version format
             "pipeline": "1.0.0-full"
         }
@@ -36,16 +33,16 @@ class SemanticVersioningService(AnalysisService):
         """Shutdown service."""
         self.logger.info("SemanticVersioningService shutdown")
 
-    async def update_version(self, context: str, new_version: str) -> Dict[str, Any]:
+    async def update_version(self, context: str, new_version: str) -> dict[str, Any]:
         """Update version with semantic versioning rules."""
         # Validate version format (MAJOR.MINOR.PATCH-regime or MAJOR.MINOR.PATCH-type)
         if not self._is_valid_semantic_version(new_version, context):
             raise ValueError("Invalid semantic version format")
-        
+
         # Increment version
         current = self._parse_version(self.current_version[context])
         new = self._parse_version(new_version)
-        
+
         # Increment major if context changed
         if context != self.current_version.get("last_context"):
             new['major'] += 1
@@ -58,18 +55,18 @@ class SemanticVersioningService(AnalysisService):
                 new['patch'] = 0
             else:
                 new['patch'] += 1
-        
+
         # Update history
         self.current_version[context] = self._format_version(new)
         self.version_history[context].append(self._format_version(new))  # Keep last 100 records
         if len(self.version_history[context]) > 100:
             self.version_history[context] = self.version_history[context][-100:]
-        
+
         # Store context
         self.current_version["last_context"] = context
-        
+
         self.logger.info(f"Updated {context} version to {self.current_version[context]}")
-        
+
         return {
             "context": context,
             "old_version": self._format_version(current),
@@ -82,12 +79,12 @@ class SemanticVersioningService(AnalysisService):
         parts = version.split('-')
         if len(parts) < 5:  # MAJOR.MINOR.PATCH-PATH-REGIME
             return False
-        
+
         try:
             major, minor, patch = map(int, parts[:3])
-            path = parts[3].split('/') if '/' in parts[3] else [parts[3]]
+            parts[3].split('/') if '/' in parts[3] else [parts[3]]
             regime = parts[-1]
-            
+
             if context == "regime_classification":
                 # Regime versions follow: MAJOR.MINOR.PATCH-REGIME-TYPE
                 return len(parts) >= 5 and regime in {"base", "expansion", "contraction"}
@@ -97,12 +94,12 @@ class SemanticVersioningService(AnalysisService):
         except (ValueError, IndexError):
             return False
 
-    def _parse_version(self, version: str) -> Dict[str, int]:
+    def _parse_version(self, version: str) -> dict[str, int]:
         """Parse version into components."""
         parts = version.split('-')[:3]
         return {"major": int(parts[0]), "minor": int(parts[1]), "patch": int(parts[2])}
 
-    def _format_version(self, components: Dict[str, int]) -> str:
+    def _format_version(self, components: dict[str, int]) -> str:
         """Format version back to string."""
         return f"{components['major']}.{components['minor']}.{components['patch']}"
 
@@ -112,7 +109,7 @@ class SemanticVersioningService(AnalysisService):
         types = {"0": "full", "1": "incremental", "2": "reduced"}
         return types.get(str(minor), "full")
 
-    async def get_version_history(self, context: str, limit: int = 10) -> List[Dict[str, Any]]:    
+    async def get_version_history(self, context: str, limit: int = 10) -> list[dict[str, Any]]:
         """Get historical version records."""
         return list(reversed(self.version_history[context][-min(limit, len(self.version_history[context])):]))
 
@@ -121,7 +118,7 @@ class SemanticVersioningService(AnalysisService):
         try:
             req_parts = self._parse_version(required)
             curr_parts = self._parse_version(current)
-            
+
             # Major must be >= required
             if curr_parts['major'] < req_parts['major']:
                 return False
@@ -131,7 +128,7 @@ class SemanticVersioningService(AnalysisService):
             # Patch must be >= required if major/minor equal
             if curr_parts['major'] == req_parts['major'] and curr_parts['minor'] == req_parts['minor'] and curr_parts['patch'] < req_parts['patch']:
                 return False
-            
+
             return True
         except ValueError:
             return False

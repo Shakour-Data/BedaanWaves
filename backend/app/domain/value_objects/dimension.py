@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
+
 from ..shared.exceptions import ValidationException
+
 
 class DimensionType(Enum):
     FUNDAMENTAL = "fundamental"

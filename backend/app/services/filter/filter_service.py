@@ -1,16 +1,15 @@
 """Service layer for the advanced hierarchical filter API."""
 
-from typing import Any, Dict, List, Optional, Union
-from datetime import datetime, timezone
-import time
 import logging
+import time
+from typing import Any
 
-from sqlalchemy import select, func, desc, asc
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.scoring_snapshot import ScoringSnapshot, SnapshotLevel
 from app.services.filter.field_registry import FieldRegistry
-from app.services.filter.filter_parser import parse_filter_tree, ParsedGroup, ParsedCondition
+from app.services.filter.filter_parser import ParsedCondition, ParsedGroup
 from app.services.filter.query_builder import apply_filter_to_query, get_sort_column
 
 logger = logging.getLogger(__name__)
@@ -25,12 +24,12 @@ class FilterService:
     async def execute_filter(
         self,
         db: AsyncSession,
-        parsed_root: Union[ParsedGroup, ParsedCondition],
+        parsed_root: ParsedGroup | ParsedCondition,
         limit: int = 100,
         offset: int = 0,
         sort_by: str = "overall_score",
         sort_dir: str = "desc",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         start = time.perf_counter()
 
         base_query = select(ScoringSnapshot)
@@ -64,7 +63,7 @@ class FilterService:
             "execution_time_ms": round(elapsed_ms, 2),
         }
 
-    def _row_to_dict(self, row: ScoringSnapshot) -> Dict[str, Any]:
+    def _row_to_dict(self, row: ScoringSnapshot) -> dict[str, Any]:
         def _safe_iso(val):
             if val is None:
                 return None
@@ -89,11 +88,11 @@ class FilterService:
             "extra_fields": dict(row.metadata) if hasattr(row, "metadata") and row.metadata else {},
         }
 
-    def _extract_applied_filters(self, root: Union[ParsedGroup, ParsedCondition]) -> List[Dict[str, Any]]:
+    def _extract_applied_filters(self, root: ParsedGroup | ParsedCondition) -> list[dict[str, Any]]:
         """Flatten the filter tree into a list of chip representations."""
-        chips: List[Dict[str, Any]] = []
+        chips: list[dict[str, Any]] = []
 
-        def walk(node: Union[ParsedGroup, ParsedCondition], path: List[str]) -> None:
+        def walk(node: ParsedGroup | ParsedCondition, path: list[str]) -> None:
             if isinstance(node, ParsedCondition):
                 chips.append({
                     "field": node.field,

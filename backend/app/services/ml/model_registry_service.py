@@ -1,22 +1,19 @@
-from typing import Any, Dict, List, Optional
 import json
-import hashlib
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
+
 from app.core.utils import utc_now_iso
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from ..core import BaseService
-from ..core.dependency_container import get_global_container
-from ..core.database_service import DatabaseService
 from ..core.config import get_settings
+from ..core.database_service import DatabaseService
+from ..core.dependency_container import get_global_container
 
 settings = get_settings()
 
 
-class ModelStatus(str, Enum):
+class ModelStatus(StrEnum):
     TRAINING = "training"
     READY = "ready"
     DEPRECATED = "deprecated"
@@ -30,7 +27,7 @@ class ModelVersion:
         version: str,
         training_data_hash: str,
         git_hash: str,
-        metrics: Dict[str, float],
+        metrics: dict[str, float],
         status: ModelStatus = ModelStatus.READY,
     ):
         self.name = name
@@ -39,9 +36,9 @@ class ModelVersion:
         self.git_hash = git_hash
         self.metrics = metrics
         self.status = status
-        self.created_at = datetime.now(timezone.utc)
+        self.created_at = datetime.now(UTC)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "version": self.version,
@@ -53,7 +50,7 @@ class ModelVersion:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ModelVersion":
+    def from_dict(cls, data: dict[str, Any]) -> "ModelVersion":
         obj = cls(
             name=data["name"],
             version=data["version"],
@@ -72,13 +69,13 @@ class ModelRegistry(BaseService):
     def __init__(
         self,
         service_name: str = "ModelRegistry",
-        database: Optional[DatabaseService] = None,
+        database: DatabaseService | None = None,
         drift_threshold: float = 0.1,
     ):
         super().__init__(service_name)
         self.database = database or DatabaseService()
         self.drift_threshold = drift_threshold
-        self._models: Dict[str, List[ModelVersion]] = {}
+        self._models: dict[str, list[ModelVersion]] = {}
 
     async def initialize(self) -> None:
         self.logger.info("ModelRegistry initialized")
@@ -117,7 +114,7 @@ class ModelRegistry(BaseService):
         version: str,
         training_data_hash: str,
         git_hash: str,
-        metrics: Dict[str, float],
+        metrics: dict[str, float],
         status: ModelStatus = ModelStatus.READY,
     ) -> ModelVersion:
         """Register a new model version."""
@@ -153,7 +150,7 @@ class ModelRegistry(BaseService):
         self.logger.info("Registered model %s v%s", name, version)
         return mv
 
-    async def get_latest(self, name: str) -> Optional[ModelVersion]:
+    async def get_latest(self, name: str) -> ModelVersion | None:
         """Get the latest READY model version."""
         models = self._models.get(name, [])
         for m in models:
@@ -161,7 +158,7 @@ class ModelRegistry(BaseService):
                 return m
         return None
 
-    async def get_all_versions(self, name: str) -> List[ModelVersion]:
+    async def get_all_versions(self, name: str) -> list[ModelVersion]:
         return self._models.get(name, [])
 
     async def deprecate(self, name: str, version: str) -> bool:
@@ -182,7 +179,7 @@ class ModelRegistry(BaseService):
             await session.execute(query, status.value, name, version)
             await session.commit()
 
-    def _psi(self, expected: List[float], actual: List[float]) -> float:
+    def _psi(self, expected: list[float], actual: list[float]) -> float:
         """Population Stability Index."""
         import numpy as np
 
@@ -198,8 +195,8 @@ class ModelRegistry(BaseService):
         return float(np.sum((e_pct - a_pct) * np.log(e_pct / a_pct)))
 
     async def check_drift(
-        self, model_name: str, live_features: List[float], training_features: List[float]
-    ) -> Dict[str, Any]:
+        self, model_name: str, live_features: list[float], training_features: list[float]
+    ) -> dict[str, Any]:
         """Check for data drift using PSI."""
         psi = self._psi(training_features, live_features)
         drift_detected = psi > self.drift_threshold

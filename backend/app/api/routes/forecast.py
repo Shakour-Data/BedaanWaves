@@ -20,16 +20,15 @@ USAGE:
 - POST /api/v1/forecast/backtest - Backtest a forecasting model
 """
 
-from typing import List, Optional, Literal
-from datetime import datetime, timedelta
-from enum import Enum
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from datetime import datetime
+from enum import Enum, StrEnum
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 
-from ....core.config import get_settings
+from app.services.core.cache_service import CacheService
+
 from ....services.ml.prediction_service import PredictionService
-from ....services.ml.time_series_service import TimeSeriesService
-from ....services.data.stock_service import StockService
 from ....services.user.auth_service import get_current_user
 
 router = APIRouter(prefix="/forecast", tags=["Forecast"])
@@ -39,7 +38,7 @@ router = APIRouter(prefix="/forecast", tags=["Forecast"])
 # Enums and Types
 # =============================================================================
 
-class ForecastModel(str, Enum):
+class ForecastModel(StrEnum):
     """Available forecasting models"""
     ARIMA = "arima"                    # AutoRegressive Integrated Moving Average
     LSTM = "lstm"                      # Long Short-Term Memory neural network
@@ -48,7 +47,7 @@ class ForecastModel(str, Enum):
     ENSEMBLE = "ensemble"              # Ensemble of multiple models
 
 
-class ForecastHorizon(str, Enum):
+class ForecastHorizon(StrEnum):
     """Forecast time horizons"""
     ONE_DAY = "1d"
     THREE_DAYS = "3d"
@@ -60,7 +59,7 @@ class ForecastHorizon(str, Enum):
     ONE_YEAR = "365d"
 
 
-class TrendDirection(str, Enum):
+class TrendDirection(StrEnum):
     """Predicted trend direction"""
     UP = "up"
     DOWN = "down"
@@ -96,7 +95,7 @@ class PriceForecastRequest(BaseModel):
     confidence_level: ConfidenceLevel = Field(ConfidenceLevel.NINETY_FIVE)
     include_history: bool = Field(True, description="Include historical data in response")
     features: ForecastFeatures = Field(default_factory=ForecastFeatures)
-    
+
     @validator('symbol')
     def validate_symbol(cls, v):
         return v.upper().strip()
@@ -115,7 +114,7 @@ class HistoricalPoint(BaseModel):
     """Historical price point"""
     date: datetime
     price: float
-    volume: Optional[int]
+    volume: int | None
 
 
 class ModelContribution(BaseModel):
@@ -142,22 +141,22 @@ class PriceForecastResponse(BaseModel):
     generated_at: datetime
     last_price: float
     last_updated: datetime
-    
+
     # Forecast data
-    forecast: List[PriceForecastPoint]
-    historical: Optional[List[HistoricalPoint]]
-    
+    forecast: list[PriceForecastPoint]
+    historical: list[HistoricalPoint] | None
+
     # Model performance
-    model_accuracy: Optional[float]
-    rmse: Optional[float]
-    mape: Optional[float]
-    
+    model_accuracy: float | None
+    rmse: float | None
+    mape: float | None
+
     # Ensemble details (if applicable)
-    model_contributions: Optional[List[ModelContribution]]
-    
+    model_contributions: list[ModelContribution] | None
+
     # Feature analysis
-    feature_importance: Optional[List[FeatureImportance]]
-    
+    feature_importance: list[FeatureImportance] | None
+
     # Metadata
     data_points_used: int
     confidence_level: float
@@ -181,13 +180,13 @@ class TrendForecastResponse(BaseModel):
     probability_down: float
     probability_sideways: float
     horizon: str
-    key_drivers: List[str]
+    key_drivers: list[str]
     generated_at: datetime
 
 
 class BatchForecastRequest(BaseModel):
     """Request for batch forecasting multiple symbols"""
-    symbols: List[str] = Field(..., min_items=1, max_items=20)
+    symbols: list[str] = Field(..., min_items=1, max_items=20)
     model: ForecastModel = Field(ForecastModel.ENSEMBLE)
     horizon: ForecastHorizon = Field(ForecastHorizon.ONE_WEEK)
     include_history: bool = Field(False)
@@ -199,8 +198,8 @@ class BatchForecastResponse(BaseModel):
     total: int
     successful: int
     failed: int
-    results: List[PriceForecastResponse]
-    errors: List[dict]
+    results: list[PriceForecastResponse]
+    errors: list[dict]
     generated_at: datetime
     processing_time_ms: int
 
@@ -219,24 +218,24 @@ async def forecast_price(
 ):
     """
     Generate price forecast for a stock.
-    
+
     Supports multiple forecasting models including:
     - ARIMA: Traditional time series model
     - LSTM: Deep learning approach
     - Prophet: Facebook's forecasting tool
     - XGBoost: Gradient boosting
     - Ensemble: Combination of all models
-    
+
     Returns forecast with confidence intervals and model accuracy metrics.
     """
     try:
         # Check cache first
         cache_key = f"forecast:price:{request.symbol}:{request.model}:{request.horizon}"
         cached = await cache_service.get(cache_key)
-        
+
         if cached and not request.include_history:
             return PriceForecastResponse(**cached)
-        
+
         # Generate forecast
         forecast = await prediction_service.forecast_price(
             symbol=request.symbol,
@@ -245,16 +244,16 @@ async def forecast_price(
             confidence_level=request.confidence_level,
             features=request.features,
         )
-        
+
         # Cache the result
         await cache_service.set(
             cache_key,
             forecast.dict(),
             ttl=1800  # 30 minutes
         )
-        
+
         return forecast
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -267,13 +266,13 @@ async def forecast_trend(
 ):
     """
     Predict trend direction for a stock.
-    
+
     Uses LSTM model to predict:
     - Upward trend
     - Downward trend
     - Sideways movement
     - Volatile conditions
-    
+
     Returns confidence scores for each direction.
     """
     try:
@@ -284,7 +283,7 @@ async def forecast_trend(
             confidence_threshold=request.confidence_threshold,
         )
         return forecast
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -298,23 +297,23 @@ async def batch_forecast(
 ):
     """
     Generate forecasts for multiple stocks in batch.
-    
+
     Efficiently processes up to 20 symbols simultaneously.
     Returns aggregated results with success/failure breakdown.
     """
     try:
         import time
         start_time = time.time()
-        
+
         results = await prediction_service.batch_forecast(
             symbols=request.symbols,
             model=request.model,
             horizon=request.horizon,
             include_history=request.include_history,
         )
-        
+
         processing_time = int((time.time() - start_time) * 1000)
-        
+
         return BatchForecastResponse(
             status="success",
             total=len(request.symbols),
@@ -325,18 +324,18 @@ async def batch_forecast(
             generated_at=datetime.utcnow(),
             processing_time_ms=processing_time,
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/models", response_model=List[dict])
+@router.get("/models", response_model=list[dict])
 async def list_models(
     current_user: dict = Depends(get_current_user),
 ):
     """
     List available forecasting models with descriptions.
-    
+
     Returns details about each model including:
     - Use cases
     - Performance characteristics
@@ -404,11 +403,11 @@ async def get_model_details(
 ):
     """
     Get detailed information about a specific forecasting model.
-    
+
     Includes hyperparameters, performance metrics, and usage recommendations.
     """
     models = await list_models(current_user)
-    
+
     for model in models:
         if model["id"] == model_id:
             # Add additional details
@@ -416,22 +415,22 @@ async def get_model_details(
             model["training_requirements"] = get_model_training_requirements(model_id)
             model["inference_time_ms"] = get_model_inference_time(model_id)
             return model
-    
+
     raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
 
 
 @router.get("/performance/{model_id}", response_model=dict)
 async def get_model_performance(
     model_id: str,
-    symbol: Optional[str] = Query(None, description="Filter by symbol"),
-    start_date: Optional[datetime] = Query(None),
-    end_date: Optional[datetime] = Query(None),
+    symbol: str | None = Query(None, description="Filter by symbol"),
+    start_date: datetime | None = Query(None),
+    end_date: datetime | None = Query(None),
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
 ):
     """
     Get performance metrics for a forecasting model.
-    
+
     Metrics include:
     - RMSE (Root Mean Square Error)
     - MAE (Mean Absolute Error)
@@ -446,7 +445,7 @@ async def get_model_performance(
             start_date=start_date,
             end_date=end_date,
         )
-        
+
         return {
             "status": "success",
             "model_id": model_id,
@@ -458,7 +457,7 @@ async def get_model_performance(
             "metrics": performance,
             "generated_at": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -471,21 +470,21 @@ async def backtest_model(
     end_date: datetime = Field(..., description="Backtest end date"),
     initial_capital: float = Field(10000.0, ge=1000, description="Initial capital for trading simulation"),
     position_size_pct: float = Field(0.1, ge=0.01, le=1.0, description="Position size as % of capital"),
-    take_profit_pct: Optional[float] = Field(None, description="Take profit percentage"),
-    stop_loss_pct: Optional[float] = Field(None, description="Stop loss percentage"),
+    take_profit_pct: float | None = Field(None, description="Take profit percentage"),
+    stop_loss_pct: float | None = Field(None, description="Stop loss percentage"),
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
 ):
     """
     Backtest a forecasting model with trading simulation.
-    
+
     Simulates trading based on model predictions and calculates:
     - Total return
     - Sharpe ratio
     - Maximum drawdown
     - Win rate
     - Profit factor
-    
+
     This helps evaluate the practical value of forecasting models.
     """
     try:
@@ -499,7 +498,7 @@ async def backtest_model(
             take_profit_pct=take_profit_pct,
             stop_loss_pct=stop_loss_pct,
         )
-        
+
         return {
             "status": "success",
             "model_id": model_id,
@@ -517,7 +516,7 @@ async def backtest_model(
             "results": backtest_result,
             "generated_at": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -568,7 +567,7 @@ def get_model_hyperparameters(model_id: str) -> dict:
             "rebalancing_frequency": "weekly",
         },
     }
-    
+
     return hyperparameters.get(model_id, {})
 
 
@@ -606,7 +605,7 @@ def get_model_training_requirements(model_id: str) -> dict:
             "hardware_requirements": "GPU recommended",
         },
     }
-    
+
     return requirements.get(model_id, {})
 
 
@@ -619,5 +618,5 @@ def get_model_inference_time(model_id: str) -> str:
         "xgboost": "< 50ms",
         "ensemble": "< 1s",
     }
-    
+
     return inference_times.get(model_id, "< 1s")

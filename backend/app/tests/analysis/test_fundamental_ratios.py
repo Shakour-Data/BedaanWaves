@@ -3,9 +3,6 @@ Unit tests for fundamental ratio calculations.
 Tests stock fundamental analysis services.
 """
 import unittest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-import asyncio
 
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
 
@@ -155,7 +152,7 @@ class TestStockFundamentalAnalysis(unittest.IsolatedAsyncioTestCase):
     async def test_analyze_with_financial_data(self):
         """Test analysis with financial data."""
         service = FundamentalAnalysisService(service_name="TestService")
-        
+
         financial_data = {
             "stock_price": 150.0,
             "eps": 5.0,
@@ -178,12 +175,12 @@ class TestStockFundamentalAnalysis(unittest.IsolatedAsyncioTestCase):
             "tax_rate": 0.21,
             "debt": 200000000.0,
         }
-        
+
         result = await service.analyze({
             "ticker": "AAPL",
             "financials": financial_data
         })
-        
+
         self.assertEqual(result["ticker"], "AAPL")
         self.assertIn("ratios", result)
         self.assertAlmostEqual(result["ratios"]["pe_ratio"], 30.0, places=2)

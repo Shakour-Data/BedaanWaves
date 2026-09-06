@@ -8,16 +8,18 @@ Advanced specialized analytics services:
 - CalendarService: Trading-day awareness and corporate events
 """
 
-from .sector_analysis_service import SectorAnalysisService
-from .screening_service import ScreeningService
+from .calendar_service import CalendarService
 from .comparison_service import ComparisonService
 from .correlation_service import CorrelationService
-from .calendar_service import CalendarService
+from .peer_comparison_service import PeerComparisonService
+from .screening_service import ScreeningService
+from .sector_analysis_service import SectorAnalysisService
 
 __all__ = [
-    "SectorAnalysisService",
-    "ScreeningService",
+    "CalendarService",
     "ComparisonService",
     "CorrelationService",
-    "CalendarService",
+    "PeerComparisonService",
+    "ScreeningService",
+    "SectorAnalysisService",
 ]

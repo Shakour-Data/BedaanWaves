@@ -17,17 +17,16 @@ return an empty series (the chart falls back to "No trend data available").
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
-from app.core.utils import utc_now_iso
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, RawPerformanceScore
 from app.services.core import BaseService
-
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ logger = logging.getLogger(__name__)
 # The "parent" is the key at the level above (None for sub-dimensions). This is
 # used both for filtering and for the response metadata so the frontend can
 # build chart legends without re-deriving the hierarchy.
-SUB_DIMENSION_TO_PARENT: Dict[str, str] = {
+SUB_DIMENSION_TO_PARENT: dict[str, str] = {
     "fundamental_price_history": "fundamental",
     "fundamental_ohlcv": "fundamental",
     "fundamental_corporate_actions": "fundamental",
@@ -72,7 +71,7 @@ def _is_aspect_key(key: str) -> bool:
     return key.endswith("_aspect_1") or key.endswith("_aspect_2")
 
 
-def _aspect_parent(key: str) -> Optional[str]:
+def _aspect_parent(key: str) -> str | None:
     """Return the parent sub-dimension key for an aspect key, or None."""
     parts = key.split("_")
     if len(parts) < 4 or "aspect" not in parts:
@@ -96,7 +95,7 @@ def _is_sub_aspect_key(key: str) -> bool:
     return True
 
 
-def _sub_aspect_parent(key: str) -> Optional[str]:
+def _sub_aspect_parent(key: str) -> str | None:
     """Return parent aspect key for a sub-aspect, or None.
 
     We don't have a ground-truth parent map for sub-aspects, so we use the
@@ -131,7 +130,7 @@ class HierarchicalScoreTrendService(BaseService):
         self,
         market: str,
         db: AsyncSession,
-    ) -> Optional[date]:
+    ) -> date | None:
         """Return the most recent date with a ``RawPerformanceScore`` row."""
         result = await db.execute(
             select(func.max(func.date(RawPerformanceScore.captured_at)))
@@ -151,11 +150,11 @@ class HierarchicalScoreTrendService(BaseService):
         level: str,
         days: int = 30,
         market: str = "NASDAQ",
-        parent: Optional[str] = None,
+        parent: str | None = None,
         latest: bool = False,
-        end_date: Optional[date] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> Dict[str, Any]:
+        end_date: date | None = None,
+        db: AsyncSession | None = None,
+    ) -> dict[str, Any]:
         """Aggregate sub-dim / aspect / sub-aspect scores for a window.
 
         Args:
@@ -195,15 +194,15 @@ class HierarchicalScoreTrendService(BaseService):
         level: str,
         days: int,
         market: str,
-        parent: Optional[str],
+        parent: str | None,
         latest: bool,
-        end_date: Optional[date],
+        end_date: date | None,
         db: AsyncSession,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if latest:
             effective_end = await self._latest_capture_date(market, db)
         else:
-            effective_end = end_date or datetime.now(timezone.utc).date()
+            effective_end = end_date or datetime.now(UTC).date()
 
         if effective_end is None:
             return self._empty(level, days, market)
@@ -228,7 +227,7 @@ class HierarchicalScoreTrendService(BaseService):
         }
 
     @staticmethod
-    def _empty(level: str, days: int, market: str) -> Dict[str, Any]:
+    def _empty(level: str, days: int, market: str) -> dict[str, Any]:
         return {
             "status": "success",
             "level": level,
@@ -248,8 +247,8 @@ class HierarchicalScoreTrendService(BaseService):
         market: str,
         start_date: date,
         end_date: date,
-        parent: Optional[str],
-    ) -> List[Dict[str, Any]]:
+        parent: str | None,
+    ) -> list[dict[str, Any]]:
         """Read ``RawPerformanceScore`` rows in the window and aggregate.
 
         We pull the raw JSONB columns and average in Python because the keys
@@ -257,8 +256,8 @@ class HierarchicalScoreTrendService(BaseService):
         but adds coupling; the dataset for one window is bounded (≤ 30 days)
         so a Python pass is fine.
         """
-        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
-        end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
+        end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=UTC)
 
         query = (
             select(
@@ -283,7 +282,7 @@ class HierarchicalScoreTrendService(BaseService):
         rows = result.all()
 
         # Per-date accumulators
-        by_date: Dict[date, Dict[str, List[float]]] = {}
+        by_date: dict[date, dict[str, list[float]]] = {}
 
         column_name = {
             "sub_dimension": "sub_dimension_scores",
@@ -303,7 +302,7 @@ class HierarchicalScoreTrendService(BaseService):
             "sub_aspect": _is_sub_aspect_key,
         }[level]
 
-        symbol_counts: Dict[date, int] = {}
+        symbol_counts: dict[date, int] = {}
 
         for row in rows:
             if hasattr(row, "capture_date"):
@@ -341,7 +340,7 @@ class HierarchicalScoreTrendService(BaseService):
             if has_contributing_score:
                 symbol_counts[capture_date] = symbol_counts.get(capture_date, 0) + 1
 
-        series: List[Dict[str, Any]] = []
+        series: list[dict[str, Any]] = []
         for capture_date in sorted(by_date.keys()):
             metrics = {
                 key: round(sum(values) / len(values), 2)

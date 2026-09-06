@@ -5,14 +5,12 @@ Aggregates metrics from all registered BedaanWaves services.
 Provides Prometheus-style counters and health summaries.
 """
 
-import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
-from prometheus_client import Counter, Gauge, Histogram, generate_latest, REGISTRY
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram, generate_latest
 
 from ..core import BaseService
-
 
 REQUESTS_TOTAL = Counter(
     "bedaanwaves_requests_total",
@@ -38,45 +36,45 @@ SIGNAL_COUNT = Counter(
 class MetricsService(BaseService):
     """
     Service metrics aggregator with Prometheus exposition.
-    
+
     Collects metrics from all registered services and exposes
     platform-wide health and performance summaries.
     """
-    
+
     def __init__(self, service_name: str = "MetricsService"):
         super().__init__(service_name)
-        self._registered_services: Dict[str, BaseService] = {}
-        self._platform_start: datetime = datetime.now(timezone.utc)
-    
+        self._registered_services: dict[str, BaseService] = {}
+        self._platform_start: datetime = datetime.now(UTC)
+
     async def initialize(self) -> None:
         self.logger.info("MetricsService initialized")
-    
+
     async def shutdown(self) -> None:
         self._registered_services.clear()
         self.logger.info("MetricsService shutdown")
-    
+
     def register_service(self, name: str, service: BaseService) -> None:
         self._registered_services[name] = service
         self.logger.debug(f"Registered metrics source: {name}")
-    
+
     def unregister_service(self, name: str) -> bool:
         if name in self._registered_services:
             del self._registered_services[name]
             return True
         return False
-    
-    def get_service_metrics(self, name: str) -> Optional[Dict[str, Any]]:
+
+    def get_service_metrics(self, name: str) -> dict[str, Any] | None:
         if name not in self._registered_services:
             return None
         return self._registered_services[name].get_metrics()
-    
-    def get_all_metrics(self) -> Dict[str, Any]:
+
+    def get_all_metrics(self) -> dict[str, Any]:
         services_metrics = {}
         total_calls = 0
         total_errors = 0
         total_cache_hits = 0
         total_cache_misses = 0
-        
+
         for name, service in self._registered_services.items():
             try:
                 metrics = service.get_metrics()
@@ -88,10 +86,10 @@ class MetricsService(BaseService):
             except Exception as exc:
                 self.logger.warning(f"Failed to collect metrics from {name}: {exc}")
                 services_metrics[name] = {"error": str(exc)}
-        
+
         total_cache_requests = total_cache_hits + total_cache_misses
-        platform_uptime = (datetime.now(timezone.utc) - self._platform_start).total_seconds()
-        
+        platform_uptime = (datetime.now(UTC) - self._platform_start).total_seconds()
+
         return {
             "platform": {
                 "uptime_seconds": platform_uptime,
@@ -107,8 +105,8 @@ class MetricsService(BaseService):
             },
             "services": services_metrics,
         }
-    
-    def get_health_summary(self) -> Dict[str, Any]:
+
+    def get_health_summary(self) -> dict[str, Any]:
         health = {"platform": "healthy", "services": {}}
         for name, service in self._registered_services.items():
             try:
@@ -119,14 +117,14 @@ class MetricsService(BaseService):
             except Exception as exc:
                 health["services"][name] = {"status": "unhealthy", "error": str(exc)}
         return health
-    
+
     def render_prometheus(self) -> bytes:
         return generate_latest(REGISTRY)
-    
-    async def health_check(self) -> Dict[str, Any]:
+
+    async def health_check(self) -> dict[str, Any]:
         return {
             "service": self.service_name,
             "status": "healthy",
             "registered_services": len(self._registered_services),
-            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(UTC) - self.created_at).total_seconds(),
         }

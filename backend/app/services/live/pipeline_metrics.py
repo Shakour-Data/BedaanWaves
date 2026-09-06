@@ -17,8 +17,8 @@ import random
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Deque, Dict, List, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 from app.services.core.base_service import BaseService
 
@@ -29,10 +29,10 @@ _SLIDING_WINDOW_S = 300
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-def _percentile(sorted_values: List[float], pct: float) -> Optional[float]:
+def _percentile(sorted_values: list[float], pct: float) -> float | None:
     if not sorted_values:
         return None
     if pct <= 0:
@@ -53,7 +53,7 @@ class _LatencyReservoir:
     """Simple reservoir sampling for latency percentiles."""
 
     size: int = _RESERVOIR_SIZE
-    samples: List[float] = field(default_factory=list)
+    samples: list[float] = field(default_factory=list)
     _n: int = 0
 
     def add(self, value: float) -> None:
@@ -65,12 +65,12 @@ class _LatencyReservoir:
         if j < self.size:
             self.samples[j] = value
 
-    def p50(self) -> Optional[float]:
+    def p50(self) -> float | None:
         if not self.samples:
             return None
         return _percentile(sorted(self.samples), 50.0)
 
-    def p95(self) -> Optional[float]:
+    def p95(self) -> float | None:
         if not self.samples:
             return None
         return _percentile(sorted(self.samples), 95.0)
@@ -79,8 +79,8 @@ class _LatencyReservoir:
 @dataclass
 class _StreamSample:
     ts: float
-    age_ms: Optional[float]
-    threshold_s: Optional[float]
+    age_ms: float | None
+    threshold_s: float | None
     emitted: bool
     dropped: bool
 
@@ -91,10 +91,10 @@ class _StreamCounters:
     messages_dropped_validation_total: int = 0
     poll_success_total: int = 0
     poll_error_total: int = 0
-    last_freshness_ts: Optional[datetime] = None
-    last_data_age_ms: Optional[float] = None
+    last_freshness_ts: datetime | None = None
+    last_data_age_ms: float | None = None
     last_sequence: int = 0
-    samples: Deque[_StreamSample] = field(
+    samples: deque[_StreamSample] = field(
         default_factory=lambda: deque(maxlen=4096)
     )
 
@@ -114,14 +114,14 @@ class LivePipelineMetrics(BaseService):
 
     def __init__(self) -> None:
         super().__init__("LivePipelineMetrics")
-        self._streams: Dict[str, _StreamCounters] = {}
-        self._symbols: Dict[str, _SymbolPollStats] = {}
+        self._streams: dict[str, _StreamCounters] = {}
+        self._symbols: dict[str, _SymbolPollStats] = {}
         self._active_subscriptions: int = 0
         self._sse_connections: int = 0
         self._reconnects_total: int = 0
         self._slo_violations_total: int = 0
-        self._connection_sub_counts: Dict[str, int] = {}
-        self._connection_first_ts: Dict[str, float] = {}
+        self._connection_sub_counts: dict[str, int] = {}
+        self._connection_first_ts: dict[str, float] = {}
         self._lock_time = 0.0
 
     # ------------------------------------------------------------------
@@ -157,9 +157,9 @@ class LivePipelineMetrics(BaseService):
         messages_emitted: int = 0,
         validation_dropped: int = 0,
         error_count: int = 0,
-        data_age_ms: Optional[float] = None,
+        data_age_ms: float | None = None,
         stale: bool = False,
-        threshold_s: Optional[float] = None,
+        threshold_s: float | None = None,
     ) -> None:
         stream = self._streams.setdefault(stream_key, _StreamCounters())
         if success:
@@ -199,7 +199,7 @@ class LivePipelineMetrics(BaseService):
         stream = self._streams.setdefault(stream_key, _StreamCounters())
         stream.last_sequence = sequence
 
-    def record_freshness(self, stream_key: str, ts: Optional[datetime]) -> None:
+    def record_freshness(self, stream_key: str, ts: datetime | None) -> None:
         stream = self._streams.setdefault(stream_key, _StreamCounters())
         stream.last_freshness_ts = ts
 
@@ -226,8 +226,8 @@ class LivePipelineMetrics(BaseService):
     def record_reconnect(self) -> None:
         self._reconnects_total += 1
 
-    def top_subscriptions(self, n: int = 10) -> List[Tuple[str, int, float]]:
-        counts: Dict[str, List[float]] = {}
+    def top_subscriptions(self, n: int = 10) -> list[tuple[str, int, float]]:
+        counts: dict[str, list[float]] = {}
         for cid, ts in self._connection_first_ts.items():
             cnt = self._connection_sub_counts.get(cid, 0)
             for stream_key in self._streams:
@@ -243,7 +243,7 @@ class LivePipelineMetrics(BaseService):
     # Health-endpoint helpers
     # ------------------------------------------------------------------
 
-    def stream_health(self, stream_key: str) -> Dict[str, Any]:
+    def stream_health(self, stream_key: str) -> dict[str, Any]:
         stream = self._streams.get(stream_key)
         if stream is None:
             return {
@@ -259,7 +259,7 @@ class LivePipelineMetrics(BaseService):
         dropped = 0
         slo_meet = 0
         slo_total = 0
-        last_age: Optional[float] = None
+        last_age: float | None = None
         for sample in reversed(stream.samples):
             if sample.ts < cutoff:
                 break
@@ -291,13 +291,13 @@ class LivePipelineMetrics(BaseService):
             "slo_attainment_pct_last_5m": round(pct, 2),
         }
 
-    def all_streams_health(self) -> Dict[str, Dict[str, Any]]:
-        out: Dict[str, Dict[str, Any]] = {}
+    def all_streams_health(self) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
         for key in list(self._streams.keys()):
             out[key] = self.stream_health(key)
         return out
 
-    def symbol_latency(self, symbol: str) -> Dict[str, Optional[float]]:
+    def symbol_latency(self, symbol: str) -> dict[str, float | None]:
         stats = self._symbols.get(symbol.upper())
         if stats is None:
             return {"p50_ms": None, "p95_ms": None, "success": 0, "errors": 0}
@@ -315,7 +315,7 @@ class LivePipelineMetrics(BaseService):
     # Snapshot for /data-health
     # ------------------------------------------------------------------
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         streams = self.all_streams_health()
         warn_count = 0
         error_count = 0
@@ -352,7 +352,7 @@ class LivePipelineMetrics(BaseService):
             },
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         base = await super().health_check()
         base.update(self.snapshot())
         return base

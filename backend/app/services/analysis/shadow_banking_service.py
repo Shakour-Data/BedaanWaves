@@ -1,11 +1,12 @@
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
-import numpy as np
+from typing import Any
+
 import aiohttp
+import numpy as np
+
+from app.core.config import get_settings
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
-from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -15,7 +16,7 @@ class ShadowBankingMetricsService(AnalysisService):
 
     def __init__(self, service_name: str = "ShadowBankingMetricsService"):
         super().__init__(service_name)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def initialize(self) -> None:
         """Initialize HTTP session for repo market data."""
@@ -28,7 +29,7 @@ class ShadowBankingMetricsService(AnalysisService):
             await self.session.close()
         self.logger.info("ShadowBankingMetricsService shutdown")
 
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """Calculate shadow banking risk metrics."""
         results = {
             "credit_intermediation_ratio": await self._credit_intermediation_ratio(data),
@@ -38,7 +39,7 @@ class ShadowBankingMetricsService(AnalysisService):
         }
         return results
 
-    async def _credit_intermediation_ratio(self, data: Dict[str, Any]) -> Dict[str, float]:
+    async def _credit_intermediation_ratio(self, data: dict[str, Any]) -> dict[str, float]:
         """Calculate credit intermediation ratio: Shadow banking assets / regulated banking assets."""
         shadow_assets = data.get("shadow_banking_assets", 1_000_000_000_000)  # $1T default
         regulated_assets = data.get("regulated_banking_assets", 20_000_000_000_000)  # $20T default
@@ -51,7 +52,7 @@ class ShadowBankingMetricsService(AnalysisService):
             "risk_level": "high" if ratio > 0.15 else "moderate" if ratio > 0.10 else "low",
         }
 
-    async def _money_multiplier_stress(self, data: Dict[str, Any]) -> Dict[str, float]:
+    async def _money_multiplier_stress(self, data: dict[str, Any]) -> dict[str, float]:
         """Monitor money multipliers: M0/M1, M1/M2, M2/M3 contractions."""
         m0 = data.get("m0", 100)
         m1 = data.get("m1", 1000)
@@ -72,7 +73,7 @@ class ShadowBankingMetricsService(AnalysisService):
             "stress_level": "high" if stress else "normal",
         }
 
-    async def _repo_market_stress(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _repo_market_stress(self, data: dict[str, Any]) -> dict[str, Any]:
         """Track repo market stress indicators: spreads, haircut volatility."""
         if not self.session:
             return {"error": "Service not initialized"}
@@ -97,7 +98,7 @@ class ShadowBankingMetricsService(AnalysisService):
             self.logger.error("Repo market stress fetch failed: %s", str(e))
             return {"error": str(e)}
 
-    async def _structured_products_tracking(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _structured_products_tracking(self, data: dict[str, Any]) -> dict[str, Any]:
         """Track structured product issuance: MBS, CDO, and tokenized assets."""
         mbs = data.get("mbs_issuance", 0)
         cdo = data.get("cdo_issuance", 0)

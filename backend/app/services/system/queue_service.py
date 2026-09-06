@@ -6,17 +6,17 @@ Supports priority, retries, and dead-letter handling.
 """
 
 import asyncio
-import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from ..core import BaseService
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     """Job lifecycle states."""
     PENDING = "pending"
     PROCESSING = "processing"
@@ -30,35 +30,35 @@ class QueuedJob:
     """Job payload for the queue."""
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
-    payload: Dict[str, Any] = field(default_factory=dict)
+    payload: dict[str, Any] = field(default_factory=dict)
     priority: int = 0
     max_retries: int = 3
     retry_count: int = 0
     status: JobStatus = JobStatus.PENDING
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    started_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
-    result: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
 
 
 class QueueService(BaseService):
     """
     Async job queue for deferred task execution.
-    
+
     Supports priority ordering, automatic retries, and dead-letter queue.
     """
-    
+
     def __init__(self, service_name: str = "QueueService", max_workers: int = 4):
         super().__init__(service_name)
         self._max_workers = max_workers
-        self._queue: Optional[asyncio.PriorityQueue] = None
-        self._jobs: Dict[str, QueuedJob] = {}
-        self._dead_letter: List[QueuedJob] = []
-        self._workers: List[asyncio.Task] = []
+        self._queue: asyncio.PriorityQueue | None = None
+        self._jobs: dict[str, QueuedJob] = {}
+        self._dead_letter: list[QueuedJob] = []
+        self._workers: list[asyncio.Task] = []
         self._running: bool = False
-        self._job_processor: Optional[Callable[[QueuedJob], Coroutine[Any, Any, Any]]] = None
-    
+        self._job_processor: Callable[[QueuedJob], Coroutine[Any, Any, Any]] | None = None
+
     async def initialize(self) -> None:
         self._running = True
         self._queue = asyncio.PriorityQueue()
@@ -66,7 +66,7 @@ class QueueService(BaseService):
             task = asyncio.create_task(self._worker_loop())
             self._workers.append(task)
         self.logger.info(f"QueueService initialized with {self._max_workers} workers")
-    
+
     async def shutdown(self) -> None:
         self._running = False
         for task in self._workers:
@@ -78,32 +78,32 @@ class QueueService(BaseService):
         self._workers.clear()
         self._jobs.clear()
         self.logger.info("QueueService shutdown")
-    
+
     def set_processor(self, processor: Callable[[QueuedJob], Coroutine[Any, Any, Any]]) -> None:
         """
         Set the job processor function.
-        
+
         Args:
             processor: Async callable that receives a QueuedJob and returns a result dict
         """
         self._job_processor = processor
-    
+
     async def enqueue(
         self,
         name: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         priority: int = 0,
         max_retries: int = 3,
     ) -> QueuedJob:
         """
         Add a job to the queue.
-        
+
         Args:
             name: Job type identifier
             payload: Job data
             priority: Higher priority runs first
             max_retries: Max retry attempts on failure
-            
+
         Returns:
             QueuedJob instance
         """
@@ -117,12 +117,12 @@ class QueueService(BaseService):
         await self._queue.put((-priority, job.id))
         self.logger.debug(f"Enqueued job {job.id} ({name}) priority={priority}")
         return job
-    
-    async def dequeue(self) -> Optional[QueuedJob]:
+
+    async def dequeue(self) -> QueuedJob | None:
         """Get next job from queue (blocks until available)."""
         _, job_id = await self._queue.get()
         return self._jobs.get(job_id)
-    
+
     async def _worker_loop(self) -> None:
         """Worker loop - processes jobs from queue."""
         while self._running:
@@ -135,7 +135,7 @@ class QueueService(BaseService):
                 break
             except Exception as exc:
                 self.logger.error(f"Worker error: {exc}", exc_info=True)
-    
+
     async def _process_job(self, job: QueuedJob) -> None:
         """Process a single job with retry logic."""
         if self._job_processor is None:
@@ -143,34 +143,34 @@ class QueueService(BaseService):
             job.error = "No processor configured"
             self.logger.error(f"Job {job.id} failed: no processor configured")
             return
-        
+
         job.status = JobStatus.PROCESSING
-        job.started_at = datetime.now(timezone.utc)
-        
+        job.started_at = datetime.now(UTC)
+
         try:
             result = await self._job_processor(job)
             job.status = JobStatus.COMPLETED
             job.result = result
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
             self._track_metric(success=True, duration_ms=0)
             self.logger.info(f"Job {job.id} ({job.name}) completed")
         except Exception as exc:
             job.retry_count += 1
             self._track_metric(success=False, duration_ms=0)
             self.logger.warning(f"Job {job.id} ({job.name}) attempt {job.retry_count} failed: {exc}")
-            
+
             if job.retry_count >= job.max_retries:
                 job.status = JobStatus.DEAD_LETTER
                 job.error = str(exc)
-                job.finished_at = datetime.now(timezone.utc)
+                job.finished_at = datetime.now(UTC)
                 self._dead_letter.append(job)
                 self.logger.error(f"Job {job.id} ({job.name}) moved to dead-letter queue")
             else:
                 job.status = JobStatus.PENDING
                 job.error = str(exc)
                 await self._queue.put((-job.priority, job.id))
-    
-    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+
+    def get_job(self, job_id: str) -> dict[str, Any] | None:
         """Get job details by ID."""
         if job_id not in self._jobs:
             return None
@@ -188,8 +188,8 @@ class QueueService(BaseService):
             "result": job.result,
             "error": job.error,
         }
-    
-    def get_queue_stats(self) -> Dict[str, Any]:
+
+    def get_queue_stats(self) -> dict[str, Any]:
         """Get queue statistics."""
         pending = sum(1 for j in self._jobs.values() if j.status == JobStatus.PENDING)
         processing = sum(1 for j in self._jobs.values() if j.status == JobStatus.PROCESSING)
@@ -205,8 +205,8 @@ class QueueService(BaseService):
             "dead_letter": dead_letter,
             "queue_size": self._queue.qsize(),
         }
-    
-    def get_dead_letter_jobs(self) -> List[Dict[str, Any]]:
+
+    def get_dead_letter_jobs(self) -> list[dict[str, Any]]:
         """Get all dead-letter jobs."""
         return [
             {
@@ -218,13 +218,13 @@ class QueueService(BaseService):
             }
             for j in self._dead_letter
         ]
-    
-    async def health_check(self) -> Dict[str, Any]:
+
+    async def health_check(self) -> dict[str, Any]:
         """Check queue service health."""
         return {
             "service": self.service_name,
             "status": "healthy" if self._running else "stopped",
             "workers": len(self._workers),
             "queue_size": self._queue.qsize(),
-            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(UTC) - self.created_at).total_seconds(),
         }

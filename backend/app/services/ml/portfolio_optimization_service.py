@@ -3,10 +3,11 @@
 Portfolio optimization and allocation suggestions.
 """
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
-from ..core import MLService
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from ..core import MLService
 
 
 class PortfolioOptimizationService(MLService):
@@ -22,11 +23,11 @@ class PortfolioOptimizationService(MLService):
         self.model = None
         self.logger.info("PortfolioOptimizationService shutdown")
 
-    async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         self.model = {"trained": True}
         return {"status": "trained"}
 
-    async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
         assets = data.get("assets", [])
         returns = data.get("expected_returns", {})
         risks = data.get("risks", {})

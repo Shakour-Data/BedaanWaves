@@ -17,15 +17,14 @@ import logging
 import time
 import uuid
 from collections import deque
-from typing import Dict, List
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.core.config import get_settings
-from app.services.user.auth_service import decode_token
 from app.infrastructure.utils.redis_rate_limiter import RedisRateLimiter
+from app.services.user.auth_service import decode_token
 
 settings = get_settings()
 
@@ -122,8 +121,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.per_minute = settings.RATE_LIMIT_REQUESTS_PER_MINUTE
         self.per_hour = settings.RATE_LIMIT_REQUESTS_PER_HOUR
         self._redis_limiter = RedisRateLimiter(redis_url=settings.REDIS_URL)
-        self._windows: Dict[str, deque] = {}
-        self._last_activity: Dict[str, float] = {}
+        self._windows: dict[str, deque] = {}
+        self._last_activity: dict[str, float] = {}
         self._eviction_interval = 3600
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -193,7 +192,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
 
-def protected_dependencies() -> List:
+def protected_dependencies() -> list:
     """Router-level dependencies enforcing auth when the global guard is enabled.
 
     Returns a list containing ``Depends(get_current_active_user)`` only when
@@ -220,7 +219,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         start_time = time.monotonic()
-        
+
         # Log incoming request
         correlation_id = getattr(request.state, 'correlation_id', 'unknown')
         logger = logging.getLogger(__name__)
@@ -237,7 +236,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             logger.error(
                 f"Request failed: {request.method} {request.url.path} "
                 f"[correlation_id={correlation_id}] "
-                f"duration={process_time:.3f}s error={str(e)}"
+                f"duration={process_time:.3f}s error={e!s}"
             )
             raise
 

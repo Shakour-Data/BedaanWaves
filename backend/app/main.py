@@ -9,49 +9,68 @@ Enhanced with full automation:
 """
 
 import logging
-import signal
-import sys
 import os
+import signal
 import subprocess
+import sys
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from fastapi import FastAPI, Request
-from fastapi.openapi.utils import get_openapi
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from app.core.utils import utc_now_iso
 
-from app.core.config import get_settings
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.middleware import (
-    RateLimitMiddleware,
-    CorrelationIdMiddleware,
     AuthGuardMiddleware,
+    CorrelationIdMiddleware,
+    RateLimitMiddleware,
     RequestLoggingMiddleware,
 )
-
+from app.api.routes import (
+    analysis_router,
+    auth_router,
+    dashboard_router,
+    data_health_router,
+    filter_router,
+    health_router,
+    history_router,
+    live_router,
+    live_sse_router,
+    market_data_router,
+    market_router,
+    ml_router,
+    news_router,
+    notifications_router,
+    password_reset_router,
+    portfolio_router,
+    ranking_router,
+    settings_router,
+    specialized_router,
+    stocks_router,
+    symbols_router,
+    system_router,
+    users_router,
+    watchlists_router,
+)
+from app.core.config import get_settings
+from app.core.config import get_settings as _live_settings_get
+from app.core.utils import utc_now_iso
+from app.services.analysis.scoring_service import ScoringService
+from app.services.core.cache_service import CacheService
+from app.services.core.config_service import ConfigService
+from app.services.core.database_service import DatabaseService
 from app.services.core.dependency_container import (
     DependencyContainer,
     set_global_container,
 )
-from app.services.core.config_service import ConfigService
-from app.services.core.logger_service import LoggerService
-from app.services.core.cache_service import CacheService
-from app.services.core.database_service import DatabaseService
 from app.services.core.health_checker import HealthChecker
-from app.services.system.scheduler_service import SchedulerService
-from app.services.system.metrics_service import MetricsService
-from app.services.system.backup_service import BackupService
-from app.services.system.data_integrity_service import DataIntegrityService
-from app.services.system.queue_service import QueueService
-from app.services.system.notification_dispatcher_service import NotificationDispatcher
-from app.services.analysis.scoring_service import ScoringService
-from app.services.ml.coefficient_learning_service import CoefficientLearningService
-from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
-from app.services.data.real_time_market_data_service import RealTimeMarketDataService
-from app.services.data.market_hours_service import MarketHoursService
+from app.services.core.logger_service import LoggerService
 from app.services.data.ingestion_service import IntelligentIngestionService
+from app.services.data.market_hours_service import MarketHoursService
+from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
 from app.services.data.news_service import NewsService
+from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.live import (
     FreshnessValidator,
     LiveDataOrchestrator,
@@ -59,36 +78,15 @@ from app.services.live import (
     PerSymbolCircuitBreaker,
     SLOMonitor,
 )
-from app.core.config import get_settings as _live_settings_get
-
+from app.services.ml.coefficient_learning_service import CoefficientLearningService
+from app.services.system.backup_service import BackupService
+from app.services.system.data_integrity_service import DataIntegrityService
+from app.services.system.logging_service import LoggingService
+from app.services.system.metrics_service import MetricsService
+from app.services.system.notification_dispatcher_service import NotificationDispatcher
+from app.services.system.queue_service import QueueService
+from app.services.system.scheduler_service import SchedulerService
 from app.services.user.auth_service import ensure_admin_user
-
-from app.api.routes import (
-    auth_router,
-    stocks_router,
-    market_router,
-    analysis_router,
-    portfolio_router,
-    history_router,
-    news_router,
-    ml_router,
-    users_router,
-    watchlists_router,
-    notifications_router,
-    specialized_router,
-    system_router,
-    live_router,
-    live_sse_router,
-    health_router,
-    symbols_router,
-    settings_router,
-    ranking_router,
-    password_reset_router,
-    market_data_router,
-    data_health_router,
-    dashboard_router,
-    filter_router,
-)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -119,8 +117,9 @@ def _ensure_directories():
 def _ensure_database():
     """Create database if it doesn't exist."""
     try:
-        from sqlalchemy import create_engine, text, inspect
         import re
+
+        from sqlalchemy import create_engine, text
         db_url = settings.DATABASE_URL
         parts = db_url.split("/")
         db_name = parts[-1].split("?")[0]
@@ -146,7 +145,7 @@ def _ensure_database():
                 conn.execute(text("COMMIT"))
                 from sqlalchemy.dialects.postgresql import base as pg_base
                 identifier = pg_base.Identifier(db_name)
-                conn.execute(text('CREATE DATABASE {}'.format(identifier)))
+                conn.execute(text(f'CREATE DATABASE {identifier}'))
                 logger.info(f"Database '{db_name}' created automatically")
         engine.dispose()
     except Exception as e:
@@ -175,7 +174,7 @@ def _run_migrations():
 def _check_tables_exist() -> bool:
     """Check if core tables exist in the database."""
     try:
-        from sqlalchemy import create_engine, inspect, text
+        from sqlalchemy import create_engine, inspect
         engine = create_engine(settings.DATABASE_URL, future=True)
         inspector = inspect(engine)
         tables = inspector.get_table_names()
@@ -329,6 +328,9 @@ async def lifespan(app: FastAPI):
         # System services
         backup_svc = BackupService()
         container.register_instance("backup_service", backup_svc)
+
+        logging_svc = LoggingService()
+        container.register_instance("logging_service", logging_svc)
 
         queue_svc = QueueService()
         container.register_instance("queue_service", queue_svc)
@@ -584,10 +586,6 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
-
-from sqlalchemy.exc import SQLAlchemyError
-from fastapi import Request
-
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):

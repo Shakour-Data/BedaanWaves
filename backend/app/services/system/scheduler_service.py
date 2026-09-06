@@ -11,22 +11,29 @@ Enhanced with full automation:
 """
 
 import asyncio
-import logging
 import os
-import shutil
-from datetime import timezone, datetime, timedelta, date as _date
-from typing import Any, Callable, Dict, List, Optional, Coroutine, Tuple
-from dataclasses import dataclass, field
 import uuid as _uuid
+from collections.abc import Callable, Coroutine
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from datetime import date as _date
+from typing import Any
+
+from sqlalchemy import and_, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.core.config import get_settings
+from app.db.base import async_session_maker
+from app.models.models import (
+    Asset,
+    IntlPriceCandle,
+    MarketDataSnapshot,
+    News,
+    ScoreHistory,
+)
+from app.models.scoring_snapshot import ScoringSnapshot, SnapshotLevel, SnapshotTier
 
 from ..core import BaseService
-from app.core.config import get_settings
-from sqlalchemy import select, func, and_
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.models import Asset, IntlPriceCandle, News, ScoreHistory, MarketDataSnapshot
-from app.models.scoring_snapshot import ScoringSnapshot, SnapshotLevel, SnapshotTier
-from app.db.base import async_session_maker
 
 
 @dataclass
@@ -36,11 +43,11 @@ class ScheduledJob:
     coroutine_func: Callable[[], Coroutine[Any, Any, Any]]
     interval_seconds: int
     enabled: bool = True
-    last_run: Optional[datetime] = None
-    next_run: Optional[datetime] = None
+    last_run: datetime | None = None
+    next_run: datetime | None = None
     run_count: int = 0
     error_count: int = 0
-    _task: Optional[asyncio.Task] = field(default=None, repr=False)
+    _task: asyncio.Task | None = field(default=None, repr=False)
 
 
 class SchedulerService(BaseService):
@@ -61,9 +68,9 @@ class SchedulerService(BaseService):
                  backup_service=None,
                  news_service=None):
         super().__init__(service_name)
-        self._jobs: Dict[str, ScheduledJob] = {}
+        self._jobs: dict[str, ScheduledJob] = {}
         self._running: bool = False
-        self._main_task: Optional[asyncio.Task] = None
+        self._main_task: asyncio.Task | None = None
         self.settings = get_settings()
         self.scoring_service = scoring_service
         self.metrics_service = metrics_service
@@ -161,7 +168,7 @@ class SchedulerService(BaseService):
             tier: SnapshotTier,
             effective_at: datetime,
             market: str = "NASDAQ",
-        ) -> Optional[str]:
+        ) -> str | None:
             """Return skip reason if this tier+effective_at already has rows."""
             async with async_session_maker() as session:
                 probe_q = (
@@ -213,13 +220,13 @@ class SchedulerService(BaseService):
                         and_(
                             ScoreHistory.date == target_date,
                             Asset.market == market,
-                            Asset.active == True,
+                            Asset.active,
                         )
                     )
                 )
                 sh_rows = (await session.execute(sh_q)).all()
 
-                snapshot_rows: List[Dict[str, Any]] = []
+                snapshot_rows: list[dict[str, Any]] = []
 
                 def _append(
                     asset_id,
@@ -241,7 +248,7 @@ class SchedulerService(BaseService):
                         "score_change": None,
                         "industry": None,
                         "company_id": None,
-                        "timestamp": datetime.now(timezone.utc),
+                        "timestamp": datetime.now(UTC),
                         "extra_fields": {},
                     })
 
@@ -301,11 +308,13 @@ class SchedulerService(BaseService):
                 return total_inserted
 
         async def daily_score_recalculation_job():
-            from app.services.analysis.score_history_pipeline import ScoreHistoryPipeline
-            now_utc = datetime.now(timezone.utc)
+            from app.services.analysis.score_history_pipeline import (
+                ScoreHistoryPipeline,
+            )
+            now_utc = datetime.now(UTC)
             effective_day = _floor_to_day(now_utc)
             target_date = effective_day.date()
-            result_base: Dict[str, Any] = {
+            result_base: dict[str, Any] = {
                 "tier": SnapshotTier.DAILY.value,
                 "effective_at": effective_day.isoformat(),
                 "date": target_date.isoformat(),
@@ -321,7 +330,7 @@ class SchedulerService(BaseService):
 
             pipeline = ScoreHistoryPipeline()
             await pipeline.initialize()
-            t0 = datetime.now(timezone.utc)
+            t0 = datetime.now(UTC)
             try:
                 pipe_result = await pipeline.compute_and_persist_v2(
                     market="NASDAQ",
@@ -358,7 +367,7 @@ class SchedulerService(BaseService):
                 else:
                     result_base["paired_hourly_skip_reason"] = paired_hourly_skip
 
-                t1 = datetime.now(timezone.utc)
+                t1 = datetime.now(UTC)
                 result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
                 self.logger.info(
                     "DailyScoreRecalculation complete: %d snapshots, paired_hourly=%d, duration=%dms",
@@ -381,12 +390,14 @@ class SchedulerService(BaseService):
 
         async def hourly_score_recompute_job():
             """Full 4-level hierarchy scoring, tier=hourly, effective_at=floor_1h(UTC)."""
-            from app.services.analysis.score_history_pipeline import ScoreHistoryPipeline
-            now_utc = datetime.now(timezone.utc)
+            from app.services.analysis.score_history_pipeline import (
+                ScoreHistoryPipeline,
+            )
+            now_utc = datetime.now(UTC)
             effective_hour = _floor_to_hour(now_utc)
             target_date = effective_hour.date()
 
-            result_base: Dict[str, Any] = {
+            result_base: dict[str, Any] = {
                 "tier": SnapshotTier.HOURLY.value,
                 "effective_at": effective_hour.isoformat(),
                 "date": target_date.isoformat(),
@@ -401,7 +412,7 @@ class SchedulerService(BaseService):
 
             pipeline = ScoreHistoryPipeline()
             await pipeline.initialize()
-            t0 = datetime.now(timezone.utc)
+            t0 = datetime.now(UTC)
             try:
                 # We compute through the v2 engine (cross-sectional ranks are
                 # market-relative so still valid on hourly cadence).
@@ -417,7 +428,7 @@ class SchedulerService(BaseService):
                     market="NASDAQ",
                 )
                 result_base["written"] = written_snap
-                t1 = datetime.now(timezone.utc)
+                t1 = datetime.now(UTC)
                 result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
                 self.logger.info(
                     "HourlyScoreRecompute complete: %d snapshots, duration=%dms",
@@ -444,16 +455,16 @@ class SchedulerService(BaseService):
             cleanly if the market is closed using a lightweight clock check.
             """
             from app.services.analysis.technical_indicators import (
-                compute_all_indicators,
                 Candle,
+                compute_all_indicators,
             )
 
-            now_utc = datetime.now(timezone.utc)
+            now_utc = datetime.now(UTC)
             # Lightweight NYSE/NASDAQ market hours check (9:30-16:00 ET => 13:30-20:00 UTC in winter).
             # We still run outside hours so that pre/post/weekend pipelines produce
             # stable rows; the TemporalSnapshotService weights by age.
             effective_5m = now_utc.replace(minute=(now_utc.minute // 5) * 5, second=0, microsecond=0)
-            result_base: Dict[str, Any] = {
+            result_base: dict[str, Any] = {
                 "interval": "5m",
                 "effective_at": effective_5m.isoformat(),
                 "written_rows": 0,
@@ -461,7 +472,7 @@ class SchedulerService(BaseService):
                 "duration_ms": 0,
                 "skip_reason": None,
             }
-            t0 = datetime.now(timezone.utc)
+            t0 = datetime.now(UTC)
 
             try:
                 async with async_session_maker() as session:
@@ -469,7 +480,7 @@ class SchedulerService(BaseService):
                         select(Asset.id, Asset.symbol, Asset.market, Asset.asset_class)
                         .where(
                             and_(
-                                Asset.active == True,
+                                Asset.active,
                                 Asset.market == "NASDAQ",
                                 Asset.asset_class.in_(["EQUITY", "ETF"]),
                             )
@@ -482,7 +493,7 @@ class SchedulerService(BaseService):
                     result_base["skip_reason"] = "no_active_assets"
                     return result_base
 
-                rows_to_write: List[Dict[str, Any]] = []
+                rows_to_write: list[dict[str, Any]] = []
                 for asset_id, symbol, market, asset_class in assets:
                     try:
                         # Fetch latest ~120 1-minute candles (or 1d fallback).
@@ -502,7 +513,7 @@ class SchedulerService(BaseService):
                         if len(candle_rows) < 20:
                             result_base["skipped_assets"] += 1
                             continue
-                        candles: List[Candle] = []
+                        candles: list[Candle] = []
                         for c in reversed(candle_rows):
                             try:
                                 candles.append(Candle(
@@ -579,7 +590,7 @@ class SchedulerService(BaseService):
                             result_base["written_rows"] += int(getattr(res, "rowcount", len(chunk)))
                         await session.commit()
 
-                t1 = datetime.now(timezone.utc)
+                t1 = datetime.now(UTC)
                 result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
                 self.logger.info(
                     "FastIndicators5m complete: written=%d, skipped=%d, duration=%dms",
@@ -590,7 +601,7 @@ class SchedulerService(BaseService):
                 self.logger.error(f"FastIndicators5m failed: {e}", exc_info=True)
                 result_base["status"] = "error"
                 result_base["error"] = str(e)
-                t1 = datetime.now(timezone.utc)
+                t1 = datetime.now(UTC)
                 result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
                 return result_base
 
@@ -609,16 +620,16 @@ class SchedulerService(BaseService):
                 CoefficientLearningService,
             )
 
-            now_utc = datetime.now(timezone.utc)
+            now_utc = datetime.now(UTC)
             effective_day = _floor_to_day(now_utc)
-            result_base: Dict[str, Any] = {
+            result_base: dict[str, Any] = {
                 "tier": SnapshotTier.DAILY.value,
                 "effective_at": effective_day.isoformat(),
                 "written": 0,
                 "duration_ms": 0,
                 "skip_reason": None,
             }
-            t0 = datetime.now(timezone.utc)
+            t0 = datetime.now(UTC)
 
             try:
                 service = CoefficientLearningService()
@@ -656,7 +667,7 @@ class SchedulerService(BaseService):
                     return result_base
 
                 # Normalize coefficients_result into a list of weight rows.
-                weights: List[Dict[str, Any]] = []
+                weights: list[dict[str, Any]] = []
                 if isinstance(coefficients_result, dict):
                     # Best-effort: accept common coefficient payload shapes.
                     for lvl_key in ("dimensions", "dimension_weights", "dimension", "sub_dimensions", "aspects", "sub_aspects"):
@@ -709,7 +720,7 @@ class SchedulerService(BaseService):
                                     captured_at=effective_day,
                                     context=context_json,
                                     score=None,
-                                    created_at=datetime.now(timezone.utc),
+                                    created_at=datetime.now(UTC),
                                 )
                                 session.add(ch_row)
                                 await session.commit()
@@ -726,7 +737,7 @@ class SchedulerService(BaseService):
                     if asyncio.iscoroutine(sdn_coro):
                         await sdn_coro
 
-                t1 = datetime.now(timezone.utc)
+                t1 = datetime.now(UTC)
                 result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
                 self.logger.info(
                     "CoefficientSnapshotDaily complete: written=%d, duration=%dms",
@@ -737,7 +748,7 @@ class SchedulerService(BaseService):
                 self.logger.error(f"CoefficientSnapshotDaily failed: {e}", exc_info=True)
                 result_base["status"] = "error"
                 result_base["error"] = str(e)
-                t1 = datetime.now(timezone.utc)
+                t1 = datetime.now(UTC)
                 result_base["duration_ms"] = int((t1 - t0).total_seconds() * 1000)
                 return result_base
 
@@ -801,21 +812,21 @@ class SchedulerService(BaseService):
         async def db_watchdog_job():
             from app.services.core.database_service import DatabaseService
             from app.services.core.dependency_container import get_global_container
-            
+
             container = get_global_container()
             if not container:
                 return {"status": "skipped", "reason": "no global container"}
-                
+
             db_service = container.get("database_service")
             if not isinstance(db_service, DatabaseService):
                 return {"status": "skipped", "reason": "database service not found"}
-                
+
             health = await db_service.health_check()
             if health["status"] != "healthy":
                 self.logger.warning("Database connection lost! Attempting recovery...")
                 success = await db_service.reconnect()
                 return {"status": "recovered" if success else "failed", "health": health}
-            
+
             return {"status": "healthy", "health": health}
 
         self.register_job(
@@ -957,7 +968,7 @@ class SchedulerService(BaseService):
     # Backfill helpers
     # ------------------------------------------------------------------ #
 
-    async def _backfill_news(self, years: int = 5) -> Dict[str, Any]:
+    async def _backfill_news(self, years: int = 5) -> dict[str, Any]:
         """Backfill historical news data for active assets.
 
         Uses the NewsService (which wraps yfinance + multi-source fetchers)
@@ -965,7 +976,7 @@ class SchedulerService(BaseService):
         """
         from app.db.base import async_session_maker
 
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=years * 365)
 
         results = {"news_inserted": 0, "errors": []}
@@ -976,7 +987,7 @@ class SchedulerService(BaseService):
                     select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
                     .where(
                         and_(
-                            Asset.active == True,
+                            Asset.active,
                             Asset.market == "NASDAQ",
                             Asset.asset_class.in_(["EQUITY", "ETF"]),
                         )
@@ -1006,7 +1017,7 @@ class SchedulerService(BaseService):
                             results["news_inserted"] += len(news_items)
 
                 except Exception as e:
-                    results["errors"].append(f"{symbol}: {str(e)}")
+                    results["errors"].append(f"{symbol}: {e!s}")
                     continue
 
         except Exception as e:
@@ -1017,11 +1028,11 @@ class SchedulerService(BaseService):
 
     async def _fetch_historical_news(
         self, symbol: str, asset_id: str, start: datetime, end: datetime
-    ) -> List[News]:
+    ) -> list[News]:
         """Fetch historical news for a symbol from yfinance and store as News objects."""
         import yfinance as yf
 
-        news_items: List[News] = []
+        news_items: list[News] = []
         try:
             ticker = yf.Ticker(symbol)
             raw_news = ticker.news or []
@@ -1091,14 +1102,15 @@ asyncio.run(main())
     async def _generate_signals(self) -> dict:
         """Generate ML signals for active assets."""
         try:
-            from app.db.base import async_session_maker
-            from app.models.models import Asset, MLSignal, IntlPriceCandle
             from decimal import Decimal
+
+            from app.db.base import async_session_maker
+            from app.models.models import Asset, IntlPriceCandle, MLSignal
 
             async with async_session_maker() as session:
                 result = await session.execute(
                     select(Asset.id, Asset.symbol)
-                    .where(Asset.active == True)
+                    .where(Asset.active)
                     .where(Asset.asset_class == "EQUITY")
                     .limit(100)
                 )
@@ -1135,7 +1147,7 @@ asyncio.run(main())
                                 technical_factors={"rsi": round(rsi, 2)},
                                 ml_model_version="auto_signal_v1",
                                 model_name="AutoSignalGenerator",
-                                valid_until=datetime.now(timezone.utc) + timedelta(days=1),
+                                valid_until=datetime.now(UTC) + timedelta(days=1),
                                 is_active=True,
                             )
                             session.add(signal)
@@ -1147,7 +1159,7 @@ asyncio.run(main())
             return {"status": "error", "error": str(e)}
 
     @staticmethod
-    def _compute_rsi(prices: list, period: int = 14) -> Optional[float]:
+    def _compute_rsi(prices: list, period: int = 14) -> float | None:
         if len(prices) < period + 1:
             return None
         gains = []
@@ -1168,7 +1180,7 @@ asyncio.run(main())
         try:
             backup_path = self.settings.BACKUP_PATH
             os.makedirs(backup_path, exist_ok=True)
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             backup_file = os.path.join(backup_path, f"backup_{timestamp}.sql")
 
             db_url = self.settings.DATABASE_URL
@@ -1218,7 +1230,7 @@ asyncio.run(main())
                 return {"status": "skipped", "reason": "no logs directory"}
 
             retention_days = getattr(self.settings, 'LOG_RETENTION_DAYS', 30)
-            cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+            cutoff = datetime.now(UTC) - timedelta(days=retention_days)
             cleaned = 0
 
             for filename in os.listdir(log_path):
@@ -1237,13 +1249,14 @@ asyncio.run(main())
     # Real-time data refresh helpers
     # ------------------------------------------------------------------ #
 
-    async def _refresh_news(self) -> Dict[str, Any]:
+    async def _refresh_news(self) -> dict[str, Any]:
         """Fetch latest news for active assets (incremental, last 24 hours)."""
-        from app.db.base import async_session_maker
-        from app.models.models import Asset, News
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-        end_date = datetime.now(timezone.utc)
+        from app.db.base import async_session_maker
+        from app.models.models import Asset, News
+
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(hours=24)
 
         results = {"news_inserted": 0, "errors": []}
@@ -1254,7 +1267,7 @@ asyncio.run(main())
                     select(Asset.id, Asset.symbol, Asset.asset_class, Asset.market)
                     .where(
                         and_(
-                            Asset.active == True,
+                            Asset.active,
                             Asset.market == "NASDAQ",
                             Asset.asset_class.in_(["EQUITY", "ETF"]),
                         )
@@ -1310,7 +1323,7 @@ asyncio.run(main())
                             results["news_inserted"] += len(news_records)
 
                 except Exception as e:
-                    results["errors"].append(f"{symbol}: {str(e)}")
+                    results["errors"].append(f"{symbol}: {e!s}")
                     continue
 
         except Exception as e:
@@ -1319,12 +1332,14 @@ asyncio.run(main())
         self.logger.info(f"News refresh complete: {results}")
         return results
 
-    async def _refresh_fundamentals(self) -> Dict[str, Any]:
+    async def _refresh_fundamentals(self) -> dict[str, Any]:
         """Refresh fundamental data (financial statements and ratios) for active equity assets."""
-        from app.db.base import async_session_maker
-        from app.models.models import Asset, FundamentalRatio, FinancialStatement
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
         from decimal import Decimal
+
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        from app.db.base import async_session_maker
+        from app.models.models import Asset, FundamentalRatio
 
         results = {"ratios_updated": 0, "statements_updated": 0, "errors": []}
 
@@ -1332,7 +1347,7 @@ asyncio.run(main())
             async with async_session_maker() as session:
                 assets_result = await session.execute(
                     select(Asset.id, Asset.symbol)
-                    .where(Asset.active == True)
+                    .where(Asset.active)
                     .where(Asset.asset_class == "EQUITY")
                     .limit(50)
                 )
@@ -1348,7 +1363,7 @@ asyncio.run(main())
                     if not info:
                         continue
 
-                    current_price = info.get("market_cap", 0) / info.get("sharesOutstanding", 1) if info.get("sharesOutstanding") else None
+                    info.get("market_cap", 0) / info.get("sharesOutstanding", 1) if info.get("sharesOutstanding") else None
                     eps = info.get("trailingEps")
                     pe = info.get("trailingPE")
                     pb = info.get("priceToBook")
@@ -1398,7 +1413,7 @@ asyncio.run(main())
                         results["ratios_updated"] += 1
 
                 except Exception as e:
-                    results["errors"].append(f"{symbol}: {str(e)}")
+                    results["errors"].append(f"{symbol}: {e!s}")
                     continue
 
         except Exception as e:
@@ -1407,12 +1422,14 @@ asyncio.run(main())
         self.logger.info(f"Fundamental data refresh complete: {results}")
         return results
 
-    async def _refresh_macro_data(self) -> Dict[str, Any]:
+    async def _refresh_macro_data(self) -> dict[str, Any]:
         """Refresh macro indicators and currency rates."""
-        from app.db.base import async_session_maker
-        from app.models.models import MacroIndicator, CurrencyRate
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
         from decimal import Decimal
+
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        from app.db.base import async_session_maker
+        from app.models.models import CurrencyRate, MacroIndicator
 
         results = {"indicators_updated": 0, "currency_rates_updated": 0, "errors": []}
 
@@ -1445,7 +1462,7 @@ asyncio.run(main())
                 await session.commit()
 
         except Exception as e:
-            results["errors"].append(f"Macro indicators: {str(e)}")
+            results["errors"].append(f"Macro indicators: {e!s}")
 
         try:
             currency_pairs = [
@@ -1475,17 +1492,19 @@ asyncio.run(main())
                 await session.commit()
 
         except Exception as e:
-            results["errors"].append(f"Currency rates: {str(e)}")
+            results["errors"].append(f"Currency rates: {e!s}")
 
         self.logger.info(f"Macro data refresh complete: {results}")
         return results
 
-    async def _refresh_master_data(self) -> Dict[str, Any]:
+    async def _refresh_master_data(self) -> dict[str, Any]:
         """Refresh market indices."""
+        from decimal import Decimal
+
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
         from app.db.base import async_session_maker
         from app.models.models import MarketIndex
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-        from decimal import Decimal
 
         results = {"indices_updated": 0, "errors": []}
 
@@ -1514,7 +1533,7 @@ asyncio.run(main())
                             "current_value": current_value,
                             "change_percent": Decimal(str(round(change_pct, 4))),
                             "volume": Decimal(str(latest["Volume"])),
-                            "last_updated": datetime.now(timezone.utc),
+                            "last_updated": datetime.now(UTC),
                             "is_active": True,
                         }
 
@@ -1533,22 +1552,23 @@ asyncio.run(main())
                             await session.commit()
                             results["indices_updated"] += 1
                 except Exception as e:
-                    results["errors"].append(f"{idx['symbol']}: {str(e)}")
+                    results["errors"].append(f"{idx['symbol']}: {e!s}")
                     continue
 
         except Exception as e:
-            results["errors"].append(f"Market indices: {str(e)}")
+            results["errors"].append(f"Market indices: {e!s}")
 
         self.logger.info(f"Master data refresh complete: {results}")
         return results
 
-    async def _refresh_intl_candles(self) -> Dict[str, Any]:
+    async def _refresh_intl_candles(self) -> dict[str, Any]:
         """Refresh international price candles for active equity assets."""
-        from app.db.base import async_session_maker
-        from app.models.models import Asset, IntlPriceCandle
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-        end_date = datetime.now(timezone.utc)
+        from app.db.base import async_session_maker
+        from app.models.models import Asset, IntlPriceCandle
+
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=7)
 
         results = {"candles_inserted": 0, "errors": []}
@@ -1557,7 +1577,7 @@ asyncio.run(main())
             async with async_session_maker() as session:
                 assets_result = await session.execute(
                     select(Asset.id, Asset.symbol)
-                    .where(Asset.active == True)
+                    .where(Asset.active)
                     .where(Asset.asset_class == "EQUITY")
                     .limit(100)
                 )
@@ -1583,8 +1603,7 @@ asyncio.run(main())
                         low_p = min(open_p, high_p, low_p, close_p)
                         high_p = max(open_p, high_p, low_p, close_p)
                         volume = int(row["Volume"])
-                        if volume < 0:
-                            volume = 0
+                        volume = max(volume, 0)
 
                         candles.append({
                             "asset_id": str(asset_id),
@@ -1625,7 +1644,7 @@ asyncio.run(main())
                             results["candles_inserted"] += len(candles)
 
                 except Exception as e:
-                    results["errors"].append(f"{symbol}: {str(e)}")
+                    results["errors"].append(f"{symbol}: {e!s}")
                     continue
 
         except Exception as e:
@@ -1662,7 +1681,7 @@ asyncio.run(main())
             name=name,
             coroutine_func=coroutine_func,
             interval_seconds=interval_seconds,
-            next_run=datetime.now(timezone.utc),
+            next_run=datetime.now(UTC),
         )
         self._jobs[name] = job
         self.logger.info(f"Registered job: {name} (interval={interval_seconds}s)")
@@ -1677,35 +1696,35 @@ asyncio.run(main())
             return True
         return False
 
-    async def run_job_now(self, name: str) -> Dict[str, Any]:
+    async def run_job_now(self, name: str) -> dict[str, Any]:
         if name not in self._jobs:
             raise ValueError(f"Job not found: {name}")
         job = self._jobs[name]
         return await self._execute_job(job)
 
-    async def _execute_job(self, job: ScheduledJob) -> Dict[str, Any]:
-        start = datetime.now(timezone.utc)
+    async def _execute_job(self, job: ScheduledJob) -> dict[str, Any]:
+        start = datetime.now(UTC)
         try:
             result = await job.coroutine_func()
-            duration_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
-            job.last_run = datetime.now(timezone.utc)
+            duration_ms = (datetime.now(UTC) - start).total_seconds() * 1000
+            job.last_run = datetime.now(UTC)
             job.run_count += 1
-            job.next_run = datetime.now(timezone.utc) + timedelta(seconds=job.interval_seconds)
+            job.next_run = datetime.now(UTC) + timedelta(seconds=job.interval_seconds)
             self.logger.info(f"Job '{job.name}' completed in {duration_ms:.1f}ms")
             return {"status": "success", "job": job.name, "duration_ms": duration_ms, "result": result}
         except Exception as exc:
-            duration_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
-            job.last_run = datetime.now(timezone.utc)
+            duration_ms = (datetime.now(UTC) - start).total_seconds() * 1000
+            job.last_run = datetime.now(UTC)
             job.run_count += 1
             job.error_count += 1
-            job.next_run = datetime.now(timezone.utc) + timedelta(seconds=job.interval_seconds)
+            job.next_run = datetime.now(UTC) + timedelta(seconds=job.interval_seconds)
             self.logger.error(f"Job '{job.name}' failed: {exc}", exc_info=True)
             return {"status": "error", "job": job.name, "error": str(exc), "duration_ms": duration_ms}
 
     async def _scheduler_loop(self) -> None:
         self.logger.info("Scheduler loop started")
         while self._running:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             for job in list(self._jobs.values()):
                 if not job.enabled:
                     continue
@@ -1713,7 +1732,7 @@ asyncio.run(main())
                     job._task = asyncio.create_task(self._execute_job(job))
             await asyncio.sleep(1)
 
-    def get_job_status(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_job_status(self, name: str) -> dict[str, Any] | None:
         if name not in self._jobs:
             return None
         job = self._jobs[name]
@@ -1727,14 +1746,14 @@ asyncio.run(main())
             "error_count": job.error_count,
         }
 
-    def list_jobs(self) -> List[Dict[str, Any]]:
+    def list_jobs(self) -> list[dict[str, Any]]:
         return [self.get_job_status(name) for name in self._jobs]
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         return {
             "service": self.service_name,
             "status": "healthy" if self._running else "stopped",
             "jobs_registered": len(self._jobs),
             "jobs_running": sum(1 for j in self._jobs.values() if j.enabled),
-            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(UTC) - self.created_at).total_seconds(),
         }

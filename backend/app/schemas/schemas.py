@@ -1,33 +1,34 @@
 """Pydantic Schemas for API"""
 
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List, Any, Dict
-from datetime import datetime
-from enum import Enum
-from decimal import Decimal
 import uuid
+from datetime import datetime
+from decimal import Decimal
+from enum import StrEnum
+from typing import Any
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 # Enums
 # Only instruments that participate in the formation of the Nasdaq index
 # are allowed. Crypto, forex, commodities, bonds, and non-Nasdaq equities
 # (NYSE, etc.) are intentionally excluded.
-class AssetClassEnum(str, Enum):
+class AssetClassEnum(StrEnum):
     EQUITY = "EQUITY"
     ETF = "ETF"
 
 
-class MarketEnum(str, Enum):
+class MarketEnum(StrEnum):
     NASDAQ = "NASDAQ"
 
 
-class ScoreTierEnum(str, Enum):
+class ScoreTierEnum(StrEnum):
     STRONG = "STRONG"
     MODERATE = "MODERATE"
     WEAK = "WEAK"
 
 
-class SignalTypeEnum(str, Enum):
+class SignalTypeEnum(StrEnum):
     STRONG_BULLISH = "STRONG_BULLISH"
     BULLISH = "BULLISH"
     NEUTRAL = "NEUTRAL"
@@ -35,7 +36,7 @@ class SignalTypeEnum(str, Enum):
     STRONG_BEARISH = "STRONG_BEARISH"
 
 
-class TimeframeEnum(str, Enum):
+class TimeframeEnum(StrEnum):
     ONE_MIN = "1m"
     FIVE_MIN = "5m"
     FIFTEEN_MIN = "15m"
@@ -52,9 +53,9 @@ class AssetBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     asset_class: AssetClassEnum
     market: MarketEnum
-    sector: Optional[str] = None
-    sub_sector: Optional[str] = None
-    country_code: Optional[str] = None
+    sector: str | None = None
+    sub_sector: str | None = None
+    country_code: str | None = None
     currency: str = "IRR"
     active: bool = True
 
@@ -64,17 +65,17 @@ class AssetCreate(AssetBase):
 
 
 class AssetUpdate(BaseModel):
-    name: Optional[str] = None
-    sector: Optional[str] = None
-    sub_sector: Optional[str] = None
-    active: Optional[bool] = None
+    name: str | None = None
+    sector: str | None = None
+    sub_sector: str | None = None
+    active: bool | None = None
 
 
 class AssetResponse(AssetBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -88,8 +89,8 @@ class PriceCandleBase(BaseModel):
     low: Decimal
     close: Decimal
     volume: int
-    turnover: Optional[Decimal] = None
-    transactions: Optional[int] = None
+    turnover: Decimal | None = None
+    transactions: int | None = None
 
 
 class PriceCandleCreate(PriceCandleBase):
@@ -104,7 +105,7 @@ class PriceCandleResponse(PriceCandleBase):
     source: str
     data_quality: str
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -112,9 +113,9 @@ class PriceCandleResponse(PriceCandleBase):
 # ML Signal Schemas (analytics only, no buy/sell/hold classification)
 class MLSignalBase(BaseModel):
     confidence: Decimal = Field(..., ge=0, le=100)
-    expected_return: Optional[Decimal] = None
-    risk_score: Optional[Decimal] = None
-    reasoning: Optional[str] = None
+    expected_return: Decimal | None = None
+    risk_score: Decimal | None = None
+    reasoning: str | None = None
 
 
 class MLSignalCreate(MLSignalBase):
@@ -140,7 +141,7 @@ class MLSignalResponse(MLSignalBase):
 # Portfolio Schemas
 class PortfolioBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     portfolio_type: str = "PERSONAL"
     base_currency: str = "IRR"
 
@@ -150,9 +151,9 @@ class PortfolioCreate(PortfolioBase):
 
 
 class PortfolioUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    portfolio_type: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
+    portfolio_type: str | None = None
 
 
 class PortfolioResponse(PortfolioBase):
@@ -160,7 +161,7 @@ class PortfolioResponse(PortfolioBase):
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -170,9 +171,9 @@ class PositionBase(BaseModel):
     quantity: Decimal = Field(..., gt=0)
     entry_price: Decimal = Field(..., gt=0)
     entry_date: datetime
-    stop_loss: Optional[Decimal] = None
-    take_profit: Optional[Decimal] = None
-    notes: Optional[str] = None
+    stop_loss: Decimal | None = None
+    take_profit: Decimal | None = None
+    notes: str | None = None
 
 
 class PositionCreate(PositionBase):
@@ -180,21 +181,21 @@ class PositionCreate(PositionBase):
 
 
 class PositionUpdate(BaseModel):
-    quantity: Optional[Decimal] = None
-    stop_loss: Optional[Decimal] = None
-    take_profit: Optional[Decimal] = None
-    notes: Optional[str] = None
+    quantity: Decimal | None = None
+    stop_loss: Decimal | None = None
+    take_profit: Decimal | None = None
+    notes: str | None = None
 
 
 class PositionResponse(PositionBase):
     id: uuid.UUID
     asset_id: uuid.UUID
     portfolio_id: uuid.UUID
-    current_price: Optional[Decimal] = None
-    current_value: Optional[Decimal] = None
-    unrealized_pnl: Optional[Decimal] = None
-    unrealized_pnl_pct: Optional[Decimal] = None
-    
+    current_price: Decimal | None = None
+    current_value: Decimal | None = None
+    unrealized_pnl: Decimal | None = None
+    unrealized_pnl_pct: Decimal | None = None
+
     class Config:
         from_attributes = True
 
@@ -203,7 +204,7 @@ class PositionResponse(PositionBase):
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 
 class UserCreate(UserBase):
@@ -211,10 +212,10 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    preferred_language: Optional[str] = None
-    theme: Optional[str] = None
+    email: EmailStr | None = None
+    full_name: str | None = None
+    preferred_language: str | None = None
+    theme: str | None = None
 
 
 class UserResponse(UserBase):
@@ -222,7 +223,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_admin: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -230,15 +231,15 @@ class UserResponse(UserBase):
 # Response Models
 class SuccessResponse(BaseModel):
     status: str = "success"
-    data: Optional[dict] = None
-    message: Optional[str] = None
+    data: dict | None = None
+    message: str | None = None
 
 
 class ErrorResponse(BaseModel):
     status: str = "error"
     error_code: str
     message: str
-    details: Optional[dict] = None
+    details: dict | None = None
 
 
 class PaginationParams(BaseModel):
@@ -247,11 +248,11 @@ class PaginationParams(BaseModel):
 
 
 class PaginatedResponse(BaseModel):
-    data: List[dict]
+    data: list[dict]
     total: int
     skip: int
     limit: int
-    
+
     class Config:
         from_attributes = True
 
@@ -287,8 +288,8 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
-    user_id: Optional[str] = None
+    username: str | None = None
+    user_id: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -300,7 +301,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=3)
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 
 # Password Reset Schemas
@@ -314,7 +315,7 @@ class PasswordResetVerifyRequest(BaseModel):
 
 class PasswordResetVerifyResponse(BaseModel):
     valid: bool
-    email_hint: Optional[str] = None
+    email_hint: str | None = None
 
 
 class PasswordResetConfirm(BaseModel):
@@ -329,18 +330,18 @@ class PasswordResetResponse(BaseModel):
 
 # User Profile Schemas
 class UserProfileUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    preferred_language: Optional[str] = None
-    theme: Optional[str] = None
-    notifications_enabled: Optional[bool] = None
+    email: EmailStr | None = None
+    full_name: str | None = None
+    preferred_language: str | None = None
+    theme: str | None = None
+    notifications_enabled: bool | None = None
 
 
 # Watchlist Schemas
 class WatchlistItemCreate(BaseModel):
     asset_id: uuid.UUID
-    note: Optional[str] = None
-    alert_threshold_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    note: str | None = None
+    alert_threshold_pct: Decimal | None = Field(None, ge=0, le=100)
 
 
 class AssetSummary(BaseModel):
@@ -356,10 +357,10 @@ class WatchlistItemResponse(BaseModel):
     id: uuid.UUID
     watchlist_id: uuid.UUID
     asset_id: uuid.UUID
-    note: Optional[str] = None
-    alert_threshold_pct: Optional[Decimal] = None
+    note: str | None = None
+    alert_threshold_pct: Decimal | None = None
     created_at: datetime
-    asset: Optional[AssetSummary] = None
+    asset: AssetSummary | None = None
 
     class Config:
         from_attributes = True
@@ -367,23 +368,23 @@ class WatchlistItemResponse(BaseModel):
 
 class WatchlistCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     is_default: bool = False
 
 
 class WatchlistUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    is_default: Optional[bool] = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    is_default: bool | None = None
 
 
 class WatchlistResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     is_default: bool
-    items: List[WatchlistItemResponse] = []
+    items: list[WatchlistItemResponse] = []
     created_at: datetime
     updated_at: datetime
 
@@ -392,8 +393,8 @@ class WatchlistResponse(BaseModel):
 
 
 class WatchlistItemUpdate(BaseModel):
-    note: Optional[str] = None
-    alert_threshold_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    note: str | None = None
+    alert_threshold_pct: Decimal | None = Field(None, ge=0, le=100)
 
 
 # Notification Schemas
@@ -408,7 +409,7 @@ class NotificationResponse(BaseModel):
     read: bool
     metadata: dict = Field(default={}, validation_alias="extra", serialization_alias="metadata")
     created_at: datetime
-    read_at: Optional[datetime] = None
+    read_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -427,59 +428,59 @@ class PreferenceResponse(BaseModel):
 
 class FundamentalAnalysisRequest(BaseModel):
     ticker: str = Field(..., min_length=1, max_length=50)
-    financials: Optional[Dict[str, Any]] = Field(default=None)
+    financials: dict[str, Any] | None = Field(default=None)
 
 
 class ScoringAnalysisRequest(BaseModel):
     ticker: str = Field(..., min_length=1, max_length=50)
-    fundamental: Optional[Dict[str, Any]] = None
-    technical: Optional[Dict[str, Any]] = None
-    sentiment: Optional[Dict[str, Any]] = None
-    risk: Optional[Dict[str, Any]] = None
-    macro: Optional[Dict[str, Any]] = None
-    ai: Optional[Dict[str, Any]] = None
-    growth: Optional[Dict[str, Any]] = Field(default=None, alias="growth")
-    momentum: Optional[Dict[str, Any]] = Field(default=None, alias="momentum")
+    fundamental: dict[str, Any] | None = None
+    technical: dict[str, Any] | None = None
+    sentiment: dict[str, Any] | None = None
+    risk: dict[str, Any] | None = None
+    macro: dict[str, Any] | None = None
+    ai: dict[str, Any] | None = None
+    growth: dict[str, Any] | None = Field(default=None, alias="growth")
+    momentum: dict[str, Any] | None = Field(default=None, alias="momentum")
 
     class Config:
         populate_by_name = True
 
 
 class RecommendationRequest(BaseModel):
-    ticker: Optional[str] = None
-    market: Optional[str] = None
-    sector: Optional[str] = None
-    asset_class: Optional[str] = None
-    risk_tolerance: Optional[str] = None
-    investment_horizon: Optional[int] = None
-    budget: Optional[Decimal] = None
+    ticker: str | None = None
+    market: str | None = None
+    sector: str | None = None
+    asset_class: str | None = None
+    risk_tolerance: str | None = None
+    investment_horizon: int | None = None
+    budget: Decimal | None = None
 
 
 class OptimizeRequest(BaseModel):
-    assets: List[Dict[str, Any]] = Field(..., min_length=1)
-    risk_tolerance: Optional[str] = None
-    target_return: Optional[Decimal] = None
-    constraints: Optional[Dict[str, Any]] = None
+    assets: list[dict[str, Any]] = Field(..., min_length=1)
+    risk_tolerance: str | None = None
+    target_return: Decimal | None = None
+    constraints: dict[str, Any] | None = None
 
 
 class ForecastRequest(BaseModel):
     ticker: str = Field(..., min_length=1, max_length=50)
     horizon: int = Field(default=30, ge=1, le=365)
-    model: Optional[str] = None
+    model: str | None = None
 
 
 class ScreenRequest(BaseModel):
-    criteria: Dict[str, Any] = Field(default_factory=dict)
-    universe: Optional[List[Dict[str, Any]]] = None
-    market: Optional[str] = None
+    criteria: dict[str, Any] = Field(default_factory=dict)
+    universe: list[dict[str, Any]] | None = None
+    market: str | None = None
 
 
 class CompareRequest(BaseModel):
-    symbols: List[Dict[str, Any]] = Field(..., min_length=1)
+    symbols: list[dict[str, Any]] = Field(..., min_length=1)
 
 
 class CorrelationRequest(BaseModel):
-    returns_map: Dict[str, List[float]] = Field(..., min_length=1)
+    returns_map: dict[str, list[float]] = Field(..., min_length=1)
     high_threshold: float = Field(default=0.7, ge=-1, le=1)
     low_threshold: float = Field(default=-0.7, ge=-1, le=1)
 
@@ -488,9 +489,9 @@ class CalendarEventCreate(BaseModel):
     date: str = Field(..., description="ISO date (YYYY-MM-DD)")
     type: str = Field(..., min_length=1, max_length=50)
     title: str = Field(..., min_length=1, max_length=255)
-    symbol: Optional[str] = None
-    description: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    symbol: str | None = None
+    description: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 # ===========================================================================
@@ -512,7 +513,7 @@ class RealtimeQuoteResponse(BaseModel):
     freshness_label: str
     is_delayed: bool
     data_source: str
-    adjusted_close: Optional[float] = None
+    adjusted_close: float | None = None
 
 
 class HistoricalCandleResponse(BaseModel):
@@ -523,16 +524,16 @@ class HistoricalCandleResponse(BaseModel):
     close: float
     adjusted_close: float
     volume: int
-    split_ratio: Optional[float] = None
+    split_ratio: float | None = None
     source: str = "yfinance"
 
 
 class HistoricalDataResponse(BaseModel):
     symbol: str
     interval: str
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    candles: List[HistoricalCandleResponse]
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    candles: list[HistoricalCandleResponse]
     data_source: str
     fetched_at: datetime
 
@@ -540,7 +541,7 @@ class HistoricalDataResponse(BaseModel):
 class IntradayDataResponse(BaseModel):
     symbol: str
     interval: str
-    candles: List[HistoricalCandleResponse]
+    candles: list[HistoricalCandleResponse]
     market_status: str
     freshness_label: str
     data_source: str
@@ -550,9 +551,9 @@ class IntradayDataResponse(BaseModel):
 class DataProviderHealthResponse(BaseModel):
     provider: str
     status: str
-    last_successful_fetch: Optional[datetime] = None
-    last_error: Optional[str] = None
-    latency_ms: Optional[float] = None
-    details: Optional[Dict[str, Any]] = None
+    last_successful_fetch: datetime | None = None
+    last_error: str | None = None
+    latency_ms: float | None = None
+    details: dict[str, Any] | None = None
 
 

@@ -18,34 +18,37 @@ Services for market and financial analysis:
 - MetricTaxonomyService: Unified metric taxonomy service
 """
 
-from .scoring_service import ScoringService
-from .technical_service import TechnicalAnalysisService
-from .fundamental_service import FundamentalAnalysisService
-from .risk_service import RiskAnalysisService
-from .momentum_service import MomentumService
-from .volatility_service import VolatilityService
-from .structural_break_service import StructuralBreakDetectionService
+from app.services.system.regime_aware_retention_service import (
+    RegimeAwareRetentionService,
+)
+
 from .behavioral_economics_service import BehavioralEconomicsService
-from .regime_compression_service import HistoricalRegimeCompressionService
-from .shadow_banking_service import ShadowBankingMetricsService
 from .currency_regime_service import CurrencyRegimeClassifier
 from .exchange_rate_volatility_service import ExchangeRateVolatilityService
+from .fundamental_service import FundamentalAnalysisService
 from .metric_taxonomy_service import MetricTaxonomyService
-from app.services.system.regime_aware_retention_service import RegimeAwareRetentionService
+from .momentum_service import MomentumService
+from .regime_compression_service import HistoricalRegimeCompressionService
+from .risk_service import RiskAnalysisService
+from .scoring_service import ScoringService
+from .shadow_banking_service import ShadowBankingMetricsService
+from .structural_break_service import StructuralBreakDetectionService
+from .technical_service import TechnicalAnalysisService
+from .volatility_service import VolatilityService
 
 __all__ = [
-    "ScoringService",
-    "TechnicalAnalysisService",
-    "FundamentalAnalysisService",
-    "RiskAnalysisService",
-    "MomentumService",
-    "VolatilityService",
-    "StructuralBreakDetectionService",
     "BehavioralEconomicsService",
-    "HistoricalRegimeCompressionService",
-    "ShadowBankingMetricsService",
     "CurrencyRegimeClassifier",
     "ExchangeRateVolatilityService",
-    "RegimeAwareRetentionService",
+    "FundamentalAnalysisService",
+    "HistoricalRegimeCompressionService",
     "MetricTaxonomyService",
+    "MomentumService",
+    "RegimeAwareRetentionService",
+    "RiskAnalysisService",
+    "ScoringService",
+    "ShadowBankingMetricsService",
+    "StructuralBreakDetectionService",
+    "TechnicalAnalysisService",
+    "VolatilityService",
 ]

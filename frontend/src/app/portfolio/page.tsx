@@ -14,7 +14,6 @@ import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 import {
   useLiveData,
   LiveConnectionIndicator,
-  type SSEEvent,
 } from "@/hooks/useLiveData";
 
 import { t } from "@/lib/i18n";
@@ -56,11 +55,11 @@ export default function PortfolioPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [holdings, setHoldings] = useState<AssetRow[]>([]);
-  const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
   const lastQuoteEventRef = useRef<number | null>(null);
+  const [lastQuoteEventTs, setLastQuoteEventTs] = useState<number | null>(null);
 
   const applyQuotePatch = useCallback((symbol: string, price?: number, changePct?: number) => {
     const sym = symbol.toUpperCase();
@@ -82,10 +81,11 @@ export default function PortfolioPage() {
       };
     });
     lastQuoteEventRef.current = now;
+    setLastQuoteEventTs(now);
   }, []);
 
   const handleMarketData = useCallback(
-    (payload: MarketStreamPayload, _event: SSEEvent<MarketStreamPayload>) => {
+    (payload: MarketStreamPayload) => {
       if (payload?.top_movers && Array.isArray(payload.top_movers)) {
         for (const m of payload.top_movers) {
           applyQuotePatch(m.symbol, m.price, m.change_pct);
@@ -123,27 +123,18 @@ export default function PortfolioPage() {
     return anyChange ? next : holdings;
   }, [holdings, liveQuotes]);
 
-  useEffect(() => {
-    if (liveHoldings.length === 0) return;
+  const stats = useMemo(() => {
+    if (liveHoldings.length === 0) return [];
     const totalValue = liveHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
     const totalCost = liveHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
     const totalPnL = totalValue - totalCost;
     const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-    setStats((prev) => {
-      const next = [
-        { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
-        { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
-        { label: t("app.portfolio.symbols_count"), value: String(liveHoldings.length), changePct: 0 },
-        { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
-      ];
-      if (
-        prev.length === next.length &&
-        prev.every((s, i) => s.label === next[i].label && s.value === next[i].value)
-      ) {
-        return prev;
-      }
-      return next;
-    });
+    return [
+      { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+      { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
+      { label: t("app.portfolio.symbols_count"), value: String(liveHoldings.length), changePct: 0 },
+      { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
+    ];
   }, [liveHoldings]);
 
   const loadPortfolio = useCallback(async () => {
@@ -193,30 +184,11 @@ export default function PortfolioPage() {
             .filter((h): h is AssetRow => h !== null);
           
           setHoldings(enrichedHoldings);
-          
-          const totalValue = enrichedHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
-          const totalCost = enrichedHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
-          const totalPnL = totalValue - totalCost;
-          const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-          
-          setStats([
-            { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
-            { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
-            { label: t("app.portfolio.symbols_count"), value: String(enrichedHoldings.length), changePct: 0 },
-            { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
-          ]);
         } else {
           setHoldings([]);
-          setStats([
-            { label: t("app.portfolio.total_value"), value: "$0", changePct: 0 },
-            { label: t("app.portfolio.total_pnl"), value: "$0", changePct: 0 },
-            { label: t("app.portfolio.symbols_count"), value: "0", changePct: 0 },
-            { label: t("app.portfolio.daily_return"), value: "0%", changePct: 0 },
-          ]);
         }
       } else {
         setHoldings([]);
-        setStats([]);
       }
     } catch {
       setError(t("app.portfolio.error_loading"));
@@ -270,7 +242,7 @@ export default function PortfolioPage() {
           <LiveConnectionIndicator
             health={marketLive.connectionHealth}
             dataAgeMs={marketLive.lastDataAgeMs}
-            lastEventTs={lastQuoteEventRef.current}
+            lastEventTs={lastQuoteEventTs}
             label="Quotes"
           />
         </div>

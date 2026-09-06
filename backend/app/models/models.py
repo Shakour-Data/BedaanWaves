@@ -8,19 +8,31 @@ BedaanWaves database design:
 - Fundamental, news, ML, and authentication/security tables.
 """
 
-from sqlalchemy import (
-    Column, String, Integer, Float, DateTime, Boolean, JSON, ForeignKey,
-    BigInteger, Numeric, Index, UniqueConstraint, CheckConstraint, Text, Date, Time,
-    text, ARRAY,
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, declared_attr, validates
-import sqlalchemy as sa
-from datetime import timezone, datetime, date
 import uuid
+from datetime import UTC, datetime
+
+import sqlalchemy as sa
+from sqlalchemy import (
+    ARRAY,
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    Time,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import declared_attr, relationship, validates
 
 from app.db.base import Base
-
 
 # ---------------------------------------------------------------------------
 # Market categorization (for selecting correct candle/orderbook table)
@@ -73,8 +85,8 @@ class Asset(Base):
     meta = Column("metadata", JSONB, default=dict)
 
     # Timestamps
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # Relationships
     ml_signals = relationship("MLSignal", back_populates="asset", cascade="all, delete-orphan")
@@ -136,7 +148,7 @@ class CandleMixin:
     source = Column(String(20), nullable=False)
     data_quality = Column(String(10), default="CONFIRMED")  # CONFIRMED, PROVISIONAL
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @declared_attr
     def asset(cls):
@@ -232,8 +244,8 @@ class MLSignal(Base):
     model_name = Column(String(100))
     model_confidence = Column(Numeric(5, 2))
 
-    generated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    valid_from = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    generated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    valid_from = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     valid_until = Column(DateTime, nullable=False)
     is_active = Column(Boolean, default=True, index=True)
 
@@ -269,8 +281,8 @@ class Portfolio(Base):
     is_public = Column(Boolean, default=False)
     public_token = Column(String(50))
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     positions = relationship("Position", back_populates="portfolio", cascade="all, delete-orphan")
 
@@ -303,8 +315,8 @@ class Position(Base):
     notes = Column(Text)
     tags = Column(JSONB, default=list)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     portfolio = relationship("Portfolio", back_populates="positions")
     asset = relationship("Asset", back_populates="positions")
@@ -335,8 +347,8 @@ class User(Base):
     theme = Column(String(20), default="light")
     notifications_enabled = Column(Boolean, default=True)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     last_login = Column(DateTime)
 
 
@@ -353,7 +365,7 @@ class RefreshToken(Base):
     user_agent = Column(String(512))
     ip_address = Column(String(64))
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     __table_args__ = (Index('idx_refresh_user', 'user_id'),)
 
 
@@ -374,7 +386,7 @@ class PasswordResetToken(Base):
     consumed = Column(Boolean, default=False)
     consumed_at = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     __table_args__ = (Index('idx_password_reset_user', 'user_id'),)
 
 
@@ -391,7 +403,7 @@ class AuditLog(Base):
     details = Column(JSONB, default=dict)
     ip_address = Column(String(64))
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
 
 class Alert(Base):
@@ -410,7 +422,7 @@ class Alert(Base):
     notification_channel = Column(String(20))  # EMAIL, SMS, PUSH, WEBHOOK
 
     is_active = Column(Boolean, default=True, index=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     triggered_at = Column(DateTime)
     triggered_count = Column(Integer, default=0)
 
@@ -425,7 +437,7 @@ class APILog(Base):
     method = Column(String(10), nullable=False)
     status_code = Column(Integer)
     response_time_ms = Column(Integer)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
     __table_args__ = (
         Index('idx_log_endpoint', 'endpoint'),
@@ -447,8 +459,8 @@ class Watchlist(Base):
     description = Column(Text, nullable=True)
     is_default = Column(Boolean, default=False)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     items = relationship(
         "WatchlistItem",
@@ -471,7 +483,7 @@ class WatchlistItem(Base):
     note = Column(Text, nullable=True)
     alert_threshold_pct = Column(Numeric(8, 4), nullable=True)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     watchlist = relationship("Watchlist", back_populates="items")
     asset = relationship("Asset")
@@ -498,7 +510,7 @@ class Notification(Base):
     read = Column(Boolean, default=False, index=True)
     extra = Column("metadata", JSONB, default=dict)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
     read_at = Column(DateTime, nullable=True)
 
     __table_args__ = (
@@ -514,7 +526,7 @@ class UserPreference(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     key = Column(String(100), nullable=False)
     value = Column(JSONB, nullable=True)
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         UniqueConstraint('user_id', 'key', name='uix_user_pref'),
@@ -554,7 +566,7 @@ class CorporateEvent(Base):
     details = Column(JSONB, default=dict)
     description = Column(Text)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class Sector(Base):
@@ -660,7 +672,7 @@ class CompanyLeadership(Base):
     start_date = Column(Date)
     end_date = Column(Date)
     source = Column(String(50), default="SEC")
-    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_company_leadership_asset', 'asset_id'),
@@ -683,7 +695,7 @@ class News(Base):
     published_at = Column(DateTime, index=True)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
     language = Column(String(5), default="fa")
-    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (Index('idx_news_published', 'published_at'),)
 
@@ -699,7 +711,7 @@ class NewsSentiment(Base):
     sentiment_label = Column(String(20))  # POSITIVE / NEGATIVE / NEUTRAL
     sentiment_score = Column(Numeric(5, 2))
     model_version = Column(String(50))
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
 
 class NewsSummary(Base):
@@ -710,7 +722,7 @@ class NewsSummary(Base):
     news_id = Column(UUID(as_uuid=True), ForeignKey("news.id"), nullable=False, index=True)
     summary_text = Column(Text)
     model_version = Column(String(50))
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 # ===========================================================================
@@ -724,7 +736,7 @@ class MLModel(Base):
     name = Column(String(100), nullable=False)
     version = Column(String(50), nullable=False)
     model_type = Column(String(50))  # PREDICTION / PATTERN / ANOMALY / RECOMMEND
-    trained_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    trained_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     metrics = Column(JSONB, default=dict)
     is_active = Column(Boolean, default=True)
     description = Column(Text)
@@ -747,7 +759,7 @@ class MLPrediction(Base):
     upper_bound = Column(Numeric(20, 8))
     confidence = Column(Numeric(5, 2))
 
-    as_of = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    as_of = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
     target_date = Column(DateTime, nullable=False, index=True)
 
     __table_args__ = (Index('idx_ml_pred_asset_target', 'asset_id', 'target_date'),)
@@ -760,7 +772,7 @@ class Anomaly(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
-    detected_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    detected_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
     score = Column(Numeric(10, 4))
     anomaly_type = Column(String(50))  # PRICE_SPIKE / VOLUME_SURGE / ...
     description = Column(Text)
@@ -783,7 +795,7 @@ class ScreeningResult(Base):
     criteria = Column(JSONB, default=dict)
     universe = Column(JSONB, default=list)
     result_count = Column(Integer, default=0)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
 
 # ===========================================================================
@@ -818,8 +830,8 @@ class RawMarketData(Base):
     source_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
 
     # Ingestion metadata
-    ingested_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    ingested_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     ingestion_id = Column(String(100))  # idempotency key
 
 
@@ -889,8 +901,8 @@ class MarketDataSnapshot(Base):
     is_fresh = Column(Boolean, default=True, index=True)
     freshness_score = Column(Numeric(5, 2))  # 0-100
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     asset = relationship("Asset")
 
@@ -909,59 +921,59 @@ class MarketDataSnapshot(Base):
 # ===========================================================================
 class RawPerformanceScore(Base):
     """Raw performance data for ML coefficient learning.
-    
+
     Stores dimension/sub-dimension/aspect/sub-aspect scores and market outcomes
     used to train hierarchical coefficient models.
     """
     __tablename__ = "raw_performance_scores"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Timestamp when data was captured
-    captured_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    
+    captured_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+
     # Asset reference
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
-    
+
     # Market classification (NASDAQ, NYSE, etc.)
     market = Column(String(20), nullable=False, index=True)
-    
+
     # Exchange identifier (NASDAQ, NYSE, etc.)
     exchange = Column(String(50), nullable=False, index=True)
-    
+
     # Performance context/metadata
     context = Column(JSONB, default=dict)  # Market regime, volatility regime, etc.
-    
+
     # Dimension scores (from ScoringService)
     dimension_scores = Column(JSONB, nullable=False)  # {fundamental: 0.8, technical: 0.7, ...}
     sub_dimension_scores = Column(JSONB, nullable=False)  # {fundamental_price_history: 0.9, ...}
     aspect_scores = Column(JSONB, nullable=False)  # {fundamental_aspect_1: 0.85, ...}
     sub_aspect_scores = Column(JSONB, nullable=False)  # Detailed scores
-    
+
     # Target performance metrics (future period returns)
     target_return = Column(Numeric(20, 8))  # Next period return
     target_volatility = Column(Numeric(10, 6))  # Future realized volatility
     target_sharpe = Column(Numeric(8, 4))  # Future Sharpe ratio
-    
+
     # Market-specific target metrics
     target_price_change = Column(Numeric(10, 6))  # For all markets
     target_volume_change = Column(Numeric(10, 4))  # Volume change
     target_market_sentiment = Column(Numeric(5, 2))  # Market sentiment score
-    
+
     # Data quality flags
-    data_quality = Column(String(20), default="VALIDATED", 
+    data_quality = Column(String(20), default="VALIDATED",
                          comment="RAW, VALIDATED, CLEANED, EXCLUDED")
     validation_status = Column(String(20), default="PENDING")
     validation_notes = Column(Text)
-    
+
     # Processing flags
     is_processed = Column(Boolean, default=False, index=True)
     processing_errors = Column(JSONB, default=dict)
-    
+
     # Metadata
     ingestion_id = Column(String(100), index=True)
     source_system = Column(String(50), default="SCORING_SERVICE")
-    
+
     __table_args__ = (
         UniqueConstraint('asset_id', 'captured_at', 'market', name='uix_raw_perf_unique',
                         deferrable=True),
@@ -974,50 +986,50 @@ class RawPerformanceScore(Base):
 
 class ProcessedFeatureData(Base):
     """Processed feature data for ML model training.
-    
+
     Contains feature-engineered data ready for coefficient learning models.
     """
     __tablename__ = "processed_feature_data"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # References
     raw_data_id = Column(UUID(as_uuid=True), ForeignKey("raw_performance_scores.id"), nullable=False)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True)
-    
+
     # Processing timestamp
-    processed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    
+    processed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+
     # Market info
     market = Column(String(20), nullable=False, index=True)
     exchange = Column(String(50), nullable=False)
-    
+
     # Feature vector (L2-normalized, fixed length for model compatibility)
     feature_vector = Column(ARRAY(Numeric(20, 8)), nullable=False)
-    
+
     # Processed/restructured scores by hierarchy level
     dimension_features = Column(JSONB, nullable=False)  # Processed dimension scores
     sub_dimension_features = Column(JSONB, nullable=False)  # Processed sub-dimension features
     aspect_features = Column(JSONB, nullable=False)  # Processed aspect features
     sub_aspect_features = Column(JSONB, nullable=False)  # Processed sub-aspect features
-    
+
     # Target values (what we're trying to predict)
     target_values = Column(JSONB, nullable=False)
-    
+
     # Feature engineering metadata
     features_used = Column(JSONB, default=dict)  # Which features were selected
     preprocessing_steps = Column(JSONB, default=dict)  # Transformations applied
     normalization_params = Column(JSONB, default=dict)  # Mean, std, min, max used
-    
+
     # Quality metrics
     is_valid = Column(Boolean, default=True, index=True)
     quality_score = Column(Numeric(5, 2), default=100.0)  # 0-100 quality rating
     validation_errors = Column(JSONB, default=dict)
-    
+
     # Model metadata
     model_version = Column(String(50), default="v1.0.0")
     feature_schema_version = Column(String(20), default="1.0")
-    
+
     __table_args__ = (
         UniqueConstraint('raw_data_id', 'processed_at', name='uix_processed_unique'),
         Index('idx_proc_asset_market', 'asset_id', 'market'),
@@ -1032,40 +1044,40 @@ class CoefficientAdjustment(Base):
     __tablename__ = "coefficient_adjustments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Adjustment cycle/timestamp
-    adjustment_cycle = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    
+    adjustment_cycle = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+
     # Asset context (nullable for global adjustments)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
-    
+
     # Hierarchy level
     level = Column(String(20), nullable=False, index=True)  # dimensions, sub_dimensions, aspects, sub_aspects
-    
+
     # Feature key (name of the weight being adjusted)
     feature_key = Column(String(100), nullable=False)
-    
+
     # Weight values
     old_weight = Column(Numeric(8, 6), nullable=False)
     new_weight = Column(Numeric(8, 6), nullable=False)
     weight_change = Column(Numeric(8, 6))  # new - old
-    
+
     # Adjustment reason
     adjustment_code = Column(String(50), nullable=False)  # PERFORMANCE, DRIFT, MANUAL, etc.
     adjustment_reason = Column(Text)
-    
+
     # Confidence in the adjustment
     confidence_score = Column(Numeric(5, 2), default=100.0)
-    
+
     # Implementation details
     model_version = Column(String(50))
     training_samples = Column(Integer)
     performance_improvement = Column(Numeric(8, 6))
-    
+
     # Metadata
     created_by = Column(String(50), default="system")
     implementation_version = Column(String(20), nullable=False)
-    
+
     __table_args__ = (
         Index('idx_adj_cycle_level', 'adjustment_cycle', 'level'),
         Index('idx_adj_feature_key', 'feature_key'),
@@ -1078,28 +1090,28 @@ class CoefficientHistory(Base):
     __tablename__ = "coefficient_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Timestamp of coefficient state
-    effective_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    
+    effective_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+
     # Asset context
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
-    
+
     # Market context
     market = Column(String(20), nullable=False)
     exchange = Column(String(50), nullable=False)
-    
+
     # Complete coefficient snapshot
     coefficients = Column(JSONB, nullable=False)  # Full weight dictionary
-    
+
     # Source
     source = Column(String(50), default="ML_TRAINING")  # ML_TRAINING, MANUAL, FALLBACK
     model_version = Column(String(50))
-    
+
     # Validation
     is_valid = Column(Boolean, default=True)
     validation_notes = Column(Text)
-    
+
     __table_args__ = (
         Index('idx_hist_asset_time', 'asset_id', 'effective_at'),
         Index('idx_hist_market', 'market'),
@@ -1126,12 +1138,12 @@ class UserMarketSetting(Base):
     currencies = Column(JSONB, default=list)
 
     # Metadata
-    last_validated = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    last_validated = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     validation_hash = Column(String(64))
     is_default = Column(Boolean, default=False)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         UniqueConstraint('user_id', name='uix_user_market_settings'),
@@ -1159,11 +1171,11 @@ class UserMarketConfig(Base):
     market_cap_filter = Column(JSONB)
 
     # Metadata
-    last_calc = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    last_calc = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     is_default = Column(Boolean, default=False)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         UniqueConstraint('user_id', 'config_name', name='uix_user_market_config'),
@@ -1196,8 +1208,8 @@ class UserScoringResult(Base):
     recommendations = Column(JSONB)
     description = Column(JSONB)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         UniqueConstraint('user_id', 'symbol', 'data_date', name='uix_user_scoring'),
@@ -1221,7 +1233,7 @@ class ValidationRecord(Base):
     is_valid = Column(Boolean, nullable=False)
     details = Column(JSONB)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_validation_source', 'source_id'),
@@ -1239,7 +1251,7 @@ class SourceAuthenticity(Base):
     verification_status = Column(String(50), nullable=False)
     verification_timestamp = Column(DateTime, nullable=False, index=True)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_authenticity_source', 'source_name'),
@@ -1258,7 +1270,7 @@ class CrossSourceConsistency(Base):
     consistency_metric = Column(Numeric(5, 2), nullable=False)
     validation_timestamp = Column(DateTime, nullable=False, index=True)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_consistency_sources', 'source_a_id', 'source_b_id'),
@@ -1285,8 +1297,8 @@ class DataSource(Base):
     is_active = Column(Boolean, default=True)
     info = Column(JSONB)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_datasource_type', 'source_type'),
@@ -1312,7 +1324,7 @@ class HistoricalDataImportLog(Base):
     import_status = Column(String(50), default="pending")
     error_message = Column(Text)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_import_batch', 'import_batch_id'),
@@ -1335,7 +1347,7 @@ class Country(Base):
     timezone = Column(String(50))
     is_active = Column(Boolean, default=True)
     extra_data = Column(JSONB)
-    last_verified = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    last_verified = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_country_code', 'iso_code'),
@@ -1356,7 +1368,7 @@ class Industry(Base):
     etf_ticker = Column(String(20))
     is_active = Column(Boolean, default=True)
     extra_data = Column(JSONB)
-    last_verified = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    last_verified = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_industry_sector', 'sector'),
@@ -1380,7 +1392,7 @@ class MarketIndex(Base):
     current_value = Column(Numeric(20, 8))
     change_percent = Column(Numeric(10, 6))
     volume = Column(Numeric(18, 8))
-    last_updated = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    last_updated = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     extra_data = Column(JSONB)
     is_active = Column(Boolean, default=True)
 
@@ -1404,7 +1416,7 @@ class UserFavorite(Base):
     symbol = Column(String(50), nullable=False)
     category = Column(String(50))
     notes = Column(Text)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         UniqueConstraint('user_id', 'source', 'symbol', name='uix_user_favorite'),
@@ -1427,7 +1439,7 @@ class UserAlert(Base):
     alert_condition = Column(JSONB, nullable=False)
     is_active = Column(Boolean, default=True)
     notify_method = Column(JSONB, default={"email": True, "push": True, "sms": False})
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     last_triggered = Column(DateTime)
 
     __table_args__ = (
@@ -1463,8 +1475,8 @@ class SymbolData(Base):
     next_shares = Column(Boolean, default=False)
     is_test_issue = Column(Boolean, default=False)
     security_type = Column(String(50), default="COMMON")
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index('idx_symbol_data_symbol', 'symbol'),
@@ -1503,8 +1515,8 @@ class SymbolMarketSettings(Base):
     volume_min = Column(Numeric(25, 2))
 
     # Timestamps
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         UniqueConstraint('symbol_id', 'user_id', name='uix_symbol_market_settings'),
@@ -1532,7 +1544,7 @@ class ScoreHistory(Base):
     sub_aspect_scores = Column(JSONB, nullable=False, default=dict)
     overall_score = Column(Numeric(8, 4), nullable=False)
     grade = Column(String(20), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     asset = relationship("Asset")
 
@@ -1566,8 +1578,8 @@ class MarketScoreTrend(Base):
     symbol_count = Column(Integer, nullable=False, default=0)
 
     computed_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     __table_args__ = (

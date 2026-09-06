@@ -16,14 +16,13 @@ USAGE:
 - POST /api/v1/compare/historical - Compare historical performance
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from ....core.config import get_settings
+from ....services.analysis.scoring_service import ScoringService
 from ....services.core.cache_service import CacheService
 from ....services.data.stock_service import StockService
-from ....services.analysis.scoring_service import ScoringService
 
 router = APIRouter(prefix="/compare", tags=["Compare"])
 
@@ -34,7 +33,7 @@ router = APIRouter(prefix="/compare", tags=["Compare"])
 
 class CompareStocksRequest(BaseModel):
     """Request model for comparing stocks"""
-    symbols: List[str] = Field(..., min_items=2, max_items=5, description="List of stock symbols to compare")
+    symbols: list[str] = Field(..., min_items=2, max_items=5, description="List of stock symbols to compare")
     include_dimensions: bool = Field(True, description="Include 6D dimension scores")
     include_metrics: bool = Field(True, description="Include financial metrics")
     include_technical: bool = Field(True, description="Include technical indicators")
@@ -44,35 +43,35 @@ class CompareStocksRequest(BaseModel):
 
 class DimensionComparison(BaseModel):
     """Dimension scores comparison"""
-    fundamental: Optional[float] = None
-    technical: Optional[float] = None
-    sentiment: Optional[float] = None
-    risk: Optional[float] = None
-    macro: Optional[float] = None
-    ai: Optional[float] = None
+    fundamental: float | None = None
+    technical: float | None = None
+    sentiment: float | None = None
+    risk: float | None = None
+    macro: float | None = None
+    ai: float | None = None
 
 
 class MetricsComparison(BaseModel):
     """Financial metrics comparison"""
-    market_cap: Optional[float] = None
-    pe_ratio: Optional[float] = None
-    pb_ratio: Optional[float] = None
-    eps: Optional[float] = None
-    dividend_yield: Optional[float] = None
-    roe: Optional[float] = None
-    debt_to_equity: Optional[float] = None
-    current_ratio: Optional[float] = None
+    market_cap: float | None = None
+    pe_ratio: float | None = None
+    pb_ratio: float | None = None
+    eps: float | None = None
+    dividend_yield: float | None = None
+    roe: float | None = None
+    debt_to_equity: float | None = None
+    current_ratio: float | None = None
 
 
 class TechnicalComparison(BaseModel):
     """Technical indicators comparison"""
-    rsi_14: Optional[float] = None
-    macd: Optional[float] = None
-    bollinger_upper: Optional[float] = None
-    bollinger_lower: Optional[float] = None
-    ema_50: Optional[float] = None
-    ema_200: Optional[float] = None
-    volume_sma_20: Optional[float] = None
+    rsi_14: float | None = None
+    macd: float | None = None
+    bollinger_upper: float | None = None
+    bollinger_lower: float | None = None
+    ema_50: float | None = None
+    ema_200: float | None = None
+    volume_sma_20: float | None = None
 
 
 class HistoricalPoint(BaseModel):
@@ -81,37 +80,37 @@ class HistoricalPoint(BaseModel):
     symbol: str
     price: float
     change_pct: float
-    volume: Optional[int] = None
+    volume: int | None = None
 
 
 class StockComparison(BaseModel):
     """Complete comparison for a single stock"""
     symbol: str
-    name: Optional[str] = None
-    sector: Optional[str] = None
-    current_price: Optional[float] = None
-    change_pct: Optional[float] = None
-    overall_score: Optional[float] = None
-    grade: Optional[str] = None
-    dimensions: Optional[DimensionComparison] = None
-    metrics: Optional[MetricsComparison] = None
-    technical: Optional[TechnicalComparison] = None
+    name: str | None = None
+    sector: str | None = None
+    current_price: float | None = None
+    change_pct: float | None = None
+    overall_score: float | None = None
+    grade: str | None = None
+    dimensions: DimensionComparison | None = None
+    metrics: MetricsComparison | None = None
+    technical: TechnicalComparison | None = None
 
 
 class CompareStocksResponse(BaseModel):
     """Response model for compare stocks endpoint"""
     status: str
     count: int
-    symbols: List[str]
-    comparisons: List[StockComparison]
-    historical_data: Optional[List[HistoricalPoint]] = None
+    symbols: list[str]
+    comparisons: list[StockComparison]
+    historical_data: list[HistoricalPoint] | None = None
     timestamp: str
 
 
 class CompareDimensionsResponse(BaseModel):
     """Response for dimension comparison"""
     status: str
-    symbols: List[str]
+    symbols: list[str]
     dimensions: dict  # dimension_name -> {symbol -> score}
     winner_by_dimension: dict  # dimension_name -> symbol
     timestamp: str
@@ -128,7 +127,7 @@ async def compare_stocks(
 ) -> CompareStocksResponse:
     """
     Compare multiple stocks side-by-side.
-    
+
     Supports 2-5 stocks comparison with:
     - 6D dimension scores
     - Financial metrics
@@ -136,7 +135,6 @@ async def compare_stocks(
     - Historical performance
     """
     # Implementation here
-    pass
 
 
 @router.get("/dimensions/{symbol1}/{symbol2}", response_model=CompareDimensionsResponse)
@@ -148,14 +146,13 @@ async def compare_dimensions(
 ) -> CompareDimensionsResponse:
     """
     Compare 6D dimension scores between two stocks.
-    
+
     Returns:
     - Individual dimension scores for both stocks
     - Winner by dimension
     - Overall comparison summary
     """
     # Implementation here
-    pass
 
 
 @router.get("/metrics/{symbol1}/{symbol2}")
@@ -166,7 +163,7 @@ async def compare_metrics(
 ):
     """
     Compare financial metrics between two stocks.
-    
+
     Includes:
     - Market cap
     - P/E ratio
@@ -177,22 +174,20 @@ async def compare_metrics(
     - Debt ratios
     """
     # Implementation here
-    pass
 
 
 @router.post("/historical")
 async def compare_historical(
-    symbols: List[str] = Field(..., min_items=2, max_items=5),
+    symbols: list[str] = Field(..., min_items=2, max_items=5),
     days: int = Field(30, ge=1, le=365),
     stock_service: StockService = Depends(),
 ):
     """
     Compare historical performance of multiple stocks.
-    
+
     Returns price data, change percentages, and volume for the specified period.
     """
     # Implementation here
-    pass
 
 
 # =============================================================================
@@ -204,10 +199,10 @@ def calculate_winner_by_dimension(
 ) -> dict:
     """
     Determine the winner for each dimension.
-    
+
     Args:
         dimension_scores: dict of dimension -> symbol -> score
-    
+
     Returns:
         dict of dimension -> winning_symbol
     """
@@ -220,14 +215,14 @@ def calculate_winner_by_dimension(
 
 
 def format_comparison_response(
-    comparisons: List[StockComparison],
-    historical_data: Optional[List] = None
+    comparisons: list[StockComparison],
+    historical_data: list | None = None
 ) -> CompareStocksResponse:
     """
     Format the comparison response.
     """
     from datetime import datetime
-    
+
     return CompareStocksResponse(
         status="success",
         count=len(comparisons),

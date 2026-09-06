@@ -13,14 +13,18 @@ Covers:
 
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, MagicMock
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
+from unittest.mock import MagicMock
 
+from app.schemas.filter_schemas import (
+    FilterCondition,
+    FilterGroup,
+    LogicOperator,
+)
 from app.services.filter.field_registry import FieldRegistry
-from app.services.filter.filter_parser import parse_filter_tree, FilterParseError
-from app.services.filter.query_builder import build_query_from_tree, QueryBuildError
+from app.services.filter.filter_parser import FilterParseError, parse_filter_tree
 from app.services.filter.filter_service import FilterService
-from app.schemas.filter_schemas import FilterGroup, FilterCondition, LogicOperator, AdvancedFilterRequest
+from app.services.filter.query_builder import build_query_from_tree
 
 
 class FakeRow:
@@ -147,8 +151,9 @@ class TestQueryBuilder(unittest.TestCase):
         return FakeRow(**kwargs)
 
     def test_simple_numeric_filter(self):
-        from app.models.scoring_snapshot import ScoringSnapshot
         from sqlalchemy import select
+
+        from app.models.scoring_snapshot import ScoringSnapshot
         parsed = parse_filter_tree(
             FilterCondition(field="overall_score", operator=">", value=750, level="overall"),
             self.reg,

@@ -1,10 +1,9 @@
 """Symbol Service - Tier 2 Data Service
 Manages symbol data and operations with multi-market support and cache integration."""
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime
+from typing import Any
 
-from sqlalchemy import select, func, or_
+from sqlalchemy import func, or_, select
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
@@ -21,7 +20,7 @@ class SymbolService(DataService):
 
     def __init__(self):
         super().__init__(service_name="SymbolService")
-        self._symbol_cache: Dict[str, Any] = {}
+        self._symbol_cache: dict[str, Any] = {}
 
     async def initialize(self) -> None:
         """Initialize service with database and cache connections."""
@@ -48,18 +47,18 @@ class SymbolService(DataService):
 
         return len(symbols)
 
-    async def get_symbol(self, symbol: str) -> Dict[str, Any]:
+    async def get_symbol(self, symbol: str) -> dict[str, Any]:
         """Cached symbol data retrieval with fallback to database."""
         cache_key = f"symbol:{symbol.upper()}"
-        
+
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData).where(SymbolData.symbol == symbol.upper())
             result = await session.execute(stmt)
             symbol_data = result.scalar_one_or_none()
-            
+
         if symbol_data:
             data = {
                 "symbol_id": symbol_data.symbol_id,
@@ -78,16 +77,16 @@ class SymbolService(DataService):
         self,
         query: str,
         limit: int = 20,
-        exchange: Optional[str] = None,
-        market_type: Optional[str] = None,
+        exchange: str | None = None,
+        market_type: str | None = None,
         active_only: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Flexible symbol search with caching and optional filters."""
         cache_key = f"search:{query}:{limit}:{exchange}:{market_type}:{active_only}"
-        
+
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData)
             search_pattern = f"%{query.upper()}%"
@@ -102,11 +101,11 @@ class SymbolService(DataService):
             if market_type:
                 stmt = stmt.where(SymbolData.market_type == market_type)
             if active_only:
-                stmt = stmt.where(SymbolData.active_status == True)
+                stmt = stmt.where(SymbolData.active_status)
             stmt = stmt.limit(limit)
             result = await session.execute(stmt)
             symbols = result.scalars().all()
-            
+
         data_list = [{
             "symbol": s.symbol,
             "name": s.security_name,
@@ -114,49 +113,49 @@ class SymbolService(DataService):
             "market_type": s.market_type,
             "active": s.active_status
         } for s in symbols]
-        
+
         self._symbol_cache[cache_key] = data_list
         return data_list
 
-    async def get_exchanges(self) -> List[str]:
+    async def get_exchanges(self) -> list[str]:
         """Get list of all available exchanges."""
         cache_key = "meta:exchanges"
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData.exchange).distinct().order_by(SymbolData.exchange)
             result = await session.execute(stmt)
             exchanges = [r for r in result.scalars().all() if r]
-        
+
         self._symbol_cache[cache_key] = exchanges
         return exchanges
 
-    async def get_market_types(self) -> List[str]:
+    async def get_market_types(self) -> list[str]:
         """Get list of all available market types."""
         cache_key = "meta:market_types"
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData.market_type).distinct().order_by(SymbolData.market_type)
             result = await session.execute(stmt)
             market_types = [r for r in result.scalars().all() if r]
-        
+
         self._symbol_cache[cache_key] = market_types
         return market_types
 
-    async def get_countries(self) -> List[str]:
+    async def get_countries(self) -> list[str]:
         """Get list of all available country codes."""
         cache_key = "meta:countries"
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData.country_code).distinct().order_by(SymbolData.country_code)
             result = await session.execute(stmt)
             countries = [r for r in result.scalars().all() if r]
-        
+
         self._symbol_cache[cache_key] = countries
         return countries
 
@@ -166,20 +165,20 @@ class SymbolService(DataService):
         limit: int = 100,
         offset: int = 0,
         active_only: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get symbols by exchange with pagination."""
         cache_key = f"exchange_symbols:{exchange}:{limit}:{offset}:{active_only}"
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData).where(SymbolData.exchange == exchange)
             if active_only:
-                stmt = stmt.where(SymbolData.active_status == True)
+                stmt = stmt.where(SymbolData.active_status)
             stmt = stmt.offset(offset).limit(limit)
             result = await session.execute(stmt)
             symbols = result.scalars().all()
-        
+
         data_list = [{
             "symbol": s.symbol,
             "name": s.security_name,
@@ -187,7 +186,7 @@ class SymbolService(DataService):
             "market_type": s.market_type,
             "active": s.active_status
         } for s in symbols]
-        
+
         self._symbol_cache[cache_key] = data_list
         return data_list
 
@@ -197,20 +196,20 @@ class SymbolService(DataService):
         limit: int = 100,
         offset: int = 0,
         active_only: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get symbols by market type with pagination."""
         cache_key = f"market_type_symbols:{market_type}:{limit}:{offset}:{active_only}"
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData).where(SymbolData.market_type == market_type)
             if active_only:
-                stmt = stmt.where(SymbolData.active_status == True)
+                stmt = stmt.where(SymbolData.active_status)
             stmt = stmt.offset(offset).limit(limit)
             result = await session.execute(stmt)
             symbols = result.scalars().all()
-        
+
         data_list = [{
             "symbol": s.symbol,
             "name": s.security_name,
@@ -218,46 +217,46 @@ class SymbolService(DataService):
             "market_type": s.market_type,
             "active": s.active_status
         } for s in symbols]
-        
+
         self._symbol_cache[cache_key] = data_list
         return data_list
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get symbol statistics."""
         async with async_session_maker() as session:
             total = await session.execute(select(func.count()).select_from(SymbolData))
             active = await session.execute(
-                select(func.count()).where(SymbolData.active_status == True).select_from(SymbolData)
+                select(func.count()).where(SymbolData.active_status).select_from(SymbolData)
             )
             exchanges = await session.execute(
                 select(func.count(SymbolData.exchange.distinct()))
             )
-        
+
         return {
             "total_symbols": total.scalar(),
             "active_symbols": active.scalar(),
             "total_exchanges": exchanges.scalar() or 0,
         }
 
-    async def get_exchange_symbols(self, exchange: str) -> List[Dict[str, Any]]:
+    async def get_exchange_symbols(self, exchange: str) -> list[dict[str, Any]]:
         """Get all symbols for a specific exchange."""
         cache_key = f"exchange:{exchange}"
-        
+
         if cache_key in self._symbol_cache:
             return self._symbol_cache[cache_key]
-        
+
         async with async_session_maker() as session:
             stmt = select(SymbolData).where(SymbolData.exchange == exchange)
             result = await session.execute(stmt)
             symbols = result.scalars().all()
-            
+
         data_list = [{
             "symbol": s.symbol,
             "name": s.security_name,
             "market_type": s.market_type,
             "active": s.active_status
         } for s in symbols]
-        
+
         self._symbol_cache[cache_key] = data_list
         return data_list
 

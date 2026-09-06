@@ -3,7 +3,7 @@
 Tests the request / verify / confirm endpoints using FastAPI's TestClient
 with the service layer mocked out (no DB or email required).
 """
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI

@@ -8,19 +8,28 @@ Each row represents one score at one hierarchical level for one asset
 on one date.
 """
 
-from sqlalchemy import (
-    Column, String, Numeric, DateTime, Date, ForeignKey, Index, Enum, UniqueConstraint
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, validates
-from datetime import datetime, timezone
-import uuid
 import enum
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import relationship, validates
 
 from app.db.base import Base
 
 
-class SnapshotLevel(str, enum.Enum):
+class SnapshotLevel(enum.StrEnum):
     OVERALL = "overall"
     DIMENSION = "dimension"
     SUB_DIMENSION = "sub_dimension"
@@ -28,7 +37,7 @@ class SnapshotLevel(str, enum.Enum):
     SUB_ASPECT = "sub_aspect"
 
 
-class SnapshotTier(str, enum.Enum):
+class SnapshotTier(enum.StrEnum):
     DAILY = "daily"
     HOURLY = "hourly"
 
@@ -53,7 +62,7 @@ class ScoringSnapshot(Base):
 
     industry = Column(String(100), nullable=True, index=True)
     company_id = Column(String(100), nullable=True, index=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True)
 
     extra_fields = Column("extra_fields", JSONB, nullable=False, default={})
 

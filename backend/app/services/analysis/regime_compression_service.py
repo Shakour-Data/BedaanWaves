@@ -1,11 +1,12 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import numpy as np
-from datetime import datetime, timezone
-from functools import lru_cache
+
+from app.core.config import get_settings
+from app.core.utils import utc_now_iso
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
-from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -15,7 +16,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
 
     def __init__(self, service_name: str = "HistoricalRegimeCompressionService"):
         super().__init__(service_name)
-        self.fingerprint_db: Dict[str, List[float]] = {}
+        self.fingerprint_db: dict[str, list[float]] = {}
 
     async def initialize(self) -> None:
         self.logger.info("HistoricalRegimeCompressionService initialized")
@@ -42,7 +43,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("HistoricalRegimeCompressionService shutdown")
 
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """Run regime compression analysis."""
         current_series = data.get("series", [])
         if not current_series or len(current_series) < 5:
@@ -64,7 +65,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
             "analysis_at": utc_now_iso(),
         }
 
-    def _normalize_series(self, series: List[float]) -> List[float]:
+    def _normalize_series(self, series: list[float]) -> list[float]:
         """Normalize a time series to mean 0, std 1."""
         arr = np.array(series, dtype=float)
         mean = np.mean(arr)
@@ -73,7 +74,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
             return [0.0] * len(arr)
         return ((arr - mean) / std).tolist()
 
-    def _dtw_distance(self, s1: List[float], s2: List[float]) -> float:
+    def _dtw_distance(self, s1: list[float], s2: list[float]) -> float:
         """Compute Dynamic Time Warping distance between two series."""
         n = len(s1)
         m = len(s2)
@@ -97,8 +98,8 @@ class HistoricalRegimeCompressionService(AnalysisService):
         return float(dtw_matrix[n, m])
 
     async def _dtw_cycle_matching(
-        self, normalized_series: List[float]
-    ) -> List[Dict[str, Any]]:
+        self, normalized_series: list[float]
+    ) -> list[dict[str, Any]]:
         """Match current series against historical regime fingerprints using DTW."""
         matches = []
 
@@ -126,7 +127,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
         matches.sort(key=lambda x: x["similarity"], reverse=True)
         return matches
 
-    async def _generate_fingerprint(self, normalized_series: List[float]) -> List[float]:
+    async def _generate_fingerprint(self, normalized_series: list[float]) -> list[float]:
         """Generate a compressed fingerprint vector for the current regime."""
         series = np.array(normalized_series)
 
@@ -151,7 +152,7 @@ class HistoricalRegimeCompressionService(AnalysisService):
 
         return [round(v, 4) for v in fingerprint]
 
-    async def get_fingerprint_database(self) -> Dict[str, Any]:
+    async def get_fingerprint_database(self) -> dict[str, Any]:
         """Return all historical fingerprints."""
         return self.fingerprint_db
 

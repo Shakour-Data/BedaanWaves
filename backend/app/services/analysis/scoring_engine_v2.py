@@ -25,10 +25,9 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 try:
-    from scipy.stats import norm, rankdata
+    from scipy.stats import norm
     _HAS_SCIPY = True
 except ImportError:  # pragma: no cover
     _HAS_SCIPY = False
@@ -38,7 +37,7 @@ except ImportError:  # pragma: no cover
 # Metric universe — single source of truth for the hierarchy
 # ---------------------------------------------------------------------------
 # Each entry: (dim, sub_dim, aspect, sub_aspect, db_field, lower_is_better)
-METRIC_UNIVERSE: List[Tuple[str, str, str, str, str, bool]] = [
+METRIC_UNIVERSE: list[tuple[str, str, str, str, str, bool]] = [
     # fundamental
     ("fundamental", "valuation",       "pe_band",        "pe_ratio",     "pe_ratio",     True),
     ("fundamental", "valuation",       "pe_band",        "pb_ratio",     "pb_ratio",     True),
@@ -74,7 +73,7 @@ METRIC_UNIVERSE: List[Tuple[str, str, str, str, str, bool]] = [
 ]
 
 
-DIMENSION_WEIGHTS: Dict[str, float] = {
+DIMENSION_WEIGHTS: dict[str, float] = {
     "fundamental": 0.25,
     "technical":   0.20,
     "sentiment":   0.15,
@@ -89,10 +88,10 @@ DIMENSION_WEIGHTS: Dict[str, float] = {
 # ---------------------------------------------------------------------------
 @dataclass
 class HierarchicalScore:
-    sub_aspect_scores: Dict[str, float] = field(default_factory=dict)
-    aspect_scores:     Dict[str, float] = field(default_factory=dict)
-    sub_dimension_scores: Dict[str, float] = field(default_factory=dict)
-    dimension_scores:  Dict[str, float] = field(default_factory=dict)
+    sub_aspect_scores: dict[str, float] = field(default_factory=dict)
+    aspect_scores:     dict[str, float] = field(default_factory=dict)
+    sub_dimension_scores: dict[str, float] = field(default_factory=dict)
+    dimension_scores:  dict[str, float] = field(default_factory=dict)
     overall_score:     float = 50.0
     coverage:          float = 0.0  # fraction of L4 metrics present
 
@@ -100,8 +99,8 @@ class HierarchicalScore:
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
-def _percentile_to_score(values: List[Optional[float]],
-                          lower_is_better: bool) -> List[Optional[float]]:
+def _percentile_to_score(values: list[float | None],
+                          lower_is_better: bool) -> list[float | None]:
     """Cross-sectional percentile → z-score → rescale to [0, 100].
 
     Missing inputs (None) are passed through as None so they don't
@@ -114,7 +113,7 @@ def _percentile_to_score(values: List[Optional[float]],
 
     sorted_vals = sorted(v for _, v in present)
     # Map each value → its rank (1..n) for ties use the average rank
-    rank_of: Dict[int, float] = {}
+    rank_of: dict[int, float] = {}
     i = 0
     while i < n:
         j = i
@@ -125,7 +124,7 @@ def _percentile_to_score(values: List[Optional[float]],
             rank_of[sorted_vals[k]] = avg_rank
         i = j + 1
 
-    out: List[Optional[float]] = [None] * len(values)
+    out: list[float | None] = [None] * len(values)
     for idx, v in present:
         p = (rank_of[v] - 0.5) / n  # (0, 1)
         if lower_is_better:
@@ -147,8 +146,8 @@ def _percentile_to_score(values: List[Optional[float]],
     return out
 
 
-def _weighted_mean(values: Dict[str, Optional[float]],
-                   weights: Optional[Dict[str, float]] = None) -> float:
+def _weighted_mean(values: dict[str, float | None],
+                   weights: dict[str, float] | None = None) -> float:
     """Coverage-weighted mean. Missing entries are skipped, not zero-filled."""
     items = [(k, v) for k, v in values.items() if v is not None]
     if not items:
@@ -165,8 +164,8 @@ def _weighted_mean(values: Dict[str, Optional[float]],
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-def score_market(asset_metrics: Dict[str, Dict[str, Optional[float]]]
-                 ) -> Dict[str, HierarchicalScore]:
+def score_market(asset_metrics: dict[str, dict[str, float | None]]
+                 ) -> dict[str, HierarchicalScore]:
     """Score every asset in a market using cross-sectional ranks.
 
     Args:
@@ -179,7 +178,7 @@ def score_market(asset_metrics: Dict[str, Dict[str, Optional[float]]]
         return {}
 
     # Group every (db_field → list of values across assets)
-    by_field: Dict[str, List[Optional[float]]] = {db: [] for *_, db, _ in METRIC_UNIVERSE}
+    by_field: dict[str, list[float | None]] = {db: [] for *_, db, _ in METRIC_UNIVERSE}
     asset_ids = list(asset_metrics.keys())
     for aid in asset_ids:
         m = asset_metrics[aid]
@@ -187,12 +186,12 @@ def score_market(asset_metrics: Dict[str, Dict[str, Optional[float]]]
             by_field[db_field].append(m.get(db_field))
 
     # Per-field rank transform
-    transformed: Dict[str, List[Optional[float]]] = {}
+    transformed: dict[str, list[float | None]] = {}
     for *_, db_field, lower_better in METRIC_UNIVERSE:
         transformed[db_field] = _percentile_to_score(by_field[db_field], lower_better)
 
     # Build per-asset L4 scores
-    results: Dict[str, HierarchicalScore] = {}
+    results: dict[str, HierarchicalScore] = {}
     for idx, aid in enumerate(asset_ids):
         hs = HierarchicalScore()
         for dim, sub, asp, sa, db_field, _ in METRIC_UNIVERSE:
@@ -203,21 +202,21 @@ def score_market(asset_metrics: Dict[str, Dict[str, Optional[float]]]
         hs.coverage = real / max(1, len(by_field))
 
         # L3: aggregate over the L4s in each aspect
-        aspect_groups: Dict[str, List[float]] = {}
+        aspect_groups: dict[str, list[float]] = {}
         for *_, asp, sa, _, _ in METRIC_UNIVERSE:
             aspect_groups.setdefault(asp, []).append(hs.sub_aspect_scores[sa])
         for asp, vals in aspect_groups.items():
             hs.aspect_scores[asp] = round(sum(vals) / len(vals), 2)
 
         # L2: aggregate aspects in each sub-dim, weighted by aspect count
-        sub_groups: Dict[str, Dict[str, float]] = {}
+        sub_groups: dict[str, dict[str, float]] = {}
         for dim, sub, asp, sa, _, _ in METRIC_UNIVERSE:
             sub_groups.setdefault(sub, {})[asp] = hs.aspect_scores[asp]
         for sub, asp_map in sub_groups.items():
             hs.sub_dimension_scores[sub] = round(_weighted_mean(asp_map), 2)
 
         # L1: aggregate sub-dims in each dimension
-        dim_groups: Dict[str, Dict[str, float]] = {}
+        dim_groups: dict[str, dict[str, float]] = {}
         for dim, sub, *_ in METRIC_UNIVERSE:
             dim_groups.setdefault(dim, {})[sub] = hs.sub_dimension_scores[sub]
         for dim, sub_map in dim_groups.items():

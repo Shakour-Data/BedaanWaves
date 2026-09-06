@@ -6,15 +6,15 @@ This configuration consolidates settings from:
 - Bedaan6D-project frontend
 - Bedaan_4D_AI analysis
 """
-from pydantic_settings import BaseSettings
-from typing import Optional, List
 from functools import lru_cache
+
 from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application Settings - Consolidated from 5 OldFils projects"""
-    
+
     # ============================================================
     # APPLICATION METADATA
     # ============================================================
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     APP_DESCRIPTION: str = "Unified Bedaan Ecosystem - Capital Market Analysis & AI Trading Platform"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, staging, production
-    
+
     # ============================================================
     # DATABASE CONFIGURATION
     # ============================================================
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     DATABASE_MAX_OVERFLOW: int = 10
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 3600
-    
+
     # ============================================================
     # REDIS & CACHE CONFIGURATION
     # ============================================================
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     CACHE_SCORE_TTL_HOURS: int = 24
     CACHE_API_RESPONSE_TTL_MINUTES: int = 5
     SYMBOL_CACHE_TTL: int = 3600
-    
+
     # ============================================================
     # API CONFIGURATION
     # ============================================================
@@ -68,20 +68,20 @@ class Settings(BaseSettings):
     REDOC_URL: str = "/api/v1/redoc"
     OPENAPI_URL: str = "/api/v1/openapi.json"
     ENABLE_DOCS: bool = True
-    
+
     # ============================================================
     # CORS CONFIGURATION
     # ============================================================
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3005",
         "http://127.0.0.1:3005",
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
-    CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-    CORS_ALLOW_HEADERS: List[str] = ["*"]
-    
+    CORS_ALLOW_METHODS: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+    CORS_ALLOW_HEADERS: list[str] = ["*"]
+
     # ============================================================
     # SECURITY & AUTHENTICATION
     # ============================================================
@@ -94,12 +94,12 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     PASSWORD_MIN_LENGTH: int = 8
     ENABLE_HTTPS: bool = False
-    
+
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     RATE_LIMIT_REQUESTS_PER_HOUR: int = 5000
-    
+
     # Global Auth Guard
     # When True, every protected API route requires a valid Bearer access token.
     # Defaults to True (secure by default). In local development you may set
@@ -108,13 +108,13 @@ class Settings(BaseSettings):
     # Fixed user id used by dev-only endpoints when the guard is disabled.
     DEV_USER_ID: str = "00000000-0000-0000-0000-000000000000"
     # Paths that never require authentication (prefix or exact match).
-    AUTH_PUBLIC_PATHS: List[str] = [
+    AUTH_PUBLIC_PATHS: list[str] = [
         "/",
         "/health",
         "/api/v1/data-health",
     ]
     # Path prefixes that never require authentication (e.g. the auth router itself).
-    AUTH_PUBLIC_PREFIXES: List[str] = [
+    AUTH_PUBLIC_PREFIXES: list[str] = [
         "/api/v1/auth",
         "/api/v1/docs",
         "/api/v1/redoc",
@@ -124,7 +124,7 @@ class Settings(BaseSettings):
         "/api/v1/news",
     ]
     # Permissions granted to a normal (non-admin) authenticated user.
-    DEFAULT_USER_PERMISSIONS: List[str] = [
+    DEFAULT_USER_PERMISSIONS: list[str] = [
         "market:read",
         "analysis:read",
         "stocks:read",
@@ -139,7 +139,7 @@ class Settings(BaseSettings):
         "profile:write",
     ]
     # Permissions granted to an admin user (superset of everything).
-    ADMIN_PERMISSIONS: List[str] = [
+    ADMIN_PERMISSIONS: list[str] = [
         "market:read", "market:write",
         "analysis:read", "analysis:write",
         "stocks:read", "stocks:write",
@@ -152,20 +152,20 @@ class Settings(BaseSettings):
         "users:read", "users:write",
         "admin:access",
     ]
-   
+
     # ============================================================
     # EXTERNAL APIs (BedaanWaves Integration)
     # ============================================================
     # Yahoo Finance (primary data source for NASDAQ stocks)
     YFINANCE_ENABLED: bool = True
-    
+
     # Data Provider Selection: yfinance (NASDAQ stocks only)
     DATA_PROVIDER: str = "yfinance"
     DATA_PROVIDER_FALLBACK_ENABLED: bool = False
     DATA_PROVIDER_TIMEOUT: int = 15
     DATA_PROVIDER_MAX_RETRIES: int = 3
     DATA_PROVIDER_RETRY_BACKOFF_BASE: float = 1.0
-    
+
     # ============================================================
     # REAL-TIME DATA & CACHE TTL CONFIGURATION
     # ============================================================
@@ -202,14 +202,14 @@ class Settings(BaseSettings):
     AFTER_HOURS_END_HOUR: int = 20
     AFTER_HOURS_END_MINUTE: int = 0
     WEEKEND_CLOSED: bool = True
-    
+
     # News APIs
-    NEWS_SOURCES: List[str] = ["financial-news", "market-news"]
+    NEWS_SOURCES: list[str] = ["financial-news", "market-news"]
     NEWS_API_URL: str = "https://newsapi.org"
-    NEWS_API_KEY: Optional[str] = None
+    NEWS_API_KEY: str | None = None
     NEWS_REFRESH_INTERVAL_MINUTES: int = 30
     NLP_MODEL: str = "bert-base-uncased"
-    
+
     # ============================================================
     # MACHINE LEARNING CONFIGURATION (Bedaan4D-ML)
     # ============================================================
@@ -248,12 +248,12 @@ class Settings(BaseSettings):
     ML_COEFFICIENTS_MIN_SAMPLES: int = 50
     ML_COEFFICIENTS_VALIDATION_SPLIT: float = 0.2
     ML_COEFFICIENTS_ALERT_THRESHOLD: float = 0.1
-    
+
     # ============================================================
     # 6D SCORING SYSTEM CONFIGURATION (Bedaan6D-project)
     # ============================================================
     SCORING_ENABLED: bool = True
-    
+
     # 6D Dimension Weights
     SCORING_WEIGHTS: dict = {
         "fundamental": 0.25,      # Financial health
@@ -263,21 +263,21 @@ class Settings(BaseSettings):
         "macro": 0.10,            # Economic indicators
         "ai": 0.10,               # ML prediction
     }
-    
+
     # Scoring Hierarchy (305 nodes)
     SCORING_HIERARCHY_ENABLED: bool = True
     SCORING_HIERARCHY_DEPTH: int = 4  # 4 levels
     SCORING_HIERARCHY_CACHE_TTL_HOURS: int = 24
-    
+
     # ============================================================
     # TECHNICAL ANALYSIS CONFIGURATION
     # ============================================================
     TECHNICAL_ANALYSIS_ENABLED: bool = True
     TECHNICAL_INDICATORS_COUNT: int = 50
-    
+
     # Indicator Defaults
-    TECHNICAL_SMA_PERIODS: List[int] = [20, 50, 200]
-    TECHNICAL_EMA_PERIODS: List[int] = [12, 26]
+    TECHNICAL_SMA_PERIODS: list[int] = [20, 50, 200]
+    TECHNICAL_EMA_PERIODS: list[int] = [12, 26]
     TECHNICAL_RSI_PERIOD: int = 14
     TECHNICAL_MACD_FAST: int = 12
     TECHNICAL_MACD_SLOW: int = 26
@@ -285,46 +285,46 @@ class Settings(BaseSettings):
     TECHNICAL_BOLLINGER_PERIOD: int = 20
     TECHNICAL_BOLLINGER_STD_DEV: float = 2.0
     TECHNICAL_ATR_PERIOD: int = 14
-    
+
     # ============================================================
     # NLP & SENTIMENT ANALYSIS (Bedaan_4D_AI)
     # ============================================================
     NLP_ENABLED: bool = True
     SENTIMENT_ANALYSIS_ENABLED: bool = True
-    
+
     # Persian NLP
     PERSIAN_STOPWORDS_ENABLED: bool = True
     PERSIAN_LEMMATIZATION_ENABLED: bool = True
-    
+
     # Sentiment Model
     SENTIMENT_MODEL_PATH: str = "./models/sentiment_model.pkl"
     SENTIMENT_KEYWORDS_PATH: str = "./data/sentiment_keywords.json"
     SENTIMENT_IMPACT_THRESHOLD: float = 0.5
-    
+
     # ============================================================
     # PORTFOLIO & RISK MANAGEMENT
     # ============================================================
     PORTFOLIO_ENABLED: bool = True
     PORTFOLIO_OPTIMIZATION_ENABLED: bool = True
-    
+
     # Portfolio Constraints
     PORTFOLIO_MIN_POSITION_SIZE: float = 0.01  # 1%
     PORTFOLIO_MAX_POSITION_SIZE: float = 0.10  # 10%
     PORTFOLIO_MAX_CONCENTRATION: float = 0.30  # 30%
-    
+
     # Risk Management
     RISK_MANAGEMENT_ENABLED: bool = True
     PORTFOLIO_VAR_CONFIDENCE: float = 0.95  # 95% VaR
     PORTFOLIO_MAX_DRAWDOWN: float = 0.20    # 20% max drawdown
     PORTFOLIO_VOLATILITY_TARGET: float = 0.15  # 15% annual volatility
-    
+
     # ============================================================
     # ALERTS & NOTIFICATIONS
     # ============================================================
     ALERTS_ENABLED: bool = True
-    
+
     # Alert Types
-    ALERT_TYPES: List[str] = [
+    ALERT_TYPES: list[str] = [
         "price_change",
         "technical_signal",
         "portfolio_alert",
@@ -333,13 +333,13 @@ class Settings(BaseSettings):
         "anomaly_detection",
         "risk_warning",
     ]
-    
+
     # Notification Channels
     NOTIFICATIONS_EMAIL_ENABLED: bool = True
     NOTIFICATIONS_SMS_ENABLED: bool = False
     NOTIFICATIONS_PUSH_ENABLED: bool = False
     NOTIFICATIONS_WEBHOOK_ENABLED: bool = True
-    
+
     # ============================================================
     # LOGGING & MONITORING
     # ============================================================
@@ -349,12 +349,12 @@ class Settings(BaseSettings):
     LOG_FILE_PATH: str = "./logs/bedaanwaves.log"
     LOG_ROTATION: str = "midnight"  # midnight, weekly, or size
     LOG_RETENTION_DAYS: int = 30
-    
+
     # Monitoring & Metrics
     METRICS_ENABLED: bool = True
     PROMETHEUS_METRICS_ENABLED: bool = True
     PROMETHEUS_METRICS_PORT: int = 9090
-    
+
     # ============================================================
     # DATA PERSISTENCE & BACKUP
     # ============================================================
@@ -363,7 +363,7 @@ class Settings(BaseSettings):
     BACKUP_RETENTION_DAYS: int = 30
     BACKUP_PATH: str = "./backups"
     ARCHIVE_PATH: str = "./data/archive"
-    
+
     # ============================================================
     # PAGINATION & LIMITS
     # ============================================================
@@ -371,7 +371,7 @@ class Settings(BaseSettings):
     MAX_PAGE_SIZE: int = 1000
     DEFAULT_LOOKBACK_DAYS: int = 365
     MAX_LOOKBACK_DAYS: int = 10 * 365  # 10 years
-    
+
     # ============================================================
     # PYDANTIC CONFIG
     # ============================================================
@@ -422,7 +422,7 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance"""
     return Settings()

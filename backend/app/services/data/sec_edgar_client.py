@@ -6,19 +6,16 @@ import asyncio
 import json
 import logging
 import re
-from datetime import datetime, date
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiohttp
-from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
-from app.models.models import Asset, FinancialStatement, FundamentalRatio
+from app.models.models import FinancialStatement, FundamentalRatio
 from app.services.core.base_service import DataService
 
 logger = logging.getLogger(__name__)
@@ -43,8 +40,8 @@ class SEDGARFinancialService(DataService):
     def __init__(self):
         super().__init__("SEDGARFinancialService")
         self.settings = get_settings()
-        self._cik_cache: Dict[str, str] = {}
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._cik_cache: dict[str, str] = {}
+        self._session: aiohttp.ClientSession | None = None
         self._load_cik_cache()
 
     def _load_cik_cache(self) -> None:
@@ -71,7 +68,7 @@ class SEDGARFinancialService(DataService):
     async def _rate_limit(self) -> None:
         await asyncio.sleep(RATE_LIMIT_DELAY)
 
-    async def lookup_cik(self, symbol: str, company_name: str = "") -> Optional[str]:
+    async def lookup_cik(self, symbol: str, company_name: str = "") -> str | None:
         if symbol in self._cik_cache:
             return self._cik_cache[symbol]
 
@@ -110,7 +107,7 @@ class SEDGARFinancialService(DataService):
                 logger.debug(f"CIK lookup failed for {symbol} with query {query}: {exc}")
         return None
 
-    async def fetch_company_facts(self, cik: str) -> Optional[Dict[str, Any]]:
+    async def fetch_company_facts(self, cik: str) -> dict[str, Any] | None:
         if not self._session:
             await self.initialize()
         await self._rate_limit()
@@ -125,7 +122,7 @@ class SEDGARFinancialService(DataService):
             logger.error(f"Company facts error for CIK {cik}: {exc}")
             return None
 
-    async def ingest_sec_financials(self, symbol: str, asset_id: str) -> Dict[str, int]:
+    async def ingest_sec_financials(self, symbol: str, asset_id: str) -> dict[str, int]:
         asset_uuid = asset_id if isinstance(asset_id, str) else str(asset_id)
         company_name = ""
         ticker = None
@@ -152,8 +149,8 @@ class SEDGARFinancialService(DataService):
         if not us_gaap:
             return {"statements": 0, "ratios": 0, "errors": 0}
 
-        statements: List[FinancialStatement] = []
-        ratios: List[FundamentalRatio] = []
+        statements: list[FinancialStatement] = []
+        ratios: list[FundamentalRatio] = []
 
         income_keys = [
             "Revenues",

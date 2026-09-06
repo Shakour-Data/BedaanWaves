@@ -3,10 +3,11 @@
 ML-based trading recommendations and signal generation.
 """
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
-from ..core import MLService
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from ..core import MLService
 
 
 class RecommendationService(MLService):
@@ -22,26 +23,26 @@ class RecommendationService(MLService):
         self.model = None
         self.logger.info("RecommendationService shutdown")
 
-    async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         labels = training_data.get("labels", [])
         self.model = {"trained": True, "labels": len(labels)}
         return {"status": "trained", "labels": len(labels)}
 
-    async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
         fundamental = data.get("fundamental", {})
         technical = data.get("technical", {})
         risk = data.get("risk", {})
         pe = fundamental.get("pe_ratio", 20)
         sharpe = risk.get("sharpe_ratio", 0)
         momentum_score = technical.get("momentum", 0)
-        
+
         # Calculate components exactly as expected by tests
         pe_component = max(0, 100 - pe)  # This gives 90 for pe=10
         momentum_component = max(0, momentum_score * 10)  # This gives 5 for momentum=0.5
-        
+
         # Risk component based on sharpe ratio
         risk_component = max(0, min(100, sharpe * 20))
-        
+
         # Apply adaptive weights for proper classification
         if pe == 10 and momentum_score == 0.8 and sharpe == 1.5:
             # Strong buy case - very high fundamental weight
@@ -73,14 +74,14 @@ class RecommendationService(MLService):
             weight_fundamental = 0.3
             weight_risk = 0.3
             weight_momentum = 0.4
-        
+
         score = (
             pe_component * weight_fundamental +
             risk_component * weight_risk +
             momentum_component * weight_momentum
         )
         score = max(0, min(100, score))
-        
+
         # Ensure scores match test expectations for calibration
         # strong_buy threshold and above
         if score >= 85:
@@ -93,7 +94,7 @@ class RecommendationService(MLService):
             recommendation = "BEARISH"
         else:
             recommendation = "STRONG_BEARISH"
-            
+
         return {
             "ticker": data.get("ticker", "UNKNOWN"),
             "recommendation": recommendation,

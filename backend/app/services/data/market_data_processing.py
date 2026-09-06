@@ -5,19 +5,19 @@ Transforms raw market data (from raw_market_data table) into processed snapshots
 (market_data_snapshots table) with technical indicators and ML features.
 """
 
-from datetime import timezone, datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+import logging
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import select, func, desc, and_
+from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.models.models import MarketDataSnapshot, RawMarketData
 
 from ..core.base_service import DataService
 from ..core.config import get_settings
-import logging
-from app.db.base import async_session_maker
-from app.models.models import RawMarketData, MarketDataSnapshot, Asset
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -26,7 +26,7 @@ settings = get_settings()
 class MarketDataProcessingService(DataService):
     """
     Service for processing raw market data into analytical snapshots.
-    
+
     Pipeline:
     1. Fetch raw data from raw_market_data table
     2. Aggregate into time-aligned intervals (1m, 5m, 15m, 1h, 4h, 1d)
@@ -71,18 +71,18 @@ class MarketDataProcessingService(DataService):
         self,
         session: Any,
         asset_id: str,
-        intervals: Optional[List[str]] = None,
+        intervals: list[str] | None = None,
         lookback_hours: int = 24,
     ) -> int:
         """
         Process raw market data for an asset into snapshots.
-        
+
         Args:
             session: Database session
             asset_id: Asset UUID
             intervals: List of intervals to process (default: all)
             lookback_hours: How far back to process
-            
+
         Returns:
             Number of snapshots created/updated
         """
@@ -145,12 +145,12 @@ class MarketDataProcessingService(DataService):
         asset_id: str,
         interval: str,
         lookback_hours: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetch raw price data from raw_market_data table.
         Filters for PRICE data type within lookback window.
         """
-        since = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        since = datetime.now(UTC) - timedelta(hours=lookback_hours)
 
         stmt = (
             select(RawMarketData)
@@ -184,7 +184,7 @@ class MarketDataProcessingService(DataService):
         """Align timestamp to interval boundary (UTC)."""
         interval_delta = self.INTERVALS[interval]
         # Get epoch seconds
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         seconds_since_epoch = (ts - epoch).total_seconds()
         interval_seconds = interval_delta.total_seconds()
         aligned_seconds = int(seconds_since_epoch / interval_seconds) * interval_seconds
@@ -192,7 +192,7 @@ class MarketDataProcessingService(DataService):
 
     def _aggregate_to_interval(
         self,
-        raw_data: List[Dict[str, Any]],
+        raw_data: list[dict[str, Any]],
         interval: str,
     ) -> pd.DataFrame:
         """
@@ -281,7 +281,7 @@ class MarketDataProcessingService(DataService):
 
     def _compute_macd(
         self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Compute MACD line, signal line, and histogram."""
         ema_fast = prices.ewm(span=fast, adjust=False).mean()
         ema_slow = prices.ewm(span=slow, adjust=False).mean()
@@ -292,7 +292,7 @@ class MarketDataProcessingService(DataService):
 
     def _compute_bollinger_bands(
         self, prices: pd.Series, period: int = 20, std_dev: int = 2
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Compute Bollinger Bands."""
         sma = prices.rolling(window=period).mean()
         std = prices.rolling(window=period).std()
@@ -383,7 +383,7 @@ class MarketDataProcessingService(DataService):
 
             snapshot = {
                 "asset_id": asset_id,
-                "snapshot_time": timestamp.to_pydatetime().replace(tzinfo=timezone.utc),
+                "snapshot_time": timestamp.to_pydatetime().replace(tzinfo=UTC),
                 "interval": interval,
                 "open": float(row["open"]) if pd.notna(row["open"]) else None,
                 "high": float(row["high"]) if pd.notna(row["high"]) else None,
@@ -444,7 +444,7 @@ class MarketDataProcessingService(DataService):
                 "source": stmt.excluded.source,
                 "is_fresh": stmt.excluded.is_fresh,
                 "freshness_score": stmt.excluded.freshness_score,
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
         )
         await session.execute(stmt)

@@ -1,32 +1,35 @@
 """Market Data Routes"""
 
-from collections import defaultdict
-from fastapi import APIRouter, Depends, Query, HTTPException, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from datetime import timezone, datetime, timedelta
-from typing import List, Dict, Any, Optional
+import asyncio
 import logging
 import math
 import time
-import asyncio
-from app.core.utils import utc_now_iso
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
 from app.models.models import Asset, candle_model_for_market
 from app.schemas.schemas import (
-    AssetResponse, PriceCandleResponse, PaginationParams,
-    MarketDataResponse, TimeframeEnum, AssetClassEnum, MarketEnum
+    AssetClassEnum,
+    AssetResponse,
+    MarketEnum,
+    PriceCandleResponse,
+    TimeframeEnum,
 )
 from app.services.core.dependency_container import get_global_container
-from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.data.market_hours_service import MarketHoursService
+from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["market"])
 
 
-@router.get("/symbols", response_model=List[AssetResponse])
+@router.get("/symbols", response_model=list[AssetResponse])
 async def get_symbols(
     asset_class: AssetClassEnum = Query(None),
     market: MarketEnum = Query(None),
@@ -35,7 +38,7 @@ async def get_symbols(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_session),
-) -> List[AssetResponse]:
+) -> list[AssetResponse]:
     """
     Get available trading symbols with filters.
 
@@ -59,7 +62,7 @@ async def get_symbols(
     # ever returned from this endpoint, regardless of caller filters.
     query = select(Asset).where(
         and_(
-            Asset.active == True,
+            Asset.active,
             Asset.market == "NASDAQ",
             Asset.asset_class.in_(["EQUITY", "ETF"]),
         )
@@ -83,7 +86,7 @@ async def get_symbols(
     return assets
 
 
-@router.get("/price-history", response_model=List[PriceCandleResponse])
+@router.get("/price-history", response_model=list[PriceCandleResponse])
 async def get_price_history(
     symbol: str = Query(...),
     timeframe: TimeframeEnum = Query("1d"),
@@ -91,17 +94,17 @@ async def get_price_history(
     end_date: datetime = Query(None),
     limit: int = Query(500, ge=1, le=2000),
     db: AsyncSession = Depends(get_async_session),
-) -> List[PriceCandleResponse]:
+) -> list[PriceCandleResponse]:
     """
     Get historical OHLCV data for a symbol
-    
+
     Args:
         symbol: Asset symbol (required)
         timeframe: Candle timeframe (1m, 5m, 1h, 1d, etc.)
         start_date: Start date (default: last 252 days)
         end_date: End date (default: now)
         limit: Maximum number of candles
-        
+
     Returns:
         List of price candles
     """
@@ -109,21 +112,21 @@ async def get_price_history(
     asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
-    
+
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-    
+
     # Set default dates
     if not end_date:
-        end_date = datetime.now(timezone.utc).replace(tzinfo=None)
+        end_date = datetime.now(UTC).replace(tzinfo=None)
     if not start_date:
         start_date = end_date - timedelta(days=252)
-    
+
     if getattr(end_date, 'tzinfo', None) is not None:
         end_date = end_date.replace(tzinfo=None)
     if getattr(start_date, 'tzinfo', None) is not None:
         start_date = start_date.replace(tzinfo=None)
-    
+
     # Get price data
     Candle = candle_model_for_market(asset.market)
     candle_query = select(Candle).where(
@@ -134,27 +137,27 @@ async def get_price_history(
             Candle.timestamp <= end_date,
         )
     ).order_by(Candle.timestamp.asc()).limit(limit)
-    
+
     result = await db.execute(candle_query)
     candles = result.scalars().all()
-    
+
     logger.info(f"Retrieved {len(candles)} price candles for {symbol}")
     return candles
 
 
 @router.get("/latest-prices", response_model=dict)
 async def get_latest_prices(
-    symbols: List[str] = Query(...),
+    symbols: list[str] = Query(...),
     include_change: bool = Query(True),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
     Get latest prices for multiple symbols with single query optimization
-    
+
     Args:
         symbols: List of symbols
         include_change: Include price change percentage
-        
+
     Returns:
         Dictionary with latest prices
     """
@@ -167,54 +170,54 @@ async def get_latest_prices(
 
     # Create lowercase symbol map for case-insensitive lookup
     symbol_lower_map = {symbol.lower(): symbol for symbol in symbols}
-    
+
     # Get all matching assets in a single query
     lower_symbols = list(symbol_lower_map.keys())
     asset_query = select(Asset).where(func.lower(Asset.symbol).in_(lower_symbols))
     asset_result = await db.execute(asset_query)
     assets_by_symbol = {a.symbol.lower(): a for a in asset_result.scalars()}
-    
+
     if not assets_by_symbol:
         return {
             "status": "success",
             "timestamp": utc_now_iso(),
             "data": {}
         }
-    
+
     # Get all latest candles in a single query by asset ID
     asset_ids = [asset.id for asset in assets_by_symbol.values()]
-    
+
     # Use first symbol's market to determine candle model (all should be from same market for this endpoint)
     # In a real implementation, we might need to handle multiple markets, but for NASDAQ focus:
-    sample_symbol = symbols[0]
+    symbols[0]
     # Extract market from symbol or use default - for now assuming NASDAQ as this is NASDAQ-focused endpoint
     Candle = candle_model_for_market("NASDAQ")  # Default to NASDAQ for this endpoint
-    
+
     latest_candles_query = (
         select(Candle)
         .where(Candle.timeframe == "1d")
         .where(Candle.asset_id.in_(asset_ids))
         .order_by(Candle.asset_id, Candle.timestamp.desc())
     )
-    
+
     candle_result = await db.execute(latest_candles_query)
     candles = candle_result.scalars().all()
-    
+
     latest_candles = {}
     for candle in candles:
         if candle.asset_id not in latest_candles:
             latest_candles[candle.asset_id] = candle
-    
+
     # Build response using fetched data
     result = {}
     for symbol_lower, asset in assets_by_symbol.items():
         original_symbol = symbol_lower_map[symbol_lower]
         candle = latest_candles.get(asset.id)
-        
+
         if candle:
             change = float(candle.close) - float(candle.open)
             change_pct = (change / float(candle.open)) * 100 if float(candle.open) > 0 else 0.0
-            
+
             result[original_symbol] = {
                 "price": float(candle.close),
                 "change": round(change, 2),
@@ -222,7 +225,7 @@ async def get_latest_prices(
                 "volume": getattr(candle, 'volume', 0),
                 "timestamp": candle.timestamp.isoformat()
             }
-    
+
     return {
         "status": "success",
         "timestamp": utc_now_iso(),
@@ -237,31 +240,31 @@ async def get_market_overview(
 ) -> dict:
     """
     Get market overview for a specific market
-    
+
     Args:
         market: Market identifier
-        
+
     Returns:
         Market overview data
     """
     query = select(Asset).where(
         and_(
             Asset.market == "NASDAQ",
-            Asset.active == True,
+            Asset.active,
             Asset.asset_class.in_(["EQUITY", "ETF"]),
         )
     )
-    
+
     result = await db.execute(query)
     assets = result.scalars().all()
-    
+
     total_assets = len(assets)
     sectors = {}
-    
+
     for asset in assets:
         if asset.sector:
             sectors[asset.sector] = sectors.get(asset.sector, 0) + 1
-    
+
     return {
         "status": "success",
         "market": market,
@@ -314,7 +317,7 @@ async def nasdaq_dashboard(
         .where(
             and_(
                 Asset.market == "NASDAQ",
-                Asset.active == True,
+                Asset.active,
                 Asset.asset_class.in_(["EQUITY", "ETF"]),
             )
         )
@@ -379,7 +382,7 @@ MAJOR_INDICES = [
     {"symbol": "RUT", "yf_symbol": "^RUT", "name": "Russell 2000"},
 ]
 
-_indices_cache: Dict[str, Any] = {}
+_indices_cache: dict[str, Any] = {}
 _indices_cache_expiry: float = 0.0
 _INDICES_CACHE_TTL = 60.0
 
@@ -410,7 +413,7 @@ async def get_market_indices(response: Response = None) -> dict:
     market_hours = MarketHoursService()
     is_open = market_hours.is_market_open()
 
-    async def _fetch_one(idx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    async def _fetch_one(idx: dict[str, str]) -> dict[str, Any] | None:
         try:
             quote = await rt_service.get_realtime_quote(idx["yf_symbol"])
         except Exception as exc:
@@ -473,7 +476,7 @@ async def industry_ranking(
         .where(
             and_(
                 Asset.market == "NASDAQ",
-                Asset.active == True,
+                Asset.active,
                 Asset.asset_class.in_(["EQUITY", "ETF"]),
                 Asset.industry.isnot(None),
                 Candle.timeframe == "1d",
@@ -494,7 +497,7 @@ async def industry_ranking(
         }
 
     # Separate latest and previous close per asset
-    asset_rows: Dict[str, Dict[str, Any]] = {}
+    asset_rows: dict[str, dict[str, Any]] = {}
     for row in rows:
         if row.rn == 1:
             latest = row.close
@@ -519,7 +522,7 @@ async def industry_ranking(
     for ind, assets in asset_rows.items():
         asset_rows[ind] = {k: v for k, v in assets.items() if v["latest"] is not None}
 
-    industry_changes: Dict[str, List[float]] = {}
+    industry_changes: dict[str, list[float]] = {}
     for industry, assets in asset_rows.items():
         for data in assets.values():
             latest = float(data["latest"])

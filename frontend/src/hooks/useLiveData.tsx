@@ -64,10 +64,12 @@ export function useLiveData<T = unknown>(
   const keyRef = useRef(key);
   const enabledRef = useRef(enabled);
 
-  onDataRef.current = onData;
-  onHealthChangeRef.current = onHealthChange;
-  keyRef.current = key;
-  enabledRef.current = enabled;
+  useEffect(() => {
+    onDataRef.current = onData;
+    onHealthChangeRef.current = onHealthChange;
+    keyRef.current = key;
+    enabledRef.current = enabled;
+  }, [onData, onHealthChange, key, enabled]);
 
   const data = (streamEntry?.data as T | null) ?? initialData;
   const latest = (streamEntry?.latest as T | null) ?? initialData;
@@ -307,11 +309,16 @@ export function LiveConnectionIndicator({
   lastEventTs,
   label,
 }: ConnectionIndicatorProps) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   let ageSeconds: number | null = null;
   if (typeof dataAgeMs === 'number') {
     ageSeconds = Math.round(dataAgeMs / 1000);
   } else if (lastEventTs !== null) {
-    ageSeconds = Math.max(0, Math.round((Date.now() - lastEventTs) / 1000));
+    ageSeconds = Math.max(0, Math.round((now - lastEventTs) / 1000));
   }
 
   return (

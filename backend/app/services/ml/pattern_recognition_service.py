@@ -3,10 +3,11 @@
 Chart pattern recognition and analysis.
 """
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
-from ..core import MLService
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from ..core import MLService
 
 
 class PatternRecognitionService(MLService):
@@ -22,22 +23,22 @@ class PatternRecognitionService(MLService):
         self.model = None
         self.logger.info("PatternRecognitionService shutdown")
 
-    async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         patterns = training_data.get("patterns", [])
         self.model = {"trained": True, "patterns_learned": len(patterns)}
         return {"status": "trained", "patterns": len(patterns)}
 
-    async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
         prices = data.get("prices", [])
         if len(prices) < 20:
             raise ValueError("Insufficient data for pattern recognition")
-        
+
         # Use previous 10 items for range to compare against current
         historical_window = prices[-11:-1]
         local_max = max(historical_window)
         local_min = min(historical_window)
         current = prices[-1]
-        
+
         if current > local_max:
             pattern = "resistance_test"
             probability = 0.75
@@ -57,7 +58,7 @@ class PatternRecognitionService(MLService):
             "timestamp": utc_now_iso(),
         }
 
-    async def detect_patterns(self, prices: List[float], volume: Optional[List[float]] = None) -> List[Dict[str, Any]]:
+    async def detect_patterns(self, prices: list[float], volume: list[float] | None = None) -> list[dict[str, Any]]:
         patterns = []
         n = len(prices)
         for i in range(20, n):

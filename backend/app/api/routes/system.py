@@ -1,16 +1,15 @@
 """System Routes - Tier 9 (Scheduler, Metrics, Queue)"""
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from datetime import timezone, datetime
-from typing import Optional
 import logging
-from app.core.utils import utc_now_iso
 
-from app.api.dependencies import get_current_admin_user, get_health_checker
+from fastapi import APIRouter, Depends, HTTPException, Response
+
+from app.api.dependencies import get_current_admin_user
+from app.core.utils import utc_now_iso
 from app.services.core.dependency_container import get_global_container
-from app.services.system.scheduler_service import SchedulerService
 from app.services.system.metrics_service import MetricsService
-from app.services.system.queue_service import QueueService, JobStatus
+from app.services.system.queue_service import QueueService
+from app.services.system.scheduler_service import SchedulerService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -47,19 +46,19 @@ async def list_scheduler_jobs() -> dict:
 async def register_scheduler_job(data: dict) -> dict:
     """
     Register a new scheduled job.
-    
+
     Body: {"name": "job_name", "interval_seconds": 3600}
     """
     name = data.get("name")
     interval_seconds = int(data.get("interval_seconds", 3600))
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
-    
+
     async def _noop():
         return {"status": "ok"}
-    
+
     svc = _get_scheduler()
-    job = svc.register_job(name, _noop, interval_seconds)
+    svc.register_job(name, _noop, interval_seconds)
     return {"status": "success", "job": svc.get_job_status(name)}
 
 
@@ -113,20 +112,20 @@ async def get_health_summary() -> dict:
 async def enqueue_job(data: dict) -> dict:
     """
     Enqueue a new job.
-    
+
     Body: {"name": "task_name", "payload": {...}, "priority": 0, "max_retries": 3}
     """
     name = data.get("name")
     payload = data.get("payload", {})
     priority = int(data.get("priority", 0))
     max_retries = int(data.get("max_retries", 3))
-    
+
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
-    
+
     async def default_processor(job):
         return {"processed": job.name, "payload": job.payload}
-    
+
     svc = _get_queue()
     svc.set_processor(default_processor)
     job = await svc.enqueue(name, payload, priority=priority, max_retries=max_retries)

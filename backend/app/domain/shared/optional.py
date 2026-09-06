@@ -1,4 +1,5 @@
-from typing import Generic, TypeVar, Optional as PyOptional, Callable, Any
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -8,8 +9,8 @@ class Optional(Generic[T]):
     Optional pattern implementation for null safety.
     Provides a way to handle potentially missing values without returning None.
     """
-    
-    def __init__(self, value: PyOptional[T], has_value: bool):
+
+    def __init__(self, value: T | None, has_value: bool):
         self._value = value
         self._has_value = has_value
 

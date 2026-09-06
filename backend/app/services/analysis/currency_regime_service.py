@@ -1,7 +1,6 @@
-from typing import Any, Dict, List, Optional, Tuple
-from datetime import datetime, timezone
+from typing import Any
+
 import numpy as np
-import random
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
@@ -22,7 +21,7 @@ class CurrencyRegimeClassifier(AnalysisService):
         super().__init__(service_name)
         # Transition matrix initialized with reasonable priors
         self.transition_matrix = self._init_transition_matrix()
-        self.currency_regimes: Dict[str, str] = {}
+        self.currency_regimes: dict[str, str] = {}
 
     def _init_transition_matrix(self) -> np.ndarray:
         """Initialize 4x4 transition matrix with domain priors."""
@@ -44,7 +43,7 @@ class CurrencyRegimeClassifier(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("CurrencyRegimeClassifier shutdown")
 
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """Classify currency regimes and calculate transition probabilities."""
         currencies = data.get("currencies", ["USD", "EUR", "CNY", "JPY", "GBP"])
         results = {}
@@ -63,7 +62,7 @@ class CurrencyRegimeClassifier(AnalysisService):
 
         return results
 
-    async def classify_currency(self, currency: str, currency_data: Dict[str, Any]) -> str:
+    async def classify_currency(self, currency: str, currency_data: dict[str, Any]) -> str:
         """Classify a currency into one of 4 regimes."""
         # Use volatility, reserves, policy statements
         volatility = currency_data.get("fx_volatility", 0.01)
@@ -99,7 +98,7 @@ class CurrencyRegimeClassifier(AnalysisService):
         }
         return factors.get(regime, 1.0)
 
-    async def _currency_pressure(self, currency: str, data: Dict[str, Any]) -> Dict[str, float]:
+    async def _currency_pressure(self, currency: str, data: dict[str, Any]) -> dict[str, float]:
         """Calculate currency pressure indicator: capital flight, reserve depletion, peg pressure."""
         capital_flight = data.get(f"{currency}_capital_flight", 0.0)
         reserve_depletion = data.get(f"{currency}_reserve_depletion", 0.0)
@@ -116,12 +115,12 @@ class CurrencyRegimeClassifier(AnalysisService):
             "risk_level": "high" if pressure > 0.7 else "moderate" if pressure > 0.4 else "low",
         }
 
-    def get_transition_probabilities(self, from_regime: str) -> Dict[str, float]:
+    def get_transition_probabilities(self, from_regime: str) -> dict[str, float]:
         """Get transition probabilities from a given regime."""
         idx = self.REGIMES.index(from_regime)
         return {r: float(self.transition_matrix[idx, i]) for i, r in enumerate(self.REGIMES)}
 
-    def simulate_regime_path(self, start_regime: str, steps: int = 12) -> List[str]:
+    def simulate_regime_path(self, start_regime: str, steps: int = 12) -> list[str]:
         """Simulate regime transitions over time."""
         path = [start_regime]
         current = start_regime

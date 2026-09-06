@@ -5,14 +5,14 @@ the router is mounted into a throwaway app and ``preference_service`` is mocked,
 so no database or authenticated session is required.
 """
 from types import SimpleNamespace
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.routes.settings import router, RECENT_SEARCHES_KEY
+from app.api.routes.settings import RECENT_SEARCHES_KEY, router
 
 
 @pytest.fixture

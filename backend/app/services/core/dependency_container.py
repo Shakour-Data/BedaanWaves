@@ -5,9 +5,10 @@ Manages all service instances and their lifecycle.
 Implements the service locator pattern for dependency injection.
 """
 
-from typing import Any, Dict, Optional, Type, TypeVar, Callable
 import logging
-from datetime import timezone, datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any, TypeVar
 
 T = TypeVar('T')
 
@@ -15,23 +16,23 @@ T = TypeVar('T')
 class DependencyContainer:
     """
     Central dependency injection container for all BedaanWaves services.
-    
+
     Manages:
     - Service registration
     - Service instantiation
     - Lifecycle management
     - Singleton instances
     """
-    
+
     def __init__(self):
         """Initialize the dependency container"""
-        self._services: Dict[str, Any] = {}
-        self._factories: Dict[str, Callable] = {}
-        self._singletons: Dict[str, Any] = {}
+        self._services: dict[str, Any] = {}
+        self._factories: dict[str, Callable] = {}
+        self._singletons: dict[str, Any] = {}
         self.logger = logging.getLogger("DependencyContainer")
-        self.created_at = datetime.now(timezone.utc)
+        self.created_at = datetime.now(UTC)
         self._is_initialized = False
-    
+
     def register(
         self,
         service_name: str,
@@ -41,7 +42,7 @@ class DependencyContainer:
     ) -> None:
         """
         Register a service factory.
-        
+
         Args:
             service_name: Unique service identifier
             factory: Callable that creates service instance
@@ -54,53 +55,53 @@ class DependencyContainer:
             'kwargs': default_kwargs,
         }
         self.logger.info(f"Registered service: {service_name} (singleton={singleton})")
-    
+
     def get(self, service_name: str, **kwargs) -> Any:
         """Get service instance.
-        
+
         Args:
             service_name: Service identifier
             **kwargs: Additional arguments for factory
-            
+
         Returns:
             Service instance
-            
+
         Raises:
             KeyError: If service not registered
         """
         if service_name in self._singletons:
             return self._singletons[service_name]
-        
+
         if service_name not in self._factories:
             raise KeyError(f"Service not registered: {service_name}")
-        
+
         factory_info = self._factories[service_name]
         factory = factory_info['factory']
         is_singleton = factory_info['singleton']
-        
+
         # Return cached singleton if available
         if is_singleton and service_name in self._singletons:
             self.logger.debug(f"Returning singleton: {service_name}")
             return self._singletons[service_name]
-        
+
         # Merge default kwargs with provided kwargs
         merged_kwargs = {**factory_info['kwargs'], **kwargs}
-        
+
         # Create new instance
         try:
             instance = factory(**merged_kwargs)
-            
+
             # Cache if singleton
             if is_singleton:
                 self._singletons[service_name] = instance
                 self.logger.debug(f"Cached singleton: {service_name}")
-            
+
             self.logger.debug(f"Created service instance: {service_name}")
             return instance
         except Exception as e:
             self.logger.error(f"Failed to create service {service_name}: {e}")
             raise
-    
+
     def register_factory(
         self,
         service_name: str,
@@ -110,7 +111,7 @@ class DependencyContainer:
     ) -> None:
         """
         Register a service factory (alias for register).
-        
+
         Args:
             service_name: Unique service identifier
             factory: Callable that creates service instance
@@ -122,28 +123,28 @@ class DependencyContainer:
     def register_instance(self, service_name: str, instance: Any) -> None:
         """
         Register a pre-created service instance (useful for testing).
-        
+
         Args:
             service_name: Service identifier
             instance: Service instance
         """
         self._singletons[service_name] = instance
         self.logger.info(f"Registered instance: {service_name}")
-    
+
     def has(self, service_name: str) -> bool:
         """Check if service is registered"""
         return service_name in self._factories or service_name in self._singletons
-    
+
     def remove(self, service_name: str) -> None:
         """Remove service registration"""
         self._factories.pop(service_name, None)
         self._singletons.pop(service_name, None)
         self.logger.info(f"Removed service: {service_name}")
-    
+
     async def initialize(self) -> None:
         """Initialize all registered services"""
         self.logger.info("Initializing all services...")
-        
+
         for service_name, instance in self._singletons.items():
             try:
                 if hasattr(instance, 'initialize'):
@@ -153,14 +154,14 @@ class DependencyContainer:
             except Exception as e:
                 self.logger.error(f"Error initializing {service_name}: {e}")
                 raise
-        
+
         self._is_initialized = True
         self.logger.info("All services initialized")
-    
+
     async def shutdown_all(self) -> None:
         """Shutdown all services"""
         self.logger.info("Shutting down all services...")
-        
+
         for service_name, instance in self._singletons.items():
             try:
                 if hasattr(instance, 'shutdown'):
@@ -169,19 +170,19 @@ class DependencyContainer:
                     self.logger.info(f"Shutdown service: {service_name}")
             except Exception as e:
                 self.logger.error(f"Error shutting down {service_name}: {e}")
-        
+
         self._singletons.clear()
         self._is_initialized = False
         self.logger.info("All services shutdown complete")
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get container statistics"""
         return {
             "registered_services": len(self._factories),
             "singleton_instances": len(self._singletons),
-            "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
+            "uptime_seconds": (datetime.now(UTC) - self.created_at).total_seconds(),
         }
-    
+
     def __repr__(self) -> str:
         return (
             f"<DependencyContainer: "
@@ -191,7 +192,7 @@ class DependencyContainer:
 
 
 # Global container instance (lazy-loaded)
-_global_container: Optional[DependencyContainer] = None
+_global_container: DependencyContainer | None = None
 
 
 def set_global_container(container: DependencyContainer) -> None:

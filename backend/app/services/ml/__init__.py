@@ -13,13 +13,13 @@ Services for machine learning and predictions:
 from .coefficient_learning_service import CoefficientLearningService
 
 __all__ = [
-    "MLService",
-    "PricePredictionService", 
     "AnomalyDetectionService",
     "ClusteringService",
+    "CoefficientLearningService",
     "EnsembleService",
     "FeatureEngineeringService",
-    "CoefficientLearningService"
+    "MLService",
+    "PricePredictionService"
 ]
 
 # Lazy imports to avoid circular dependencies

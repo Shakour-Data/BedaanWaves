@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
-import { NewsList } from "@/components/shared/NewsList";
 import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
@@ -11,7 +10,6 @@ import { formatTimeAgo } from "@/lib/utils";
 import {
   useLiveData,
   LiveConnectionIndicator,
-  type SSEEvent,
 } from "@/hooks/useLiveData";
 
 interface LiveNewsItem extends NewsItem {
@@ -93,6 +91,7 @@ export default function NewsPage() {
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const lastNewsEventRef = useRef<number | null>(null);
+  const [lastNewsEventTs, setLastNewsEventTs] = useState<number | null>(null);
   const itemIdCounter = useRef(0);
 
   useEffect(() => {
@@ -144,7 +143,7 @@ export default function NewsPage() {
   }, []);
 
   const handleNewsData = useCallback(
-    (payload: NewsStreamPayload, _event: SSEEvent<NewsStreamPayload>) => {
+    (payload: NewsStreamPayload) => {
       const incoming: LiveNewsItem[] = [];
       if (payload?.item) incoming.push(payload.item);
       if (payload?.items && Array.isArray(payload.items)) {
@@ -154,6 +153,7 @@ export default function NewsPage() {
 
       const now = Date.now();
       lastNewsEventRef.current = now;
+      setLastNewsEventTs(now);
 
       setNewsItems((prev) => {
         const next: LiveNewsItem[] = [];
@@ -223,7 +223,7 @@ export default function NewsPage() {
               <LiveConnectionIndicator
                 health={newsLive.connectionHealth}
                 dataAgeMs={newsLive.lastDataAgeMs}
-                lastEventTs={lastNewsEventRef.current}
+                lastEventTs={lastNewsEventTs}
               />
             </div>
             <div className="space-y-1">

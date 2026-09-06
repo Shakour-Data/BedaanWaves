@@ -12,23 +12,22 @@ whether the email/token exists, so account enumeration is mitigated.
 Error philosophy (spec.yaml): "Never blame user; always suggest next action".
 """
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
 import logging
 
+from fastapi import APIRouter, HTTPException, status
+
 from app.schemas.schemas import (
-    PasswordResetRequest,
     PasswordResetConfirm,
-    PasswordResetVerifyRequest,
+    PasswordResetRequest,
     PasswordResetResponse,
+    PasswordResetVerifyRequest,
     PasswordResetVerifyResponse,
 )
 from app.services.user.password_reset_service import (
     create_password_reset_token,
-    verify_reset_token,
     reset_password,
+    verify_reset_token,
 )
-from app.services.user.auth_service import get_user_by_email
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["password-reset"])

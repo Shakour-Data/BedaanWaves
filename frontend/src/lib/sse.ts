@@ -269,7 +269,7 @@ export function createSSEConnection<T = unknown>(
           data_age_ms,
         };
         onMessage?.(sseEvent);
-      } catch (err) {
+      } catch {
         const sseEvent: SSEEvent<T> = {
           type: 'ping',
           event: 'ping',

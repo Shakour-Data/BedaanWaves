@@ -1,7 +1,8 @@
 """Field registry and validation helpers for the advanced filter engine."""
 
-from typing import Dict, Any, List
-from .config import get_field_registry, FILTERABLE_FIELDS, EXTRA_FILTERABLE_FIELDS
+from typing import Any
+
+from .config import get_field_registry
 
 
 class FieldRegistry:
@@ -10,7 +11,7 @@ class FieldRegistry:
     def __init__(self) -> None:
         self._registry = get_field_registry()
 
-    def get_field(self, name: str) -> Dict[str, Any]:
+    def get_field(self, name: str) -> dict[str, Any]:
         if name not in self._registry:
             raise KeyError(
                 f"Unknown filterable field '{name}'. "
@@ -18,14 +19,14 @@ class FieldRegistry:
             )
         return self._registry[name]
 
-    def list_fields(self, level: str) -> List[Dict[str, Any]]:
+    def list_fields(self, level: str) -> list[dict[str, Any]]:
         return [
             {**meta, "name": name}
             for name, meta in self._registry.items()
             if level in meta.get("levels", [])
         ]
 
-    def list_all_fields(self) -> List[Dict[str, Any]]:
+    def list_all_fields(self) -> list[dict[str, Any]]:
         return [
             {**meta, "name": name}
             for name, meta in self._registry.items()

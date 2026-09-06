@@ -20,7 +20,6 @@ DB is needed, and verify:
 """
 import asyncio
 import unittest
-from datetime import date
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 

@@ -1,7 +1,6 @@
 """Authentication & Authorization Dependencies"""
 
 import uuid
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -11,10 +10,9 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import User
-from app.schemas.schemas import TokenData
-from app.services.user.authorization_service import AuthorizationService
-from app.services.core.health_checker import HealthChecker
 from app.services.core.dependency_container import get_global_container
+from app.services.core.health_checker import HealthChecker
+from app.services.user.authorization_service import AuthorizationService
 
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -64,7 +62,7 @@ async def get_current_user_id(current_user: User = Depends(get_current_active_us
     return current_user.id
 
 
-def require_permissions(required: List[str]):
+def require_permissions(required: list[str]):
     """Dependency factory enforcing that the user holds ALL ``required`` permissions."""
     _auth_service = AuthorizationService()
 
@@ -80,7 +78,7 @@ def require_permissions(required: List[str]):
     return _checker
 
 
-def require_roles(roles: List[str]):
+def require_roles(roles: list[str]):
     """Dependency factory enforcing that the user matches one of ``roles``.
 
     Supported roles: ``admin`` (``User.is_admin``) and ``user`` (any active user).

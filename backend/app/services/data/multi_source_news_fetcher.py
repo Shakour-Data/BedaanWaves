@@ -18,12 +18,12 @@ import asyncio
 import logging
 import re
 import xml.etree.ElementTree as ET
-from defusedxml.ElementTree import fromstring as safe_fromstring
-from datetime import timezone, datetime
-from typing import Any, Dict, List, Optional
-from urllib.parse import quote_plus, urlencode
+from datetime import UTC, datetime
+from typing import Any
+from urllib.parse import quote_plus
 
 import aiohttp
+from defusedxml.ElementTree import fromstring as safe_fromstring
 
 from app.models.models import News
 from app.services.core.base_service import DataService
@@ -70,9 +70,9 @@ class MultiSourceNewsFetcher(DataService):
         self,
         symbol: str,
         days: int = 7,
-        asset_id: Optional[str] = None,
+        asset_id: str | None = None,
         language: str = "en",
-    ) -> List[News]:
+    ) -> list[News]:
         """
         Fetch news for a specific symbol from all available sources.
 
@@ -86,9 +86,9 @@ class MultiSourceNewsFetcher(DataService):
             List of News objects deduplicated by URL
         """
         symbol = symbol.upper().strip()
-        cutoff = datetime.now(timezone.utc).timestamp() - (days * 86400)
+        cutoff = datetime.now(UTC).timestamp() - (days * 86400)
         seen_urls: set = set()
-        news_items: List[News] = []
+        news_items: list[News] = []
 
         # Source 1: Google News RSS (symbol search)
         google_news = await self._fetch_google_news_rss(symbol)
@@ -174,14 +174,14 @@ class MultiSourceNewsFetcher(DataService):
         for item in news_items:
             item.asset_id = asset_id
             item.language = language
-            item.fetched_at = datetime.now(timezone.utc)
+            item.fetched_at = datetime.now(UTC)
 
         self.logger.info(
             f"Fetched {len(news_items)} news items for {symbol} from {len(set(n.source for n in news_items))} sources"
         )
         return news_items
 
-    async def fetch_market_news(self, limit: int = 20) -> List[News]:
+    async def fetch_market_news(self, limit: int = 20) -> list[News]:
         """
         Fetch general market news from general RSS sources.
 
@@ -192,7 +192,7 @@ class MultiSourceNewsFetcher(DataService):
             List of News objects
         """
         seen_urls: set = set()
-        news_items: List[News] = []
+        news_items: list[News] = []
 
         sources = [
             self._fetch_marketwatch_rss(),
@@ -210,7 +210,7 @@ class MultiSourceNewsFetcher(DataService):
                 if item.url and item.url not in seen_urls:
                     seen_urls.add(item.url)
                     item.language = "en"
-                    item.fetched_at = datetime.now(timezone.utc)
+                    item.fetched_at = datetime.now(UTC)
                     news_items.append(item)
                     if len(news_items) >= limit * 3:
                         break
@@ -223,21 +223,21 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 1: Google News RSS
     # ------------------------------------------------------------------
-    async def _fetch_google_news_rss(self, symbol: str) -> List[News]:
+    async def _fetch_google_news_rss(self, symbol: str) -> list[News]:
         url = f"https://news.google.com/rss/search?q={quote_plus(symbol)}+stock&hl=en-US&gl=US&ceid=US:en"
         return await self._fetch_rss(url, "Google News", symbol)
 
     # ------------------------------------------------------------------
     # Source 2: Yahoo Finance RSS
     # ------------------------------------------------------------------
-    async def _fetch_yahoo_finance_rss(self, symbol: str) -> List[News]:
+    async def _fetch_yahoo_finance_rss(self, symbol: str) -> list[News]:
         url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US"
         return await self._fetch_rss(url, "Yahoo Finance", symbol)
 
     # ------------------------------------------------------------------
     # Source 3: CNBC RSS
     # ------------------------------------------------------------------
-    async def _fetch_cnbc_rss(self, symbol: str) -> List[News]:
+    async def _fetch_cnbc_rss(self, symbol: str) -> list[News]:
         url = (
             "https://search.cnbc.com/rs/search/combinedcms/view.xml"
             f"?partid=119005645&tagId=119005645&query={quote_plus(symbol)}"
@@ -247,7 +247,7 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 4: Reuters RSS
     # ------------------------------------------------------------------
-    async def _fetch_reuters_rss(self, symbol: str) -> List[News]:
+    async def _fetch_reuters_rss(self, symbol: str) -> list[News]:
         url = "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best"
         items = await self._fetch_rss(url, "Reuters", symbol)
         for item in items:
@@ -257,7 +257,7 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 5: MarketWatch RSS
     # ------------------------------------------------------------------
-    async def _fetch_marketwatch_rss(self) -> List[News]:
+    async def _fetch_marketwatch_rss(self) -> list[News]:
         url = "https://feeds.content.dowjones.io/public/rss/mw_topstories"
         items = await self._fetch_rss(url, "MarketWatch", "market")
         for item in items:
@@ -267,7 +267,7 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 6: SEC EDGAR
     # ------------------------------------------------------------------
-    async def _fetch_sec_edgar(self, symbol: str) -> List[News]:
+    async def _fetch_sec_edgar(self, symbol: str) -> list[News]:
         url = (
             "https://www.sec.gov/cgi-bin/browse-edgar"
             f"?action=getcompany&CIK={symbol}&type=10-K&dateb=&owner=include&count=40&output=atom"
@@ -277,7 +277,7 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 7: Reddit JSON
     # ------------------------------------------------------------------
-    async def _fetch_reddit_json(self, symbol: str) -> List[News]:
+    async def _fetch_reddit_json(self, symbol: str) -> list[News]:
         subreddits = ["wallstreetbets", "stocks", "investing", "StockMarket"]
         tasks = []
         for sub in subreddits:
@@ -288,14 +288,14 @@ class MultiSourceNewsFetcher(DataService):
             tasks.append(self._fetch_reddit_json_one(url, sub, symbol))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        items: List[News] = []
+        items: list[News] = []
         for r in results:
             if isinstance(r, list):
                 items.extend(r)
         return items
 
-    async def _fetch_reddit_json_one(self, url: str, subreddit: str, symbol: str) -> List[News]:
-        items: List[News] = []
+    async def _fetch_reddit_json_one(self, url: str, subreddit: str, symbol: str) -> list[News]:
+        items: list[News] = []
         try:
             data = await self._get_json(url, headers={"User-Agent": USER_AGENT})
             children = (
@@ -309,7 +309,7 @@ class MultiSourceNewsFetcher(DataService):
                 permalink = post.get("permalink", "")
                 link = f"https://www.reddit.com{permalink}" if permalink else post.get("url", "")
                 created = post.get("created_utc")
-                published_at = datetime.fromtimestamp(created, tz=timezone.utc) if created else datetime.now(timezone.utc)
+                published_at = datetime.fromtimestamp(created, tz=UTC) if created else datetime.now(UTC)
                 self_comment = post.get("selftext", "")
                 body = self_comment[:500] if self_comment else title
 
@@ -330,9 +330,9 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 8: Stocktwits
     # ------------------------------------------------------------------
-    async def _fetch_stocktwits(self, symbol: str) -> List[News]:
+    async def _fetch_stocktwits(self, symbol: str) -> list[News]:
         url = f"https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
-        items: List[News] = []
+        items: list[News] = []
         try:
             data = await self._get_json(url, headers={"User-Agent": USER_AGENT})
             messages = (
@@ -343,7 +343,7 @@ class MultiSourceNewsFetcher(DataService):
             for msg in messages[:20]:
                 body = msg.get("body", "")
                 created = msg.get("created_at")
-                published_at = datetime.fromisoformat(created.replace("Z", "+00:00")) if created else datetime.now(timezone.utc)
+                published_at = datetime.fromisoformat(created.replace("Z", "+00:00")) if created else datetime.now(UTC)
                 msg_id = msg.get("id", "")
                 link = f"https://stocktwits.com/message/{msg_id}" if msg_id else ""
                 items.append(
@@ -363,7 +363,7 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 9: Nasdaq RSS
     # ------------------------------------------------------------------
-    async def _fetch_nasdaq_rss(self) -> List[News]:
+    async def _fetch_nasdaq_rss(self) -> list[News]:
         url = "https://www.nasdaq.com/feed/rssoutbound"
         items = await self._fetch_rss(url, "Nasdaq", "market")
         for item in items:
@@ -373,7 +373,7 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Source 10: Benzinga RSS
     # ------------------------------------------------------------------
-    async def _fetch_benzinga_rss(self) -> List[News]:
+    async def _fetch_benzinga_rss(self) -> list[News]:
         url = "https://www.benzinga.com/feed"
         items = await self._fetch_rss(url, "Benzinga", "market")
         for item in items:
@@ -383,8 +383,8 @@ class MultiSourceNewsFetcher(DataService):
     # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------
-    async def _fetch_rss(self, url: str, source_name: str, symbol: str) -> List[News]:
-        items: List[News] = []
+    async def _fetch_rss(self, url: str, source_name: str, symbol: str) -> list[News]:
+        items: list[News] = []
         try:
             text = await self._get_text(url)
             if not text:
@@ -398,7 +398,7 @@ class MultiSourceNewsFetcher(DataService):
 
                 published_at = self._parse_date(pub_date)
                 if not published_at:
-                    published_at = datetime.now(timezone.utc)
+                    published_at = datetime.now(UTC)
 
                 body = self._strip_html(description) if description else (title or "")
                 if not title:
@@ -418,7 +418,7 @@ class MultiSourceNewsFetcher(DataService):
             self.logger.debug(f"RSS fetch failed for {source_name} ({symbol}): {e}")
         return items
 
-    async def _get_text(self, url: str) -> Optional[str]:
+    async def _get_text(self, url: str) -> str | None:
         for attempt in range(self.max_retries):
             try:
                 async with aiohttp.ClientSession() as session:
@@ -436,7 +436,7 @@ class MultiSourceNewsFetcher(DataService):
                 await asyncio.sleep(min(2 ** attempt, 5))
         return None
 
-    async def _get_json(self, url: str, headers: Optional[Dict[str, str]] = None) -> Any:
+    async def _get_json(self, url: str, headers: dict[str, str] | None = None) -> Any:
         for attempt in range(self.max_retries):
             try:
                 async with aiohttp.ClientSession() as session:
@@ -463,7 +463,7 @@ class MultiSourceNewsFetcher(DataService):
         return (elem.text or "").strip() if elem is not None else ""
 
     @staticmethod
-    def _parse_date(date_str: str) -> Optional[datetime]:
+    def _parse_date(date_str: str) -> datetime | None:
         if not date_str:
             return None
         formats = [
@@ -477,13 +477,13 @@ class MultiSourceNewsFetcher(DataService):
             try:
                 dt = datetime.strptime(date_str, fmt)
                 if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
+                    dt = dt.replace(tzinfo=UTC)
                 return dt
             except ValueError:
                 continue
         try:
             ts = float(date_str)
-            return datetime.fromtimestamp(ts, tz=timezone.utc)
+            return datetime.fromtimestamp(ts, tz=UTC)
         except (ValueError, TypeError):
             return None
 

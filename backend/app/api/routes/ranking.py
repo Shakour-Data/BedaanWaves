@@ -1,9 +1,10 @@
 """Ranking API Routes"""
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 import math
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_async_session
 from app.services.analysis.ranking_service import RankingService

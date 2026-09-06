@@ -3,20 +3,17 @@
 All data is fetched live from yfinance. No hardcoded or mock data.
 """
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Header, Response, UploadFile, File
-from typing import List, Optional
-from datetime import datetime, timezone
-import logging
 import csv
 import io
 import json as json_module
+import logging
 
-from app.core.utils import utc_now_iso
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
-from app.services.data.stock_service import StockService
-from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.core.config import get_settings
+from app.core.utils import utc_now_iso
 from app.services.core.dependency_container import get_global_container
+from app.services.data.stock_service import StockService
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -108,9 +105,9 @@ async def get_stock(
     """Get stock information by ticker from live yfinance data."""
     if response:
         _add_version_header(response, version)
-    
+
     data = await service.get_stock(ticker)
-    
+
     result = {
         "status": "success",
         "ticker": ticker,
@@ -118,24 +115,24 @@ async def get_stock(
         "api_version": version,
         "timestamp": utc_now_iso()
     }
-    
+
     if version == "v1":
         result["deprecated"] = False
         result["migrated_to"] = "v2 has same endpoint"
-    
+
     return result
 
 
 @router.post("/batch", response_model=dict)
 async def get_multiple_stocks(
-    tickers: List[str],
+    tickers: list[str],
     service: StockService = Depends(get_stock_service),
     response: Response = None
 ) -> dict:
     """Get multiple stocks by tickers from live yfinance data."""
     if response:
         _add_version_header(response, "v1")
-    
+
     results = await service.get_multiple(tickers)
     successful = sum(1 for v in results.values() if "error" not in v)
     failed = len(tickers) - successful
@@ -156,7 +153,7 @@ async def get_multiple_stocks(
 
 @router.post("/v2/batch", response_model=dict)
 async def get_multiple_stocks_v2(
-    tickers: List[str],
+    tickers: list[str],
     include_history: bool = Query(False, description="Include historical data"),
     service: StockService = Depends(get_stock_service),
     response: Response = None
@@ -164,9 +161,9 @@ async def get_multiple_stocks_v2(
     """Get multiple stocks by tickers (v2 with enhanced features)."""
     if response:
         _add_version_header(response, "v2")
-    
+
     results = await service.get_multiple(tickers)
-    
+
     if include_history:
         for ticker in tickers:
             if ticker in results and "error" not in results[ticker]:
@@ -175,7 +172,7 @@ async def get_multiple_stocks_v2(
                     results[ticker]["history"] = history[:50]
                 except Exception:
                     results[ticker]["history"] = []
-    
+
     successful = sum(1 for v in results.values() if "error" not in v)
     return {
         "status": "success",
@@ -195,7 +192,7 @@ async def get_multiple_stocks_v2(
 
 @router.post("/export", response_model=dict)
 async def export_portfolio_data(
-    tickers: Optional[List[str]] = None,
+    tickers: list[str] | None = None,
     format: str = Query("json", pattern="^(json|csv)$"),
     service: StockService = Depends(get_stock_service),
     response: Response = None
@@ -203,12 +200,12 @@ async def export_portfolio_data(
     """Export portfolio data in JSON or CSV format."""
     if response:
         _add_version_header(response, "v1")
-    
+
     if not tickers:
         tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
-    
+
     data = await service.get_multiple(tickers)
-    
+
     export_result = {
         "export_timestamp": utc_now_iso(),
         "total_records": len(tickers),
@@ -217,9 +214,10 @@ async def export_portfolio_data(
         "data": data,
         "timestamp": utc_now_iso()
     }
-    
+
     if format == "csv":
-        import io, csv
+        import csv
+        import io
         csv_buffer = io.StringIO()
         writer = csv.writer(csv_buffer)
         writer.writerow(["ticker", "symbol", "price", "volume", "change", "timestamp"])
@@ -234,7 +232,7 @@ async def export_portfolio_data(
                     utc_now_iso()
                 ])
         export_result["csv_content"] = csv_buffer.getvalue()
-    
+
     return export_result
 
 
@@ -254,9 +252,7 @@ async def import_portfolio_data(
 
     try:
         text = content.decode("utf-8")
-        if text.strip().startswith('[{') or text.strip().startswith('['):
-            data = json_module.loads(text)
-        elif text.strip().startswith('{'):
+        if text.strip().startswith('[{') or text.strip().startswith('[') or text.strip().startswith('{'):
             data = json_module.loads(text)
         else:
             csv_buffer = io.StringIO(text)
@@ -284,6 +280,6 @@ async def import_portfolio_data(
             "timestamp": utc_now_iso()
         }
     except json_module.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e!s}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Import failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Import failed: {e!s}")

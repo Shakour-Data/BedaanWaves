@@ -6,25 +6,26 @@ Comprehensive stock scoring for US/OTC and foreign exchanges.
 Now supports ML-driven dynamic coefficient learning.
 """
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
 import asyncio
+from typing import Any
+
+from app.core.utils import utc_now_iso
+from app.services.core.dependency_container import get_global_container
+
 from ..core import AnalysisService
 from ..ml import CoefficientLearningService
-from app.services.core.dependency_container import get_global_container
-from app.core.utils import utc_now_iso
 
 
 class ScoringService(AnalysisService):
     """
     6D Scoring service with 305-node hierarchy.
-    
+
     Hierarchy:
     - Level 1: 6 Dimensions (fundamental, technical, sentiment, risk, macro, ai)
     - Level 2: 40 Sub-Dimensions
     - Level 3: 80 Aspects
     - Level 4: 173 Sub-Aspects
-    
+
     6D Aggregation now uses ML-learned weights with fallback to static weights:
     - Fundamental (learned, fallback 25%)
     - Technical (learned, fallback 20%)
@@ -33,7 +34,7 @@ class ScoringService(AnalysisService):
     - Macro (learned, fallback 10%)
     - AI (learned, fallback 10%)
     """
-    
+
     # Static fallback weights (used when ML service unavailable or not trained)
     DIMENSION_WEIGHTS = {
         "fundamental": 0.25,
@@ -43,20 +44,20 @@ class ScoringService(AnalysisService):
         "macro": 0.10,
         "ai": 0.10,
     }
-    
+
     DIMENSIONS = ['fundamental', 'technical', 'sentiment', 'risk', 'macro', 'ai']
-    
+
     def __init__(self, service_name: str = "ScoringService"):
         super().__init__(service_name)
-        self._hierarchy: Dict[str, Dict[str, Any]] = {}
-        self._scores_cache: Dict[str, Dict[str, float]] = {}
-        self._coefficient_service: Optional[CoefficientLearningService] = None
+        self._hierarchy: dict[str, dict[str, Any]] = {}
+        self._scores_cache: dict[str, dict[str, float]] = {}
+        self._coefficient_service: CoefficientLearningService | None = None
         self._use_ml_coefficients = True  # Feature flag
-        
+
     async def initialize(self) -> None:
         """Initialize service and build hierarchy"""
         self._build_hierarchy()
-        
+
         # Initialize coefficient learning service
         try:
             container = get_global_container()
@@ -69,14 +70,14 @@ class ScoringService(AnalysisService):
         except Exception as e:
             self.logger.warning(f"Could not initialize Coefficient Learning Service: {e}")
             self._coefficient_service = None
-        
+
         self.logger.info(f"ScoringService initialized with {len(self._hierarchy)} hierarchy nodes")
-    
+
     async def shutdown(self) -> None:
         """Shutdown service"""
         self._scores_cache.clear()
         self.logger.info("ScoringService shutdown")
-    
+
     def _build_hierarchy(self) -> None:
         """Build 4-level 320-node hierarchy."""
         level1 = self._build_level1_dimensions()
@@ -84,15 +85,15 @@ class ScoringService(AnalysisService):
         level2 = self._build_level2_sub_dimensions(sub_dim_map)
         level3 = self._build_level3_aspects(level2)
         level4 = self._build_level4_sub_aspects(level3)
-        
+
         self._hierarchy.update({d["id"]: {"level": 1, **d} for d in level1})
         self._hierarchy.update({sd["id"]: {"level": 2, **sd} for sd in level2})
         self._hierarchy.update({a["id"]: {"level": 3, **a} for a in level3})
         self._hierarchy.update({sa["id"]: {"level": 4, **sa} for sa in level4})
-        
+
         self._verify_hierarchy_counts()
-    
-    def _build_level1_dimensions(self) -> List[Dict[str, Any]]:
+
+    def _build_level1_dimensions(self) -> list[dict[str, Any]]:
         """Build level 1 dimension definitions."""
         raw = [
             {"id": "d1", "name": "fundamental_price", "group": "fundamental", "weight": 0.15},
@@ -113,8 +114,8 @@ class ScoringService(AnalysisService):
             for item in raw:
                 item["weight"] = item["weight"] / total
         return raw
-    
-    def _build_sub_dimension_map(self) -> Dict[str, List[str]]:
+
+    def _build_sub_dimension_map(self) -> dict[str, list[str]]:
         """Build sub-dimension mapping for level 2."""
         return {
             "d1": ["price_history", "ohlcv", "corporate_actions"],
@@ -130,8 +131,8 @@ class ScoringService(AnalysisService):
             "d11": ["eps_growth", "revenue_growth", "book_value_growth"],
             "d12": ["earnings_quality", "accounting_quality", "governance"],
         }
-    
-    def _build_level2_sub_dimensions(self, sub_dim_map: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+
+    def _build_level2_sub_dimensions(self, sub_dim_map: dict[str, list[str]]) -> list[dict[str, Any]]:
         """Build level 2 sub-dimensions from parent mapping."""
         level2 = []
         sub_dim_id = 0
@@ -144,8 +145,8 @@ class ScoringService(AnalysisService):
                     "name": child,
                 })
         return level2
-    
-    def _build_level3_aspects(self, level2: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+    def _build_level3_aspects(self, level2: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Build level 3 aspects (2 per sub-dimension)."""
         level3 = []
         aspect_id = 0
@@ -158,15 +159,15 @@ class ScoringService(AnalysisService):
                     "name": f"{sub['name']}_aspect_{i+1}",
                 })
         return level3
-    
-    def _build_level4_sub_aspects(self, level3: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+    def _build_level4_sub_aspects(self, level3: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Build level 4 sub-aspects distributed across aspects."""
         level4 = []
         sub_id = 0
         total_aspects = len(level3)
         base_count = 173 // total_aspects
         remainder = 173 % total_aspects
-        
+
         for idx, aspect in enumerate(level3):
             count_for_this_aspect = base_count + (1 if idx < remainder else 0)
             for i in range(count_for_this_aspect):
@@ -179,35 +180,35 @@ class ScoringService(AnalysisService):
                     "name": f"{aspect['name']}_detail_{i+1}",
                 })
         return level4
-    
+
     def _verify_hierarchy_counts(self) -> None:
         """Verify hierarchy node counts at each level."""
         level1_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 1)
         level2_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 2)
         level3_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 3)
         level4_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 4)
-        
+
         self.logger.debug(
             f"Hierarchy built: L1={level1_count}, L2={level2_count}, "
             f"L3={level3_count}, L4={level4_count}"
         )
 
-    def _get_dynamic_weights(self, level: str = "dimensions") -> Dict[str, float]:
+    def _get_dynamic_weights(self, level: str = "dimensions") -> dict[str, float]:
         """
         Get weights for a specific hierarchy level, trying ML first then falling back to static.
-        
+
         Args:
             level: The hierarchy level to get weights for.
                 Currently only "dimensions" is implemented for 6D aggregation.
-                   
+
         Returns:
             Dictionary of item names to weights (should sum to ~1.0)
         """
         # Try to get ML weights first if enabled and service available
-        if (self._use_ml_coefficients and 
-            self._coefficient_service and 
+        if (self._use_ml_coefficients and
+            self._coefficient_service and
             self._coefficient_service.is_model_trained(level)):
-            
+
             ml_weights = self._coefficient_service.get_coefficients(level)
             if ml_weights and len(ml_weights) > 0:
                 # Validate that weights sum to approximately 1.0
@@ -219,7 +220,7 @@ class ScoringService(AnalysisService):
                     self.logger.warning(
                         f"ML weights for {level} sum to {total}, not close to 1.0. Using fallback."
                     )
-        
+
         # Fallback to static weights
         self.logger.debug(f"Using static weights for {level}")
         if level == "dimensions":
@@ -244,7 +245,7 @@ class ScoringService(AnalysisService):
                     ["earnings_quality", "accounting_quality", "governance"]   # d12
                 ])
                 # This should equal 40
-                uniform_weight = 1.0 / total_sub_dims if total_sub_dims > 0 else 0.0
+                1.0 / total_sub_dims if total_sub_dims > 0 else 0.0
                 # We'd need to map back to actual names - for now return empty to signal need for ML
                 return {}
             elif level in ["aspects", "sub_aspects"]:
@@ -252,11 +253,11 @@ class ScoringService(AnalysisService):
                 return {}
             else:
                 return {}
-    
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Perform 6D scoring analysis using ML-learned or static weights.
-        
+
         Args:
             data: Input data containing ticker, market, and scores for each dimension.
                 Expected format:
@@ -267,13 +268,13 @@ class ScoringService(AnalysisService):
                     "technical": {"rsi": 55, "macd": 0.5, ...},
                     ...
                 }
-                  
+
         Returns:
             Dictionary containing scores, overall score, grade, and signals
         """
         ticker = data.get("ticker", "UNKNOWN")
         market = data.get("market", "NASDAQ")
-        
+
         scores = {
             "ticker": ticker,
             "market": market,
@@ -283,55 +284,55 @@ class ScoringService(AnalysisService):
             "grade": "",
             "signals": [],
         }
-        
+
         # Get dynamic weights for the 6 dimensions (Level 1)
         dimension_weights = self._get_dynamic_weights("dimensions")
-        
+
         # Fallback: if we couldn't get weights (empty dict), use static weights
         if not dimension_weights:
             dimension_weights = self.DIMENSION_WEIGHTS
             self.logger.debug("Using static dimension weights (ML unavailable or not trained)")
         else:
             self.logger.debug("Using ML-derived dimension weights")
-        
+
         # Score each dimension and calculate weighted sum
         weighted_sum = 0.0
         total_weight = sum(dimension_weights.values())
-        
+
         # Normalize weights to sum to 1.0 (in case of any floating point issues)
         if total_weight > 0:
             normalized_weights = {k: v / total_weight for k, v in dimension_weights.items()}
         else:
             normalized_weights = self.DIMENSION_WEIGHTS
-        
+
         for dim in self.DIMENSIONS:  # Use the canonical list for iteration
             dim_data = data.get(dim, {})
             score = await self._score_dimension(dim, dim_data, market)
             # Validate score is within [0, 100] range
             score = max(0.0, min(100.0, score))
             scores["dimension_scores"][dim] = score
-            
+
             # Apply weight (default to 0.0 if dimension not in weights)
             weight = normalized_weights.get(dim, 0.0)
             weighted_sum += score * weight
-        
+
         # Validate overall score is within [0, 100] range
         scores["overall_score"] = round(max(0.0, min(100.0, weighted_sum)), 2)
         scores["grade"] = self._assign_grade(scores["overall_score"])
         scores["signals"] = self._generate_signals(scores["dimension_scores"])
-        
+
         # Cache the dimension scores for potential reuse
         self._scores_cache[ticker] = scores["dimension_scores"]
-        
+
         return scores
-    
+
     # Remaining methods (_score_dimension, _normalize_score, scoring helpers, etc.)
     # remain unchanged from the original implementation
-    
+
     async def _score_dimension(
         self,
         dimension: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         market: str = "NASDAQ"
     ) -> float:
         """Score a 6D dimension using market-aware logic."""
@@ -347,7 +348,7 @@ class ScoringService(AnalysisService):
         if not scores:
             return 50.0
         return round(sum(scores) / len(scores), 2)
-    
+
     def _normalize_score(
         self,
         value: float,
@@ -356,7 +357,7 @@ class ScoringService(AnalysisService):
         market: str
     ) -> float:
         """Normalize raw metric to 0-100 score with market-specific thresholds."""
-        
+
         # Market-specific thresholds
         if market in ("NYSE", "NASDAQ", "AMEX"):
             if dimension == "technical":
@@ -369,26 +370,26 @@ class ScoringService(AnalysisService):
                     return self._score_pe_global(value)
                 if "roe" in key:
                     return self._score_roe_global(value)
-        
+
         # Default generic normalization
         return min(100.0, max(0.0, float(value)))
-    
+
     # ... (remaining scoring helper methods unchanged from original)
     # These are: _score_rsi_global,
     # _score_macd_global, _score_volume_global,
     # _score_pe_global, _score_roe_global,
     # _assign_grade, _generate_signals, score_multiple, rank_stocks, get_hierarchy_info
-    
+
     def _score_rsi_global(self, rsi: float) -> float:
         if rsi > 75:
             return max(0, 100 - (rsi - 75) * 2.5)
         elif rsi < 25:
             return max(0, 100 - (25 - rsi) * 2.5)
         return 50 + (rsi - 50) * 0.5
-    
+
     def _score_macd_global(self, macd: float) -> float:
         return min(100, max(0, 50 + macd * 10))
-    
+
     def _score_pe_global(self, pe: float) -> float:
         if pe <= 0:
             return 0.0
@@ -402,10 +403,10 @@ class ScoringService(AnalysisService):
             return 40
         else:
             return max(0, 100 - pe)
-    
+
     def _score_roe_global(self, roe: float) -> float:
         return min(100, max(0, roe * 2))
-    
+
     def _assign_grade(self, score: float) -> str:
         if score >= 85:
             return "STRONG_BULLISH"
@@ -417,8 +418,8 @@ class ScoringService(AnalysisService):
             return "BEARISH"
         else:
             return "STRONG_BEARISH"
-    
-    def _generate_signals(self, dimension_scores: Dict[str, float]) -> List[str]:
+
+    def _generate_signals(self, dimension_scores: dict[str, float]) -> list[str]:
         signals = []
         for dim, score in dimension_scores.items():
             if score >= 80:
@@ -428,11 +429,11 @@ class ScoringService(AnalysisService):
             elif score <= 20:
                 signals.append(f"weak_{dim}")
         return signals
-    
-    async def score_multiple(self, stocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+    async def score_multiple(self, stocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         tasks = [self.analyze(stock) for stock in stocks]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         processed = []
         for stock, result in zip(stocks, results):
             if isinstance(result, Exception):
@@ -441,21 +442,21 @@ class ScoringService(AnalysisService):
             else:
                 processed.append(result)
         return processed
-    
+
     async def rank_stocks(
         self,
-        stocks: List[Dict[str, Any]],
-        dimension: Optional[str] = None,
+        stocks: list[dict[str, Any]],
+        dimension: str | None = None,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         scored = await self.score_multiple(stocks)
         if dimension:
             scored.sort(key=lambda x: x.get("dimension_scores", {}).get(dimension, 0), reverse=True)
         else:
             scored.sort(key=lambda x: x.get("overall_score", 0), reverse=True)
         return scored[:limit]
-    
-    def get_hierarchy_info(self) -> Dict[str, Any]:
+
+    def get_hierarchy_info(self) -> dict[str, Any]:
         level1 = [v for v in self._hierarchy.values() if v.get("level") == 1]
         level2 = [v for v in self._hierarchy.values() if v.get("level") == 2]
         level3 = [v for v in self._hierarchy.values() if v.get("level") == 3]

@@ -5,38 +5,36 @@ Validates data integrity, authenticity, and completeness across all sources.
 Ensures historical data meets 3+ year minimum requirement.
 """
 
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import timezone, datetime, timedelta, date
-import hashlib
-import json
 import asyncio
+import json
+import logging
+from datetime import date, datetime
+from typing import Any
+
+from app.core.utils import utc_now_iso
 from app.services.core.base_service import CachedService
-try:
-    from app.services.data.intl_api_client import IntlApiClient
-except Exception:
-    IntlApiClient = None
+from app.services.data.intl_api_client import IntlApiClient
 from app.services.data.market_service import MarketService
 from app.services.data.stock_service import StockService
-import logging
-from app.core.utils import utc_now_iso
+
 
 class DataValidationService(CachedService):
     """
     Data validation service ensuring data integrity and authenticity.
-    
+
     Validates:
     - Historical data completeness (3+ year minimum)
     - Source authenticity and traceability
     - Cross-source consistency
     - Data quality metrics
     """
-    
+
     def __init__(self,
                  service_name: str = "DataValidationService",
-                 intl_client: Optional[IntlApiClient] = None,
-                 market_service: Optional[MarketService] = None,
-                 stock_service: Optional[StockService] = None,
-                 logger: Optional[logging.Logger] = None):
+                 intl_client: IntlApiClient | None = None,
+                 market_service: MarketService | None = None,
+                 stock_service: StockService | None = None,
+                 logger: logging.Logger | None = None):
         """
         Initialize data validation service.
 
@@ -66,35 +64,35 @@ class DataValidationService(CachedService):
                 "authentication_required": False
             }
         }
-    
+
     async def initialize(self) -> None:
         """Initialize data validation service."""
         self.logger.info("Initializing DataValidationService")
-        
+
         # Validate service dependencies
         dependencies = {
                         "Intl Client": self.intl_client,
             "Market Service": self.market_service,
             "Stock Service": self.stock_service
         }
-        
+
         for name, client in dependencies.items():
             if client is None:
                 self.logger.warning(f"{name} not provided - limited validation capability")
-        
+
         self.logger.info("DataValidationService initialized")
-    
+
     async def shutdown(self) -> None:
         """Shutdown data validation service."""
         self.cache_clear()
         self._validation_cache.clear()
         self.logger.info("DataValidationService shutdown")
 
-    def _get_cached_validation(self, key: str) -> Optional[Dict[str, Any]]:
+    def _get_cached_validation(self, key: str) -> dict[str, Any] | None:
         """Get cached validation result."""
         return self._validation_cache.get(key)
 
-    def _set_cached_validation(self, key: str, result: Dict[str, Any]) -> None:
+    def _set_cached_validation(self, key: str, result: dict[str, Any]) -> None:
         """Set cached validation result with LRU eviction."""
         if len(self._validation_cache) >= self._cache_size_limit:
             # Remove oldest entry
@@ -102,35 +100,35 @@ class DataValidationService(CachedService):
             del self._validation_cache[oldest_key]
         self._validation_cache[key] = result
 
-    async def validate_stock_data_optimized(self, ticker: str) -> Dict[str, Any]:
+    async def validate_stock_data_optimized(self, ticker: str) -> dict[str, Any]:
         """
         Optimized stock data validation with caching.
-        
+
         Args:
             ticker: Stock ticker symbol
-            
+
         Returns:
             Dictionary with validation results
         """
         cache_key = f"validate_{ticker}"
-        
+
         # Check cache first
         cached = self._get_cached_validation(cache_key)
         if cached:
             self.logger.debug(f"Cache hit for {ticker}")
             return cached
-        
+
         # Perform validation
         try:
             # Validate stock data
             stock_data = await self._validate_stock_data(ticker)
-            
+
             # Validate related market data
             market_data = await self._validate_related_market_data(ticker)
-            
+
             # Validate historical data
             history_data = await self._validate_historical_data(ticker)
-            
+
             result = {
                 "ticker": ticker,
                 "stock_data": stock_data,
@@ -139,14 +137,14 @@ class DataValidationService(CachedService):
                 "validated": True,
                 "timestamp": utc_now_iso()
             }
-            
+
             # Cache the result
             self._set_cached_validation(cache_key, result)
-            
+
             return result
-            
+
         except Exception as e:
-            self.logger.error(f"Validation failed for {ticker}: {str(e)}")
+            self.logger.error(f"Validation failed for {ticker}: {e!s}")
             return {
                 "ticker": ticker,
                 "validated": False,
@@ -154,7 +152,7 @@ class DataValidationService(CachedService):
                 "timestamp": utc_now_iso()
             }
 
-    async def _validate_stock_data(self, ticker: str) -> Dict[str, Any]:
+    async def _validate_stock_data(self, ticker: str) -> dict[str, Any]:
         """Validate individual stock data."""
         return {
             "ticker": ticker,
@@ -166,7 +164,7 @@ class DataValidationService(CachedService):
             }
         }
 
-    async def _validate_related_market_data(self, ticker: str) -> Dict[str, Any]:
+    async def _validate_related_market_data(self, ticker: str) -> dict[str, Any]:
         """Validate related market data for the ticker."""
         return {
             "ticker": ticker,
@@ -174,7 +172,7 @@ class DataValidationService(CachedService):
             "sources": ["INTL", "MARKET"]
         }
 
-    async def _validate_historical_data(self, ticker: str) -> Dict[str, Any]:
+    async def _validate_historical_data(self, ticker: str) -> dict[str, Any]:
         """Validate historical data availability."""
         return {
             "ticker": ticker,
@@ -182,7 +180,7 @@ class DataValidationService(CachedService):
             "periods": "full"
         }
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "cache_size": len(self._validation_cache),
@@ -194,18 +192,18 @@ class DataValidationService(CachedService):
         self._validation_cache.clear()
         self.logger.info("Cache cleared")
 
-    async def validate_historical_completeness(self, 
+    async def validate_historical_completeness(self,
                                              source_type: str,
                                              symbol: str,
-                                             min_years: int = 3) -> Dict[str, Any]:
+                                             min_years: int = 3) -> dict[str, Any]:
         """
         Validate that historical data meets minimum time requirement.
-        
+
         Args:
             source_type: Type of data source (stocks, market_indices)
             symbol: Asset symbol to validate
             min_years: Minimum years of data required
-            
+
         Returns:
             Validation results with completeness score
         """
@@ -213,7 +211,7 @@ class DataValidationService(CachedService):
         cached = self.get_cached(cache_key)
         if cached:
             return cached
-        
+
         try:
             validation_result = {
                 "symbol": symbol,
@@ -228,7 +226,7 @@ class DataValidationService(CachedService):
                 "data_gaps": [],
                 "validation_score": 0.0
             }
-            
+
             # Get data based on source type
             data_points = []
             if source_type == "stocks" and self.stock_service:
@@ -236,7 +234,7 @@ class DataValidationService(CachedService):
             elif source_type == "market_indices" and self.market_service:
                 # Get market index historical data
                 pass
-            
+
             if data_points:
                 # Analyze date range
                 dates = [dp.get('timestamp') for dp in data_points if dp.get('timestamp')]
@@ -253,21 +251,21 @@ class DataValidationService(CachedService):
                                 date_objects.append(d.date())
                         except ValueError:
                             continue
-                    
+
                     if date_objects:
                         earliest = min(date_objects)
                         latest = max(date_objects)
-                        
+
                         # Calculate years of data
                         date_range = latest - earliest
                         years_available = date_range.days / 365.25
-                        
+
                         validation_result["years_available"] = years_available
                         validation_result["earliest_date"] = earliest.isoformat()
                         validation_result["latest_date"] = latest.isoformat()
                         validation_result["is_valid"] = years_available >= min_years
                         validation_result["validation_score"] = min(years_available / min_years, 1.0)
-                        
+
                         # Identify gaps (simplified - in production would check for missing periods)
                         if years_available < min_years:
                             validation_result["missing_periods"].append({
@@ -275,13 +273,13 @@ class DataValidationService(CachedService):
                                 "available_years": years_available,
                                 "shortfall_years": min_years - years_available
                             })
-            
+
             # Cache result for 1 hour
             self.set_cached(cache_key, validation_result, 3600)
             return validation_result
-            
+
         except Exception as e:
-            self.logger.error(f"Error validating historical completeness for {symbol}: {str(e)}")
+            self.logger.error(f"Error validating historical completeness for {symbol}: {e!s}")
             return {
                 "symbol": symbol,
                 "source_type": source_type,
@@ -289,17 +287,17 @@ class DataValidationService(CachedService):
                 "is_valid": False,
                 "validation_timestamp": utc_now_iso()
             }
-    
-    async def verify_source_authenticity(self, 
+
+    async def verify_source_authenticity(self,
                                        source_name: str,
-                                       data_sample: Dict[str, Any]) -> Dict[str, Any]:
+                                       data_sample: dict[str, Any]) -> dict[str, Any]:
         """
         Verify authenticity and integrity of a data source.
-        
+
         Args:
             source_name: Name of the data source
             data_sample: Sample data from the source
-            
+
         Returns:
             Authenticity verification results
         """
@@ -307,7 +305,7 @@ class DataValidationService(CachedService):
         cached = self.get_cached(cache_key)
         if cached:
             return cached
-        
+
         try:
             verification_result = {
                 "source_name": source_name,
@@ -318,7 +316,7 @@ class DataValidationService(CachedService):
                 "warnings": [],
                 "errors": []
             }
-            
+
             # Check 1: Source identifier validation
             valid_sources = ["NASDAQ", "NYSE", "LSE", "HKEX"]
             source_check = {
@@ -327,12 +325,12 @@ class DataValidationService(CachedService):
                 "message": f"Source '{source_name}' is {'valid' if source_name.upper() in valid_sources else 'unknown'}"
             }
             verification_result["checks_performed"].append(source_check)
-            
+
             if source_check["passed"]:
                 verification_result["authenticity_score"] += 0.3
             else:
                 verification_result["warnings"].append(f"Unknown source: {source_name}")
-            
+
             # Check 2: Data structure integrity
             if isinstance(data_sample, dict) and len(data_sample) > 0:
                 structure_check = {
@@ -350,7 +348,7 @@ class DataValidationService(CachedService):
                 }
                 verification_result["checks_performed"].append(structure_check)
                 verification_result["errors"].append("Invalid data structure")
-            
+
             # Check 3: Timestamp validity (if present)
             if "timestamp" in data_sample or "date" in data_sample:
                 timestamp_check = {
@@ -368,7 +366,7 @@ class DataValidationService(CachedService):
                 }
                 verification_result["checks_performed"].append(timestamp_check)
                 verification_result["warnings"].append("Missing timestamp information")
-            
+
             # Check 4: Data format consistency
             format_check = {
                 "check": "data_format_consistency",
@@ -377,19 +375,19 @@ class DataValidationService(CachedService):
             }
             verification_result["checks_performed"].append(format_check)
             verification_result["authenticity_score"] += 0.3
-            
+
             # Overall authenticity determination
             verification_result["is_authentic"] = (
-                verification_result["authenticity_score"] >= 0.7 and 
+                verification_result["authenticity_score"] >= 0.7 and
                 len(verification_result["errors"]) == 0
             )
-            
+
             # Cache result for 30 minutes
             self.set_cached(cache_key, verification_result, 1800)
             return verification_result
-            
+
         except Exception as e:
-            self.logger.error(f"Error verifying source authenticity for {source_name}: {str(e)}")
+            self.logger.error(f"Error verifying source authenticity for {source_name}: {e!s}")
             return {
                 "source_name": source_name,
                 "error": str(e),
@@ -397,17 +395,17 @@ class DataValidationService(CachedService):
                 "authenticity_score": 0.0,
                 "verification_timestamp": utc_now_iso()
             }
-    
-    async def check_cross_source_consistency(self, 
+
+    async def check_cross_source_consistency(self,
                                            symbol: str,
-                                           data_types: List[str] = ["price", "volume"]) -> Dict[str, Any]:
+                                           data_types: list[str] = ["price", "volume"]) -> dict[str, Any]:
         """
         Check consistency between multiple data sources for the same symbol.
-        
+
         Args:
             symbol: Asset symbol to check
             data_types: Types of data to compare
-            
+
         Returns:
             Cross-source consistency results
         """
@@ -415,7 +413,7 @@ class DataValidationService(CachedService):
         cached = self.get_cached(cache_key)
         if cached:
             return cached
-        
+
         try:
             consistency_result = {
                 "symbol": symbol,
@@ -427,10 +425,10 @@ class DataValidationService(CachedService):
                 "discrepancies": [],
                 "source_values": {}
             }
-            
+
             # Collect data from available sources
             source_data = {}
-            
+
             # Try to get data from different sources
             if self.stock_service:
                 try:
@@ -439,12 +437,12 @@ class DataValidationService(CachedService):
                         source_data["YFINANCE"] = stock_data
                         consistency_result["sources_compared"].append("YFINANCE")
                 except Exception as e:
-                    self.logger.warning(f"Failed to get YFinance data for {symbol}: {str(e)}")
-            
+                    self.logger.warning(f"Failed to get YFinance data for {symbol}: {e!s}")
+
             # Compare values from different sources
             if len(source_data) >= 2:
-                sources = list(source_data.keys())
-                
+                list(source_data.keys())
+
                 for data_type in data_types:
                     values = {}
                     for source, data in source_data.items():
@@ -455,21 +453,21 @@ class DataValidationService(CachedService):
                             value = data.get("volume") or data.get("vol")
                         else:
                             value = data.get(data_type)
-                        
+
                         if value is not None:
                             values[source] = float(value)
-                    
+
                     if len(values) >= 2:
                         # Calculate variance between sources
                         value_list = list(values.values())
                         avg_value = sum(value_list) / len(value_list)
-                        
+
                         if avg_value != 0:
                             variance = sum((v - avg_value) ** 2 for v in value_list) / len(value_list)
                             relative_variance = (variance ** 0.5) / abs(avg_value)  # Coefficient of variation
-                            
+
                             consistency_result["source_values"][f"{data_type}_{source}"] = values
-                            
+
                             # Consider consistent if variation is less than 5%
                             if relative_variance < 0.05:
                                 consistency_result["consistency_score"] += (1.0 / len(data_types))
@@ -482,15 +480,15 @@ class DataValidationService(CachedService):
                                     "variance": variance,
                                     "relative_variance": relative_variance
                                 })
-            
+
             # Determine overall consistency
             consistency_result["is_consistent"] = consistency_result["consistency_score"] >= 0.8
-            
+
             # Cache result for 15 minutes
             self.set_cached(cache_key, consistency_result, 900)
             return consistency_result
         except Exception as e:
-            self.logger.error(f"Error checking cross-source consistency for {symbol}: {str(e)}")
+            self.logger.error(f"Error checking cross-source consistency for {symbol}: {e!s}")
             return {
                 "symbol": symbol,
                 "error": str(e),
@@ -498,24 +496,24 @@ class DataValidationService(CachedService):
                 "is_consistent": False,
                 "consistency_score": 0.0
             }
-    
-    async def get_comprehensive_validation_report(self, 
+
+    async def get_comprehensive_validation_report(self,
                                                 symbol: str,
-                                                source_types: List[str] = None) -> Dict[str, Any]:
+                                                source_types: list[str] = None) -> dict[str, Any]:
         """
         Generate comprehensive validation report for a symbol.
-        
+
         Args:
             symbol: Asset symbol to validate
             source_types: Types of sources to validate (defaults to all applicable)
-            
+
         Returns:
             Complete validation report
         """
         if source_types is None:
             # Assume stock for now - could be enhanced with symbol lookup
             source_types = ["stocks"]
-        
+
         report = {
             "symbol": symbol,
             "report_timestamp": utc_now_iso(),
@@ -523,18 +521,18 @@ class DataValidationService(CachedService):
             "overall_status": "unknown",
             "recommendations": []
         }
-        
+
         validation_tasks = []
-        
+
         # Historical completeness validation
         for source_type in source_types:
             validation_tasks.append(
                 self.validate_historical_completeness(source_type, symbol)
             )
-        
+
         # Execute validations concurrently
         validation_results = await asyncio.gather(*validation_tasks, return_exceptions=True)
-        
+
         # Process results
         for i, result in enumerate(validation_results):
             source_type = source_types[i]
@@ -545,18 +543,18 @@ class DataValidationService(CachedService):
                 }
             else:
                 report["validations"][source_type] = result
-        
+
         # Cross-source consistency (if multiple sources available)
         if len(source_types) > 1:
             consistency_result = await self.check_cross_source_consistency(symbol)
             report["validations"]["cross_source_consistency"] = consistency_result
-        
+
         # Calculate overall status
-        valid_count = sum(1 for v in report["validations"].values() 
+        valid_count = sum(1 for v in report["validations"].values()
                          if isinstance(v, dict) and v.get("is_valid", False))
-        total_checks = len([v for v in report["validations"].values() 
+        total_checks = len([v for v in report["validations"].values()
                            if isinstance(v, dict) and "error" not in v])
-        
+
         if total_checks > 0:
             success_rate = valid_count / total_checks
             if success_rate >= 0.8:
@@ -565,13 +563,13 @@ class DataValidationService(CachedService):
                 report["overall_status"] = "warning"
             else:
                 report["overall_status"] = "fail"
-                
+
                 # Generate recommendations
                 if valid_count == 0:
                     report["recommendations"].append("Data validation failed - consider alternative data sources")
                 else:
                     report["recommendations"].append("Some validation checks failed - review data sources")
-        
+
         return report
 
 # Service registration function for dependency injection

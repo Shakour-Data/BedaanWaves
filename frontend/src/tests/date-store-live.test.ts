@@ -4,7 +4,7 @@ import { useDateStore } from '@/store/useDateStore'
 beforeAll(async () => {
   vi.useRealTimers()
   try { localStorage.removeItem('date-storage') } catch {}
-  const p = (useDateStore as any).persist
+  const p = (useDateStore as unknown as { persist?: { rehydrate?: () => unknown; onFinishHydration?: (cb: () => void) => () => void; hasHydrated?: () => boolean } }).persist
   if (p) {
     if (typeof p.rehydrate === 'function') {
       try { await p.rehydrate() } catch {}

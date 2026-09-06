@@ -1,17 +1,17 @@
 """ML Routes"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from typing import List
 import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_async_session
 from app.models.models import Asset, candle_model_for_market
-from app.services.ml.prediction_service import PredictionService
-from app.services.ml.pattern_recognition_service import PatternRecognitionService
 from app.services.ml.anomaly_detection_service import AnomalyDetectionService
+from app.services.ml.pattern_recognition_service import PatternRecognitionService
 from app.services.ml.portfolio_optimization_service import PortfolioOptimizationService
+from app.services.ml.prediction_service import PredictionService
 from app.services.ml.time_series_forecasting_service import TimeSeriesForecastingService
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ async def anomaly(symbol: str, db: AsyncSession = Depends(get_async_session)):
     returns = [(prices[i] - prices[i-1]) / prices[i-1] for i in range(1, len(prices))]
     service = _load_service(AnomalyDetectionService)
     await service.initialize()
-    train = await service.train({"values": returns})
+    await service.train({"values": returns})
     result = await service.predict({"ticker": symbol, "prices": prices, "returns": returns})
     return {"status": "success", "data": result}
 
@@ -80,7 +80,7 @@ async def optimize(data: dict):
 
 @router.post("/forecast")
 async def forecast(data: dict):
-    ticker = data.get("ticker", "UNKNOWN")
+    data.get("ticker", "UNKNOWN")
     service = _load_service(TimeSeriesForecastingService)
     await service.initialize()
     result = await service.predict(data)

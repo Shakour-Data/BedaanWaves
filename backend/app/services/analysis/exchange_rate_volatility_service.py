@@ -1,5 +1,5 @@
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
+from typing import Any
+
 import numpy as np
 
 from ..core import AnalysisService
@@ -11,7 +11,7 @@ class ExchangeRateVolatilityService(AnalysisService):
 
     def __init__(self, service_name: str = "ExchangeRateVolatilityService"):
         super().__init__(service_name)
-        self.benchmark_db: Dict[str, Dict[str, float]] = {}
+        self.benchmark_db: dict[str, dict[str, float]] = {}
 
     async def initialize(self) -> None:
         """Initialize volatility benchmarks indexed by GDP per capita."""
@@ -28,7 +28,7 @@ class ExchangeRateVolatilityService(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("ExchangeRateVolatilityService shutdown")
 
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """Calculate size-normalized volatility metrics."""
         return {
             "volatility_per_gdp": await self._volatility_per_gdp(data),
@@ -37,7 +37,7 @@ class ExchangeRateVolatilityService(AnalysisService):
             "benchmark_comparison": await self._benchmark_comparison(data),
         }
 
-    async def _volatility_per_gdp(self, data: Dict[str, Any]) -> Dict[str, float]:
+    async def _volatility_per_gdp(self, data: dict[str, Any]) -> dict[str, float]:
         """Create volatility per Unit of GDP: σ(exchange) / GDP per capita."""
         exchange_rates = data.get("exchange_rates", [])
         gdp_per_capita = data.get("gdp_per_capita", 50000)
@@ -54,7 +54,7 @@ class ExchangeRateVolatilityService(AnalysisService):
             "gdp_per_capita": float(gdp_per_capita),
         }
 
-    async def _fisher_information_metric(self, data: Dict[str, Any]) -> Dict[str, float]:
+    async def _fisher_information_metric(self, data: dict[str, Any]) -> dict[str, float]:
         """Convert nominal volatility to Fisher Information content."""
         exchange_rates = data.get("exchange_rates", [])
 
@@ -80,7 +80,7 @@ class ExchangeRateVolatilityService(AnalysisService):
             "interpretation": "High information content" if normalized_info > 10 else "Low information content",
         }
 
-    async def _real_exchange_rate_volatility(self, data: Dict[str, Any]) -> Dict[str, float]:
+    async def _real_exchange_rate_volatility(self, data: dict[str, Any]) -> dict[str, float]:
         """Calculate Real Exchange Rate Volatility adjusted for trade balance."""
         exchange_rate = data.get("exchange_rate", 1.0)
         domestic_price = data.get("domestic_price_index", 100.0)
@@ -99,7 +99,7 @@ class ExchangeRateVolatilityService(AnalysisService):
             "trade_balance_factor": float(1 + abs(trade_balance)),
         }
 
-    async def _benchmark_comparison(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _benchmark_comparison(self, data: dict[str, Any]) -> dict[str, Any]:
         """Compare volatility against benchmark database indexed by GDP per capita."""
         gdp_per_capita = data.get("gdp_per_capita", 50000)
         exchange_rates = data.get("exchange_rates", [])

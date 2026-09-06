@@ -5,10 +5,29 @@ import {
   getActiveConnectionKeys,
   getSSEConnection,
   disconnectAllSSE,
+  type SSEEvent,
 } from '@/lib/sse'
 
-function getLastMockES(): any {
-  const list = (globalThis as any).__getMockEventSources()
+interface MockES {
+  readyState: number
+  url: string
+  mockOpen(): void
+  mockEmit(event: string, payload: Record<string, unknown>): void
+  mockError(): void
+  mockClose(): void
+}
+
+interface TestGlobals {
+  __getMockEventSources: () => MockES[]
+  __clearMockEventSources: () => void
+}
+
+function getTestGlobals(): TestGlobals {
+  return globalThis as unknown as TestGlobals
+}
+
+function getLastMockES(): MockES {
+  const list = getTestGlobals().__getMockEventSources()
   return list[list.length - 1]
 }
 
@@ -16,7 +35,7 @@ describe('lib/sse.ts', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     disconnectAllSSE()
-    ;(globalThis as any).__clearMockEventSources()
+    ;getTestGlobals().__clearMockEventSources()
   })
 
   afterEach(() => {
@@ -54,11 +73,11 @@ describe('lib/sse.ts', () => {
       expect(reconnectSpy).toHaveBeenCalledTimes(1)
       expect(reconnectSpy).toHaveBeenLastCalledWith(1)
 
-      const initialCount = (globalThis as any).__getMockEventSources().length
+      const initialCount = getTestGlobals().__getMockEventSources().length
 
       for (let i = 1; i <= 3; i++) {
         vi.advanceTimersByTime(5_000 + 2_000)
-        const sourcesAfter = (globalThis as any).__getMockEventSources()
+        const sourcesAfter = getTestGlobals().__getMockEventSources()
         expect(sourcesAfter.length).toBe(initialCount + i)
         const newEs = sourcesAfter[sourcesAfter.length - 1]
         newEs.mockError()
@@ -92,9 +111,9 @@ describe('lib/sse.ts', () => {
       es.mockError()
       expect(reconnectSpy).toHaveBeenCalledWith(2)
 
-      const countBefore = (globalThis as any).__getMockEventSources().length
+      const countBefore = getTestGlobals().__getMockEventSources().length
       vi.advanceTimersByTime(30_000)
-      const countAfter = (globalThis as any).__getMockEventSources().length
+      const countAfter = getTestGlobals().__getMockEventSources().length
       expect(countAfter).toBeLessThanOrEqual(countBefore + 1)
 
       conn.disconnect()
@@ -171,7 +190,7 @@ describe('lib/sse.ts', () => {
 
   describe('onMessage parses typed envelopes', () => {
     it('receives quote event via addEventListener path', () => {
-      const messages: any[] = []
+      const messages: SSEEvent<unknown>[] = []
       const conn = createSSEConnection<{ price: number }>('sse-test:quote', {
         endpoint: '/stream',
         reconnect: false,
@@ -199,7 +218,7 @@ describe('lib/sse.ts', () => {
     })
 
     it('message event (default onmessage) parses envelope', () => {
-      const messages: any[] = []
+      const messages: SSEEvent<unknown>[] = []
       const conn = createSSEConnection<{ v: number }>('sse-test:msg', {
         endpoint: '/stream',
         reconnect: false,

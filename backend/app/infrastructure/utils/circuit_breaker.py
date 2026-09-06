@@ -1,33 +1,35 @@
 import time
-import asyncio
-from typing import Callable, Any, Type, Optional
+from collections.abc import Callable
+from typing import Any
+
 from ...application.interfaces.i_logger import ILogger
+
 
 class CircuitBreaker:
     """
     Infrastructure implementation of Circuit Breaker pattern.
     Protects against cascading failures in external API calls.
     """
-    
+
     def __init__(
-        self, 
+        self,
         logger: ILogger,
-        failure_threshold: int = 5, 
+        failure_threshold: int = 5,
         recovery_timeout: int = 60,
-        expected_exception: Type[Exception] = Exception
+        expected_exception: type[Exception] = Exception
     ):
         self._logger = logger
         self._failure_threshold = failure_threshold
         self._recovery_timeout = recovery_timeout
         self._expected_exception = expected_exception
-        
+
         self._failure_count = 0
-        self._last_failure_time: Optional[float] = None
+        self._last_failure_time: float | None = None
         self._state = "CLOSED" # CLOSED, OPEN, HALF_OPEN
 
     async def call(self, func: Callable, *args, **kwargs) -> Any:
         self._check_state()
-        
+
         try:
             result = await func(*args, **kwargs)
             self._on_success()
@@ -53,8 +55,8 @@ class CircuitBreaker:
     def _on_failure(self, error: Exception):
         self._failure_count += 1
         self._last_failure_time = time.time()
-        self._logger.warning(f"Circuit breaker recorded failure: {str(error)}")
-        
+        self._logger.warning(f"Circuit breaker recorded failure: {error!s}")
+
         if self._failure_count >= self._failure_threshold:
             self._state = "OPEN"
             self._logger.error("Circuit breaker state changed to OPEN")

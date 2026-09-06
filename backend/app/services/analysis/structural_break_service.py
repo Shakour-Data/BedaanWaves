@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
 import numpy as np
 from scipy import stats
 
@@ -18,7 +19,7 @@ class StructuralBreakDetectionService(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("StructuralBreakDetectionService shutdown")
 
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """Detect structural breaks in time series data."""
         series = data.get("series", [])
         if not series or len(series) < 20:
@@ -31,7 +32,7 @@ class StructuralBreakDetectionService(AnalysisService):
         }
         return results
 
-    async def _bai_perron_test(self, series: List[float]) -> Dict[str, Any]:
+    async def _bai_perron_test(self, series: list[float]) -> dict[str, Any]:
         """Bai-Perron multiple structural break test."""
         n = len(series)
         if n < 30:
@@ -46,9 +47,7 @@ class StructuralBreakDetectionService(AnalysisService):
                 continue
 
             # Sequential search for break points
-            break_points = []
             remaining = series.copy()
-            sse = 0
 
             for _ in range(min(k, 3)):
                 segments = np.array_split(remaining, 2)
@@ -69,7 +68,7 @@ class StructuralBreakDetectionService(AnalysisService):
             "method": "sequential_search",
         }
 
-    async def _chow_test(self, series: List[float]) -> Dict[str, Any]:
+    async def _chow_test(self, series: list[float]) -> dict[str, Any]:
         """Chow test for structural change at a specific point."""
         n = len(series)
         break_point = n // 2
@@ -102,7 +101,7 @@ class StructuralBreakDetectionService(AnalysisService):
             "break_point": break_point,
         }
 
-    async def _markov_structure_change(self, series: List[float]) -> Dict[str, Any]:
+    async def _markov_structure_change(self, series: list[float]) -> dict[str, Any]:
         """Markov structure change detection for gradual shifts."""
         n = len(series)
         if n < 30:

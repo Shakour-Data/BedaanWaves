@@ -1,11 +1,12 @@
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
+from typing import Any
+
 import aiohttp
 import numpy as np
 
+from app.core.config import get_settings
+
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
-from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -15,7 +16,7 @@ class BehavioralEconomicsService(AnalysisService):
 
     def __init__(self, service_name: str = "BehavioralEconomicsService"):
         super().__init__(service_name)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def initialize(self) -> None:
         """Initialize HTTP session for survey APIs."""
@@ -28,7 +29,7 @@ class BehavioralEconomicsService(AnalysisService):
             await self.session.close()
         self.logger.info("BehavioralEconomicsService shutdown")
 
-    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
         """Run behavioral economics analysis."""
         market_data = data.get("market_data", {})
         survey_data = data.get("survey_data", {})
@@ -42,7 +43,7 @@ class BehavioralEconomicsService(AnalysisService):
         return results
 
     async def behavioral_inconsistency_index(
-        self, market_data: Dict[str, Any], survey_data: Dict[str, Any]
+        self, market_data: dict[str, Any], survey_data: dict[str, Any]
     ) -> float:
         """Behavioral Inconsistency Index: Survey data vs market data divergence."""
         market_sentiment = market_data.get("sentiment", 0.0)
@@ -52,7 +53,7 @@ class BehavioralEconomicsService(AnalysisService):
         self.logger.info("Behavioral inconsistency index: %.3f", normalized)
         return normalized
 
-    async def _noise_trader_risk(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _noise_trader_risk(self, market_data: dict[str, Any]) -> dict[str, Any]:
         """NoiseTrader Risk assessment using volatility clustering and volume spikes."""
         volatility = market_data.get("volatility", [])
         volume = market_data.get("volume", [])
@@ -78,7 +79,7 @@ class BehavioralEconomicsService(AnalysisService):
             "confidence": 0.9 if noise_risk > 0.5 else 0.6,
         }
 
-    async def _prospect_theory_weighting(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _prospect_theory_weighting(self, market_data: dict[str, Any]) -> dict[str, Any]:
         """Prospect Theory value function asymmetry in risk metrics."""
         returns = market_data.get("returns", [])
 
@@ -98,7 +99,7 @@ class BehavioralEconomicsService(AnalysisService):
 
         # Calculate weighted values
         gain_sum = sum(abs(g) ** alpha for g in gains) / len(gains)
-        loss_sum = sum(abs(l) ** beta for l in losses) * lambda_kt / len(losses)
+        loss_sum = sum(abs(loss) ** beta for loss in losses) * lambda_kt / len(losses)
 
         asymmetry = (loss_sum - gain_sum) / (loss_sum + gain_sum + 0.001)
 
@@ -109,7 +110,7 @@ class BehavioralEconomicsService(AnalysisService):
             "loss_count": len(losses),
         }
 
-    async def _behavioral_regime_classifier(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _behavioral_regime_classifier(self, market_data: dict[str, Any]) -> dict[str, Any]:
         """Behavioral regime classifier as ensemble model."""
         noise_risk = await self._noise_trader_risk(market_data)
         sentiment = market_data.get("sentiment", 0.0)
@@ -144,7 +145,7 @@ class BehavioralEconomicsService(AnalysisService):
             },
         }
 
-    async def fetch_survey_data(self, source: str = "umich") -> Dict[str, Any]:
+    async def fetch_survey_data(self, source: str = "umich") -> dict[str, Any]:
         """Fetch survey data from University of Michigan or ECB Survey."""
         endpoints = {
             "umich": "https://api.bls.gov/publicAPI/v1/data/SURVEY_UMICH",

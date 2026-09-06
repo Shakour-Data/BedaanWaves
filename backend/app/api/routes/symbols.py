@@ -1,15 +1,14 @@
 """Symbol Data Routes"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import List, Optional
-from datetime import timezone, datetime
 import logging
-from app.core.utils import utc_now_iso
 
-from app.services.data.symbol_service import SymbolService
-from app.services.data.stock_service import StockService
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from app.core.config import get_settings
+from app.core.utils import utc_now_iso
 from app.services.core.dependency_container import get_global_container
+from app.services.data.stock_service import StockService
+from app.services.data.symbol_service import SymbolService
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -36,8 +35,8 @@ def get_stock_service() -> StockService:
 async def search_symbols(
     q: str = Query(..., min_length=1, description="Search query (symbol or company name)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
-    exchange: Optional[str] = Query(None, description="Filter by exchange"),
-    market_type: Optional[str] = Query(None, description="Filter by market type"),
+    exchange: str | None = Query(None, description="Filter by exchange"),
+    market_type: str | None = Query(None, description="Filter by market type"),
     active_only: bool = Query(True, description="Only active symbols"),
     service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
@@ -49,7 +48,7 @@ async def search_symbols(
         market_type=market_type,
         active_only=active_only,
     )
-    
+
     return {
         "status": "success",
         "query": q,
@@ -65,7 +64,7 @@ async def get_exchanges(
 ) -> dict:
     """Get list of all available exchanges."""
     exchanges = await service.get_exchanges()
-    
+
     return {
         "status": "success",
         "exchanges": exchanges,
@@ -80,7 +79,7 @@ async def get_market_types(
 ) -> dict:
     """Get list of all available market types."""
     market_types = await service.get_market_types()
-    
+
     return {
         "status": "success",
         "market_types": market_types,
@@ -95,7 +94,7 @@ async def get_countries(
 ) -> dict:
     """Get list of all available country codes."""
     countries = await service.get_countries()
-    
+
     return {
         "status": "success",
         "countries": countries,
@@ -110,7 +109,7 @@ async def get_symbol_stats(
 ) -> dict:
     """Get symbol statistics."""
     stats = await service.get_stats()
-    
+
     return {
         "status": "success",
         "stats": stats,
@@ -133,7 +132,7 @@ async def get_symbols_by_exchange(
         offset=offset,
         active_only=active_only,
     )
-    
+
     return {
         "status": "success",
         "exchange": exchange,
@@ -160,7 +159,7 @@ async def get_symbols_by_market_type(
         offset=offset,
         active_only=active_only,
     )
-    
+
     return {
         "status": "success",
         "market_type": market_type,
@@ -184,7 +183,7 @@ async def get_symbol(
             status_code=404,
             detail=f"Symbol '{symbol}' not found"
         )
-    
+
     return {
         "status": "success",
         "symbol": symbol,

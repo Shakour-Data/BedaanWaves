@@ -1,12 +1,10 @@
 """Database Configuration and Session Management"""
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base, Session
-from sqlalchemy.pool import NullPool, QueuePool
-from typing import AsyncGenerator, Generator
 import logging
-import os
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
 
 from app.core.config import get_settings
 
@@ -52,7 +50,7 @@ async_session_maker = async_sessionmaker(
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Get async database session
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -61,7 +59,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             yield session
         except Exception as e:
             await session.rollback()
-            logger.error(f"Database session error: {str(e)}")
+            logger.error(f"Database session error: {e!s}")
             raise
         finally:
             await session.close()
@@ -69,10 +67,10 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Initialize database by running Alembic migrations."""
+    from pathlib import Path
+
     from alembic import command
     from alembic.config import Config
-
-    from pathlib import Path
     alembic_ini = Path(__file__).resolve().parent.parent.parent / "database" / "alembic" / "alembic.ini"
     alembic_cfg = Config(str(alembic_ini))
     alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

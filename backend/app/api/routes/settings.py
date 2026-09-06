@@ -1,12 +1,12 @@
 """Settings and Preferences Routes"""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Any
 from uuid import UUID
-from typing import Dict, List, Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_route_user_id
-from app.schemas.schemas import PreferenceResponse, PreferenceUpdate
 from app.services.user.preference_service import preference_service
 
 router = APIRouter(tags=["settings"])
@@ -27,14 +27,14 @@ def _normalize_recents(values, limit=DEFAULT_RECENT_LIMIT):
             out.append(v.strip())
     return out[:limit]
 
-@router.get("/market-preferences", response_model=Dict[str, Any])
+@router.get("/market-preferences", response_model=dict[str, Any])
 async def get_market_preferences(user_id: UUID = Depends(get_route_user_id)):
     """
     Get market configuration preferences for the user.
     If not set, returns default platform-wide configuration.
     """
     pref = await preference_service.get_preference(user_id, "market_preferences")
-    
+
     if pref:
         return pref.value
     return {
@@ -49,14 +49,14 @@ async def get_market_preferences(user_id: UUID = Depends(get_route_user_id)):
 
 @router.post("/market-preferences", status_code=status.HTTP_200_OK)
 async def save_market_preferences(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     user_id: UUID = Depends(get_route_user_id)
 ):
     """Save user market preferences."""
     await preference_service.set_preference(user_id, "market_preferences", data)
     return {"status": "success", "message": "Preferences saved"}
 
-@router.get("/countries", response_model=List[Dict[str, str]])
+@router.get("/countries", response_model=list[dict[str, str]])
 async def get_countries():
     """Get list of supported countries/regions."""
     return [
@@ -71,7 +71,7 @@ class RecentSearchAdd(BaseModel):
     limit: int = Field(DEFAULT_RECENT_LIMIT, ge=0, le=50)
 
 
-@router.get("/recent-searches", response_model=Dict[str, Any])
+@router.get("/recent-searches", response_model=dict[str, Any])
 async def get_recent_searches(user_id: UUID = Depends(get_route_user_id)):
     """Return the current user's most-recently-used search terms (most recent first)."""
     pref = await preference_service.get_preference(user_id, RECENT_SEARCHES_KEY)
@@ -79,7 +79,7 @@ async def get_recent_searches(user_id: UUID = Depends(get_route_user_id)):
     return {"status": "success", "recent_searches": recents}
 
 
-@router.post("/recent-searches", response_model=Dict[str, Any])
+@router.post("/recent-searches", response_model=dict[str, Any])
 async def add_recent_search(
     payload: RecentSearchAdd,
     user_id: UUID = Depends(get_route_user_id),

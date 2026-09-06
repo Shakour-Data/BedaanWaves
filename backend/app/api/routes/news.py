@@ -1,8 +1,8 @@
 """News Routes"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import List
 import logging
+
+from fastapi import APIRouter, Query
 
 from app.services.data.news_service import NewsService
 

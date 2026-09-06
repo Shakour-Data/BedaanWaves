@@ -3,7 +3,6 @@
 Manages a user's watchlists and the assets contained within them.
 """
 
-from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -22,7 +21,7 @@ class WatchlistService:
         self,
         user_id: UUID,
         name: str,
-        description: Optional[str] = None,
+        description: str | None = None,
         is_default: bool = False,
         session=None,
     ) -> Watchlist:
@@ -43,7 +42,7 @@ class WatchlistService:
             if owns:
                 await session.close()
 
-    async def list_watchlists(self, user_id: UUID, session=None) -> List[Watchlist]:
+    async def list_watchlists(self, user_id: UUID, session=None) -> list[Watchlist]:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -57,7 +56,7 @@ class WatchlistService:
 
     async def get_watchlist(
         self, watchlist_id: UUID, user_id: UUID, session=None
-    ) -> Optional[Watchlist]:
+    ) -> Watchlist | None:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -93,10 +92,10 @@ class WatchlistService:
         watchlist_id: UUID,
         user_id: UUID,
         asset_id: UUID,
-        note: Optional[str] = None,
-        alert_threshold_pct: Optional[float] = None,
+        note: str | None = None,
+        alert_threshold_pct: float | None = None,
         session=None,
-    ) -> Optional[WatchlistItem]:
+    ) -> WatchlistItem | None:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -148,11 +147,11 @@ class WatchlistService:
         self,
         watchlist_id: UUID,
         user_id: UUID,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        is_default: Optional[bool] = None,
+        name: str | None = None,
+        description: str | None = None,
+        is_default: bool | None = None,
         session=None,
-    ) -> Optional[Watchlist]:
+    ) -> Watchlist | None:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -177,10 +176,10 @@ class WatchlistService:
         watchlist_id: UUID,
         item_id: UUID,
         user_id: UUID,
-        note: Optional[str] = None,
-        alert_threshold_pct: Optional[float] = None,
+        note: str | None = None,
+        alert_threshold_pct: float | None = None,
         session=None,
-    ) -> Optional[WatchlistItem]:
+    ) -> WatchlistItem | None:
         owns = session is None
         session = session or self.session_factory()
         try:

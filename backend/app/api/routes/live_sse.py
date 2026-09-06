@@ -20,12 +20,13 @@ or internal exception messages leak).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
-import time
 import uuid
-from typing import AsyncGenerator, Dict, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -33,7 +34,6 @@ from starlette import status as http_status
 
 from app.core.config import get_settings
 from app.services.core.dependency_container import get_global_container
-from app.services.live.constants import VALID_INTRADAY_INTERVALS
 from app.services.live.endpoint_validators import (
     validate_interval,
     validate_scope,
@@ -48,7 +48,7 @@ router = APIRouter(tags=["market-live-sse"])
 
 settings = get_settings()
 
-_SSE_HEADERS: Dict[str, str] = {
+_SSE_HEADERS: dict[str, str] = {
     "Cache-Control": "no-cache, no-store, must-revalidate",
     "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
@@ -77,7 +77,7 @@ def _safe_log(level: int, fmt: str, *args: object) -> None:
     logger.log(level, cleaned_fmt, *cleaned_args)
 
 
-def _extract_token(request: Request) -> Optional[str]:
+def _extract_token(request: Request) -> str | None:
     """Extract token from Authorization header or ?token= query string."""
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
@@ -88,7 +88,7 @@ def _extract_token(request: Request) -> Optional[str]:
     return None
 
 
-def _authenticate(request: Request) -> Dict[str, object]:
+def _authenticate(request: Request) -> dict[str, object]:
     """
     Pre-streaming authentication check.
 
@@ -129,7 +129,7 @@ def _authenticate(request: Request) -> Dict[str, object]:
     return payload
 
 
-def _format_sse(event: str, data_obj: Dict[str, object]) -> str:
+def _format_sse(event: str, data_obj: dict[str, object]) -> str:
     """Format a single SSE `event:` / `data:` block."""
     try:
         payload = json.dumps(data_obj, ensure_ascii=False, default=str)
@@ -193,7 +193,6 @@ async def _stream_generator(
                 # FastAPI StreamingResponse will already have sent the
                 # headers by the time we yield the first byte; we rely on
                 # _authenticate() having returned before headers went out.
-                pass
             yield frame
 
             if metrics is not None:
@@ -307,7 +306,7 @@ async def live_quote_stream(
 async def live_intraday_stream(
     request: Request,
     symbol: str,
-    interval: Optional[str] = Query(default=None),
+    interval: str | None = Query(default=None),
 ) -> StreamingResponse:
     """
     Stream intraday OHLCV bars for a single ticker + interval.
@@ -360,7 +359,7 @@ async def live_market_stream(
 @router.get("/scores/stream", summary="Live 6D score delta SSE stream")
 async def live_scores_stream(
     request: Request,
-    scope: Optional[str] = Query(default="NASDAQ"),
+    scope: str | None = Query(default="NASDAQ"),
 ) -> StreamingResponse:
     """
     Stream per-market or per-symbol score delta events.

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
-import { useLiveData, type LiveStreamKey } from '@/hooks/useLiveData'
+import { useLiveData, type LiveStreamKey, type ConnectionHealth } from '@/hooks/useLiveData'
 import {
   disconnectAllSSE,
   getActiveConnectionKeys,
@@ -9,13 +9,31 @@ import {
 import { useLiveStore, STALE_THRESHOLD_MS } from '@/store/useLiveStore'
 import * as apiModule from '@/lib/api'
 
-function getLastMockES(): any {
-  const list = (globalThis as any).__getMockEventSources()
+interface MockES {
+  readyState: number
+  url: string
+  mockOpen(): void
+  mockEmit(event: string, payload: Record<string, unknown>): void
+  mockError(): void
+  mockClose(): void
+}
+
+interface TestGlobals {
+  __getMockEventSources: () => MockES[]
+  __clearMockEventSources: () => void
+}
+
+function getTestGlobals(): TestGlobals {
+  return globalThis as unknown as TestGlobals
+}
+
+function getLastMockES(): MockES {
+  const list = getTestGlobals().__getMockEventSources()
   return list[list.length - 1]
 }
 
-function getAllMockES(): any[] {
-  return (globalThis as any).__getMockEventSources() ?? []
+function getAllMockES(): MockES[] {
+  return getTestGlobals().__getMockEventSources() ?? []
 }
 
 async function flushAll(ticks = 12, timerMs = 100) {
@@ -37,7 +55,7 @@ describe('hooks/useLiveData.tsx', () => {
 
   beforeEach(() => {
     disconnectAllSSE()
-    ;(globalThis as any).__clearMockEventSources()
+    getTestGlobals().__clearMockEventSources()
     cleanup()
     useLiveStore.setState({ streams: {} })
     vi.useFakeTimers()
@@ -56,7 +74,7 @@ describe('hooks/useLiveData.tsx', () => {
           statusText: 'OK',
           headers: {},
           config: {},
-        } as any)
+        } as unknown)
       })
   })
 
@@ -144,7 +162,7 @@ describe('hooks/useLiveData.tsx', () => {
       { timeout: 30000 },
       async () => {
         const key: LiveStreamKey = 'market'
-        const healthChanges: any[] = []
+        const healthChanges: ConnectionHealth[] = []
 
         const { result } = renderHook(() =>
           useLiveData<{ tick: number }>(key, {

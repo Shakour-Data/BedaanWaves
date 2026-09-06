@@ -9,6 +9,17 @@ interface AttachSpy {
   onerror: () => ReturnType<typeof vi.fn>
 }
 
+interface TestGlobals {
+  EventSource: typeof MockEventSource
+  __mockEventSources: MockEventSource[]
+  __getMockEventSources: () => MockEventSource[]
+  __clearMockEventSources: () => void
+}
+
+function getTestGlobals(): TestGlobals {
+  return globalThis as unknown as TestGlobals
+}
+
 class MockEventSource {
   url: string
   withCredentials: boolean = false
@@ -17,17 +28,18 @@ class MockEventSource {
   OPEN: EventSourceReadyState = 1
   CLOSED: EventSourceReadyState = 2
 
-  onopen: ((ev: Event) => any) | null = null
-  onmessage: ((ev: MessageEvent) => any) | null = null
-  onerror: ((ev: Event) => any) | null = null
+  onopen: ((ev: Event) => void) | null = null
+  onmessage: ((ev: MessageEvent) => void) | null = null
+  onerror: ((ev: Event) => void) | null = null
 
   private _listeners: Map<string, Set<EventListener>> = new Map()
 
-  constructor(url: string | URL, _eventSourceInitDict?: EventSourceInit) {
+  constructor(url: string | URL) {
     this.url = typeof url === 'string' ? url : url.toString()
     this.readyState = this.CONNECTING
-    ;(globalThis as any).__mockEventSources = (globalThis as any).__mockEventSources ?? []
-    ;(globalThis as any).__mockEventSources.push(this)
+    const g = getTestGlobals()
+    g.__mockEventSources = g.__mockEventSources ?? []
+    g.__mockEventSources.push(this)
   }
 
   mockOpen(): void {
@@ -39,20 +51,20 @@ class MockEventSource {
 
   mockEmit(
     eventType: string,
-    payloadObj: Record<string, any>,
+    payloadObj: Record<string, unknown>,
     opts: { lastEventId?: string; delayMs?: number } = {}
   ): void {
     const fire = () => {
       const data = typeof payloadObj === 'string' ? payloadObj : JSON.stringify(payloadObj)
       const ev = new MessageEvent(eventType, {
         data,
-        lastEventId: opts.lastEventId ?? String(payloadObj?.sequence ?? ''),
+        lastEventId: opts.lastEventId ?? String((payloadObj as Record<string, unknown>).sequence ?? ''),
       })
       if (eventType === 'message') {
         this.onmessage?.(ev)
       }
-      this._listeners.get(eventType)?.forEach((l) => l(ev as any))
-      this._listeners.get('message')?.forEach((l) => l(ev as any))
+      this._listeners.get(eventType)?.forEach((l) => l(ev))
+      this._listeners.get('message')?.forEach((l) => l(ev))
     }
     if (opts.delayMs) {
       setTimeout(fire, opts.delayMs)
@@ -71,14 +83,16 @@ class MockEventSource {
     this.readyState = this.CLOSED
   }
 
-  addEventListener(type: string, listener: EventListener, _options?: any): void {
+  addEventListener(type: string, listener: EventListener, _options?: boolean | AddEventListenerOptions): void {
+    void _options;
     if (!this._listeners.has(type)) {
       this._listeners.set(type, new Set())
     }
     this._listeners.get(type)!.add(listener)
   }
 
-  removeEventListener(type: string, listener: EventListener, _options?: any): void {
+  removeEventListener(type: string, listener: EventListener, _options?: boolean | AddEventListenerOptions): void {
+    void _options;
     this._listeners.get(type)?.delete(listener)
   }
 
@@ -118,14 +132,15 @@ class MockEventSource {
   }
 }
 
-;(globalThis as any).EventSource = MockEventSource
-;(globalThis as any).__getMockEventSources = () => (globalThis as any).__mockEventSources ?? []
-;(globalThis as any).__clearMockEventSources = () => {
-  ;(globalThis as any).__mockEventSources = []
+const g = getTestGlobals()
+g.EventSource = MockEventSource
+g.__getMockEventSources = () => g.__mockEventSources ?? []
+g.__clearMockEventSources = () => {
+  g.__mockEventSources = []
 }
 
 beforeEach(() => {
-  ;(globalThis as any).__clearMockEventSources()
+  g.__clearMockEventSources()
 })
 
 afterEach(() => {

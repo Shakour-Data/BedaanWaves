@@ -1,20 +1,21 @@
 """Specialized Routes - Tier 7 (sector analysis, screening, comparison, correlation, calendar)"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Body
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from datetime import timezone, datetime, date
-from typing import List, Optional, Dict, Any
 import logging
-from app.core.utils import utc_now_iso
+from datetime import UTC, datetime
+from typing import Any
 
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
-from app.models.models import Asset, candle_model_for_market, MLSignal
-from app.services.specialized.sector_analysis_service import SectorAnalysisService
-from app.services.specialized.screening_service import ScreeningService
+from app.models.models import Asset, MLSignal, candle_model_for_market
+from app.services.specialized.calendar_service import CalendarService
 from app.services.specialized.comparison_service import ComparisonService
 from app.services.specialized.correlation_service import CorrelationService
-from app.services.specialized.calendar_service import CalendarService
+from app.services.specialized.screening_service import ScreeningService
+from app.services.specialized.sector_analysis_service import SectorAnalysisService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["specialized"])
@@ -26,8 +27,8 @@ def _load(svc_cls):
 
 
 async def _build_universe(
-    db: AsyncSession, market: Optional[str] = None
-) -> List[Dict[str, Any]]:
+    db: AsyncSession, market: str | None = None
+) -> list[dict[str, Any]]:
     """Build a stock universe from stored assets, latest candle, and latest signal.
 
     The universe is hard-locked to Nasdaq-listed equities and ETFs. The
@@ -76,7 +77,7 @@ async def _build_universe(
 
     assets = [a for a, _ in rows]
     asset_ids = [a.id for a in assets]
-    signals: Dict[Any, MLSignal] = {}
+    signals: dict[Any, MLSignal] = {}
     if asset_ids:
         sig_query = (
             select(MLSignal)
@@ -84,7 +85,7 @@ async def _build_universe(
                 and_(
                     MLSignal.asset_id.in_(asset_ids),
                     MLSignal.is_active,
-                    MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None),
+                    MLSignal.valid_until >= datetime.now(UTC).replace(tzinfo=None),
                 )
             )
             .order_by(MLSignal.generated_at.desc())

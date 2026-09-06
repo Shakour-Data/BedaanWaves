@@ -7,24 +7,25 @@ POST /auth/login      Authenticate and obtain access/refresh tokens
 POST /auth/refresh    Exchange a valid refresh token for new tokens
 """
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, HTTPException, status
-from datetime import datetime, timezone
 from jose import jwt
+from sqlalchemy import select, update
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
-from app.models.models import User, RefreshToken
-from app.schemas.schemas import Token, LoginRequest, RegisterRequest
+from app.models.models import RefreshToken
+from app.schemas.schemas import LoginRequest, RegisterRequest, Token
 from app.services.user.auth_service import (
-    hash_password,
+    authenticate_user,
     create_access_token,
     create_refresh_token,
-    get_user_by_username,
-    get_user_by_email,
     create_user,
-    authenticate_user,
+    get_user_by_email,
+    get_user_by_username,
+    hash_password,
 )
-from sqlalchemy import select, update
 
 settings = get_settings()
 router = APIRouter(tags=["auth"])
@@ -82,7 +83,7 @@ async def refresh_token(token: str) -> Token:
         raise HTTPException(status_code=401, detail="User not found")
 
     async with async_session_maker() as session:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         result = await session.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user.id,

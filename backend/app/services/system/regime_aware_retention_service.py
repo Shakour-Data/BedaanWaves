@@ -1,10 +1,9 @@
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
+from typing import Any
 
-from ..core import BaseService
-from ..core.dependency_container import get_global_container
-from ..core.database_service import DatabaseService
 from app.core.config import get_settings
+
+from ..core.database_service import DatabaseService
+from ..core.dependency_container import get_global_container
 
 settings = get_settings()
 
@@ -14,7 +13,7 @@ class RegimeAwareRetentionService(DatabaseService):
 
     def __init__(self, service_name: str = "RegimeAwareRetentionService"):
         super().__init__(service_name)
-        self.last_regime: Optional[str] = None
+        self.last_regime: str | None = None
 
     async def initialize(self) -> None:
         """Initialize with regime transition tracking."""
@@ -23,7 +22,7 @@ class RegimeAwareRetentionService(DatabaseService):
         self.regime_db = self._load_regime_db()
         self.logger.info("Loaded %d regime transition records", len(self.regime_db))
 
-    def _load_regime_db(self) -> Dict[str, List[Dict]]:
+    def _load_regime_db(self) -> dict[str, list[dict]]:
         """Load predefined regime transition data."""
         return {
             "hard_peg": [
@@ -44,11 +43,11 @@ class RegimeAwareRetentionService(DatabaseService):
     async def shutdown(self) -> None:
         self.logger.info("RegimeAwareRetentionService shutdown")
 
-    async def get_retention_strategy(self, currency: str) -> Dict[str, Any]:
+    async def get_retention_strategy(self, currency: str) -> dict[str, Any]:
         """Get retention schedule based on current currency regime."""
         regime_data = self._get_current_regime(currency)
         strategy_params = regime_data["retention_params"]
-        
+
         return {
             "regime": regime_data["current_regime"],
             "retention_params": strategy_params,
@@ -56,15 +55,10 @@ class RegimeAwareRetentionService(DatabaseService):
             "special_buffer_capacity": "high" if regime_data.get("is_transitioning") else "normal"
         }
 
-    def _get_current_regime(self, currency: str) -> Dict[str, Any]:
+    def _get_current_regime(self, currency: str) -> dict[str, Any]:
         """Infer current currency regime from economic indicators."""
         # Priority order: check for hard peg indicators first
-        hard_peg_indicators = {
-            "fixed_exchange_rate": False,
-            "one_dollar_funds_local_currency": False,
-            "strict_monetary_policy": False
-        }
-        
+
         # Placeholder for actual analysis logic
         current_regime = "free_float"
         is_transitioning = False
@@ -73,7 +67,7 @@ class RegimeAwareRetentionService(DatabaseService):
             "decay_multiplier": 1.0,
             "granularity_hint": "monthly"
         }
-        
+
         return {
             "current_regime": current_regime,
             "is_transitioning": is_transitioning,
@@ -85,7 +79,7 @@ class RegimeAwareRetentionService(DatabaseService):
         """Check if new regime implies extended retention."""
         current_strategy = await self.get_retention_strategy(currency)
         regime_change_detected = current_strategy["regime"] != self.last_regime
-        
+
         if regime_change_detected:
             # Extend retention halo period for new regime
             self.last_regime = current_strategy["regime"]

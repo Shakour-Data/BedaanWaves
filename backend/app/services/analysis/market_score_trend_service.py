@@ -13,17 +13,17 @@ Typical usage (called by the daily scheduler after ``DailyScoreRecalculation``):
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import Numeric, and_, case as sa_case, func, select
+from sqlalchemy import Numeric, and_, func, select
+from sqlalchemy import case as sa_case
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.core import BaseService
 from app.db.base import async_session_maker
 from app.models.models import Asset, MarketScoreTrend, ScoreHistory
-
+from app.services.core import BaseService
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,10 @@ class MarketScoreTrendService(BaseService):
 
     async def compute_and_persist(
         self,
-        target_date: Optional[date] = None,
+        target_date: date | None = None,
         market: str = "NASDAQ",
         lookback_days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Aggregate ``ScoreHistory`` rows into ``market_score_trend``.
 
         Args:
@@ -70,7 +70,7 @@ class MarketScoreTrendService(BaseService):
             Summary dict with counts and the list of persisted rows.
         """
         if target_date is None:
-            target_date = datetime.now(timezone.utc).date()
+            target_date = datetime.now(UTC).date()
 
         start_date = target_date - timedelta(days=lookback_days - 1)
         self.logger.info(
@@ -117,10 +117,10 @@ class MarketScoreTrendService(BaseService):
         self,
         days: int = 30,
         market: str = "NASDAQ",
-        db: Optional[AsyncSession] = None,
-        end_date: Optional[date] = None,
+        db: AsyncSession | None = None,
+        end_date: date | None = None,
         latest: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Read the precomputed trend series for a market.
 
         Returns one dict per day ordered ascending by date. Each dict matches
@@ -160,14 +160,14 @@ class MarketScoreTrendService(BaseService):
         elif latest:
             effective_end = await self._latest_date(market, db)
         else:
-            effective_end = datetime.now(timezone.utc).date()
+            effective_end = datetime.now(UTC).date()
 
         if effective_end is not None:
             cutoff = effective_end - timedelta(days=days - 1)
         else:
             cutoff = None
 
-        async def _read(session: AsyncSession) -> List[Dict[str, Any]]:
+        async def _read(session: AsyncSession) -> list[dict[str, Any]]:
             query = (
                 MarketScoreTrend.__table__.select()
                 .where(MarketScoreTrend.market == market)
@@ -189,7 +189,7 @@ class MarketScoreTrendService(BaseService):
             async with async_session_maker() as session:
                 rows = await _read(session)
 
-        series: List[Dict[str, Any]] = []
+        series: list[dict[str, Any]] = []
         for row in rows:
             series.append({
                 "date": row["date"].isoformat(),
@@ -202,15 +202,15 @@ class MarketScoreTrendService(BaseService):
     async def _latest_date(
         self,
         market: str = "NASDAQ",
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[date]:
+        db: AsyncSession | None = None,
+    ) -> date | None:
         """Return the most recent date with trend data.
 
         Tries ``market_score_trend`` first (the precomputed table) and falls
         back to ``ScoreHistory.date`` so callers always get a usable date even
         before the first scheduler backfill has run.
         """
-        async def _query(session: AsyncSession) -> Optional[date]:
+        async def _query(session: AsyncSession) -> date | None:
             result = await session.execute(
                 select(func.max(MarketScoreTrend.date))
                 .where(MarketScoreTrend.market == market)
@@ -223,7 +223,7 @@ class MarketScoreTrendService(BaseService):
                 .join(Asset, Asset.id == ScoreHistory.asset_id)
                 .where(
                     and_(
-                        Asset.active == True,
+                        Asset.active,
                         Asset.market == market,
                         Asset.asset_class.in_(["EQUITY", "ETF"]),
                     )
@@ -253,7 +253,7 @@ class MarketScoreTrendService(BaseService):
         market: str,
         start_date: date,
         end_date: date,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         market_filter = and_(
             Asset.market == market,
             Asset.asset_class.in_(["EQUITY", "ETF"]),
@@ -298,7 +298,7 @@ class MarketScoreTrendService(BaseService):
         result = await session.execute(stmt)
         rows = result.all()
 
-        aggregated: List[Dict[str, Any]] = []
+        aggregated: list[dict[str, Any]] = []
         for row in rows:
             aggregated.append({
                 "date": row.date,
@@ -315,9 +315,9 @@ class MarketScoreTrendService(BaseService):
         self,
         session: AsyncSession,
         market: str,
-        rows: List[Dict[str, Any]],
+        rows: list[dict[str, Any]],
     ) -> None:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         payloads = [
             {
                 "market": market,

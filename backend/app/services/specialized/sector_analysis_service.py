@@ -6,7 +6,8 @@ Aggregates stock-level metrics into sector-level intelligence:
 - Market-wide overview
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from ..core import AnalysisService
 
 
@@ -22,7 +23,7 @@ class SectorAnalysisService(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("SectorAnalysisService shutdown")
 
-    def _validate_stock(self, stock: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_stock(self, stock: dict[str, Any]) -> dict[str, Any]:
         """Normalize a single stock record, filling missing fields."""
         score = stock.get("score")
         change = stock.get("change_pct")
@@ -37,7 +38,7 @@ class SectorAnalysisService(AnalysisService):
             "signal": stock.get("signal"),
         }
 
-    async def analyze_sector(self, sector: str, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def analyze_sector(self, sector: str, stocks: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Summarize a single sector from its constituent stocks.
 
@@ -90,7 +91,7 @@ class SectorAnalysisService(AnalysisService):
             "score_distribution": distribution,
         }
 
-    async def analyze_all(self, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def analyze_all(self, stocks: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Group stocks by sector and summarize each, plus market overview.
 
@@ -100,7 +101,7 @@ class SectorAnalysisService(AnalysisService):
         Returns:
             {sectors: [...], market_overview: {...}}
         """
-        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        grouped: dict[str, list[dict[str, Any]]] = {}
         for stock in stocks:
             sector = (stock.get("sector") or "UNCLASSIFIED")
             grouped.setdefault(sector, []).append(stock)
@@ -135,7 +136,7 @@ class SectorAnalysisService(AnalysisService):
             "timestamp": None,
         }
 
-    async def rank_sectors(self, sector_summaries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def rank_sectors(self, sector_summaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Rank sectors by a composite strength score.
 
@@ -150,10 +151,10 @@ class SectorAnalysisService(AnalysisService):
         if not sector_summaries:
             return []
 
-        def _score_of(s: Dict[str, Any]) -> Optional[float]:
+        def _score_of(s: dict[str, Any]) -> float | None:
             return s.get("average_score")
 
-        def _change_of(s: Dict[str, Any]) -> float:
+        def _change_of(s: dict[str, Any]) -> float:
             return float(s.get("average_change_pct", 0.0))
 
         scores = [s for s in sector_summaries if _score_of(s) is not None]

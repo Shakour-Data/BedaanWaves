@@ -1,17 +1,15 @@
-from typing import Any, Dict, List, Optional
-import json
 import hashlib
-from datetime import datetime, timezone
-from pathlib import Path
-from app.core.utils import utc_now_iso
+import json
+from datetime import UTC, datetime
+from typing import Any
 
-import aiofiles
 from aioredis import Redis
 
-from ..core import ExternalAPIService
-from ..core.dependency_container import get_global_container
+from app.core.utils import utc_now_iso
+
 from ..core.config import get_settings
 from ..core.database_service import DatabaseService
+from ..core.dependency_container import get_global_container
 
 settings = get_settings()
 
@@ -22,7 +20,7 @@ class SchemaVersion:
         self.minor = minor
         self.patch = patch
         self.regime = regime
-        self.date = date or datetime.now(timezone.utc).strftime("%Y.%m.%d")
+        self.date = date or datetime.now(UTC).strftime("%Y.%m.%d")
 
     @property
     def version(self) -> str:
@@ -33,7 +31,7 @@ class SchemaVersion:
         parts = [str(self.major), str(self.minor), str(self.patch), self.regime, self.date]
         return hashlib.sha256(".".join(parts).encode()).hexdigest()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "major": self.major,
             "minor": self.minor,
@@ -50,9 +48,9 @@ class SchemaRegistry:
         self.db = db
         self.redis = redis
         self.logger = __import__("logging").getLogger(self.__class__.__name__)
-        self._schemas: Dict[str, Dict[str, Any]] = {}
+        self._schemas: dict[str, dict[str, Any]] = {}
 
-    async def register_schema(self, asset_type: str, data: Dict[str, Any], version_obj: SchemaVersion) -> Dict[str, Any]:
+    async def register_schema(self, asset_type: str, data: dict[str, Any], version_obj: SchemaVersion) -> dict[str, Any]:
         """Register a new schema version."""
 
         schema_hash = version_obj.hash
@@ -95,7 +93,7 @@ class SchemaRegistry:
         self.logger.info("Registered new schema for %s (v%s)", asset_type, version_obj.version)
         return schema_obj
 
-    async def validate(self, asset_type: str, data: Dict[str, Any]) -> bool:
+    async def validate(self, asset_type: str, data: dict[str, Any]) -> bool:
         """Validate data against the latest schema for the asset type."""
         if asset_type not in self._schemas:
             return True
@@ -111,7 +109,7 @@ class SchemaRegistry:
 
         return await self._validate_against_db(asset_type, data)
 
-    async def _validate_against_db(self, asset_type: str, data: Dict[str, Any]) -> bool:
+    async def _validate_against_db(self, asset_type: str, data: dict[str, Any]) -> bool:
         """Validate against database-stored schema."""
         return True
 

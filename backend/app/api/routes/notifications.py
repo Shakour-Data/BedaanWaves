@@ -1,9 +1,9 @@
 """Notification Routes (Tier 6)"""
 
-from typing import Optional
+
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from uuid import UUID
 
 from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import NotificationResponse

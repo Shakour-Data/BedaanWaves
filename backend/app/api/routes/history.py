@@ -1,12 +1,11 @@
 """History Routes"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from datetime import datetime, timedelta
-from typing import List
-from collections import defaultdict
 import logging
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_async_session
 from app.models.models import Asset
@@ -16,12 +15,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["history"])
 
 
-@router.get("/{ticker}", response_model=List[dict])
+@router.get("/{ticker}", response_model=list[dict])
 async def get_price_history(
     ticker: str,
     days: int = Query(30, ge=1, le=3650),
     db: AsyncSession = Depends(get_async_session),
-) -> List[dict]:
+) -> list[dict]:
     """Get price history for a ticker."""
     asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(ticker))
     asset_result = await db.execute(asset_query)
@@ -43,12 +42,12 @@ async def get_price_history(
     ]
 
 
-@router.get("/volume/{ticker}", response_model=List[dict])
+@router.get("/volume/{ticker}", response_model=list[dict])
 async def get_volume_history(
     ticker: str,
     days: int = Query(30, ge=1, le=3650),
     db: AsyncSession = Depends(get_async_session),
-) -> List[dict]:
+) -> list[dict]:
     """Get volume history for a ticker."""
     asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(ticker))
     asset_result = await db.execute(asset_query)

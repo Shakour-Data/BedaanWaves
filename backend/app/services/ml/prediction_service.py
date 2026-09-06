@@ -3,12 +3,13 @@
 Stock price and direction prediction using ML models.
 """
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
-import math
 import asyncio
-from ..core import MLService
+import time
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from ..core import MLService
 
 
 class PredictionService(MLService):
@@ -24,36 +25,37 @@ class PredictionService(MLService):
         self.model = None
         self.logger.info("PredictionService shutdown")
 
-    async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         features = training_data.get("features", [])
         labels = training_data.get("labels", [])
         self._metrics["calls"] += 1
         if len(features) != len(labels) or not features:
             self._metrics["errors"] += 1
             raise ValueError("Invalid training data")
-        import time; start = time.perf_counter()
+        import time
+        start = time.perf_counter()
         self.features = features
         self.model = {"trained": True, "samples": len(features)}
         duration = (time.perf_counter() - start) * 1000
         self._track_metric(True, duration)
         return {"status": "trained", "samples": len(features), "metrics": {"mse": 0.0}}
 
-    async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        import time; start = time.perf_counter()
+    async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
+        start = time.perf_counter()
         prices = data.get("prices", [])
         horizon = data.get("horizon", 1)
         if len(prices) < 10 or not self.model:
             self._metrics["errors"] += 1
             raise ValueError("Insufficient data or model not trained")
-        
+
         last = float(prices[-1])
         momentum = (prices[-1] - prices[-5]) / prices[-5] if len(prices) >= 5 and prices[-5] else 0
         predicted = last * (1 + momentum * 0.5 * horizon)
         confidence = min(abs(momentum) * 10, 0.95)
-        
+
         duration = (time.perf_counter() - start) * 1000
         self._track_metric(True, duration)
-        
+
         return {
             "ticker": data.get("ticker", "UNKNOWN"),
             "predicted_price": round(predicted, 2),
@@ -63,7 +65,7 @@ class PredictionService(MLService):
             "timestamp": utc_now_iso(),
         }
 
-    async def batch_predict(self, data_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def batch_predict(self, data_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         tasks = [self.predict(d) for d in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         processed = []

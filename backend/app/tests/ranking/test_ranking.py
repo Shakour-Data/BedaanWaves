@@ -4,7 +4,7 @@ Validates grade assignment and the technical/risk dimension scoring math.
 """
 import unittest
 
-from app.api.routes.ranking import _assign_grade, _technical_score, _risk_score
+from app.api.routes.ranking import _assign_grade, _risk_score, _technical_score
 
 
 class TestAssignGrade(unittest.TestCase):

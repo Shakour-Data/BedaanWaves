@@ -21,28 +21,28 @@ import csv
 import logging
 import math
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
-from app.core.exceptions import DataParsingException, IngestionException
 
-from app.services.core.base_service import DataService
 from app.core.config import get_settings
+from app.core.exceptions import IngestionException
+from app.db.base import async_session_maker
 from app.models.models import (
     Asset,
-    IntlPriceCandle,
+    CompanyLeadership,
     FinancialStatement,
     FundamentalRatio,
-    CompanyLeadership,
-    News,
+    IntlPriceCandle,
     MacroIndicator,
+    News,
 )
+from app.services.core.base_service import DataService
 from app.services.data.multi_source_news_fetcher import MultiSourceNewsFetcher
 from app.services.data.sec_edgar_client import SEDGARFinancialService
-from app.db.base import async_session_maker
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class NasdaqIngestionService(DataService):
     def __init__(self, service_name: str = "NasdaqIngestionService"):
         super().__init__(service_name)
         self.settings = get_settings()
-        self._symbols: List[str] = []
+        self._symbols: list[str] = []
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT)
         self._sec_service = SEDGARFinancialService()
 
@@ -102,7 +102,7 @@ class NasdaqIngestionService(DataService):
             return [NasdaqIngestionService._clean_nan(v) for v in obj]
         return obj
 
-    def _load_symbols_from_csv(self) -> List[str]:
+    def _load_symbols_from_csv(self) -> list[str]:
         """Load all Nasdaq symbols from the CSV file."""
         symbols = []
         try:
@@ -119,7 +119,7 @@ class NasdaqIngestionService(DataService):
         return symbols
 
     @property
-    def DEFAULT_CONSTITUENTS(self) -> List[str]:
+    def DEFAULT_CONSTITUENTS(self) -> list[str]:
         if not self._symbols:
             self._symbols = self._load_symbols_from_csv()
         return self._symbols
@@ -173,7 +173,7 @@ class NasdaqIngestionService(DataService):
                     await session.refresh(asset)
             return asset
 
-    async def _bulk_upsert_candles(self, candles: List[IntlPriceCandle]) -> int:
+    async def _bulk_upsert_candles(self, candles: list[IntlPriceCandle]) -> int:
         """Bulk upsert candles using PostgreSQL upsert."""
         if not candles:
             return 0
@@ -197,7 +197,7 @@ class NasdaqIngestionService(DataService):
                         "adjusted_close": float(c.adjusted_close) if c.adjusted_close else None,
                         "split_ratio": float(c.split_ratio) if c.split_ratio else 1.0,
                     })
-                
+
                 stmt = pg_insert(IntlPriceCandle).values(rows)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["asset_id", "timestamp", "timeframe"],
@@ -244,7 +244,7 @@ class NasdaqIngestionService(DataService):
                     sector=info.get("sector", ""),
                     industry=info.get("industry", ""),
                 )
-                
+
             candles = []
             for timestamp, row in hist.iterrows():
                 ts = timestamp.to_pydatetime().replace(tzinfo=None) if hasattr(timestamp, 'to_pydatetime') else timestamp
@@ -498,7 +498,7 @@ class NasdaqIngestionService(DataService):
                         sector=info.get("sector", ""),
                         industry=info.get("industry", ""),
                     )
-                    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+                    cutoff = datetime.now(UTC) - timedelta(days=days)
 
                     for item in raw_news:
                         published_str = item.get("published")
@@ -507,7 +507,7 @@ class NasdaqIngestionService(DataService):
                             try:
                                 published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
                             except (ValueError, TypeError):
-                                published_dt = datetime.now(timezone.utc)
+                                published_dt = datetime.now(UTC)
 
                         if published_dt and published_dt < cutoff:
                             continue
@@ -570,7 +570,7 @@ class NasdaqIngestionService(DataService):
                         latest_date = hist.index[-1]
                         period_str = latest_date.strftime("%Y-%m-%d")
                         value = float(latest["Close"])
-                        
+
                         macro_data.append({
                             "indicator_code": ticker_sym,
                             "name": name,
@@ -601,7 +601,7 @@ class NasdaqIngestionService(DataService):
             self.logger.error(f"Failed to ingest macro indicators: {e}")
             return False
 
-    async def backfill_nasdaq(self, symbols: Optional[List[str]] = None, years: int = 5):
+    async def backfill_nasdaq(self, symbols: list[str] | None = None, years: int = 5):
         """Run full backfill for Nasdaq constituents."""
         symbols = symbols or self.DEFAULT_CONSTITUENTS
         self.logger.info(f"Starting Nasdaq backfill for {len(symbols)} symbols, {years} years")
@@ -688,7 +688,7 @@ class NasdaqIngestionService(DataService):
         self.logger.info(f"Backfill complete: {results}")
         return results
 
-    async def daily_update(self, symbols: Optional[List[str]] = None):
+    async def daily_update(self, symbols: list[str] | None = None):
         """Run daily incremental update."""
         symbols = symbols or self.DEFAULT_CONSTITUENTS
         self.logger.info(f"Starting daily update for {len(symbols)} symbols")
@@ -726,8 +726,8 @@ class NasdaqIngestionService(DataService):
         self.logger.info(f"Daily update complete: {results}")
         return results
 
-    async def ingest_symbol_batch(self, symbols: List[str], include_news: bool = True,
-                                  include_fundamentals: bool = False) -> Dict[str, Any]:
+    async def ingest_symbol_batch(self, symbols: list[str], include_news: bool = True,
+                                  include_fundamentals: bool = False) -> dict[str, Any]:
         """Ingest a batch of symbols with configurable data types."""
         results = {"prices": 0, "fundamentals": 0, "board": 0, "news": 0, "errors": []}
 

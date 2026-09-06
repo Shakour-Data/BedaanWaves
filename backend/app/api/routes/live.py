@@ -13,7 +13,7 @@ derive the snapshot URL by dropping the trailing `/stream`.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette import status as http_status
@@ -36,7 +36,7 @@ router = APIRouter(tags=["market-live"])
 settings = get_settings()
 
 
-def _extract_token(request: Request) -> Optional[str]:
+def _extract_token(request: Request) -> str | None:
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         return auth_header.split(" ", 1)[1].strip()
@@ -92,7 +92,7 @@ def _get_orchestrator() -> Any:
     return orch
 
 
-def _envelope_to_response(envelope: Optional[LiveEventEnvelope]) -> Dict[str, Any]:
+def _envelope_to_response(envelope: LiveEventEnvelope | None) -> dict[str, Any]:
     if envelope is None:
         return {
             "stream_key": None,
@@ -107,7 +107,7 @@ def _envelope_to_response(envelope: Optional[LiveEventEnvelope]) -> Dict[str, An
     return model
 
 
-def _get_stream_status(orch: Any, stream_key: str) -> Dict[str, Any]:
+def _get_stream_status(orch: Any, stream_key: str) -> dict[str, Any]:
     status = orch.get_stream_status(stream_key)
     env = orch.get_last_emitted(stream_key)
     snap = _envelope_to_response(env)
@@ -125,7 +125,7 @@ def _get_stream_status(orch: Any, stream_key: str) -> Dict[str, Any]:
 async def live_quote_snapshot(
     request: Request,
     symbol: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Return the most recent quote event for the symbol.
 
@@ -143,8 +143,8 @@ async def live_quote_snapshot(
 async def live_intraday_snapshot(
     request: Request,
     symbol: str,
-    interval: Optional[str] = Query(default=None),
-) -> Dict[str, Any]:
+    interval: str | None = Query(default=None),
+) -> dict[str, Any]:
     """Return the most recent intraday bar set for the symbol+interval pair."""
     safe_symbol = validate_symbol(symbol, param_name="symbol")
     safe_interval = validate_interval(interval)
@@ -157,7 +157,7 @@ async def live_intraday_snapshot(
 @router.get("/market", summary="Last emitted market pulse snapshot")
 async def live_market_snapshot(
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return the most recent aggregate market_pulse composite event."""
     _authenticate(request)
     orch = _get_orchestrator()
@@ -168,8 +168,8 @@ async def live_market_snapshot(
 @router.get("/scores", summary="Last emitted score delta snapshot")
 async def live_scores_snapshot(
     request: Request,
-    scope: Optional[str] = Query(default="NASDAQ"),
-) -> Dict[str, Any]:
+    scope: str | None = Query(default="NASDAQ"),
+) -> dict[str, Any]:
     """Return the most recent score_delta event for a given market scope."""
     safe_scope = validate_scope(scope, allowed={"NASDAQ"}, default="NASDAQ")
     _authenticate(request)
@@ -181,7 +181,7 @@ async def live_scores_snapshot(
 @router.get("/news", summary="Last emitted news item snapshot")
 async def live_news_snapshot(
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return the most recent news_item event emitted by the news poller."""
     _authenticate(request)
     orch = _get_orchestrator()
@@ -192,12 +192,12 @@ async def live_news_snapshot(
 @router.get("/streams", summary="List all active live stream keys + status")
 async def live_streams_list(
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Admin/debug endpoint listing every active or recently-emitted stream."""
     _authenticate(request)
     orch = _get_orchestrator()
     keys = orch.list_active_streams()
-    entries: Dict[str, Dict[str, Any]] = {}
+    entries: dict[str, dict[str, Any]] = {}
     for key in keys:
         entries[key] = orch.get_stream_status(key)
     return {

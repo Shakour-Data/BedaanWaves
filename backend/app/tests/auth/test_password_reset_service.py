@@ -2,22 +2,20 @@
 
 All database access is mocked — no real DB connection required.
 """
-import asyncio
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from app.services.user.password_reset_service import (
-    create_password_reset_token,
-    verify_reset_token,
     consume_reset_token,
-    reset_password,
+    create_password_reset_token,
     generate_raw_token,
     hash_token,
+    reset_password,
+    verify_reset_token,
     verify_token_hash,
-    RESET_TOKEN_TTL_MINUTES,
 )
 
 
@@ -95,7 +93,7 @@ class TestCreatePasswordResetToken:
     @pytest.mark.asyncio
     async def test_returns_token_for_existing_user(self, mock_session, mock_async_session_maker):
         user = FakeUser()
-        mock_session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
+        mock_session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=list)))
 
         with patch(
             "app.services.user.password_reset_service.get_user_by_email",
@@ -113,7 +111,7 @@ class TestCreatePasswordResetToken:
 
     @pytest.mark.asyncio
     async def test_returns_none_for_unknown_user(self, mock_session, mock_async_session_maker):
-        mock_session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
+        mock_session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=list)))
         with patch(
             "app.services.user.password_reset_service.get_user_by_email",
             new_callable=AsyncMock,
@@ -130,7 +128,7 @@ class TestCreatePasswordResetToken:
         old_token = FakeToken(
             user_id=user.id,
             token_hash="old_hash",
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
             consumed=False,
         )
 
@@ -176,7 +174,7 @@ class TestVerifyResetToken:
         valid_token = FakeToken(
             user_id=user.id,
             token_hash=stored_hash,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
         )
         mock_session.execute = AsyncMock(
             return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [valid_token]))
@@ -188,15 +186,15 @@ class TestVerifyResetToken:
     @pytest.mark.asyncio
     async def test_returns_false_for_consumed_token(self, mock_session, mock_async_session_maker):
         raw = generate_raw_token()
-        consumed = FakeToken(
+        FakeToken(
             user_id=uuid4(),
             token_hash=hash_token(raw),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
             consumed=True,
         )
         # The query already filters consumed=False, so consumed tokens won't appear
         mock_session.execute = AsyncMock(
-            return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
+            return_value=MagicMock(scalars=lambda: MagicMock(all=list))
         )
 
         result = await verify_reset_token(raw)
@@ -207,7 +205,7 @@ class TestVerifyResetToken:
         raw = generate_raw_token()
         # Query filters expires_at > now, so expired tokens won't appear
         mock_session.execute = AsyncMock(
-            return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
+            return_value=MagicMock(scalars=lambda: MagicMock(all=list))
         )
 
         result = await verify_reset_token(raw)
@@ -225,7 +223,7 @@ class TestConsumeResetToken:
         token = FakeToken(
             user_id=user.id,
             token_hash=hash_token(raw),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
         )
         mock_session.execute = AsyncMock(
             side_effect=[
@@ -248,7 +246,7 @@ class TestConsumeResetToken:
     @pytest.mark.asyncio
     async def test_returns_none_for_invalid_token(self, mock_session, mock_async_session_maker):
         mock_session.execute = AsyncMock(
-            return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
+            return_value=MagicMock(scalars=lambda: MagicMock(all=list))
         )
 
         result = await consume_reset_token("invalid-token")
@@ -266,7 +264,7 @@ class TestResetPassword:
         token = FakeToken(
             user_id=user.id,
             token_hash=hash_token(raw),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
         )
         mock_session.execute = AsyncMock(
             side_effect=[
@@ -288,7 +286,7 @@ class TestResetPassword:
     @pytest.mark.asyncio
     async def test_returns_false_for_invalid_token(self, mock_session, mock_async_session_maker):
         mock_session.execute = AsyncMock(
-            return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
+            return_value=MagicMock(scalars=lambda: MagicMock(all=list))
         )
 
         result = await reset_password("bad-token", "newpassword123")

@@ -5,9 +5,9 @@ Computes real technical indicators from candle data for the scoring pipeline.
 All indicators use standard financial formulas on actual price/volume data.
 """
 
-from typing import List, Optional, Dict, Any
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -20,7 +20,7 @@ class Candle:
     volume: float
 
 
-def compute_rsi(closes: List[float], period: int = 14) -> Optional[float]:
+def compute_rsi(closes: list[float], period: int = 14) -> float | None:
     """
     Compute Relative Strength Index (RSI) using Wilder's smoothing.
     Standard 14-period RSI as defined by J. Welles Wilder Jr.
@@ -52,14 +52,14 @@ def compute_rsi(closes: List[float], period: int = 14) -> Optional[float]:
     return 100.0 - (100.0 / (1.0 + rs))
 
 
-def compute_sma(closes: List[float], period: int) -> Optional[float]:
+def compute_sma(closes: list[float], period: int) -> float | None:
     """Compute Simple Moving Average for the given period."""
     if len(closes) < period:
         return None
     return sum(closes[-period:]) / period
 
 
-def compute_ema(values: List[float], period: int) -> Optional[float]:
+def compute_ema(values: list[float], period: int) -> float | None:
     """Compute Exponential Moving Average."""
     if len(values) < period:
         return None
@@ -74,11 +74,11 @@ def compute_ema(values: List[float], period: int) -> Optional[float]:
 
 
 def compute_macd(
-    closes: List[float],
+    closes: list[float],
     fast_period: int = 12,
     slow_period: int = 26,
     signal_period: int = 9
-) -> Optional[Dict[str, float]]:
+) -> dict[str, float] | None:
     """
     Compute MACD (Moving Average Convergence Divergence).
     Returns macd_line, signal_line, and histogram.
@@ -116,10 +116,10 @@ def compute_macd(
 
 
 def compute_bollinger_bands(
-    closes: List[float],
+    closes: list[float],
     period: int = 20,
     num_std: float = 2.0
-) -> Optional[Dict[str, float]]:
+) -> dict[str, float] | None:
     """
     Compute Bollinger Bands.
     Returns upper_band, middle_band (SMA), lower_band, and percent_b.
@@ -146,7 +146,7 @@ def compute_bollinger_bands(
     }
 
 
-def compute_atr(candles: List[Candle], period: int = 14) -> Optional[float]:
+def compute_atr(candles: list[Candle], period: int = 14) -> float | None:
     """
     Compute Average True Range (ATR).
     Measures volatility based on true range.
@@ -177,7 +177,7 @@ def compute_atr(candles: List[Candle], period: int = 14) -> Optional[float]:
     return atr
 
 
-def compute_volume_ratio(volumes: List[float], period: int = 20) -> Optional[float]:
+def compute_volume_ratio(volumes: list[float], period: int = 20) -> float | None:
     """
     Compute volume ratio: current volume / average volume.
     Values > 1 indicate above-average volume.
@@ -192,7 +192,7 @@ def compute_volume_ratio(volumes: List[float], period: int = 20) -> Optional[flo
     return volumes[-1] / avg_volume
 
 
-def compute_volatility(closes: List[float], period: int = 20) -> Optional[float]:
+def compute_volatility(closes: list[float], period: int = 20) -> float | None:
     """
     Compute annualized volatility from daily returns.
     Uses standard deviation of log returns.
@@ -215,7 +215,7 @@ def compute_volatility(closes: List[float], period: int = 20) -> Optional[float]
     return daily_vol * math.sqrt(252)
 
 
-def compute_momentum(closes: List[float], period: int = 10) -> Optional[float]:
+def compute_momentum(closes: list[float], period: int = 10) -> float | None:
     """
     Compute price momentum: rate of change over period.
     Returns percentage change.
@@ -231,10 +231,10 @@ def compute_momentum(closes: List[float], period: int = 10) -> Optional[float]:
 
 
 def compute_stochastic(
-    candles: List[Candle],
+    candles: list[Candle],
     k_period: int = 14,
     d_period: int = 3
-) -> Optional[Dict[str, float]]:
+) -> dict[str, float] | None:
     """
     Compute Stochastic Oscillator (%K and %D).
     """
@@ -267,7 +267,7 @@ def compute_stochastic(
     return {"k": k_value, "d": d_value}
 
 
-def compute_all_indicators(candles: List[Candle]) -> Dict[str, Any]:
+def compute_all_indicators(candles: list[Candle]) -> dict[str, Any]:
     """
     Compute all technical indicators from candle data.
     Returns a dictionary of indicator names to values.

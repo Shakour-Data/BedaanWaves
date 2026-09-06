@@ -6,14 +6,14 @@ and industries. Only instruments that participate in the formation of the
 Nasdaq index are considered (Nasdaq-listed EQUITY and ETF).
 """
 
-from typing import Dict, List, Optional, Any
-from datetime import datetime, date
-import asyncio
-from app.services.core.base_service import BaseService
-from app.services.analysis.scoring_service import ScoringService
-from app.services.data.stock_service import StockService
-from app.services.data.market_service import MarketService
 import logging
+from typing import Any
+
+from app.services.analysis.scoring_service import ScoringService
+from app.services.core.base_service import BaseService
+from app.services.data.market_service import MarketService
+from app.services.data.stock_service import StockService
+
 
 class UserFilteredScoringService(BaseService):
     """
@@ -27,10 +27,10 @@ class UserFilteredScoringService(BaseService):
     def __init__(
         self,
         service_name: str = "UserFilteredScoringService",
-        scoring_service: Optional[ScoringService] = None,
-        stock_service: Optional[StockService] = None,
-        market_service: Optional[MarketService] = None,
-        logger: Optional[logging.Logger] = None
+        scoring_service: ScoringService | None = None,
+        stock_service: StockService | None = None,
+        market_service: MarketService | None = None,
+        logger: logging.Logger | None = None
     ):
         """
         Initialize user filtered scoring service.
@@ -64,8 +64,8 @@ class UserFilteredScoringService(BaseService):
         self.logger.info("UserFilteredScoringService shutdown")
 
     async def filter_by_user_preferences(self,
-                                         assets: List[Dict[str, Any]],
-                                         user_preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
+                                         assets: list[dict[str, Any]],
+                                         user_preferences: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Filter assets based on user preferences.
 
@@ -103,7 +103,7 @@ class UserFilteredScoringService(BaseService):
 
         return filtered_assets
 
-    def _is_part_of_industry(self, asset: Dict[str, Any], industries: List[str]) -> bool:
+    def _is_part_of_industry(self, asset: dict[str, Any], industries: list[str]) -> bool:
         asset_industry = asset.get("industry", asset.get("sector", ""))
 
         for user_industry in industries:
@@ -114,9 +114,9 @@ class UserFilteredScoringService(BaseService):
         return False
 
     async def score_and_rank(self,
-                             assets: List[Dict[str, Any]],
-                             user_preferences: Dict[str, Any],
-                             scoring_method: str = "default") -> List[Dict[str, Any]]:
+                             assets: list[dict[str, Any]],
+                             user_preferences: dict[str, Any],
+                             scoring_method: str = "default") -> list[dict[str, Any]]:
         """
         Score and rank assets based on user preferences.
 
@@ -146,7 +146,7 @@ class UserFilteredScoringService(BaseService):
                 }
                 scored_assets.append(scored_asset)
             except Exception as e:
-                self.logger.error(f"Error scoring asset {asset.get('symbol')}: {str(e)}")
+                self.logger.error(f"Error scoring asset {asset.get('symbol')}: {e!s}")
                 scored_assets.append({
                     **asset,
                     "score": 0.0,
@@ -162,8 +162,8 @@ class UserFilteredScoringService(BaseService):
 
     async def rank_assets_by_sector(self,
                                     sector: str,
-                                    assets: List[Dict[str, Any]],
-                                    user_preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
+                                    assets: list[dict[str, Any]],
+                                    user_preferences: dict[str, Any]) -> list[dict[str, Any]]:
         """Rank Nasdaq assets from a specific sector."""
         sector_assets = [a for a in assets
                          if (a.get("sector") or "").upper() == sector.upper()]
@@ -173,8 +173,8 @@ class UserFilteredScoringService(BaseService):
 
     async def rank_assets_by_industry(self,
                                       industry: str,
-                                      assets: List[Dict[str, Any]],
-                                      user_preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
+                                      assets: list[dict[str, Any]],
+                                      user_preferences: dict[str, Any]) -> list[dict[str, Any]]:
         """Rank Nasdaq assets from a specific industry."""
         industry_assets = [a for a in assets
                            if (a.get("industry") or a.get("sector") or "").upper() == industry.upper()]

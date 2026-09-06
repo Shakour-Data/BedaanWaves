@@ -69,13 +69,15 @@ describe('useRecentSearches', () => {
   it('records a search and updates the list from the response', async () => {
     getSpy.mockResolvedValueOnce({ data: { recent_searches: [] } });
     postSpy.mockImplementation(async (_url: string, _data: unknown) => {
+      void _url;
+      void _data;
       return Promise.resolve({
         data: { status: 'success', recent_searches: ['MSFT'] },
         status: 200,
         statusText: 'OK',
         headers: {},
         config: {},
-      } as any);
+      } as unknown);
     });
 
     const { result } = renderHook(() => useRecentSearches());

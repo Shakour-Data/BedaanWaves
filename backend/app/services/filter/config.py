@@ -11,13 +11,12 @@ builder.  Each entry declares:
   - group:          optional grouping for the UI (e.g., "Score", "Name")
 """
 
-from typing import Dict, List, Any
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Core filterable fields
 # ---------------------------------------------------------------------------
-FILTERABLE_FIELDS: Dict[str, Dict[str, Any]] = {
+FILTERABLE_FIELDS: dict[str, dict[str, Any]] = {
     # Numeric — scores and changes
     "overall_score": {
         "type": "numeric",
@@ -164,7 +163,7 @@ FILTERABLE_FIELDS: Dict[str, Dict[str, Any]] = {
 # ---------------------------------------------------------------------------
 # Extensible / miscellaneous fields (add new entries here to extend the engine)
 # ---------------------------------------------------------------------------
-EXTRA_FILTERABLE_FIELDS: Dict[str, Dict[str, Any]] = {
+EXTRA_FILTERABLE_FIELDS: dict[str, dict[str, Any]] = {
     "region": {
         "type": "text",
         "db_column": "metadata->>region",
@@ -200,6 +199,6 @@ EXTRA_FILTERABLE_FIELDS: Dict[str, Dict[str, Any]] = {
 }
 
 
-def get_field_registry() -> Dict[str, Dict[str, Any]]:
+def get_field_registry() -> dict[str, dict[str, Any]]:
     """Return the combined field registry (core + extensible)."""
     return {**FILTERABLE_FIELDS, **EXTRA_FILTERABLE_FIELDS}

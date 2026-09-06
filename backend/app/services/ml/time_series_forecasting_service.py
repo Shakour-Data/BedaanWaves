@@ -3,10 +3,11 @@
 Time series forecasting for prices, volumes, and indicators.
 """
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
-from ..core import MLService
+from typing import Any
+
 from app.core.utils import utc_now_iso
+
+from ..core import MLService
 
 
 class TimeSeriesForecastingService(MLService):
@@ -22,14 +23,14 @@ class TimeSeriesForecastingService(MLService):
         self.model = None
         self.logger.info("TimeSeriesForecastingService shutdown")
 
-    async def train(self, training_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         series = training_data.get("series", [])
         if not series:
             raise ValueError("No training data provided")
         self.model = {"trained": True, "last_value": series[-1]}
         return {"status": "trained", "points": len(series)}
 
-    async def predict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
         series = data.get("series", [])
         horizon = data.get("horizon", 5)
         if len(series) < 10 or not self.model:

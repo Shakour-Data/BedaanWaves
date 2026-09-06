@@ -5,39 +5,40 @@ Centralized configuration management for the entire BedaanWaves platform.
 Handles environment variables, settings, and feature flags.
 """
 
-from typing import Any, Dict, Optional
+import json
 import os
 from pathlib import Path
-import json
+from typing import Any
+
 from .base_service import BaseService
 
 
 class ConfigService(BaseService):
     """
     Manages all configuration for BedaanWaves application.
-    
+
     Provides:
     - Environment variable management
     - Configuration sections (database, cache, API, ML, etc.)
     - Feature flags
     - Settings validation
     """
-    
-    def __init__(self, service_name: str = "ConfigService", env_file: Optional[str] = None):
+
+    def __init__(self, service_name: str = "ConfigService", env_file: str | None = None):
         """
         Initialize configuration service.
-        
+
         Args:
             service_name: Service identifier
             env_file: Optional path to .env file
         """
         super().__init__(service_name)
         self.env_file = env_file or self._find_env_file()
-        self._config: Dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
         self._load_config()
-    
+
     @staticmethod
-    def _find_env_file() -> Optional[str]:
+    def _find_env_file() -> str | None:
         """Find .env file in project structure"""
         possible_paths = [
             Path.cwd() / '.env',
@@ -48,16 +49,16 @@ class ConfigService(BaseService):
             if path.exists():
                 return str(path)
         return None
-    
+
     async def initialize(self) -> None:
         """Initialize configuration service"""
         self.logger.info("ConfigService initialized")
         self._config.update(self._load_environment_variables())
-    
+
     async def shutdown(self) -> None:
         """Shutdown configuration service"""
         self.logger.info("ConfigService shutdown")
-    
+
     def _load_config(self) -> None:
         """Load all configuration"""
         self._config = {
@@ -71,12 +72,12 @@ class ConfigService(BaseService):
             'security': self._load_security_config(),
             'services': self._load_services_config(),
         }
-    
-    def _load_environment_variables(self) -> Dict[str, Any]:
+
+    def _load_environment_variables(self) -> dict[str, Any]:
         """Load environment variables"""
         if self.env_file and os.path.exists(self.env_file):
             try:
-                with open(self.env_file, 'r') as f:
+                with open(self.env_file) as f:
                     for line in f:
                         line = line.strip()
                         if line and not line.startswith('#'):
@@ -85,10 +86,10 @@ class ConfigService(BaseService):
                 self.logger.info(f"Loaded environment from {self.env_file}")
             except Exception as e:
                 self.logger.warning(f"Failed to load .env file: {e}")
-        
+
         return os.environ.copy()
-    
-    def _load_api_config(self) -> Dict[str, Any]:
+
+    def _load_api_config(self) -> dict[str, Any]:
         """Load API configuration"""
         return {
             'host': self.get('API_HOST', '0.0.0.0'),
@@ -100,8 +101,8 @@ class ConfigService(BaseService):
             'max_connections': self.get_int('API_MAX_CONNECTIONS', 100),
             'cors_origins': self.get_list('CORS_ORIGINS', ['*']),
         }
-    
-    def _load_database_config(self) -> Dict[str, Any]:
+
+    def _load_database_config(self) -> dict[str, Any]:
         """Load database configuration"""
         return {
             'driver': self.get('DB_DRIVER', 'postgresql'),
@@ -114,8 +115,8 @@ class ConfigService(BaseService):
             'max_overflow': self.get_int('DB_MAX_OVERFLOW', 10),
             'echo': self.get_bool('DB_ECHO', False),
         }
-    
-    def _load_cache_config(self) -> Dict[str, Any]:
+
+    def _load_cache_config(self) -> dict[str, Any]:
         """Load cache configuration"""
         return {
             'backend': self.get('CACHE_BACKEND', 'memory'),
@@ -123,8 +124,8 @@ class ConfigService(BaseService):
             'ttl_seconds': self.get_int('CACHE_TTL', 3600),
             'max_size': self.get_int('CACHE_MAX_SIZE', 1000),
         }
-    
-    def _load_ml_config(self) -> Dict[str, Any]:
+
+    def _load_ml_config(self) -> dict[str, Any]:
         """Load machine learning configuration"""
         return {
             'models_dir': self.get('ML_MODELS_DIR', './models'),
@@ -133,8 +134,8 @@ class ConfigService(BaseService):
             'epochs': self.get_int('ML_EPOCHS', 100),
             'ensemble_enabled': self.get_bool('ML_ENSEMBLE_ENABLED', True),
         }
-    
-    def _load_security_config(self) -> Dict[str, Any]:
+
+    def _load_security_config(self) -> dict[str, Any]:
         """Load security configuration"""
         return {
             'jwt_secret': self.get('JWT_SECRET', ''),
@@ -143,8 +144,8 @@ class ConfigService(BaseService):
             'password_min_length': self.get_int('PASSWORD_MIN_LENGTH', 8),
             'enable_https': self.get_bool('ENABLE_HTTPS', False),
         }
-    
-    def _load_services_config(self) -> Dict[str, Any]:
+
+    def _load_services_config(self) -> dict[str, Any]:
         """Load services configuration"""
         return {
             'news_api_url': self.get('NEWS_API_URL', 'https://newsapi.org'),
@@ -157,27 +158,27 @@ class ConfigService(BaseService):
             'ml_coefficients_validation_split': self.get_float('ML_COEFFICIENTS_VALIDATION_SPLIT', 0.2),
             'ml_coefficients_alert_threshold': self.get_float('ML_COEFFICIENTS_ALERT_THRESHOLD', 0.1),
         }
-    
+
     # Get methods with type conversion
-    
+
     def get(self, key: str, default: Any = None) -> str:
         """Get string value from environment"""
         return os.environ.get(key, default or '')
-    
+
     def get_int(self, key: str, default: int = 0) -> int:
         """Get integer value from environment"""
         try:
             return int(self.get(key, str(default)))
         except (ValueError, TypeError):
             return default
-    
+
     def get_float(self, key: str, default: float = 0.0) -> float:
         """Get float value from environment"""
         try:
             return float(self.get(key, str(default)))
         except (ValueError, TypeError):
             return default
-    
+
     def get_bool(self, key: str, default: bool = False) -> bool:
         """Get boolean value from environment"""
         value = self.get(key, '').lower()
@@ -186,14 +187,14 @@ class ConfigService(BaseService):
         elif value in ('false', '0', 'no', 'off'):
             return False
         return default
-    
+
     def get_list(self, key: str, default: list = None) -> list:
         """Get comma-separated list from environment"""
         value = self.get(key)
         if not value:
             return default or []
         return [item.strip() for item in value.split(',')]
-    
+
     def get_json(self, key: str, default: dict = None) -> dict:
         """Get JSON object from environment"""
         try:
@@ -203,40 +204,40 @@ class ConfigService(BaseService):
             return json.loads(value)
         except (json.JSONDecodeError, TypeError):
             return default or {}
-    
+
     # Configuration access
-    
-    def get_config(self, section: Optional[str] = None) -> Dict[str, Any]:
+
+    def get_config(self, section: str | None = None) -> dict[str, Any]:
         """
         Get configuration.
-        
+
         Args:
             section: Optional section name (e.g., 'database', 'api')
-            
+
         Returns:
             Configuration dictionary
         """
         if section:
             return self._config.get(section, {})
         return self._config.copy()
-    
+
     def set_config(self, key: str, value: Any) -> None:
         """Set configuration value at runtime"""
         self._config[key] = value
         self.logger.debug(f"Set config: {key}")
-    
+
     def is_production(self) -> bool:
         """Check if running in production"""
         return self._config.get('environment') == 'production'
-    
+
     def is_development(self) -> bool:
         """Check if running in development"""
         return self._config.get('environment') == 'development'
-    
+
     def is_debug(self) -> bool:
         """Check if debug mode is enabled"""
         return self._config.get('debug', False)
-    
+
     @staticmethod
     def get_settings():
         """Get default configuration settings"""

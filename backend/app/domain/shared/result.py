@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Optional, Any
+from typing import Any, Generic, TypeVar
 
 T = TypeVar('T')
 
@@ -7,13 +7,13 @@ class Result(Generic[T]):
     Result pattern implementation for handling operation outcomes.
     Follows Clean OO principles by avoiding exceptions for expected business rule violations.
     """
-    
+
     def __init__(
-        self, 
-        is_success: bool, 
-        value: Optional[T] = None, 
-        error_message: Optional[str] = None, 
-        error_code: Optional[str] = None
+        self,
+        is_success: bool,
+        value: T | None = None,
+        error_message: str | None = None,
+        error_code: str | None = None
     ):
         self._is_success = is_success
         self._value = value
@@ -35,11 +35,11 @@ class Result(Generic[T]):
         return self._value
 
     @property
-    def error_message(self) -> Optional[str]:
+    def error_message(self) -> str | None:
         return self._error_message
 
     @property
-    def error_code(self) -> Optional[str]:
+    def error_code(self) -> str | None:
         return self._error_code
 
     @staticmethod

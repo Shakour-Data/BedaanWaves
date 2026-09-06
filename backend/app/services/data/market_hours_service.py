@@ -5,8 +5,7 @@ Determines NASDAQ market status: pre-market, regular, after-hours, or closed.
 Provides freshness labels for UI display.
 """
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from app.core.config import get_settings
@@ -31,12 +30,12 @@ class MarketHoursService:
         Returns current market status and metadata.
         Cached for MARKET_STATUS_CACHE_TTL_SECONDS to avoid repeated calculations.
         """
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         if self._cache_expiry and now_utc < self._cache_expiry:
             return self._cache
 
         now_ny = now_utc.astimezone(self._tz)
-        current_time = now_ny.time()
+        now_ny.time()
         weekday = now_ny.weekday()  # 0=Monday, 6=Sunday
 
         market_open = datetime(
@@ -113,10 +112,10 @@ class MarketHoursService:
         status = self.get_market_status()
         return status["is_trading"]
 
-    def get_last_trading_day(self, dt: Optional[datetime] = None) -> datetime:
+    def get_last_trading_day(self, dt: datetime | None = None) -> datetime:
         """Get the most recent trading day (skip weekends)."""
         if dt is None:
-            dt = datetime.now(timezone.utc)
+            dt = datetime.now(UTC)
         day = dt.astimezone(self._tz)
         while day.weekday() >= 5:
             day -= timedelta(days=1)

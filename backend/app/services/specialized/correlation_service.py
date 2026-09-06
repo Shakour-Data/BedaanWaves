@@ -4,7 +4,8 @@ Computes a Pearson correlation matrix across symbols from aligned return
 series, and surfaces highly-correlated / inversely-correlated pairs.
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
+
 from ..core import AnalysisService
 
 
@@ -21,7 +22,7 @@ class CorrelationService(AnalysisService):
         self.logger.info("CorrelationService shutdown")
 
     @staticmethod
-    def _pearson(a: List[float], b: List[float]) -> float:
+    def _pearson(a: list[float], b: list[float]) -> float:
         """Pearson correlation coefficient for two equal-length series."""
         n = len(a)
         if n < 2:
@@ -38,11 +39,11 @@ class CorrelationService(AnalysisService):
 
     async def compute_correlation(
         self,
-        returns_map: Dict[str, List[float]],
+        returns_map: dict[str, list[float]],
         min_observations: int = 2,
         high_threshold: float = 0.7,
         low_threshold: float = -0.7,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build a correlation matrix from per-symbol return series.
 
@@ -63,7 +64,7 @@ class CorrelationService(AnalysisService):
         # Align all series to the shortest length for fair comparison.
         min_len = min(len(series_by_symbol[s]) for s in symbols)
 
-        matrix: Dict[str, Dict[str, float]] = {}
+        matrix: dict[str, dict[str, float]] = {}
         for s in symbols:
             matrix[s] = {}
             sa = series_by_symbol[s][:min_len]
@@ -74,9 +75,9 @@ class CorrelationService(AnalysisService):
                     tb = series_by_symbol[t][:min_len]
                     matrix[s][t] = round(self._pearson(sa, tb), 4)
 
-        high_pairs: List[Dict[str, Any]] = []
-        inverse_pairs: List[Dict[str, Any]] = []
-        pairs: Dict[Tuple[str, str], float] = {}
+        high_pairs: list[dict[str, Any]] = []
+        inverse_pairs: list[dict[str, Any]] = []
+        pairs: dict[tuple[str, str], float] = {}
         for i, s in enumerate(symbols):
             for t in symbols[i + 1:]:
                 corr = matrix[s][t]

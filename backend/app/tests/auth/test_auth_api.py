@@ -2,8 +2,7 @@
 
 All service-layer functions are mocked — no database or real JWT required.
 """
-from unittest.mock import patch, AsyncMock, MagicMock
-from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI

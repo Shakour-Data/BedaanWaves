@@ -6,14 +6,13 @@ read path and the fallback on-the-fly aggregator are covered.
 """
 
 import asyncio
-from datetime import date
 import unittest
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from app.services.analysis import market_score_trend_service as svc_module
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
-
 
 DIM_KEYS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
 

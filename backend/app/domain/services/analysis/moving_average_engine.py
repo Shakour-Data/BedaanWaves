@@ -1,4 +1,3 @@
-from typing import List, Dict
 import logging
 
 from app.services.data.adjusted_price_validator import AdjustedPriceValidator
@@ -8,13 +7,13 @@ logger = logging.getLogger(__name__)
 class MovingAverageEngine:
     """Domain service for calculating moving averages on ADJUSTED prices."""
 
-    def calculate_sma(self, prices: List[float], period: int, source: str = "unknown") -> float:
+    def calculate_sma(self, prices: list[float], period: int, source: str = "unknown") -> float:
         AdjustedPriceValidator.validate_price_array(prices, source)
         if not prices or len(prices) < period:
             return 0.0
         return sum(prices[-period:]) / period
 
-    def calculate_ema(self, prices: List[float], period: int, source: str = "unknown") -> float:
+    def calculate_ema(self, prices: list[float], period: int, source: str = "unknown") -> float:
         AdjustedPriceValidator.validate_price_array(prices, source)
         if not prices or len(prices) < period:
             return 0.0
@@ -25,7 +24,7 @@ class MovingAverageEngine:
             ema = (price * alpha) + (ema * (1 - alpha))
         return round(ema, 2)
 
-    def calculate_wma(self, prices: List[float], period: int, source: str = "unknown") -> float:
+    def calculate_wma(self, prices: list[float], period: int, source: str = "unknown") -> float:
         AdjustedPriceValidator.validate_price_array(prices, source)
         if not prices or len(prices) < period:
             return 0.0

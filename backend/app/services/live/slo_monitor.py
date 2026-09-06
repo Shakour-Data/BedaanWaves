@@ -17,8 +17,8 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Deque, Dict, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 from app.core.config import Settings, get_settings
 from app.services.core.base_service import BaseService
@@ -39,20 +39,20 @@ CATEGORY_SYSTEM = "system"
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass
 class _StreamState:
-    samples: Deque[Tuple[float, float]] = field(
+    samples: deque[tuple[float, float]] = field(
         default_factory=lambda: deque(maxlen=4096)
     )
-    current_severity: Optional[str] = None
-    last_alert_ts: Dict[str, float] = field(default_factory=dict)
+    current_severity: str | None = None
+    last_alert_ts: dict[str, float] = field(default_factory=dict)
     consecutive_good: int = 0
-    last_good_freshness_ts: Optional[float] = None
+    last_good_freshness_ts: float | None = None
     last_seen_ts: float = 0.0
-    known_threshold_s: Optional[float] = None
+    known_threshold_s: float | None = None
 
 
 class SLOMonitor(BaseService):
@@ -64,14 +64,14 @@ class SLOMonitor(BaseService):
     def __init__(
         self,
         notification_dispatcher: Any,
-        settings: Optional[Settings] = None,
+        settings: Settings | None = None,
     ) -> None:
         super().__init__("SLOMonitor")
         self._settings = settings or get_settings()
         self._dispatcher = notification_dispatcher
-        self._states: Dict[str, _StreamState] = {}
-        self._shutdown_event: Optional[asyncio.Event] = None
-        self._monitor_task: Optional[asyncio.Task] = None
+        self._states: dict[str, _StreamState] = {}
+        self._shutdown_event: asyncio.Event | None = None
+        self._monitor_task: asyncio.Task | None = None
         self._orchestrator: Any = None
 
     # ------------------------------------------------------------------
@@ -106,8 +106,8 @@ class SLOMonitor(BaseService):
         self,
         envelope: LiveEventEnvelope,
         *,
-        data_age_ms: Optional[float] = None,
-        threshold_s: Optional[float] = None,
+        data_age_ms: float | None = None,
+        threshold_s: float | None = None,
     ) -> None:
         """Register a single emitted envelope for SLO evaluation."""
         key = envelope.stream_key
@@ -143,7 +143,7 @@ class SLOMonitor(BaseService):
                 await asyncio.sleep(5.0)
                 keys = list(self._states.keys())
                 if self._orchestrator is not None:
-                    for extra in getattr(self._orchestrator, "list_active_streams", lambda: [])():
+                    for extra in getattr(self._orchestrator, "list_active_streams", list)():
                         if extra not in self._states:
                             self._states[extra] = _StreamState()
                     keys = list(self._states.keys())
@@ -250,8 +250,8 @@ class SLOMonitor(BaseService):
         severity: str,
         *,
         reason: str,
-        data_age_ms: Optional[float],
-        threshold_s: Optional[float],
+        data_age_ms: float | None,
+        threshold_s: float | None,
         duration_s: float,
     ) -> None:
         last = state.last_alert_ts.get(severity, 0.0)

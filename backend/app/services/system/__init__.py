@@ -14,9 +14,9 @@ Infrastructure and system services:
 """
 
 from .backup_service import BackupService
-from .metrics_service import MetricsService
-from .logging_service import LoggingService
 from .data_integrity_service import DataIntegrityService
+from .logging_service import LoggingService
+from .metrics_service import MetricsService
 from .notification_dispatcher_service import NotificationDispatcher
 from .queue_service import QueueService
 from .scheduler_service import SchedulerService
@@ -24,9 +24,9 @@ from .settings_migration_service import SettingsMigrationService
 
 __all__ = [
     "BackupService",
-    "MetricsService",
-    "LoggingService",
     "DataIntegrityService",
+    "LoggingService",
+    "MetricsService",
     "NotificationDispatcher",
     "QueueService",
     "SchedulerService",

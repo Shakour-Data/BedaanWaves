@@ -4,7 +4,8 @@ Compares multiple symbols across shared metrics and produces relative
 rankings, highlighting the best/worst performer in each dimension.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from ..core import AnalysisService
 
 
@@ -20,7 +21,7 @@ class ComparisonService(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("ComparisonService shutdown")
 
-    async def compare(self, symbols_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def compare(self, symbols_data: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Compare symbols across available metrics.
 
@@ -47,7 +48,7 @@ class ComparisonService(AnalysisService):
             })
 
         metric_keys = ["score", "change_pct", "volatility", "momentum", "risk_score", "expected_return"]
-        rankings: Dict[str, Dict[str, Any]] = {}
+        rankings: dict[str, dict[str, Any]] = {}
 
         for key in metric_keys:
             values = [(r["symbol"], r[key]) for r in records if r[key] is not None]
@@ -67,8 +68,8 @@ class ComparisonService(AnalysisService):
                 "order": [{"symbol": sym, "value": val} for sym, val in ordered],
             }
 
-        best: Dict[str, str] = {}
-        worst: Dict[str, str] = {}
+        best: dict[str, str] = {}
+        worst: dict[str, str] = {}
         for key, r in rankings.items():
             if r.get("available"):
                 best[key] = r["best"]["symbol"]
@@ -84,7 +85,7 @@ class ComparisonService(AnalysisService):
         }
 
     @staticmethod
-    def _to_float(value: Any) -> Optional[float]:
+    def _to_float(value: Any) -> float | None:
         if value is None:
             return None
         try:

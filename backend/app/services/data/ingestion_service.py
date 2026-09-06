@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Optional
 import asyncio
-from datetime import datetime, timezone
+from typing import Any
+
 from app.core.utils import utc_now_iso
 
 from ..core import ExternalAPIService
@@ -43,7 +43,7 @@ class IntelligentIngestionService(ExternalAPIService):
             timeout=timeout,
             max_retries=max_retries,
         )
-        self._session: Optional[Any] = None
+        self._session: Any | None = None
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._limiter = IngestionRateLimiter()
         self.max_concurrent = max_concurrent
@@ -62,7 +62,7 @@ class IntelligentIngestionService(ExternalAPIService):
         self.logger.info("IntelligentIngestionService shutdown")
 
     async def _execute(
-        self, method: str, path: str, params: Optional[Dict[str, Any]] = None
+        self, method: str, path: str, params: dict[str, Any] | None = None
     ) -> Any:
         if not self._session:
             raise RuntimeError("IntelligentIngestionService not initialized")
@@ -92,8 +92,8 @@ class IntelligentIngestionService(ExternalAPIService):
     # High-level ingestion methods
     # ------------------------------------------------------------------ #
     async def get_market_data(
-        self, exchange: str, assets: List[str]
-    ) -> Dict[str, Any]:
+        self, exchange: str, assets: list[str]
+    ) -> dict[str, Any]:
         """Concurrently fetch market data from a given exchange."""
         tasks = [
             self._execute("GET", "market-data", {"exchange": exchange, "symbol": s})
@@ -104,8 +104,8 @@ class IntelligentIngestionService(ExternalAPIService):
 
     async def batch_ingest(
         self,
-        requests: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        requests: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Process a batch of ingestion requests concurrently."""
         tasks = [
             self._execute(
@@ -122,6 +122,6 @@ class IntelligentIngestionService(ExternalAPIService):
             "results": raw,
         }
 
-    def _process_market_data(self, raw_data: Any) -> Dict[str, Any]:
+    def _process_market_data(self, raw_data: Any) -> dict[str, Any]:
         """Normalise and deduplicate raw API responses."""
         return {"raw": raw_data}

@@ -6,15 +6,17 @@ Integrates with SQLAlchemy for ORM functionality.
 """
 
 import asyncio
-from typing import Any, Dict, Optional, List, AsyncGenerator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from sqlalchemy import create_engine, event, pool, text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from typing import Any
+
+from sqlalchemy import create_engine, pool, text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
-from .base_service import BaseService
 
 from app.core.config import get_settings
+
+from .base_service import BaseService
 
 settings = get_settings()
 
@@ -22,22 +24,22 @@ settings = get_settings()
 class DatabaseService(BaseService):
     """
     Database connection and session management service.
-    
+
     Provides:
     - Connection pooling
     - Session management via context managers
     - Transaction handling
     - Connection health checks
     """
-    
+
     def __init__(
         self,
         service_name: str = "DatabaseService",
-        database_url: Optional[str] = None,
+        database_url: str | None = None,
         async_mode: bool = True,
-        pool_size: Optional[int] = None,
-        max_overflow: Optional[int] = None,
-        echo: Optional[bool] = None,
+        pool_size: int | None = None,
+        max_overflow: int | None = None,
+        echo: bool | None = None,
     ):
         super().__init__(service_name)
         self.database_url = database_url or settings.DATABASE_URL
@@ -45,18 +47,18 @@ class DatabaseService(BaseService):
         self.pool_size = pool_size if pool_size is not None else settings.DATABASE_POOL_SIZE
         self.max_overflow = max_overflow if max_overflow is not None else settings.DATABASE_MAX_OVERFLOW
         self.echo = echo if echo is not None else settings.DATABASE_ECHO
-        
+
         self.engine = None
         self.session_factory = None
         self._connection_checks = 0
         self._session_counter = 0
         self._active_session_count = 0
-    
+
     async def initialize(self) -> None:
         """Initialize database service with retry logic."""
         max_retries = 1
         retry_delay = 1
-        
+
         for attempt in range(max_retries):
             try:
                 if self.async_mode:
@@ -65,7 +67,7 @@ class DatabaseService(BaseService):
                         db_url = "postgresql+asyncpg://" + self.database_url[len("postgresql://"):]
                     else:
                         db_url = self.database_url
-                    
+
                     self.engine = create_async_engine(
                         db_url,
                         echo=self.echo,
@@ -96,7 +98,7 @@ class DatabaseService(BaseService):
                         self.engine,
                         expire_on_commit=False,
                     )
-                
+
                 # Test connection
                 await self.health_check()
                 health = await self.health_check()
@@ -105,7 +107,7 @@ class DatabaseService(BaseService):
                     return
                 else:
                     raise Exception(f"Health check failed: {health.get('error')}")
-            
+
             except Exception as e:
                 self.logger.warning(f"Database connection attempt {attempt + 1}/{max_retries} failed: {e}")
                 if attempt < max_retries - 1:
@@ -114,7 +116,7 @@ class DatabaseService(BaseService):
                     self.logger.error("All database connection attempts failed.")
                     self.engine = None
                     self.session_factory = None
-    
+
     async def reconnect(self) -> bool:
         """Attempt to reconnect to the database."""
         self.logger.info("Attempting to reconnect to database...")
@@ -125,7 +127,7 @@ class DatabaseService(BaseService):
         except Exception as e:
             self.logger.error(f"Reconnection attempt failed: {e}")
             return False
-    
+
     async def shutdown(self) -> None:
         """Shutdown database service"""
         try:
@@ -134,29 +136,29 @@ class DatabaseService(BaseService):
                     await self.engine.dispose()
                 else:
                     self.engine.dispose()
-            
+
             self._active_session_count = 0
             self.logger.info("DatabaseService shutdown")
         except Exception as e:
             self.logger.error(f"Error during database shutdown: {e}")
-    
+
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """
         Get database session as async context manager.
-        
+
         Usage:
             async with db_service.get_session() as session:
                 result = await session.execute(query)
         """
         if not self.session_factory:
             raise RuntimeError("Database not initialized")
-        
+
         session = self.session_factory()
         self._session_counter += 1
         self._active_session_count += 1
         session_id = self._session_counter
-        
+
         try:
             yield session
         finally:
@@ -165,25 +167,25 @@ class DatabaseService(BaseService):
                 await session.close()
             except Exception as e:
                 self.logger.warning(f"Error closing session {session_id}: {e}")
-    
+
     async def execute(self, query: Any) -> Any:
         """
         Execute database query with automatic session management.
-        
+
         Args:
             query: SQLAlchemy query object
-            
+
         Returns:
             Query result
         """
         async with self.get_session() as session:
             return await session.execute(query)
-    
-    async def health_check(self) -> Dict[str, Any]:
+
+    async def health_check(self) -> dict[str, Any]:
         """Check database health"""
         try:
             self._connection_checks += 1
-            
+
             if not self.engine:
                 return {
                     "service": self.service_name,
@@ -191,14 +193,14 @@ class DatabaseService(BaseService):
                     "error": "Database engine not initialized",
                     "active_sessions": self._active_session_count,
                 }
-            
+
             if self.async_mode:
                 async with self.engine.connect() as conn:
                     await conn.execute(text("SELECT 1"))
             else:
                 with self.engine.connect() as conn:
                     conn.execute(text("SELECT 1"))
-            
+
             return {
                 "service": self.service_name,
                 "status": "healthy",
@@ -213,22 +215,22 @@ class DatabaseService(BaseService):
                 "error": str(e),
                 "active_sessions": self._active_session_count,
             }
-    
+
     def get_connection_url(self) -> str:
         """Get database connection URL (without password for security)"""
         url_parts = self.database_url.split('://')
         if len(url_parts) == 2:
             protocol = url_parts[0]
             rest = url_parts[1]
-            
+
             if '@' in rest:
                 creds, host = rest.rsplit('@', 1)
                 user = creds.split(':')[0] if ':' in creds else creds
                 return f"{protocol}://{user}:***@{host}"
-        
+
         return self.database_url
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get database statistics"""
         return {
             "service": self.service_name,

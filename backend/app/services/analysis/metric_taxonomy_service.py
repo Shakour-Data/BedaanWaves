@@ -1,8 +1,9 @@
-from typing import Dict, Any, Optional, List
 import json
-import aiofiles
 from pathlib import Path
-from datetime import datetime
+from typing import Any
+
+import aiofiles
+
 from ..core import BaseService
 from ..core.dependency_container import get_global_container
 
@@ -12,8 +13,8 @@ class MetricTaxonomyService(BaseService):
 
     def __init__(self, service_name: str = "MetricTaxonomyService"):
         super().__init__(service_name)
-        self.taxonomy: Dict[str, Any] = {}
-        self.mappings: Dict[str, Dict[str, str]] = {}
+        self.taxonomy: dict[str, Any] = {}
+        self.mappings: dict[str, dict[str, str]] = {}
 
     async def initialize(self) -> None:
         """Load taxonomy mappings from configuration."""
@@ -49,7 +50,7 @@ class MetricTaxonomyService(BaseService):
         mapping_path = Path(__file__).parent.parent.parent / "docs" / "analysis" / "metric_taxonomy.json"
         try:
             if mapping_path.exists():
-                async with aiofiles.open(mapping_path, 'r') as f:
+                async with aiofiles.open(mapping_path) as f:
                     data = json.loads(await f.read())
                     self.mappings = data.get("mappings", self.mappings)
             else:
@@ -72,7 +73,7 @@ class MetricTaxonomyService(BaseService):
         }
         self.logger.info("Initialized default metric mappings")
 
-    def get_metric_type(self, metric_name: str) -> Optional[str]:
+    def get_metric_type(self, metric_name: str) -> str | None:
         """Get the semantic type of a metric."""
         for metric_type, info in self.taxonomy.items():
             if metric_name.lower() in [ex.lower() for ex in info["examples"]]:
@@ -87,9 +88,9 @@ class MetricTaxonomyService(BaseService):
 
     async def normalize_cross_asset(
         self,
-        source_data: Dict[str, float],
-        target_data: Dict[str, float]
-    ) -> Dict[str, Any]:
+        source_data: dict[str, float],
+        target_data: dict[str, float]
+    ) -> dict[str, Any]:
         """Normalize data for cross-asset comparison."""
         normalized = {
             "source": {},

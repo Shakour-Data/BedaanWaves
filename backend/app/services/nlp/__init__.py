@@ -8,12 +8,12 @@ Services for natural language processing:
 All text processing is English-only (Nasdaq market focus).
 """
 
-from .sentiment_analysis_service import SentimentAnalysisService
-from .news_summarization_service import NewsSummarizationService
 from .document_extraction_service import DocumentExtractionService
+from .news_summarization_service import NewsSummarizationService
+from .sentiment_analysis_service import SentimentAnalysisService
 
 __all__ = [
-    "SentimentAnalysisService",
-    "NewsSummarizationService",
     "DocumentExtractionService",
+    "NewsSummarizationService",
+    "SentimentAnalysisService",
 ]

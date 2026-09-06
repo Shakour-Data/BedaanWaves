@@ -5,18 +5,18 @@ Provides live quotes, adjusted historical data, and intraday bars for NASDAQ equ
 All endpoints connect to live external APIs — no hardcoded or mock data.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from datetime import datetime, timezone
-from typing import Optional
 import logging
+from datetime import datetime
 
-from app.services.data.real_time_market_data_service import RealTimeMarketDataService
-from app.services.data.market_hours_service import MarketHoursService
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from app.schemas.schemas import (
-    RealtimeQuoteResponse,
     HistoricalDataResponse,
     IntradayDataResponse,
+    RealtimeQuoteResponse,
 )
+from app.services.data.market_hours_service import MarketHoursService
+from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["market-data"])
@@ -58,8 +58,8 @@ async def get_realtime_quote(
 @router.get("/history/{symbol}", response_model=HistoricalDataResponse)
 async def get_adjusted_historical(
     symbol: str,
-    start_date: Optional[datetime] = Query(None),
-    end_date: Optional[datetime] = Query(None),
+    start_date: datetime | None = Query(None),
+    end_date: datetime | None = Query(None),
     interval: str = Query("1d", pattern="^(1m|2m|5m|15m|30m|60m|90m|1h|1d|5d|1wk|1mo|3mo)$"),
     service: RealTimeMarketDataService = Depends(get_market_data_service),
 ) -> HistoricalDataResponse:

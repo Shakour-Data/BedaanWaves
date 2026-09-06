@@ -1,17 +1,15 @@
 """Advanced hierarchical filter API routes."""
 
-from datetime import datetime
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Union
-import logging
-import time
 
 from app.db.base import get_async_session
 from app.schemas.filter_schemas import AdvancedFilterRequest
-from app.services.filter.filter_parser import parse_filter_tree, FilterParseError
-from app.services.filter.filter_service import FilterService
 from app.services.filter.field_registry import FieldRegistry
+from app.services.filter.filter_parser import FilterParseError, parse_filter_tree
+from app.services.filter.filter_service import FilterService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["filter"])

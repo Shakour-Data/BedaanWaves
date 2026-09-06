@@ -17,22 +17,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
-
-import pandas as pd
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from app.core.config import get_settings
 from app.core.exceptions import DataProviderException
-from app.services.core.base_service import BaseService
-from app.services.data.market_hours_service import MarketHoursService
 from app.schemas.schemas import (
     HistoricalCandleResponse,
     HistoricalDataResponse,
     IntradayDataResponse,
     RealtimeQuoteResponse,
 )
+from app.services.core.base_service import BaseService
+from app.services.data.market_hours_service import MarketHoursService
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +55,9 @@ class RealTimeMarketDataService(BaseService):
         self._market_hours = MarketHoursService()
         self._cache = cache_service
         self._provider = self._settings.DATA_PROVIDER.lower()
-        self._last_fetch_ts: Dict[str, datetime] = {}
-        self._last_fetch_error: Optional[str] = None
-        self._last_fetch_latency_ms: Optional[float] = None
+        self._last_fetch_ts: dict[str, datetime] = {}
+        self._last_fetch_error: str | None = None
+        self._last_fetch_latency_ms: float | None = None
 
     async def initialize(self) -> None:
         self.logger.info(f"RealTimeMarketDataService initialized (provider={self._provider})")
@@ -99,7 +97,7 @@ class RealTimeMarketDataService(BaseService):
             low=float(raw["low"]),
             previous_close=float(raw["previous_close"]),
             volume=int(raw["volume"]),
-            timestamp=datetime.fromtimestamp(raw["timestamp"], tz=timezone.utc),
+            timestamp=datetime.fromtimestamp(raw["timestamp"], tz=UTC),
             market_status=market_status["status"],
             freshness_label=market_status["freshness_label"],
             is_delayed=market_status["is_delayed"],
@@ -109,14 +107,14 @@ class RealTimeMarketDataService(BaseService):
 
         ttl = self._settings.REALTIME_QUOTE_CACHE_TTL_SECONDS
         self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
-        self._last_fetch_ts[symbol.upper()] = datetime.now(timezone.utc)
+        self._last_fetch_ts[symbol.upper()] = datetime.now(UTC)
         return response
 
     async def get_adjusted_historical(
         self,
         symbol: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         interval: str = "1d",
     ) -> HistoricalDataResponse:
         """
@@ -128,7 +126,7 @@ class RealTimeMarketDataService(BaseService):
         STRICT: Raises DataProviderException on failure. Never returns fake data.
         """
         if end_date is None:
-            end_date = datetime.now(timezone.utc)
+            end_date = datetime.now(UTC)
         if start_date is None:
             start_date = end_date - timedelta(days=self._settings.DEFAULT_LOOKBACK_DAYS)
 
@@ -150,7 +148,7 @@ class RealTimeMarketDataService(BaseService):
                 details={"symbol": symbol, "provider": self._provider},
             )
 
-        market_status = self._market_hours.get_market_status()
+        self._market_hours.get_market_status()
         candles = [
             HistoricalCandleResponse(
                 timestamp=c["timestamp"],
@@ -173,12 +171,12 @@ class RealTimeMarketDataService(BaseService):
             end_date=end_date,
             candles=candles,
             data_source="yfinance",
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
         )
 
         ttl = self._settings.HISTORICAL_DATA_CACHE_TTL_SECONDS
         self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
-        self._last_fetch_ts[symbol.upper()] = datetime.now(timezone.utc)
+        self._last_fetch_ts[symbol.upper()] = datetime.now(UTC)
         return response
 
     async def get_intraday(self, symbol: str, interval: str = "5m") -> IntradayDataResponse:
@@ -229,26 +227,26 @@ class RealTimeMarketDataService(BaseService):
             market_status=market_status["status"],
             freshness_label=market_status["freshness_label"],
             data_source="yfinance",
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
         )
 
         ttl = self._settings.INTRADAY_DATA_CACHE_TTL_SECONDS
         self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
-        self._last_fetch_ts[symbol.upper()] = datetime.now(timezone.utc)
+        self._last_fetch_ts[symbol.upper()] = datetime.now(UTC)
         return response
 
-    async def get_price_array(self, symbol: str, days: int = 252) -> List[float]:
+    async def get_price_array(self, symbol: str, days: int = 252) -> list[float]:
         """
         Utility for analytical engines: returns a list of adjusted_close prices.
 
         ALL technical indicator engines MUST consume this method rather than raw close.
         """
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days + 30)
         hist = await self.get_adjusted_historical(symbol, start_date, end_date, interval="1d")
         return [c.adjusted_close for c in hist.candles]
 
-    async def fetch_quote_no_cache(self, symbol: str) -> Dict[str, Any]:
+    async def fetch_quote_no_cache(self, symbol: str) -> dict[str, Any]:
         """
         Fetch a real-time quote WITHOUT touching the cache layer.
 
@@ -272,10 +270,10 @@ class RealTimeMarketDataService(BaseService):
             )
 
         market_status = self._market_hours.get_market_status()
-        freshness_ts = datetime.fromtimestamp(raw["timestamp"], tz=timezone.utc)
+        freshness_ts = datetime.fromtimestamp(raw["timestamp"], tz=UTC)
 
         self._last_fetch_latency_ms = (time.perf_counter() - start_ts) * 1000.0
-        self._last_fetch_ts[sym] = datetime.now(timezone.utc)
+        self._last_fetch_ts[sym] = datetime.now(UTC)
 
         return {
             "symbol": sym,
@@ -301,7 +299,7 @@ class RealTimeMarketDataService(BaseService):
         self,
         symbol: str,
         interval: str = "5m",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Fetch intraday bars WITHOUT touching the cache layer.
 
@@ -328,20 +326,20 @@ class RealTimeMarketDataService(BaseService):
             )
 
         market_status = self._market_hours.get_market_status()
-        candles_out: List[Dict[str, Any]] = []
+        candles_out: list[dict[str, Any]] = []
         for c in raw_candles:
             ts_raw = c["timestamp"]
             if isinstance(ts_raw, datetime):
                 if ts_raw.tzinfo is None:
-                    ts = ts_raw.replace(tzinfo=timezone.utc)
+                    ts = ts_raw.replace(tzinfo=UTC)
                 else:
-                    ts = ts_raw.astimezone(timezone.utc)
+                    ts = ts_raw.astimezone(UTC)
             else:
                 ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
                 if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
+                    ts = ts.replace(tzinfo=UTC)
                 else:
-                    ts = ts.astimezone(timezone.utc)
+                    ts = ts.astimezone(UTC)
             candles_out.append({
                 "timestamp": ts,
                 "open": float(c["open"]),
@@ -354,9 +352,9 @@ class RealTimeMarketDataService(BaseService):
                 "source": "yfinance",
             })
 
-        freshness_ts = candles_out[-1]["timestamp"] if candles_out else datetime.now(timezone.utc)
+        freshness_ts = candles_out[-1]["timestamp"] if candles_out else datetime.now(UTC)
         self._last_fetch_latency_ms = (time.perf_counter() - start_ts) * 1000.0
-        self._last_fetch_ts[sym] = datetime.now(timezone.utc)
+        self._last_fetch_ts[sym] = datetime.now(UTC)
 
         return {
             "symbol": sym,
@@ -368,7 +366,7 @@ class RealTimeMarketDataService(BaseService):
             "freshness_ts": freshness_ts,
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Return data provider health status."""
         status = "healthy"
         last_error = None
@@ -401,7 +399,7 @@ class RealTimeMarketDataService(BaseService):
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _get_cached(self, key: str) -> Optional[Dict[str, Any]]:
+    def _get_cached(self, key: str) -> dict[str, Any] | None:
         if self._cache is None:
             return None
         try:
@@ -441,7 +439,7 @@ class RealTimeMarketDataService(BaseService):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
 
-    def _fetch_yfinance_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def _fetch_yfinance_quote(self, symbol: str) -> dict[str, Any] | None:
         """
         Blocking call to yfinance for a real-time quote.
         Uses ticker.info for the latest available data.
@@ -491,7 +489,7 @@ class RealTimeMarketDataService(BaseService):
         start_date: datetime,
         end_date: datetime,
         interval: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Blocking call to yfinance for adjusted historical OHLCV.
         Uses auto_adjust=False so we can explicitly read Adj Close.
@@ -510,7 +508,7 @@ class RealTimeMarketDataService(BaseService):
         candles = []
         for ts, row in hist.iterrows():
             # yfinance returns timezone-aware timestamps
-            ts_utc = ts.tz_convert("UTC") if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+            ts_utc = ts.tz_convert("UTC") if ts.tzinfo else ts.replace(tzinfo=UTC)
             open_p = float(row["Open"])
             high_p = float(row["High"])
             low_p = float(row["Low"])
@@ -538,7 +536,7 @@ class RealTimeMarketDataService(BaseService):
 
         return candles
 
-    def _fetch_yfinance_intraday(self, symbol: str, interval: str = "5m") -> List[Dict[str, Any]]:
+    def _fetch_yfinance_intraday(self, symbol: str, interval: str = "5m") -> list[dict[str, Any]]:
         """
         Blocking call to yfinance for intraday bars.
         Uses auto_adjust=False for explicit adjusted_close.
@@ -558,7 +556,7 @@ class RealTimeMarketDataService(BaseService):
 
         candles = []
         for ts, row in hist.iterrows():
-            ts_utc = ts.tz_convert("UTC") if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+            ts_utc = ts.tz_convert("UTC") if ts.tzinfo else ts.replace(tzinfo=UTC)
             open_p = float(row["Open"])
             high_p = float(row["High"])
             low_p = float(row["Low"])

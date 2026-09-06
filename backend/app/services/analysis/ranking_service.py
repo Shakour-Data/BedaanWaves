@@ -8,19 +8,19 @@ Provides:
 - Current coefficients/weights per symbol
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
-import logging
 import asyncio
-from app.core.utils import utc_now_iso
+import logging
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.models import Asset, IntlPriceCandle, ScoreHistory, candle_model_for_market
+from app.core.utils import utc_now_iso
+from app.models.models import Asset, ScoreHistory, candle_model_for_market
 from app.services.analysis.scoring_service import ScoringService
-from app.services.analysis.technical_indicators import compute_all_indicators, Candle
+from app.services.analysis.technical_indicators import compute_all_indicators
 from app.services.core.dependency_container import get_global_container
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class RankingService:
     }
 
     def __init__(self):
-        self._scoring_service: Optional[ScoringService] = None
+        self._scoring_service: ScoringService | None = None
         self._coefficient_service = None
 
     async def initialize(self) -> None:
@@ -63,8 +63,8 @@ class RankingService:
         offset: int = 0,
         sort_by: str = "overall_score",
         order: str = "desc",
-        db: Optional[AsyncSession] = None,
-    ) -> Dict[str, Any]:
+        db: AsyncSession | None = None,
+    ) -> dict[str, Any]:
         if sort_by not in self.VALID_SORT_FIELDS:
             sort_by = "overall_score"
         if order not in ("asc", "desc"):
@@ -78,7 +78,7 @@ class RankingService:
             .where(
                 and_(
                     Asset.market == "NASDAQ",
-                    Asset.active == True,
+                    Asset.active,
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 )
             )
@@ -101,7 +101,7 @@ class RankingService:
             .where(
                 and_(
                     Asset.market == "NASDAQ",
-                    Asset.active == True,
+                    Asset.active,
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 )
             )
@@ -125,7 +125,7 @@ class RankingService:
         sh_rows = sh_result.all()
         sh_map = {row.asset_id: row for row in sh_rows}
 
-        async def score_asset(asset: Asset) -> Dict[str, Any]:
+        async def score_asset(asset: Asset) -> dict[str, Any]:
             sh = sh_map.get(asset.id)
             if sh is not None and sh.overall_score is not None:
                 dims = dict(sh.dimension_scores) if sh.dimension_scores else {}
@@ -255,7 +255,7 @@ class RankingService:
         tasks = [score_asset(asset) for asset in assets]
         scored_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        ranked: List[Dict[str, Any]] = []
+        ranked: list[dict[str, Any]] = []
         for scored_result in scored_results:
             if isinstance(scored_result, Exception):
                 continue
@@ -284,8 +284,8 @@ class RankingService:
         }
 
     async def get_score_history(
-        self, symbol: str, days: int = 30, db: Optional[AsyncSession] = None
-    ) -> Dict[str, Any]:
+        self, symbol: str, days: int = 30, db: AsyncSession | None = None
+    ) -> dict[str, Any]:
         if not db:
             raise ValueError("Database session is required")
 
@@ -296,7 +296,7 @@ class RankingService:
         if not asset:
             raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
 
-        cutoff_date = datetime.now(timezone.utc).date() - timedelta(days=days)
+        cutoff_date = datetime.now(UTC).date() - timedelta(days=days)
         history_query = (
             select(ScoreHistory)
             .where(
@@ -334,7 +334,7 @@ class RankingService:
             "timestamp": utc_now_iso(),
         }
 
-    async def get_hierarchy_scores(self, symbol: str, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
+    async def get_hierarchy_scores(self, symbol: str, db: AsyncSession | None = None) -> dict[str, Any]:
         if not db:
             raise ValueError("Database session is required")
 
@@ -416,10 +416,10 @@ class RankingService:
             await self.initialize()
 
         scored = await self._scoring_service.analyze(scoring_input)
-        hierarchy = self._scoring_service.get_hierarchy_info()
+        self._scoring_service.get_hierarchy_info()
 
         dimension_scores = scored.get("dimension_scores", {})
-        hierarchy_scores: Dict[str, List[Dict[str, Any]]] = {
+        hierarchy_scores: dict[str, list[dict[str, Any]]] = {
             "level1_dimensions": [],
             "level2_subdimensions": [],
             "level3_aspects": [],
@@ -484,7 +484,7 @@ class RankingService:
             "timestamp": utc_now_iso(),
         }
 
-    async def get_coefficients(self, symbol: str, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
+    async def get_coefficients(self, symbol: str, db: AsyncSession | None = None) -> dict[str, Any]:
         if not db:
             raise ValueError("Database session is required")
 
@@ -495,7 +495,7 @@ class RankingService:
         if not asset:
             raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
 
-        coefficients: Dict[str, Any] = {
+        coefficients: dict[str, Any] = {
             "dimensions": {},
             "sub_dimensions": {},
             "aspects": {},
