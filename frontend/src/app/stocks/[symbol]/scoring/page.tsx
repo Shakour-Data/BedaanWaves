@@ -524,7 +524,7 @@ export default function StockScoringPage() {
 
   if (error || !hierarchy) {
     return (
-      <TarotCard icon="⚠️" title={t("app.analysis.scoring_not_found")}>
+      <TarotCard icon="[!]" title={t("app.analysis.scoring_not_found")}>
         <p className="text-sm text-muted-foreground">{error || t("app.analysis.scoring_not_found")}</p>
         <Link href={`/stocks/${symbol}`} className="mt-3 inline-block text-sm text-secondary hover:underline">
           ← {t("app.stocks.detail.back_to_list")}
@@ -640,7 +640,7 @@ export default function StockScoringPage() {
       </div>
 
       {mergedSnapshotIndex && mergedSnapshotIndex.length > 0 && (
-        <TarotCard title="⏱ SNAPSHOT REPLAY — Drag to travel in time">
+        <TarotCard title="[SR] SNAPSHOT REPLAY — Drag to travel in time">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3 text-xs">
               <span className="font-mono text-muted-foreground">
@@ -735,7 +735,7 @@ export default function StockScoringPage() {
         </div>
       </TarotCard>
 
-      <TarotCard icon="💎" title={`${symbol} · ${overallScoreText}`}>
+      <TarotCard icon="[AN]" title={`${symbol} · ${overallScoreText}`}>
         <div className="flex items-center gap-4 flex-wrap">
           <div
             className={cn(

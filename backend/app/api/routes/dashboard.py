@@ -1,5 +1,10 @@
 """Dashboard API Routes - Leaderboard & Biggest Movers"""
 
+from datetime import datetime, timezone, timedelta, date
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy import select, func, and_, case, Numeric
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
 import logging
 from datetime import datetime
 
@@ -490,7 +495,7 @@ async def get_sub_dimension_trend(
 
     Calls TemporalSnapshotService first to warm/validate latest tier snapshots,
     then derives from HierarchicalScoreTrendService (same underlying DB tables
-    the snapshot composer reads). L2 series are not yet materialized inside
+    the snapshot composer materializes tier roots from). L2 series are not yet materialized inside
     snapshot.trends.daily; fallback path is always authoritative until trends
     builder is extended.
     """
@@ -714,28 +719,96 @@ async def get_coefficient_history_by_level(
     parent: str | None = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Coefficient history by level endpoint (preserved for compatibility)."""
+    """Coefficient history by level endpoint (preserved for compatibility).
+
+    Calls TemporalSnapshotService for parity-first dimension weight-trend
+    derivation when level=dimension (sourced from snapshot.weightTrends /
+    weightDeltas). For deeper levels (sub_dimension / aspect / sub_aspect)
+    transparently delegates to CoefficientHistoryService which reads the
+    same underlying tables the snapshot composer materializes tier roots from.
+    """
     from app.services.analysis.coefficient_history_service import (
         CoefficientHistoryService,
+        DIMENSION_KEYS,
     )
 
-    if level not in ("dimension", "sub_dimension", "aspect", "sub_aspect"):
-        raise HTTPException(status_code=400, detail="level must be dimension, sub_dimension, aspect, or sub_aspect")
-    service = CoefficientHistoryService()
-    try:
-        end_dt = datetime.fromisoformat(end_date).date() if end_date else None
-        result = await service.get_history(
-            days=days, market=market, level=level, parent=parent, latest=latest, end_date=end_dt,
+    if level not in VALID_LEVELS or level == "overall":
+        raise HTTPException(
+            status_code=400,
+            detail="level must be dimension, sub_dimension, aspect, or sub_aspect",
         )
+    try:
+        series: List[dict] = []
+        source_count: int = 0
+        latest_date: Optional[str] = None
+
+        # ---- TemporalSnapshotService parity-first path (only dimension) ----
+        if level == "dimension":
+            try:
+                snap_service = TemporalSnapshotService()
+                await snap_service.initialize()
+                try:
+                    snap = await snap_service.get_market_snapshot(
+                        db=db, window_daily=days, window_intraday="24h",
+                    )
+                finally:
+                    await snap_service.shutdown()
+                weight_trends = snap.get("weightTrends") or []
+                if len(weight_trends) >= max(1, int(days * 0.8)):
+                    for i, pt in enumerate(weight_trends):
+                        weights_raw = pt.get("weights") or {}
+                        metrics = {
+                            k: float(weights_raw.get(k)) if isinstance(weights_raw.get(k), (int, float)) else 0.0
+                            for k in DIMENSION_KEYS
+                            if (parent is None or k == parent)
+                        }
+                        if i == 0:
+                            metric_changes = {k: 0.0 for k in metrics.keys()}
+                        else:
+                            prev_raw = (weight_trends[i - 1].get("weights") or {})
+                            metric_changes = {
+                                k: round(
+                                    metrics.get(k, 0.0) - (
+                                        float(prev_raw.get(k))
+                                        if isinstance(prev_raw.get(k), (int, float))
+                                        else 0.0
+                                    ),
+                                    6,
+                                )
+                                for k in metrics.keys()
+                            }
+                        d = str(pt.get("date") or "")
+                        series.append({
+                            "date": d,
+                            "metrics": metrics,
+                            "metric_changes": metric_changes,
+                        })
+                        latest_date = d
+                    source_count = len(series)
+            except Exception as exc:  # pragma: no cover
+                logger.warning(f"coefficient-by-level snapshot derive skipped: {exc}")
+                series = []
+
+        # ---- Legacy CoefficientHistoryService fallback ----
+        if not series:
+            service = CoefficientHistoryService()
+            end_dt = datetime.fromisoformat(end_date).date() if end_date else None
+            result = await service.get_history(
+                days=days, market=market, level=level, parent=parent, latest=latest, end_date=end_dt,
+            )
+            series = result.get("series", [])
+            source_count = result.get("count", len(series))
+            latest_date = result.get("latest_date")
+
         return {
             "status": "success",
             "level": level,
-            "days": result["days"],
-            "market": result["market"],
-            "parent": result.get("parent"),
-            "count": result["count"],
-            "latest_date": result.get("latest_date"),
-            "series": result.get("series", []),
+            "days": days,
+            "market": market or "NASDAQ",
+            "parent": parent,
+            "count": source_count if source_count else len(series),
+            "latest_date": latest_date,
+            "series": series,
             "timestamp": utc_now_iso(),
         }
     except Exception as exc:

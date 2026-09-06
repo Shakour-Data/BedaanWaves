@@ -683,21 +683,60 @@ class CompanyLeadership(Base):
 # 11. News and NLP
 # ===========================================================================
 class News(Base):
-    """News items"""
+    """News items with domain classification."""
     __tablename__ = "news"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source = Column(String(100), nullable=False)
+    source = Column(String(100), nullable=False, index=True)
     title = Column(String(512), nullable=False)
     body = Column(Text)
-    url = Column(String(1024))
+    url = Column(String(1024), unique=True, nullable=False)
+
+    category = Column(String(50), nullable=False, index=True)
+    sub_category = Column(String(100), nullable=True, index=True)
+    region = Column(String(50), nullable=True, index=True)
+    priority = Column(String(10), nullable=False, default="NORMAL", index=True)
+    language = Column(String(5), default="en", index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
 
     published_at = Column(DateTime, index=True)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
-    language = Column(String(5), default="fa")
-    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+    is_market_moving = Column(Boolean, default=False, index=True)
 
-    __table_args__ = (Index('idx_news_published', 'published_at'),)
+    __table_args__ = (
+        Index('idx_news_published', 'published_at'),
+        Index('idx_news_category_priority', 'category', 'priority'),
+        Index('idx_news_region_category', 'region', 'category'),
+        Index('idx_news_url', 'url'),
+    )
+
+
+class NewsSource(Base):
+    """Configurable news source registry."""
+    __tablename__ = "news_sources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False, unique=True)
+    display_name = Column(String(200), nullable=False)
+    url = Column(String(1024), nullable=False)
+    source_type = Column(String(50), nullable=False)
+    category = Column(String(50), nullable=False)
+    region = Column(String(50), nullable=True)
+    interval_seconds = Column(Integer, nullable=False, default=900)
+    enabled = Column(Boolean, default=True, index=True)
+    max_concurrent_requests = Column(Integer, default=3)
+    last_success_at = Column(DateTime(timezone=True), nullable=True)
+    last_error_at = Column(DateTime(timezone=True), nullable=True)
+    last_error_message = Column(Text, nullable=True)
+    success_count_24h = Column(Integer, default=0)
+    failure_count_24h = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+
+    __table_args__ = (
+        Index('idx_news_source_enabled', 'enabled'),
+        Index('idx_news_source_category', 'category'),
+    )
 
 
 class NewsSentiment(Base):
