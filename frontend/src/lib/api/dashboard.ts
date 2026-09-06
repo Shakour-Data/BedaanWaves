@@ -628,3 +628,141 @@ export async function fetchBiggestMovers(options: {
   const res = await apiClient.get<LeaderboardResponse>(url, { timeout: 60000 });
   return res.data;
 }
+
+// ============================================================================
+// Unified Temporal Snapshot API (Spec: temporal-scoring-snapshot-dashboard)
+// ============================================================================
+
+export type SnapshotTier = "daily" | "hourly";
+
+export interface HierarchyScores {
+  overall: number | null;
+  dimension: Record<string, number>;
+  sub_dimension: Record<string, number>;
+  aspect: Record<string, number>;
+  sub_aspect: Record<string, number>;
+  symbol_map?: Record<string, {
+    overall: number | null;
+    grade?: string | null;
+    dimension: Record<string, number>;
+  }>;
+}
+
+export interface DeltaFrame {
+  overall_delta: number | null;
+  overall_delta_pct: number | null;
+  dimension_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;
+  sub_dimension_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;
+  aspect_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;
+  sub_aspect_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;
+  by_symbol?: Record<string, {
+    delta: number | null;
+    delta_pct: number | null;
+    dimension_deltas?: Record<string, { delta: number | null; delta_pct: number | null }>;
+  }>;
+}
+
+export interface TrendPoint {
+  date: string;
+  effective_at: string;
+  overall: number | null;
+  level_scores: Record<string, number>;
+  count: number;
+  tier?: SnapshotTier;
+}
+
+export interface WeightSnapshot {
+  dimension: Record<string, number>;
+  sub_dimension: Record<string, number>;
+  aspect: Record<string, number>;
+  sub_aspect: Record<string, number>;
+  captured_at?: string;
+}
+
+export interface WeightTrendPoint {
+  date: string;
+  effective_at: string;
+  weights: Record<string, number>;
+}
+
+export interface WeightDeltaPoint {
+  date: string;
+  delta: number | null;
+  delta_pct: number | null;
+  weights: Record<string, { delta: number | null; delta_pct: number | null }>;
+}
+
+export interface SnapshotResponse {
+  snapshotId: string;
+  timestamp: string;
+  scores: {
+    daily: HierarchyScores;
+    hourly: HierarchyScores;
+    current: HierarchyScores;
+  };
+  deltas: {
+    hourly_vs_daily: DeltaFrame;
+    current_vs_hourly: DeltaFrame;
+    current_vs_daily: DeltaFrame;
+  };
+  weights: WeightSnapshot;
+  weight_trends: {
+    daily: WeightTrendPoint[];
+  };
+  weight_deltas: {
+    daily: WeightDeltaPoint;
+  };
+  trends: {
+    daily: TrendPoint[];
+    intraday: TrendPoint[];
+  };
+}
+
+export interface SnapshotIndexEntry {
+  snapshotId: string;
+  effectiveAt: string;
+  tier: SnapshotTier;
+  count: number;
+  symbol?: string | null;
+}
+
+export interface SnapshotIndexResponse {
+  hourly: SnapshotIndexEntry[];
+  daily: SnapshotIndexEntry[];
+}
+
+export interface FetchSnapshotOptions {
+  symbol?: string;
+  snapshotId?: string;
+  window_daily?: number;
+  window_intraday?: "6h" | "24h" | "7d";
+}
+
+export async function fetchDashboardSnapshot(
+  options: FetchSnapshotOptions = {},
+): Promise<SnapshotResponse> {
+  const params = new URLSearchParams();
+  if (options.symbol) params.set("symbol", options.symbol);
+  if (options.snapshotId) params.set("snapshotId", options.snapshotId);
+  if (options.window_daily) params.set("window_daily", String(options.window_daily));
+  if (options.window_intraday) params.set("window_intraday", options.window_intraday);
+  const url = params.toString()
+    ? `/analysis/dashboard/snapshot?${params.toString()}`
+    : `/analysis/dashboard/snapshot`;
+  const res = await apiClient.get<SnapshotResponse>(url, { timeout: 120000 });
+  return res.data;
+}
+
+export async function fetchDashboardSnapshots(options?: {
+  hourly_limit?: number;
+  daily_limit?: number;
+}): Promise<SnapshotIndexResponse> {
+  const params = new URLSearchParams();
+  if (options?.hourly_limit) params.set("hourly_limit", String(options.hourly_limit));
+  if (options?.daily_limit) params.set("daily_limit", String(options.daily_limit));
+  const url = params.toString()
+    ? `/analysis/dashboard/snapshots?${params.toString()}`
+    : `/analysis/dashboard/snapshots`;
+  const res = await apiClient.get<SnapshotIndexResponse>(url, { timeout: 60000 });
+  return res.data;
+}
