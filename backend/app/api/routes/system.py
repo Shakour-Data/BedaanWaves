@@ -1,6 +1,6 @@
 """System Routes - Tier 9 (Scheduler, Metrics, Queue)"""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from datetime import timezone, datetime
 from typing import Optional
 import logging
@@ -89,6 +89,14 @@ async def get_platform_metrics() -> dict:
     svc = _get_metrics()
     metrics = svc.get_all_metrics()
     return {"status": "success", "timestamp": utc_now_iso(), **metrics}
+
+
+@router.get("/metrics/prometheus")
+async def get_prometheus_metrics() -> Response:
+    """Expose Prometheus exposition format."""
+    svc = _get_metrics()
+    data = svc.render_prometheus()
+    return Response(content=data, media_type="text/plain; version=0.0.4")
 
 
 @router.get("/metrics/health")

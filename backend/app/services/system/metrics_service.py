@@ -9,12 +9,35 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from prometheus_client import Counter, Gauge, Histogram, generate_latest, REGISTRY
+
 from ..core import BaseService
+
+
+REQUESTS_TOTAL = Counter(
+    "bedaanwaves_requests_total",
+    "Total API requests",
+    ["method", "endpoint", "status"],
+)
+REQUEST_LATENCY = Histogram(
+    "bedaanwaves_request_latency_seconds",
+    "Request latency in seconds",
+    ["method", "endpoint"],
+)
+ACTIVE_CONNECTIONS = Gauge(
+    "bedaanwaves_active_connections",
+    "Currently active SSE/WebSocket connections",
+)
+SIGNAL_COUNT = Counter(
+    "bedaanwaves_signals_total",
+    "Total generated signals",
+    ["signal_type"],
+)
 
 
 class MetricsService(BaseService):
     """
-    Service metrics aggregator.
+    Service metrics aggregator with Prometheus exposition.
     
     Collects metrics from all registered services and exposes
     platform-wide health and performance summaries.
@@ -33,36 +56,21 @@ class MetricsService(BaseService):
         self.logger.info("MetricsService shutdown")
     
     def register_service(self, name: str, service: BaseService) -> None:
-        """
-        Register a service for metrics collection.
-        
-        Args:
-            name: Service identifier
-            service: Service instance implementing get_metrics()
-        """
         self._registered_services[name] = service
         self.logger.debug(f"Registered metrics source: {name}")
     
     def unregister_service(self, name: str) -> bool:
-        """Unregister a metrics source."""
         if name in self._registered_services:
             del self._registered_services[name]
             return True
         return False
     
     def get_service_metrics(self, name: str) -> Optional[Dict[str, Any]]:
-        """Get metrics for a specific registered service."""
         if name not in self._registered_services:
             return None
         return self._registered_services[name].get_metrics()
     
     def get_all_metrics(self) -> Dict[str, Any]:
-        """
-        Get metrics for all registered services.
-        
-        Returns:
-            Platform-wide metrics summary
-        """
         services_metrics = {}
         total_calls = 0
         total_errors = 0
@@ -101,7 +109,6 @@ class MetricsService(BaseService):
         }
     
     def get_health_summary(self) -> Dict[str, Any]:
-        """Get health summary for all registered services."""
         health = {"platform": "healthy", "services": {}}
         for name, service in self._registered_services.items():
             try:
@@ -113,8 +120,10 @@ class MetricsService(BaseService):
                 health["services"][name] = {"status": "unhealthy", "error": str(exc)}
         return health
     
+    def render_prometheus(self) -> bytes:
+        return generate_latest(REGISTRY)
+    
     async def health_check(self) -> Dict[str, Any]:
-        """Check metrics service health."""
         return {
             "service": self.service_name,
             "status": "healthy",

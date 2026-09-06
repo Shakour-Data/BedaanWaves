@@ -198,11 +198,12 @@ class BackupService(BaseService):
         """
         backup_name = name or f"db_backup_{int(datetime.now(timezone.utc).timestamp())}"
         
+        config_service = self.config_service or {}
         db_config = {
-            "host": self.config_service.get("DB_HOST"),
-            "port": self.config_service.get("DB_PORT"),
-            "database": self.config_service.get("DB_NAME"),
-            "user": self.config_service.get("DB_USER"),
+            "host": config_service.get("DB_HOST") if hasattr(config_service, "get") else os.environ.get("DB_HOST"),
+            "port": config_service.get("DB_PORT") if hasattr(config_service, "get") else os.environ.get("DB_PORT"),
+            "database": config_service.get("DB_NAME") if hasattr(config_service, "get") else os.environ.get("DB_NAME"),
+            "user": config_service.get("DB_USER") if hasattr(config_service, "get") else os.environ.get("DB_USER"),
         }
         
         task = asyncio.create_task(self._perform_database_backup(backup_name, db_config, _include_schema))
@@ -252,42 +253,46 @@ class BackupService(BaseService):
             "schema": {},
             "data": {},
         }
-        
-        try:
+
+        def _collect_backup_data() -> dict:
             import psycopg2
             from psycopg2.extras import DictCursor
-            
+
             conn = psycopg2.connect(
                 host=db_config["host"],
                 port=db_config["port"],
                 database=db_config["database"],
                 user=db_config["user"],
             )
-            
-            if _include_schema:
+
+            try:
+                if _include_schema:
+                    with conn.cursor(cursor_factory=DictCursor) as cursor:
+                        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+                        tables = cursor.fetchall()
+
+                        for table_tuple in tables:
+                            table_name = table_tuple["table_name"]
+                            backup_data["schema"][table_name] = {}
+
+                            cursor.execute(sql.SQL("SELECT * FROM {} LIMIT 1").format(sql.Identifier(table_name)))
+                            columns = [desc[0] for desc in cursor.description]
+                            backup_data["schema"][table_name]["columns"] = columns
+
+                            cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name)))
+                            backup_data["schema"][table_name]["row_count"] = cursor.fetchone()[0]
+
                 with conn.cursor(cursor_factory=DictCursor) as cursor:
-                    cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-                    tables = cursor.fetchall()
-                    
                     for table_tuple in tables:
                         table_name = table_tuple["table_name"]
-                        backup_data["schema"][table_name] = {}
-                        
-                        cursor.execute(sql.SQL("SELECT * FROM {} LIMIT 1").format(sql.Identifier(table_name)))
-                        columns = [desc[0] for desc in cursor.description]
-                        backup_data["schema"][table_name]["columns"] = columns
-                        
-                        cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name)))
-                        backup_data["schema"][table_name]["row_count"] = cursor.fetchone()[0]
-            
-            with conn.cursor(cursor_factory=DictCursor) as cursor:
-                for table_tuple in tables:
-                    table_name = table_tuple["table_name"]
-                    cursor.execute(sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name)))
-                    rows = cursor.fetchall()
-                    backup_data["data"][table_name] = rows
-            
-            conn.close()
+                        cursor.execute(sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name)))
+                        rows = cursor.fetchall()
+                        backup_data["data"][table_name] = rows
+            finally:
+                conn.close()
+
+        try:
+            await asyncio.to_thread(_collect_backup_data)
         except Exception as exc:
             self.logger.error(f"Database backup data collection failed: {exc}", exc_info=True)
             raise
@@ -509,46 +514,49 @@ class BackupService(BaseService):
         if backup_data["metadata"]["type"] != "database_backup":
             raise ValueError(f"Invalid backup type: {backup_data['metadata']['type']}")
         
-        try:
+        config_service = self.config_service or {}
+        def _restore_backup() -> dict:
             import psycopg2
             from psycopg2.extras import DictCursor
             
             conn = psycopg2.connect(
-                host=self.config_service.get("DB_HOST"),
-                port=self.config_service.get("DB_PORT"),
-                database=self.config_service.get("DB_NAME"),
-                user=self.config_service.get("DB_USER"),
+                host=config_service.get("DB_HOST") if hasattr(config_service, "get") else os.environ.get("DB_HOST"),
+                port=config_service.get("DB_PORT") if hasattr(config_service, "get") else os.environ.get("DB_PORT"),
+                database=config_service.get("DB_NAME") if hasattr(config_service, "get") else os.environ.get("DB_NAME"),
+                user=config_service.get("DB_USER") if hasattr(config_service, "get") else os.environ.get("DB_USER"),
             )
             
-            for table_name, table_data in backup_data["schema"].items():
-                with conn.cursor() as cursor:
-                    create_stmt = self._generate_create_table_stmt(table_name, table_data["columns"])
-                    try:
-                        cursor.execute(create_stmt)
-                    except Exception:
-                        self.logger.warning(f"Table {table_name} already exists, skipping recreation")
-                        continue
-                    
-                    if table_data["row_count"] > 0:
-                        placeholders = ", ".join(["%s"] * len(table_data["columns"]))
-                        insert_stmt = sql.SQL("INSERT INTO {} VALUES ({})").format(
-                            sql.Identifier(table_name),
-                            sql.SQL(placeholders)
-                        )
-                        cursor.executemany(insert_stmt, [])
-            
-            for table_name, table_data in backup_data["data"].items():
-                with conn.cursor() as cursor:
-                    if table_data:
-                        placeholders = ", ".join(["%s"] * len(table_data[0]))
-                        insert_stmt = sql.SQL("INSERT INTO {} VALUES ({})").format(
-                            sql.Identifier(table_name),
-                            sql.SQL(placeholders)
-                        )
-                        cursor.executemany(insert_stmt, table_data)
-            
-            conn.commit()
-            conn.close()
+            try:
+                for table_name, table_data in backup_data["schema"].items():
+                    with conn.cursor() as cursor:
+                        create_stmt = self._generate_create_table_stmt(table_name, table_data["columns"])
+                        try:
+                            cursor.execute(create_stmt)
+                        except Exception:
+                            self.logger.warning(f"Table {table_name} already exists, skipping recreation")
+                            continue
+                        
+                        if table_data["row_count"] > 0:
+                            placeholders = ", ".join(["%s"] * len(table_data["columns"]))
+                            insert_stmt = sql.SQL("INSERT INTO {} VALUES ({})").format(
+                                sql.Identifier(table_name),
+                                sql.SQL(placeholders)
+                            )
+                            cursor.executemany(insert_stmt, [])
+                
+                for table_name, table_data in backup_data["data"].items():
+                    with conn.cursor() as cursor:
+                        if table_data:
+                            placeholders = ", ".join(["%s"] * len(table_data[0]))
+                            insert_stmt = sql.SQL("INSERT INTO {} VALUES ({})").format(
+                                sql.Identifier(table_name),
+                                sql.SQL(placeholders)
+                            )
+                            cursor.executemany(insert_stmt, table_data)
+                
+                conn.commit()
+            finally:
+                conn.close()
             
             self._backup_history.append({
                 "type": "database_restore",
@@ -566,6 +574,10 @@ class BackupService(BaseService):
                 "tables_restoraged": len(backup_data["data"]),
                 "rows_restoraged": sum(len(table_data) for table_data in backup_data["data"].values()),
             }
+        
+        try:
+            result = await asyncio.to_thread(_restore_backup)
+            return result
         except Exception as exc:
             self._backup_history.append({
                 "type": "database_restore",

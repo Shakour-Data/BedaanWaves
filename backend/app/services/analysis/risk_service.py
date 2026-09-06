@@ -74,7 +74,7 @@ class RiskAnalysisService(AnalysisService):
     async def _calculate_volatility_metrics(self, returns: List[float], data: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
         """Calculate volatility metrics"""
         volatility = self._calculate_std_dev(returns)
-        beta = data.get("beta", 1.0) if data else 1.0
+        beta = self._calculate_beta(returns)
         
         return {
             "volatility": volatility,
@@ -105,16 +105,17 @@ class RiskAnalysisService(AnalysisService):
             "cvar_95": cvar_95 * 100,
         }
     
-    async def _calculate_performance_metrics(self, returns: List[float]) -> Dict[str, float]:
+    async def _calculate_performance_metrics(self, returns: List[float], risk_free_rate: float = 0.0) -> Dict[str, float]:
         """Calculate performance metrics"""
         mean_return = sum(returns) / len(returns)
         volatility = self._calculate_std_dev(returns)
+        excess_return = mean_return - risk_free_rate
         
         return {
             "mean_return": mean_return * 100,
-            "sharpe_ratio": (mean_return / volatility) if volatility > 0 else 0,
+            "sharpe_ratio": (excess_return / volatility) if volatility > 0 else 0,
             "max_drawdown": self._calculate_max_drawdown(returns),
-            "sortino_ratio": self._calculate_sortino_ratio(returns),
+            "sortino_ratio": self._calculate_sortino_ratio(returns, risk_free_rate),
         }
     
     def _calculate_std_dev(self, values: List[float]) -> float:
@@ -145,9 +146,10 @@ class RiskAnalysisService(AnalysisService):
         
         return max_dd * 100
     
-    def _calculate_sortino_ratio(self, returns: List[float]) -> float:
+    def _calculate_sortino_ratio(self, returns: List[float], risk_free_rate: float = 0.0) -> float:
         """Sortino ratio (downside volatility focused)"""
         mean_return = sum(returns) / len(returns)
+        excess_return = mean_return - risk_free_rate
         
         downside_returns = [r for r in returns if r < 0]
         if not downside_returns:
@@ -155,7 +157,20 @@ class RiskAnalysisService(AnalysisService):
         
         downside_volatility = self._calculate_std_dev(downside_returns)
         
-        return (mean_return / downside_volatility) if downside_volatility > 0 else 0
+        return (excess_return / downside_volatility) if downside_volatility > 0 else 0
+    
+    def _calculate_beta(self, returns: List[float], market_returns: Optional[List[float]] = None) -> float:
+        """Calculate beta relative to market returns."""
+        if not returns or not market_returns or len(returns) != len(market_returns):
+            return 1.0
+        
+        mean_asset = sum(returns) / len(returns)
+        mean_market = sum(market_returns) / len(market_returns)
+        
+        covariance = sum((returns[i] - mean_asset) * (market_returns[i] - mean_market) for i in range(len(returns))) / len(returns)
+        market_variance = sum((r - mean_market) ** 2 for r in market_returns) / len(market_returns)
+        
+        return covariance / market_variance if market_variance != 0 else 1.0
     
     async def calculate_portfolio_risk(
         self,

@@ -478,6 +478,9 @@ class TemporalSnapshotService:
 
         When snapshot_id is provided and present in the cache, return it
         byte-consistent so the slider replays history deterministically.
+
+        When no snapshot_id is provided, we also try a stable "latest" cache
+        key so repeated requests for the current view hit cache within TTL.
         """
         if snapshot_id:
             cached = await self._cache_get(f"snapshot:{snapshot_id}")
@@ -485,6 +488,14 @@ class TemporalSnapshotService:
                 return cached
 
         now_utc = datetime.now(timezone.utc)
+
+        # Stable cache key for the "latest" snapshot (same params → same key)
+        latest_cache_key = None
+        if not snapshot_id:
+            latest_cache_key = f"snapshot:latest:{window_daily}:{window_intraday}:{symbol or 'market'}"
+            cached_latest = await self._cache_get(latest_cache_key)
+            if cached_latest and isinstance(cached_latest, dict):
+                return cached_latest
 
         daily = await self._resolve_tier_root(db, SnapshotTier.DAILY, symbol=symbol)
         hourly = await self._resolve_tier_root(db, SnapshotTier.HOURLY, symbol=symbol)
@@ -547,6 +558,8 @@ class TemporalSnapshotService:
         try:
             tier_ttl = {"daily": 86400 * 30, "hourly": 7200, "current": 300}.get(current.tier, 300)
             await self._cache_set(f"snapshot:{snapshot_id_val}", payload, ttl_seconds=tier_ttl)
+            if latest_cache_key:
+                await self._cache_set(latest_cache_key, payload, ttl_seconds=300)
         except Exception:  # pragma: no cover
             pass
 

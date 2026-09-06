@@ -14,8 +14,14 @@ function getLastMockES(): any {
 
 describe('lib/sse.ts', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     disconnectAllSSE()
     ;(globalThis as any).__clearMockEventSources()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   afterEach(() => {

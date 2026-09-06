@@ -6,7 +6,7 @@ No hardcoded data. No fallback to static arrays.
 """
 
 from typing import Any, Dict, Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from app.core.utils import utc_now_iso
@@ -268,7 +268,7 @@ class StockService(CachedService):
             import yfinance as yf
             t = yf.Ticker(ticker)
             end = end_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            start = start_date or (datetime.now(timezone.utc) - __import__("datetime").timedelta(days=365)).strftime("%Y-%m-%d")
+            start = start_date or (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
             hist = t.history(start=start, end=end, interval=interval, auto_adjust=False)
             if hist.empty:
                 raise DataProviderException(f"No history for {ticker}", details={"provider": "yfinance"})

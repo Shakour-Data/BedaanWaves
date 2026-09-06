@@ -13,7 +13,7 @@ import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -105,8 +105,12 @@ class NotificationDispatcher(BaseService):
         self._active_subscriptions: Dict[str, Set[NotificationDispatcher]] = {}
         self._scheduled_tasks: Dict[str, asyncio.Task] = {}
         self._recipients: Dict[str, Dict[str, Set[str]]] = defaultdict(lambda: defaultdict(set))
-        self._channel_handlers: Dict[NotificationChannel, List[NotificationDispatcher]] = {
-            channel: [] for channel in NotificationChannel
+        self._channel_handlers: Dict[NotificationChannel, List[Callable[[NotificationMessage], None]]] = {
+            NotificationChannel.EMAIL: [self._send_email],
+            NotificationChannel.SMS: [self._send_sms],
+            NotificationChannel.PUSH: [self._send_push],
+            NotificationChannel.IN_APP: [self._send_in_app],
+            NotificationChannel.WEBHOOK: [self._send_webhook],
         }
         self._pending_events: Dict[str, List[NotificationMessage]] = {}
         self._retry_locks: Dict[str, asyncio.Lock] = {}
@@ -136,13 +140,18 @@ class NotificationDispatcher(BaseService):
             recipients = ["system"]
         if sender is None:
             sender = "core"
-            
+        
+        try:
+            notification_type = NotificationType(event_type)
+        except ValueError:
+            raise ValueError(f"Invalid event_type: {event_type!r}. Allowed: {[e.value for e in NotificationType]}")
+        
         notification_id = str(uuid.uuid4())
         timestamp = datetime.now(timezone.utc)
         
         message = NotificationMessage(
             notification_id=notification_id,
-            type=NotificationType(event_type),
+            type=notification_type,
             channel=channel,
             priority=priority,
             payload=payload or {},
@@ -173,13 +182,12 @@ class NotificationDispatcher(BaseService):
             
         for message in messages:
             try:
-                # Rate limiting simulation
                 await asyncio.sleep(0.01)
-                
-                self.logger.debug(f"Dispatching {event_type} via {message.channel.value}")
+                handlers = self._channel_handlers.get(message.channel, [])
+                for handler in handlers:
+                    handler(message)
                 message.status = NotificationStatus.SENT
-                self.logger.info(f"Notification dispatched: {message.notification_id}")
-                
+                self.logger.info(f"Notification dispatched: {message.notification_id} via {message.channel.value}")
             except Exception as exc:
                 self.logger.error(f"Failed to dispatch: {exc}")
                 message.retry_count += 1
@@ -218,6 +226,21 @@ class NotificationDispatcher(BaseService):
                 "uptime_seconds": (datetime.now(timezone.utc) - self.created_at).total_seconds(),
             }
             
+    def _send_email(self, message: NotificationMessage) -> None:
+        self.logger.debug(f"Email sender stub for {message.notification_id}: {message.payload}")
+
+    def _send_sms(self, message: NotificationMessage) -> None:
+        self.logger.debug(f"SMS sender stub for {message.notification_id}: {message.payload}")
+
+    def _send_push(self, message: NotificationMessage) -> None:
+        self.logger.debug(f"Push sender stub for {message.notification_id}: {message.payload}")
+
+    def _send_in_app(self, message: NotificationMessage) -> None:
+        self.logger.debug(f"In-app sender stub for {message.notification_id}: {message.payload}")
+
+    def _send_webhook(self, message: NotificationMessage) -> None:
+        self.logger.debug(f"Webhook sender stub for {message.notification_id}: {message.payload}")
+
     async def health_check(self) -> Dict[str, Any]:
         """Check dispatcher health."""
         pending = sum(len(msgs) for msgs in self._pending_events.values())

@@ -1,8 +1,6 @@
 /// <reference types="vitest/globals" />
 import '@testing-library/jest-dom'
 
-vi.useFakeTimers()
-
 type EventSourceReadyState = 0 | 1 | 2
 
 interface AttachSpy {
@@ -128,7 +126,6 @@ class MockEventSource {
 
 beforeEach(() => {
   ;(globalThis as any).__clearMockEventSources()
-  vi.useFakeTimers()
 })
 
 afterEach(() => {

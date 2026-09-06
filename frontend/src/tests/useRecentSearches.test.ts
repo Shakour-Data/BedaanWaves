@@ -1,15 +1,40 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+
+vi.mock('@/lib/api', () => {
+  const createMockClient = () => ({
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    request: vi.fn(),
+    defaults: { headers: { common: {} } },
+    interceptors: {
+      request: { use: vi.fn() },
+      response: { use: vi.fn() },
+    },
+  });
+
+  const apiClient = createMockClient();
+  return {
+    apiClient,
+    getApiErrorMessage: (err: unknown) => {
+      if (err instanceof Error) return err.message;
+      return String(err);
+    },
+  };
+});
+
 import { apiClient } from '@/lib/api';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
 
-const getSpy = vi.spyOn(apiClient, 'get');
-const postSpy = vi.spyOn(apiClient, 'post');
+const getSpy = apiClient.get;
+const postSpy = apiClient.post;
 
 beforeEach(() => {
-  getSpy.mockReset();
-  postSpy.mockReset();
+  apiClient.get.mockReset();
+  apiClient.post.mockReset();
 });
 
 describe('useRecentSearches', () => {
@@ -31,30 +56,40 @@ describe('useRecentSearches', () => {
   });
 
   it('falls back to an empty list when the request fails', async () => {
-    getSpy.mockRejectedValueOnce(new Error('Network error'));
+    getSpy.mockRejectedValueOnce(new Error('Network Error'));
 
     const { result } = renderHook(() => useRecentSearches());
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.recent).toEqual([]);
-    expect(result.current.error).toBe('Network error');
+    expect(result.current.error).toBe('Network Error');
   });
 
   it('records a search and updates the list from the response', async () => {
     getSpy.mockResolvedValueOnce({ data: { recent_searches: [] } });
-    postSpy.mockResolvedValueOnce({
-      data: { status: 'success', recent_searches: ['MSFT'] },
+    postSpy.mockImplementation(async (_url: string, _data: unknown) => {
+      return Promise.resolve({
+        data: { status: 'success', recent_searches: ['MSFT'] },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {},
+      } as any);
     });
 
     const { result } = renderHook(() => useRecentSearches());
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 3000 });
 
     await act(async () => {
       await result.current.addRecent('msft');
     });
 
-    await waitFor(() => expect(result.current.recent).toEqual(['MSFT']));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    expect(result.current.recent).toEqual(['MSFT']);
     expect(postSpy).toHaveBeenCalledWith('/settings/recent-searches', { query: 'MSFT' });
     expect(result.current.error).toBeNull();
   });

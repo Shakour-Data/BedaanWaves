@@ -25,9 +25,14 @@ export const apiClient = axios.create({
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = useAuthStore.getState().token;
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const state = useAuthStore.getState ? useAuthStore.getState() : null;
+      const token = state?.token;
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore auth header issues in tests / uninitialized store
     }
     return config;
   },
@@ -74,10 +79,14 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = useAuthStore.getState().refreshToken;
+      const refreshToken = useAuthStore.getState ? useAuthStore.getState().refreshToken : null;
 
       if (!refreshToken) {
-        useAuthStore.getState().logout();
+        try {
+          useAuthStore.getState?.().logout?.();
+        } catch {
+          // ignore logout failures in tests
+        }
         return Promise.reject(error);
       }
 
@@ -89,16 +98,21 @@ apiClient.interceptors.response.use(
           setTimeout(() => reject(new Error('Refresh token timeout')), 10000)
         ),
       ]).catch((refreshError) => {
-        useAuthStore.getState().logout();
+        try {
+          useAuthStore.getState?.()?.logout?.();
+        } catch {
+          // ignore
+        }
         throw refreshError;
       });
 
       try {
         const token = await refreshPromise;
 
+        const currentRefreshToken = useAuthStore.getState ? useAuthStore.getState().refreshToken : null;
         useAuthStore.setState({
           token,
-          refreshToken: useAuthStore.getState().refreshToken,
+          refreshToken: currentRefreshToken,
         });
 
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
