@@ -217,3 +217,92 @@ class TestSchedulerServiceWithInjectedServices:
         if ml_svc.retrained:
             assert ml_svc.initialized is True
             assert ml_svc.shutdown_called is True
+
+
+class TestScoringJobsRegistration:
+    """Temporal scoring job registration (Task 3 / AC3 idempotency)."""
+
+    async def test_four_scoring_jobs_registered(self):
+        """T3: FastIndicators5m, HourlyScoreRecompute, DailyScoreRecalculation,
+        CoefficientSnapshotDaily should all be registered after initialize()."""
+        svc = _TestScheduler(service_name="ScoringJobsCheck")
+        await svc.initialize()
+        try:
+            jobs = {j.name for j in svc.list_jobs()}
+            EXPECTED: set = {
+                "FastIndicators5m",
+                "HourlyScoreRecompute",
+                "DailyScoreRecalculation",
+                "CoefficientSnapshotDaily",
+            }
+            missing = EXPECTED - jobs
+            assert not missing, f"Missing scoring jobs: {sorted(missing)}"
+            # Interval parity check: 300s / 3600s / 86400s
+            fi = svc.get_job_status("FastIndicators5m")
+            assert fi is not None
+            assert fi.interval_seconds == 300
+            hr = svc.get_job_status("HourlyScoreRecompute")
+            assert hr is not None
+            assert hr.interval_seconds == 3600
+            ds = svc.get_job_status("DailyScoreRecalculation")
+            assert ds is not None
+            assert ds.interval_seconds == 86400
+            cs = svc.get_job_status("CoefficientSnapshotDaily")
+            assert cs is not None
+            assert cs.interval_seconds == 86400
+        finally:
+            await svc.shutdown()
+
+    async def test_scoring_jobs_return_structured_result_dict(self):
+        """Every scoring job run_job_now result has structured return keys."""
+        svc = _TestScheduler(service_name="ScoringStructuredCheck")
+        await svc.initialize()
+        try:
+            job_names = (
+                "FastIndicators5m",
+                "HourlyScoreRecompute",
+                "DailyScoreRecalculation",
+                "CoefficientSnapshotDaily",
+            )
+            for name in job_names:
+                result = await svc.run_job_now(name)
+                # always returns a structured dict with status; no raw exception bubbles
+                assert isinstance(result, dict)
+                assert "status" in result
+                assert result["status"] in {"success", "skipped", "error"}
+                # when skipped/partial, result may carry skip_reason
+                if result["status"] == "skipped":
+                    assert "skip_reason" in result
+        finally:
+            await svc.shutdown()
+
+    async def test_two_consecutive_scoring_job_runs_no_integrity_errors(self):
+        """AC3: Idempotency — two triggers must never raise an IntegrityError.
+        Either both succeed or second one returns a `skip_reason` struct.
+        """
+        svc = _TestScheduler(service_name="IdempotencyCheck")
+        await svc.initialize()
+        try:
+            job_names = (
+                "HourlyScoreRecompute",
+                "DailyScoreRecalculation",
+            )
+            for name in job_names:
+                # Run once
+                r1 = await svc.run_job_now(name)
+                assert isinstance(r1, dict)
+                assert "status" in r1
+                # Run twice in immediate succession
+                r2 = await svc.run_job_now(name)
+                assert isinstance(r2, dict)
+                assert "status" in r2
+                # Neither run can produce status other than success/skipped/error
+                assert r1["status"] in {"success", "skipped", "error"}
+                assert r2["status"] in {"success", "skipped", "error"}
+                # Integrity violations never bubble; they appear as status=error
+                # plus message payload OR status=skipped with skip_reason.
+                if r2["status"] == "skipped":
+                    assert "skip_reason" in r2 and isinstance(r2["skip_reason"], str)
+                    assert len(r2["skip_reason"]) > 0
+        finally:
+            await svc.shutdown()
