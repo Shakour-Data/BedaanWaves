@@ -192,7 +192,7 @@ export default function DashboardPage() {
     }
     load();
     return () => { active = false; };
-  }, [snapshot, drill.level, drill.selectedKey]);
+  }, [snapshot, drill.level, drill.selectedKey, snapshotTimestamp]);
 
   const mergedSnapshotIndex = useMemo(() => {
     if (!snapshotIndex) return [];
