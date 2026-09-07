@@ -28,6 +28,7 @@ from typing import (
 
 from app.core.config import Settings, get_settings
 from app.services.core.base_service import BaseService
+from app.services.core.dependency_container import get_global_container
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.live.constants import (
@@ -35,6 +36,7 @@ from app.services.live.constants import (
     LIVE_EVENT_INTRADAY,
     LIVE_EVENT_MARKET_PULSE,
     LIVE_EVENT_NEWS_ITEM,
+    LIVE_EVENT_ORDERBOOK,
     LIVE_EVENT_PING,
     LIVE_EVENT_QUOTE,
     LIVE_EVENT_SCORE_DELTA,
@@ -111,6 +113,7 @@ class LiveDataOrchestrator(BaseService):
         metrics_service: Any = None,
         scoring_service: Any = None,
         news_service: Any = None,
+        orderbook_service: Any = None,
     ) -> None:
         super().__init__("LiveDataOrchestrator")
         self._settings = settings or get_settings()
@@ -121,6 +124,7 @@ class LiveDataOrchestrator(BaseService):
         self._metrics = metrics_service
         self._scoring = scoring_service
         self._news = news_service
+        self._orderbook_service = orderbook_service
 
         self._subscribers: dict[str, dict[str, Subscriber]] = {}
         self._poll_tasks: dict[str, asyncio.Task] = {}
@@ -361,6 +365,8 @@ class LiveDataOrchestrator(BaseService):
                         validated = await self._collect_scores_raw()
                     elif kind == "news":
                         validated = await self._collect_news_raw()
+                    elif kind == "orderbook":
+                        validated = await self._collect_orderbook_raw(symbol)
                     else:
                         await asyncio.sleep(1.0)
                         continue
@@ -687,6 +693,43 @@ class LiveDataOrchestrator(BaseService):
             },
         }
 
+    async def _collect_orderbook_raw(self, symbol: str) -> dict[str, Any]:
+        ord_service = getattr(self, "_orderbook_service", None)
+        if ord_service is None:
+            container = get_global_container()
+            try:
+                ord_service = container.get("orderbook_service")
+            except Exception:
+                return {
+                    VALIDATED: True,
+                    "data": {
+                        "symbol": symbol.upper(),
+                        "bids": [],
+                        "asks": [],
+                        "spread": None,
+                        "spread_pct": None,
+                        "freshness_ts": _utc_now(),
+                    },
+                }
+        if ord_service is not None:
+            try:
+                payload = await ord_service.get_latest_orderbook(symbol)
+                payload["freshness_ts"] = payload.get("freshness_ts") or _utc_now()
+                return {VALIDATED: True, "data": payload}
+            except Exception as exc:
+                self.logger.warning("OrderBook fetch failed symbol=%s: %s", symbol, exc)
+        return {
+            VALIDATED: True,
+            "data": {
+                "symbol": symbol.upper(),
+                "bids": [],
+                "asks": [],
+                "spread": None,
+                "spread_pct": None,
+                "freshness_ts": _utc_now(),
+            },
+        }
+
     # ------------------------------------------------------------------
     # Metrics hooks
     # ------------------------------------------------------------------
@@ -749,6 +792,7 @@ def _event_for_stream_kind(kind: str) -> str:
         "market": LIVE_EVENT_MARKET_PULSE,
         "scores": LIVE_EVENT_SCORE_DELTA,
         "news": LIVE_EVENT_NEWS_ITEM,
+        "orderbook": LIVE_EVENT_ORDERBOOK,
     }.get(kind, LIVE_EVENT_QUOTE)
 
 
@@ -847,55 +891,90 @@ class LiveScoreDeltaProducer:
 
 class LiveNewsProducer:
     """
-    Polls the existing NewsService periodically and diffs against the last
-    snapshot to emit only new news items.
+    Receives news events from ContinuousNewsIngestionService via async queue
+    and emits SSE envelopes. Falls back to polling NewsService if the
+    ingestion service is unavailable.
     """
 
-    def __init__(self, orchestrator: LiveDataOrchestrator, news_service: Any) -> None:
+    def __init__(
+        self,
+        orchestrator: LiveDataOrchestrator,
+        news_service: Any,
+        ingestion_service: Any | None = None,
+    ) -> None:
         self._orch = orchestrator
         self._news = news_service
+        self._ingestion = ingestion_service
         self._logger = logging.getLogger("LiveNewsProducer")
         self._seen_ids: set[str] = set()
+        self._queue: asyncio.Queue | None = None
 
     async def start(self) -> None:
         self._logger.info("LiveNewsProducer started")
         try:
-            while True:
-                await asyncio.sleep(60.0)
-                if self._news is None:
-                    continue
-                try:
-                    items: Any = []
-                    if hasattr(self._news, "get_latest_news"):
-                        items = await self._news.get_latest_news(limit=20)
-                    if not isinstance(items, list):
-                        continue
-                    new_items = [
-                        it for it in items
-                        if isinstance(it, dict) and str(it.get("news_id") or it.get("id")) not in self._seen_ids
-                    ]
-                    for it in new_items:
-                        nid = str(it.get("news_id") or it.get("id") or uuid.uuid4().hex)
-                        self._seen_ids.add(nid)
-                        payload: dict[str, Any] = {
-                            "news_id": nid,
-                            "title": str(it.get("title", "")),
-                            "summary": it.get("summary"),
-                            "source": str(it.get("source", "unknown")),
-                            "url": it.get("url"),
-                            "symbols_affected": list(it.get("symbols_affected", []) or []),
-                            "sentiment": it.get("sentiment"),
-                            "published_at": it.get("published_at") or _utc_now(),
-                            "freshness_ts": _utc_now(),
-                        }
-                        validated = self._orch._validator.validate_news_item(payload)
-                        if validated.get(VALIDATED):
-                            self._orch._emit_envelope(
-                                "news", LIVE_EVENT_NEWS_ITEM, validated["data"]
-                            )
-                except Exception as exc:
-                    self._logger.warning("LiveNewsProducer poll error: %s", exc)
+            if self._ingestion is not None:
+                await self._ingestion_loop()
+            else:
+                await self._polling_loop()
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             self._logger.error("LiveNewsProducer failed: %s", exc)
+
+    async def _ingestion_loop(self) -> None:
+        if self._ingestion is None:
+            return
+        self._queue = await self._ingestion.subscribe()
+        while True:
+            try:
+                item = await self._queue.get()
+                if item is None:
+                    break
+                await self._handle_item(item)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._logger.warning("LiveNewsProducer ingestion error: %s", exc)
+
+    async def _polling_loop(self) -> None:
+        while True:
+            try:
+                await asyncio.sleep(60.0)
+                if self._news is None:
+                    continue
+                items: Any = []
+                if hasattr(self._news, "get_latest_news"):
+                    items = await self._news.get_latest_news(limit=20)
+                if not isinstance(items, list):
+                    continue
+                for it in items:
+                    await self._handle_item(it)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._logger.warning("LiveNewsProducer poll error: %s", exc)
+
+    async def _handle_item(self, it: dict[str, Any]) -> None:
+        nid = str(it.get("news_id") or it.get("id") or uuid.uuid4().hex)
+        if nid in self._seen_ids:
+            return
+        self._seen_ids.add(nid)
+        payload: dict[str, Any] = {
+            "news_id": nid,
+            "title": str(it.get("title", "")),
+            "summary": it.get("summary") or it.get("body", "")[:300],
+            "source": str(it.get("source", "unknown")),
+            "url": it.get("url"),
+            "symbols_affected": list(it.get("symbols_affected", []) or []),
+            "sentiment": it.get("sentiment"),
+            "published_at": it.get("published_at") or _utc_now(),
+            "freshness_ts": _utc_now(),
+            "category": it.get("category", "GENERAL"),
+            "region": it.get("region", "GLOBAL"),
+            "priority": it.get("priority", "NORMAL"),
+        }
+        validated = self._orch._validator.validate_news_item(payload)
+        if validated.get(VALIDATED):
+            self._orch._emit_envelope(
+                "news", LIVE_EVENT_NEWS_ITEM, validated["data"]
+            )

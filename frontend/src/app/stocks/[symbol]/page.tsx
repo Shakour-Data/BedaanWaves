@@ -8,6 +8,7 @@ import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/shared/StatCard";
 import { StatBox } from "@/components/shared/StatBox";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { OrderBook } from "@/components/market/OrderBook";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
 import {
@@ -30,7 +31,7 @@ import {
   type LiveStreamKey,
 } from "@/hooks/useLiveData";
 
-type Tab = "overview" | "risk" | "history";
+   type Tab = "overview" | "risk" | "history" | "orderbook";
 
 interface QuotePayload {
   symbol?: string;
@@ -279,6 +280,7 @@ export default function StockDetailPage() {
     { key: "overview", label: "Overview" },
     { key: "risk", label: "Risk" },
     { key: "history", label: "Historical Data" },
+    { key: "orderbook", label: "Order Book" },
   ];
 
   function fmt(n: number, digits = 0): string {
@@ -607,6 +609,14 @@ export default function StockDetailPage() {
               />
             )}
           </TarotCard>
+        </div>
+      )}
+
+      {activeTab === "orderbook" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="relative">
+            <OrderBook symbol={symbol} maxDepth={5} />
+          </div>
         </div>
       )}
     </div>

@@ -31,7 +31,7 @@ from .data.financial_data_ingest_service import (
     MarketType,
 )
 from .data.history_service import HistoryService
-from .data.intl_api_client import IntlApiClient
+from .data.intl_api_client import IntlApiClient, MockIntlApiClient
 from .data.market_service import MarketService
 from .data.news_service import NewsService
 from .data.portfolio_service import PortfolioService
@@ -63,9 +63,11 @@ except Exception:
 
 # Tier 5: NLP Services
 try:
+    from .nlp.chatbot_service import ChatbotService
     from .nlp.document_extraction_service import DocumentExtractionService
     from .nlp.multilingual_news_service import MultilingualNewsService
     from .nlp.news_summarization_service import NewsSummarizationService
+    from .nlp.search_service import SearchService
     from .nlp.sentiment_analysis_service import SentimentAnalysisService
 except Exception:
     pass
@@ -95,6 +97,7 @@ __all__ = [
     "HistoryService",
     "NewsService",
     "IntlApiClient",
+    "MockIntlApiClient",
     "DataValidationService",
     "FinancialDataIngestService",
     "StockFundamentalDataIngestionService",
@@ -116,6 +119,8 @@ __all__ = [
     "NewsSummarizationService",
     "DocumentExtractionService",
     "MultilingualNewsService",
+    "ChatbotService",
+    "SearchService",
     # Tier 9: System
     "SchedulerService",
     "MetricsService",

@@ -248,9 +248,49 @@ class FinancialDataIngestService(DataService):
         statement_type: FinancialStatementType | None = None,
         limit: int = 10
     ) -> list[FinancialStatement]:
-        """Retrieve stored financial statements for an asset"""
-        # Implementation would query database
-        return []
+        """Retrieve stored financial statements for an asset from the database.
+
+        Returns the most recent ``limit`` quarterly periods (default 10, up
+        to 20+ if available), ordered by fiscal year / quarter descending.
+        """
+        from sqlalchemy import desc, select
+
+        from app.db.base import async_session_maker
+        from app.models.models import FinancialStatement as DBStatement
+
+        stmt = (
+            select(DBStatement)
+            .where(DBStatement.asset_id == asset_id)
+            .where(DBStatement.period.like("%Q%"))
+        )
+        if statement_type is not None:
+            stmt = stmt.where(DBStatement.statement_type == statement_type.value)
+        stmt = stmt.order_by(
+            desc(DBStatement.fiscal_year),
+            desc(DBStatement.period),
+        ).limit(limit)
+
+        async with async_session_maker() as session:
+            result = await session.execute(stmt)
+            rows = result.fetchall()
+
+        statements = []
+        for row in rows:
+            stmt_obj = FinancialStatement(
+                asset_id=row.asset_id,
+                symbol="",
+                market=MarketType(row.market),
+                statement_type=FinancialStatementType(row.statement_type),
+                period=row.period,
+                fiscal_year=row.fiscal_year,
+                fiscal_quarter=None,
+                data=row.data or {},
+                source="SEC_EDGAR",
+                fetched_at=row.as_of or datetime.now(),
+                as_of=row.as_of,
+            )
+            statements.append(stmt_obj)
+        return statements
 
     async def get_latest_fundamentals(
         self,
@@ -262,7 +302,7 @@ class FinancialDataIngestService(DataService):
 
         Returns standardized financial data ready for FundamentalAnalysisService.
         """
-        statements = await self.get_financial_statements(asset_id)
+        statements = await self.get_financial_statements(asset_id, limit=20)
 
         # Combine statements into a single financials dict
         financials = {}

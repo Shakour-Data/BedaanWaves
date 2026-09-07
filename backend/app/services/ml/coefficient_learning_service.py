@@ -95,6 +95,11 @@ class CoefficientLearningService(MLService):
         self.retrain_interval_hours = 24  # Retrain daily
         self.min_samples_for_training = 50
         self.validation_split = 0.2
+        self.max_training_records = 5000
+        self.random_state = 42
+        self.n_estimators = 100
+        self.max_depth = 10
+        self.min_feature_vectors = 50
 
         # Hierarchy mappings (populated from ScoringService)
         self.dimension_names = [
@@ -290,7 +295,7 @@ class CoefficientLearningService(MLService):
                     .where(RawPerformanceScore.is_processed)
                     .where(RawPerformanceScore.data_quality == "VALIDATED")
                     .order_by(desc(RawPerformanceScore.captured_at))
-                    .limit(5000)
+                    .limit(self.max_training_records)
                 )
                 rows = result.fetchall()
 
@@ -484,15 +489,15 @@ class CoefficientLearningService(MLService):
                 features.append(float(row_dict.get(mf, 0.0)))
 
             # Ensure fixed feature length
-            while len(features) < 50:  # Minimum feature size
+            while len(features) < self.min_feature_vectors:
                 features.append(0.0)
-            if len(features) > 50:
-                features = features[:50]  # Truncate if too long
+            if len(features) > self.min_feature_vectors:
+                features = features[:self.min_feature_vectors]  # Truncate if too long
 
         except Exception as e:
             self.logger.warning(f"Error extracting features: {e}")
             # Return zero vector of expected length
-            features = [0.0] * 50
+            features = [0.0] * self.min_feature_vectors
 
         return features
 
@@ -521,7 +526,7 @@ class CoefficientLearningService(MLService):
 
             # Split data
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=self.validation_split, random_state=42
+                X, y, test_size=self.validation_split, random_state=self.random_state
             )
 
             # Scale features
@@ -535,9 +540,9 @@ class CoefficientLearningService(MLService):
             model = self.models.get(level)
             if model is None:
                 model = RandomForestRegressor(
-                    n_estimators=100,
-                    max_depth=10,
-                    random_state=42,
+                    n_estimators=self.n_estimators,
+                    max_depth=self.max_depth,
+                    random_state=self.random_state,
                     n_jobs=-1
                 )
                 self.models[level] = model

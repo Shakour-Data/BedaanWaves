@@ -92,9 +92,11 @@ async def ensure_admin_user() -> None:
     admin_password = os.environ.get("ADMIN_PASSWORD")
     if not admin_password:
         admin_password = secrets.token_urlsafe(16)
+        hashed = hash_password(admin_password)
         logging.getLogger(__name__).warning(
-            "ADMIN_PASSWORD not set in environment. Generated temporary admin password. "
-            "Store this value securely - it will not be shown again."
+            "ADMIN_PASSWORD not set in environment. Generated temporary admin "
+            f"password. Hash prefix (first 8 chars): {hashed[:8]}... - "
+            "Store the password securely; it will not be shown again."
         )
     await create_user(
         username="admin",

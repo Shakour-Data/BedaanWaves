@@ -406,3 +406,34 @@ async def live_news_stream(
         headers=_SSE_HEADERS,
         media_type="text/event-stream",
     )
+
+
+@router.get("/orderbook/{symbol}/stream", summary="Live per-symbol order book SSE stream")
+async def live_orderbook_stream(
+    request: Request,
+    symbol: str,
+) -> StreamingResponse:
+    """
+    Stream top-5 order book snapshots (bids/asks) for a single ticker.
+
+    Accepts auth via `Authorization: Bearer <JWT>` header or `?token=<JWT>`.
+    Disallowed symbols or charset violations return HTTP 422 before
+    opening the SSE stream.
+    """
+    safe_symbol = validate_symbol(symbol, param_name="symbol")
+    _authenticate(request)
+    stream_key = f"orderbook:{safe_symbol}"
+    orch, metrics = _get_orchestrator_and_metrics()
+
+    connection_id = getattr(request.state, "correlation_id", None) or uuid.uuid4().hex
+    if metrics is not None and hasattr(metrics, "increment_active_subscriptions"):
+        try:
+            metrics.increment_active_subscriptions(1)
+        except Exception:
+            pass
+
+    return StreamingResponse(
+        _stream_generator(orch, stream_key, metrics, connection_id),
+        headers=_SSE_HEADERS,
+        media_type="text/event-stream",
+    )

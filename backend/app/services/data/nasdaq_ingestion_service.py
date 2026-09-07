@@ -66,6 +66,12 @@ MAX_CONCURRENT = 5
 # Batch size for DB inserts
 CANDLE_BATCH_SIZE = 1000
 NEWS_BATCH_SIZE = 500
+# Minimum quarterly financial statements to ensure per symbol via SEC EDGAR
+SEC_EDGAR_MIN_QUARTERS = 20
+# SEC EDGAR rate limit per request (seconds)
+SEC_EDGAR_RATE_DELAY = 0.6
+# Chunk size for bulk SEC EDGAR ingestion
+SEC_EDGAR_CHUNK_SIZE = 50
 
 
 class NasdaqIngestionService(DataService):
@@ -422,13 +428,140 @@ class NasdaqIngestionService(DataService):
                     await session.commit()
 
                 if len(seen_periods) < 20:
-                    sec_results = await self._sec_service.ingest_sec_financials(symbol, str(asset.id))
+                    sec_results = await self._sec_service.ingest_sec_financials(
+                        symbol, str(asset.id),
+                        min_quarters=20,
+                        skip_if_sufficient=True,
+                    )
                     self.logger.debug(f"SEC EDGAR fallback for {symbol}: {sec_results}")
 
                 return True
         except Exception as e:
             self.logger.error(f"Failed to ingest fundamentals for {symbol}: {e}")
             return False
+
+    async def bulk_ingest_sec_financials(
+        self,
+        symbols: list[str] | None = None,
+        min_quarters: int = SEC_EDGAR_MIN_QUARTERS,
+        max_concurrent: int = MAX_CONCURRENT,
+        chunk_size: int = SEC_EDGAR_CHUNK_SIZE,
+    ) -> dict[str, int]:
+        """
+        Bulk-ingest quarterly financial statements for all (or a subset of)
+        Nasdaq constituents using the free SEC EDGAR API.
+
+        SEC EDGAR (data.sec.gov) is a public, no-API-key data source.  Each
+        company's full XBRL fact history is retrieved via the
+        ``companyfacts`` endpoint, which returns every 10-Q / 10-K filing
+        on record.  This guarantees at least ``min_quarters`` (default 20)
+        quarters of income-statement, balance-sheet, and cash-flow data
+        per symbol.
+
+        Args:
+            symbols: Symbol list; falls back to ``DEFAULT_CONSTITUENTS``.
+            min_quarters: Minimum quarterly financial statements to ensure
+                per symbol.  Symbols that already have >= this many quarters
+                in the DB are skipped.
+            max_concurrent: Maximum concurrent SEC EDGAR requests.
+            chunk_size: Number of symbols processed per batch.
+
+        Returns:
+            Aggregate counts: ``{symbols_processed, statements_stored,
+            ratios_stored, skipped, errors}``.
+        """
+        symbols = symbols or self.DEFAULT_CONSTITUENTS
+        self.logger.info(
+            f"Starting SEC EDGAR bulk financial ingestion for {len(symbols)} symbols "
+            f"(target min {min_quarters} quarters each)"
+        )
+        await self._sec_service.initialize()
+
+        results = {"symbols_processed": 0, "statements_stored": 0,
+                    "ratios_stored": 0, "skipped": 0, "errors": 0}
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def _process_symbol(sym: str) -> dict[str, int]:
+            async with semaphore:
+                try:
+                    asset = await self._ensure_asset(sym, sym, "EQUITY")
+                    outcome = await self._sec_service.ingest_sec_financials(
+                        sym, str(asset.id),
+                        min_quarters=min_quarters,
+                        skip_if_sufficient=True,
+                    )
+                    return outcome
+                except Exception as e:
+                    self.logger.error(f"SEC EDGAR ingestion failed for {sym}: {e}")
+                    return {"statements": 0, "ratios": 0, "errors": 1}
+
+        for i in range(0, len(symbols), chunk_size):
+            chunk = symbols[i:i + chunk_size]
+            self.logger.info(
+                f"SEC EDGAR chunk {i // chunk_size + 1}/"
+                f"{(len(symbols) + chunk_size - 1) // chunk_size}: "
+                f"{len(chunk)} symbols"
+            )
+            tasks = [_process_symbol(s) for s in chunk]
+            outcomes = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for outcome in outcomes:
+                if isinstance(outcome, Exception):
+                    results["errors"] += 1
+                    continue
+                if outcome.get("skipped"):
+                    results["skipped"] += 1
+                results["symbols_processed"] += 1
+                results["statements_stored"] += outcome.get("statements", 0)
+                results["ratios_stored"] += outcome.get("ratios", 0)
+                if outcome.get("errors"):
+                    results["errors"] += outcome["errors"]
+
+            await asyncio.sleep(SEC_EDGAR_RATE_DELAY)
+
+        await self._sec_service.shutdown()
+        self.logger.info(f"SEC EDGAR bulk ingestion complete: {results}")
+        return results
+
+    async def backfill_sec_financials(self, min_quarters: int = SEC_EDGAR_MIN_QUARTERS) -> dict[str, int]:
+        """
+        Backfill quarterly financial statements for all Nasdaq constituents
+        that have fewer than ``min_quarters`` quarters already stored.
+        """
+        from sqlalchemy import func
+
+        self.logger.info(f"Starting SEC EDGAR backfill (target {min_quarters} quarters)")
+
+        async with async_session_maker() as session:
+            all_assets = await session.execute(
+                select(Asset.id, Asset.symbol)
+                .where(Asset.active)
+                .where(Asset.asset_class == "EQUITY")
+                .where(Asset.market == "NASDAQ")
+                .limit(2000)
+            )
+            assets = all_assets.fetchall()
+
+        symbols_to_process = []
+        await self._sec_service.initialize()
+        for asset_id, symbol in assets:
+            count = await self._sec_service.count_quarters_in_db(str(asset_id))
+            if count < min_quarters:
+                symbols_to_process.append(symbol)
+
+        await self._sec_service.shutdown()
+        self.logger.info(
+            f"Backfill: {len(symbols_to_process)}/{len(assets)} symbols need "
+            f"more quarters (<{min_quarters})"
+        )
+
+        if symbols_to_process:
+            return await self.bulk_ingest_sec_financials(
+                symbols=sorted(symbols_to_process),
+                min_quarters=min_quarters,
+            )
+        return {"symbols_processed": 0, "statements_stored": 0,
+                "ratios_stored": 0, "skipped": len(assets), "errors": 0}
 
     async def ingest_board_members(self, symbol: str) -> int:
         """Fetch board members and officers from yfinance."""

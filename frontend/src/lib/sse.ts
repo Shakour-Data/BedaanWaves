@@ -232,6 +232,27 @@ export function createSSEConnection<T = unknown>(
       }
     }) as EventListener);
 
+    eventSource.addEventListener('orderbook', ((ev: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(ev.data);
+        const data = parsed.data ?? parsed;
+        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
+        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
+        const sseEvent: SSEEvent<T> = {
+          type: 'orderbook',
+          event: parsed.event || 'orderbook',
+          data,
+          timestamp: Date.now(),
+          eventId: ev.lastEventId || undefined,
+          sequence,
+          data_age_ms,
+        };
+        onMessage?.(sseEvent);
+      } catch (err) {
+        console.error('Failed to parse SSE orderbook event:', err, ev.data);
+      }
+    }) as EventListener);
+
     eventSource.addEventListener('health', ((ev: MessageEvent<string>) => {
       try {
         const parsed = JSON.parse(ev.data);

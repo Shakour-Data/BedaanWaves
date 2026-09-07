@@ -17,7 +17,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from datetime import date as _date
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -26,7 +26,9 @@ from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import (
     Asset,
+    CurrencyRate,
     IntlPriceCandle,
+    MacroIndicator,
     MarketDataSnapshot,
     News,
     ScoreHistory,
@@ -66,7 +68,8 @@ class SchedulerService(BaseService):
                  data_integrity_service=None,
                  ml_training_service=None,
                  backup_service=None,
-                 news_service=None):
+                 news_service=None,
+                 ingestion_service=None):
         super().__init__(service_name)
         self._jobs: dict[str, ScheduledJob] = {}
         self._running: bool = False
@@ -82,6 +85,7 @@ class SchedulerService(BaseService):
         self.ml_training_service = ml_training_service
         self.backup_service = backup_service
         self.news_service = news_service
+        self.ingestion_service = ingestion_service
 
     async def initialize(self) -> None:
         self._running = True
@@ -89,6 +93,13 @@ class SchedulerService(BaseService):
         self.logger.info("SchedulerService initialized")
 
         await self._register_default_jobs()
+
+        if self.ingestion_service is not None:
+            try:
+                await self.ingestion_service.initialize()
+                self.logger.info("ContinuousNewsIngestionService started")
+            except Exception as exc:
+                self.logger.error("Failed to start ContinuousNewsIngestionService: %s", exc)
 
     async def _register_default_jobs(self) -> None:
         """Register ALL platform jobs automatically."""
@@ -913,13 +924,34 @@ class SchedulerService(BaseService):
         # === REAL-TIME DATA REFRESH JOBS ===
 
         async def daily_news_refresh_job():
-            """Fetch latest news for active assets every 30 minutes."""
-            return await self._refresh_news()
+            """Fallback news refresh if continuous ingestion is disabled or unhealthy."""
+            if self.ingestion_service is not None:
+                return {"status": "skipped", "reason": "continuous_ingestion_active"}
+            if self.news_service:
+                return await self._refresh_news()
+            return {"status": "skipped", "reason": "no_news_service"}
 
         self.register_job(
             name="DailyNewsRefresh",
             coroutine_func=daily_news_refresh_job,
-            interval_seconds=1800,  # 30 minutes
+            interval_seconds=3600,  # 1 hour fallback
+        )
+
+        async def continuous_news_supervisor_job():
+            """Supervise continuous news ingestion service."""
+            if self.ingestion_service is None:
+                return {"status": "skipped", "reason": "ingestion_service_not_available"}
+            try:
+                if not getattr(self.ingestion_service, "_initialized", False):
+                    await self.ingestion_service.initialize()
+                return {"status": "running", "sources": len(self.ingestion_service._source_loops)}
+            except Exception as exc:
+                return {"status": "error", "error": str(exc)}
+
+        self.register_job(
+            name="ContinuousNewsIngestion",
+            coroutine_func=continuous_news_supervisor_job,
+            interval_seconds=900,  # 15 minutes supervisor check
         )
 
         async def fundamental_data_refresh_job():
@@ -932,6 +964,23 @@ class SchedulerService(BaseService):
             interval_seconds=86400,  # Daily
         )
 
+        async def sec_financials_bulk_job():
+            """Bulk-refresh quarterly financial statements via free SEC EDGAR."""
+            if self.nasdaq_service:
+                await self.nasdaq_service.initialize()
+                result = await self.nasdaq_service.backfill_sec_financials(
+                    min_quarters=20,
+                )
+                await self.nasdaq_service.shutdown()
+                return result
+            return {"status": "skipped", "reason": "nasdaq_service not available"}
+
+        self.register_job(
+            name="SecFinancialsBulkRefresh",
+            coroutine_func=sec_financials_bulk_job,
+            interval_seconds=604800,  # Weekly
+        )
+
         async def macro_data_refresh_job():
             """Refresh macro indicators and currency rates daily."""
             return await self._refresh_macro_data()
@@ -940,6 +989,16 @@ class SchedulerService(BaseService):
             name="MacroDataRefresh",
             coroutine_func=macro_data_refresh_job,
             interval_seconds=86400,  # Daily
+        )
+
+        async def macro_forecast_refresh_job():
+            """Generate free in-process macro forecasts from stored history."""
+            return await self._refresh_macro_forecasts()
+
+        self.register_job(
+            name="MacroForecastRefresh",
+            coroutine_func=macro_forecast_refresh_job,
+            interval_seconds=21600,  # every 6h
         )
 
         async def master_data_refresh_job():
@@ -1423,79 +1482,274 @@ asyncio.run(main())
         return results
 
     async def _refresh_macro_data(self) -> dict[str, Any]:
-        """Refresh macro indicators and currency rates."""
-        from decimal import Decimal
+        """Refresh real US macroeconomic indicators and currency rates.
 
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-        from app.db.base import async_session_maker
-        from app.models.models import CurrencyRate, MacroIndicator
-
-        results = {"indicators_updated": 0, "currency_rates_updated": 0, "errors": []}
-
-        try:
-            today = datetime.now().date()
-
-            macro_updates = [
-                {"code": "US_INFLATION", "name": "US Inflation Rate", "value": 0, "unit": "%"},
-                {"code": "US_FED_RATE", "name": "US Federal Funds Rate", "value": 0, "unit": "%"},
-                {"code": "GOLD_PRICE", "name": "Gold Price (USD/oz)", "value": 0, "unit": "USD"},
-                {"code": "OIL_PRICE", "name": "Crude Oil Price (USD/bbl)", "value": 0, "unit": "USD"},
-            ]
-
-            async with async_session_maker() as session:
-                for indicator in macro_updates:
-                    record = {
-                        "indicator_code": indicator["code"],
-                        "name": indicator["name"],
-                        "value": Decimal(str(indicator["value"])),
-                        "unit": indicator["unit"],
-                        "as_of": today,
-                    }
-                    stmt = pg_insert(MacroIndicator).values(record)
-                    stmt = stmt.on_conflict_do_update(
-                        constraint="uix_macro_indicator",
-                        set_={"value": stmt.excluded.value, "as_of": stmt.excluded.as_of},
-                    )
-                    await session.execute(stmt)
-                    results["indicators_updated"] += 1
-                await session.commit()
-
-        except Exception as e:
-            results["errors"].append(f"Macro indicators: {e!s}")
+        All data sources here are **free and require no API key**:
+          * Real economic releases (CPI, unemployment, GDP, Fed funds, sentiment,
+            industrial production, housing, yields/curve) are downloaded from the
+            public FRED graph-CSV endpoint (urllib, no account).
+          * Market tickers (^VIX, ^TNX, Dollar Index, Gold, Oil, ^GSPC) come from
+            yfinance (free public data).
+          * FX rates come from FRED's free DEX* series.
+        If a network fetch fails (e.g. air-gapped host) the job keeps the last
+        known values rather than writing placeholder zeros.
+        """
+        results: dict[str, Any] = {
+            "indicators_updated": 0,
+            "currency_rates_updated": 0,
+            "errors": [],
+        }
 
         try:
-            currency_pairs = [
-                {"base": "USD", "quote": "EUR", "rate": Decimal("0.85")},
-                {"base": "USD", "quote": "GBP", "rate": Decimal("0.73")},
-                {"base": "USD", "quote": "JPY", "rate": Decimal("110.0")},
-                {"base": "USD", "quote": "CHF", "rate": Decimal("0.92")},
-            ]
+            results["indicators_updated"] += await self._refresh_real_indicators()
+        except Exception as exc:  # pragma: no cover - defensive
+            results["errors"].append(f"Real indicators: {exc!s}")
 
-            today = datetime.now().date()
-            async with async_session_maker() as session:
-                for pair in currency_pairs:
-                    record = {
-                        "base_currency": pair["base"],
-                        "quote_currency": pair["quote"],
-                        "rate": pair["rate"],
-                        "rate_date": today,
-                        "source": "ECB",
-                    }
-                    stmt = pg_insert(CurrencyRate).values(record)
-                    stmt = stmt.on_conflict_do_update(
-                        constraint="uix_currency_rate",
-                        set_={"rate": stmt.excluded.rate, "rate_date": stmt.excluded.rate_date},
-                    )
-                    await session.execute(stmt)
-                    results["currency_rates_updated"] += 1
-                await session.commit()
+        try:
+            results["indicators_updated"] += await self._refresh_ticker_indicators()
+        except Exception as exc:  # pragma: no cover - defensive
+            results["errors"].append(f"Ticker indicators: {exc!s}")
 
-        except Exception as e:
-            results["errors"].append(f"Currency rates: {e!s}")
+        try:
+            results["currency_rates_updated"] += await self._refresh_currency_rates()
+        except Exception as exc:  # pragma: no cover - defensive
+            results["errors"].append(f"Currency rates: {exc!s}")
 
         self.logger.info(f"Macro data refresh complete: {results}")
         return results
+
+    async def _refresh_real_indicators(self) -> int:
+        """Fetch real US macro releases from the free FRED CSV endpoint (no key)."""
+        from decimal import Decimal
+
+        from app.services.data.fred_csv_client import fetch_history_map
+        from app.services.analysis.macro_scoring import (
+            INDICATOR_REGISTRY,
+            BUNDLED_MACRO_SNAPSHOT,
+            derive_indicators,
+        )
+
+        monthly_ids = [
+            "CPIAUCSL", "CPILFESL", "UNRATE", "U6RATE", "UMCSENT",
+            "INDPRO", "TCU", "PERMIT", "PAYEMS",
+            "CES0501000000000000050Q0",
+        ]
+        quarterly_ids = ["GDPC1", "GDP"]
+
+        # FRED allows many ids in one graph request → a single free HTTP call.
+        series_ids = monthly_ids + quarterly_ids + ["FEDFUNDS", "DGS10", "DGS2", "T10Y2Y", "DGS30"]
+        history_map = await asyncio.to_thread(fetch_history_map, series_ids)
+
+        # Frequency cap on how much history we persist per series.
+        lookback = {"monthly": 24, "quarterly": 8, "daily": 60}
+
+        count = 0
+        async with async_session_maker() as session:
+            for code, history in history_map.items():
+                if not history:
+                    continue
+                meta = INDICATOR_REGISTRY.get(code, {})
+                freq = meta.get("frequency", "monthly")
+                keep = history[-lookback.get(freq, 24):]
+                for as_of, value in keep:
+                    stmt = pg_insert(MacroIndicator).values(
+                        {
+                            "indicator_code": code,
+                            "name": meta.get("name", code),
+                            "value": Decimal(str(value)),
+                            "period": _period_for(code, as_of, freq),
+                            "unit": meta.get("unit", ""),
+                            "source": meta.get("source", "FRED"),
+                            "as_of": as_of,
+                        }
+                    )
+                    stmt = stmt.on_conflict_do_update(
+                        constraint="uix_macro_indicator",
+                        set_={
+                            "value": stmt.excluded.value,
+                            "as_of": stmt.excluded.as_of,
+                            "unit": stmt.excluded.unit,
+                            "source": stmt.excluded.source,
+                            "name": stmt.excluded.name,
+                        },
+                    )
+                    await session.execute(stmt)
+                    count += 1
+
+            # Derived indicators (inflation YoY, GDP q/q, payroll/mo, wage YoY).
+            derived = derive_indicators(history_map)
+            for code, info in derived.items():
+                stmt = pg_insert(MacroIndicator).values(
+                    {
+                        "indicator_code": code,
+                        "name": INDICATOR_REGISTRY.get(code, {}).get("name", code),
+                        "value": Decimal(str(info["value"])),
+                        "period": info.get("period", ""),
+                        "unit": info.get("unit", ""),
+                        "source": info.get("source", "derived"),
+                        "as_of": _parse_period_date(info.get("period")) or today_local(),
+                    }
+                )
+                stmt = stmt.on_conflict_do_update(
+                    constraint="uix_macro_indicator",
+                    set_={
+                        "value": stmt.excluded.value,
+                        "as_of": stmt.excluded.as_of,
+                        "unit": stmt.excluded.unit,
+                        "source": stmt.excluded.source,
+                    },
+                )
+                await session.execute(stmt)
+                count += 1
+
+            # Backward-compat aliases used elsewhere in the codebase.
+            aliases = {"US_FED_RATE": "FEDFUNDS", "US_INFLATION": "INFLATION"}
+            for alias, real in aliases.items():
+                if real in history_map or real in derived:
+                    latest = _latest_value(history_map.get(real, []), derived.get(real))
+                    if latest is not None:
+                        as_of, value = latest
+                        stmt = pg_insert(MacroIndicator).values(
+                            {
+                                "indicator_code": alias,
+                                "name": INDICATOR_REGISTRY.get(alias, {}).get("name", alias),
+                                "value": Decimal(str(value)),
+                                "period": _period_for(real, as_of, INDICATOR_REGISTRY.get(real, {}).get("frequency", "monthly")),
+                                "unit": "%",
+                                "source": "FRED",
+                                "as_of": as_of,
+                            }
+                        )
+                        stmt = stmt.on_conflict_do_update(
+                            constraint="uix_macro_indicator",
+                            set_={"value": stmt.excluded.value, "as_of": stmt.excluded.as_of},
+                        )
+                        await session.execute(stmt)
+                        count += 1
+
+            await session.commit()
+        return count
+
+    async def _refresh_ticker_indicators(self) -> int:
+        """Refresh market-based macro tickers from yfinance (free public data)."""
+        from app.services.data.nasdaq_ingestion_service import (
+            MACRO_TICKERS,
+        )
+        from decimal import Decimal
+        import yfinance as yf
+
+        tickers = list(MACRO_TICKERS.keys())
+        today = today_local()
+
+        def _fetch_one(sym: str) -> Optional[tuple[Any, float]]:
+            try:
+                ticker = yf.Ticker(sym)
+                hist = ticker.history(period="5d", interval="1d")
+                if hist.empty:
+                    return None
+                latest = hist.iloc[-1]
+                return hist.index[-1].date(), float(latest["Close"])
+            except Exception as exc:  # pragma: no cover - defensive
+                self.logger.warning("yfinance macro fetch failed for %s: %s", sym, exc)
+                return None
+
+        fetched = await asyncio.to_thread(
+            lambda: {sym: _fetch_one(sym) for sym in tickers}
+        )
+
+        count = 0
+        async with async_session_maker() as session:
+            for sym, res in fetched.items():
+                if res is None:
+                    continue
+                name, unit = MACRO_TICKERS[sym]
+                as_of, value = res
+                stmt = pg_insert(MacroIndicator).values(
+                    {
+                        "indicator_code": sym,
+                        "name": name,
+                        "value": Decimal(str(value)),
+                        "period": as_of.strftime("%Y-%m-%d"),
+                        "unit": unit,
+                        "source": "yfinance",
+                        "as_of": as_of,
+                    }
+                )
+                stmt = stmt.on_conflict_do_update(
+                    constraint="uix_macro_indicator",
+                    set_={
+                        "value": stmt.excluded.value,
+                        "as_of": stmt.excluded.as_of,
+                        "unit": stmt.excluded.unit,
+                        "source": stmt.excluded.source,
+                    },
+                )
+                await session.execute(stmt)
+                count += 1
+            await session.commit()
+        return count
+
+    async def _refresh_currency_rates(self) -> int:
+        """Refresh USD FX rates from the free FRED DEX series (no API key)."""
+        from decimal import Decimal
+
+        from app.services.data.fred_csv_client import fetch_latest_map
+
+        # FRED series: USD per unit of foreign currency (EUR/GBP/JPY vs USD).
+        fx_series = {"DEXUSEU": "EUR", "DEXUSUK": "GBP", "DEXJPUS": "JPY"}
+        latest_map = await asyncio.to_thread(fetch_latest_map, list(fx_series.keys()))
+
+        count = 0
+        today = today_local()
+        async with async_session_maker() as session:
+            for series_id, quote in fx_series.items():
+                entry = latest_map.get(series_id)
+                if not entry:
+                    continue
+                as_of, value = entry
+                # Normalize to "USD per 1 unit of quote currency".
+                if series_id == "DEXJPUS":
+                    rate = 1.0 / value  # JPY per USD -> USD per JPY
+                else:
+                    rate = value
+                stmt = pg_insert(CurrencyRate).values(
+                    {
+                        "base_currency": "USD",
+                        "quote_currency": quote,
+                        "rate": Decimal(str(round(rate, 6))),
+                        "rate_date": as_of,
+                        "source": "FRED",
+                    }
+                )
+                stmt = stmt.on_conflict_do_update(
+                    constraint="uix_currency_rate",
+                    set_={"rate": stmt.excluded.rate, "rate_date": stmt.excluded.rate_date},
+                )
+                await session.execute(stmt)
+                count += 1
+            await session.commit()
+        return count
+
+    async def _refresh_macro_forecasts(self) -> dict[str, Any]:
+        """Generate free in-process macro forecasts from stored history."""
+        results: dict[str, Any] = {"forecasts": 0, "errors": []}
+        try:
+            from app.services.ml.macro_forecasting_service import MacroForecastingService
+
+            svc = MacroForecastingService()
+            await svc.initialize()
+            try:
+                for code in ("INFLATION", "UNRATE", "GDPC1", "FEDFUNDS", "UMCSENT", "T10Y2Y"):
+                    ok = await svc.forecast_and_persist(code)
+                    if ok:
+                        results["forecasts"] += 1
+            finally:
+                await svc.shutdown()
+        except Exception as exc:  # pragma: no cover - defensive
+            results["errors"].append(f"Macro forecasts: {exc!s}")
+        self.logger.info(f"Macro forecast refresh complete: {results}")
+        return results
+
 
     async def _refresh_master_data(self) -> dict[str, Any]:
         """Refresh market indices."""
@@ -1757,3 +2011,65 @@ asyncio.run(main())
             "jobs_running": sum(1 for j in self._jobs.values() if j.enabled),
             "uptime_seconds": (datetime.now(UTC) - self.created_at).total_seconds(),
         }
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers for free, no-API-key macro refresh.
+# ---------------------------------------------------------------------------
+import re as _re
+
+
+def today_local() -> Any:
+    """Local (naive) date for rate/as_of stamping."""
+    return datetime.now().date()
+
+
+def _period_for(freq: str, as_of: Any) -> str:
+    """Build a MacroIndicator period string from a date + frequency."""
+    if freq == "quarterly":
+        quarter = (as_of.month - 1) // 3 + 1
+        return f"{as_of.year}Q{quarter}"
+    if freq == "daily":
+        return as_of.strftime("%Y-%m-%d")
+    return as_of.strftime("%Y-%m")
+
+
+def _parse_period_date(period: Optional[str]) -> Optional[Any]:
+    """Parse a period string ('2026-07', '2026Q2', '2026-07-30') into a date."""
+    if not period:
+        return None
+    s = str(period).strip()
+    m = _re.fullmatch(r"(\d{4})-(\d{2})", s)
+    if m:
+        y, mo = int(m.group(1)), int(m.group(2))
+        nxt = _date(y + 1, 1, 1) if mo == 12 else _date(y, mo + 1, 1)
+        return nxt - timedelta(days=1)
+    m = _re.fullmatch(r"(\d{4})Q([1-4])", s)
+    if m:
+        y, q = int(m.group(1)), int(m.group(2))
+        qm = (q - 1) * 3 + 3  # end-quarter month
+        nxt = _date(y + 1, 1, 1) if qm == 12 else _date(y, qm + 1, 1)
+        return nxt - timedelta(days=1)
+    m = _re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", s)
+    if m:
+        try:
+            return _date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            return None
+    return None
+
+
+def _latest_value(
+    history: list[tuple[Any, float]], derived_entry: Optional[dict[str, Any]]
+) -> Optional[tuple[Any, float]]:
+    """Return (as_of, value) for the most recent observation of a series."""
+    if history:
+        return history[-1]
+    if derived_entry and "value" in derived_entry:
+        as_of = _parse_period_date(derived_entry.get("period")) or today_local()
+        try:
+            return as_of, float(derived_entry["value"])
+        except (TypeError, ValueError):
+            return None
+    return None
+

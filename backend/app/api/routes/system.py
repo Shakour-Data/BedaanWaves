@@ -156,3 +156,47 @@ async def get_dead_letter_jobs() -> dict:
     svc = _get_queue()
     jobs = svc.get_dead_letter_jobs()
     return {"status": "success", "jobs": jobs, "count": len(jobs)}
+
+
+# ---- News Source Registry Endpoints ----
+
+
+@router.get("/news-sources", response_model=dict)
+async def list_news_sources():
+    """List all registered news sources."""
+    async with async_session_maker() as session:
+        result = await session.execute(select(NewsSource))
+        sources = result.scalars().all()
+        return {
+            "status": "success",
+            "data": [
+                {
+                    "id": str(s.id),
+                    "name": s.name,
+                    "display_name": s.display_name,
+                    "category": s.category,
+                    "region": s.region,
+                    "interval_seconds": s.interval_seconds,
+                    "enabled": s.enabled,
+                    "last_success_at": s.last_success_at.isoformat() if s.last_success_at else None,
+                    "last_error_at": s.last_error_at.isoformat() if s.last_error_at else None,
+                    "last_error_message": s.last_error_message,
+                    "failure_count_24h": s.failure_count_24h,
+                    "success_count_24h": s.success_count_24h,
+                }
+                for s in sources
+            ],
+        }
+
+
+@router.post("/news-sources/{source_id}/toggle", response_model=dict)
+async def toggle_news_source(source_id: str):
+    """Enable/disable a news source."""
+    async with async_session_maker() as session:
+        result = await session.execute(select(NewsSource).where(NewsSource.id == source_id))
+        source = result.scalar_one_or_none()
+        if not source:
+            raise HTTPException(404, "Source not found")
+        source.enabled = not source.enabled
+        await session.commit()
+        return {"status": "success", "enabled": source.enabled}

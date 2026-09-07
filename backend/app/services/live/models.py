@@ -26,6 +26,7 @@ EventType = Literal[
     "news_item",
     "health",
     "ping",
+    "orderbook",
 ]
 
 
@@ -232,6 +233,27 @@ class LivePingPayload(_BasePayload):
     subscription_count: int = Field(0, ge=0)
 
 
+class LiveOrderBookLevel(BaseModel):
+    rank: int = Field(..., ge=1, le=5)
+    price: float = Field(..., gt=0)
+    volume: int = Field(..., ge=0)
+    order_count: int = Field(default=0, ge=0)
+
+
+class LiveOrderBookPayload(_BasePayload):
+    symbol: str = Field(..., min_length=1, max_length=16)
+    bids: list[LiveOrderBookLevel] = Field(default_factory=list, max_length=5)
+    asks: list[LiveOrderBookLevel] = Field(default_factory=list, max_length=5)
+    spread: float | None = None
+    spread_pct: float | None = None
+    data_source: str = "itch"
+
+    @field_validator("symbol")
+    @classmethod
+    def _uppercase(cls, value: str) -> str:
+        return value.upper()
+
+
 LivePayload = (
     LiveQuotePayload
     | LiveIntradayPayload
@@ -240,6 +262,7 @@ LivePayload = (
     | LiveNewsPayload
     | LiveHealthPayload
     | LivePingPayload
+    | LiveOrderBookPayload
 )
 
 

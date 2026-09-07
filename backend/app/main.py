@@ -69,7 +69,9 @@ from app.services.core.logger_service import LoggerService
 from app.services.data.ingestion_service import IntelligentIngestionService
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
+from app.services.data.itch_ingestion_service import ITCHOrderBookService
 from app.services.data.news_service import NewsService
+from app.services.news.continuous_news_ingestion_service import ContinuousNewsIngestionService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.live import (
     FreshnessValidator,
@@ -316,10 +318,14 @@ async def lifespan(app: FastAPI):
         news_svc = NewsService()
         market_hours_svc = MarketHoursService()
         realtime_market_svc = RealTimeMarketDataService(cache_service=cache_svc)
+        ingestion_svc = ContinuousNewsIngestionService(
+            news_service=news_svc,
+        )
         container.register_instance("nasdaq_service", nasdaq_svc)
         container.register_instance("nasdaq_ingestion_service", nasdaq_svc)
         container.register_instance("data_ingest_service", ingest_svc)
         container.register_instance("news_service", news_svc)
+        container.register_instance("continuous_news_ingestion_service", ingestion_svc)
         container.register_instance("market_hours_service", market_hours_svc)
         container.register_instance("real_time_market_data_service", realtime_market_svc)
         container.register_instance("data_integrity_service",
@@ -348,6 +354,7 @@ async def lifespan(app: FastAPI):
             ml_training_service=coefficient_svc,
             backup_service=backup_svc,
             news_service=news_svc,
+            ingestion_service=ingestion_svc,
         )
         container.register_instance("scheduler_service", scheduler_svc)
         container.register_instance("scheduler", scheduler_svc)
@@ -388,6 +395,9 @@ async def lifespan(app: FastAPI):
             logger.warning(f"Could not register live metrics with MetricsService: {_e}")
 
         # Task 3: Orchestrator with per-key polling + reference counting + derived producers
+        orderbook_svc = ITCHOrderBookService()
+        container.register_instance("orderbook_service", orderbook_svc)
+
         live_orchestrator = LiveDataOrchestrator(
             market_data_service=realtime_market_svc,
             market_hours_service=market_hours_svc,
@@ -397,7 +407,9 @@ async def lifespan(app: FastAPI):
             metrics_service=live_pipeline_metrics,
             scoring_service=scoring_svc,
             news_service=news_svc,
+            orderbook_service=orderbook_svc,
         )
+        ingestion_svc._orch = live_orchestrator
         container.register_instance("live_orchestrator", live_orchestrator)
 
         # Task 6: SLO monitor with notification dispatch + debounce + recovery

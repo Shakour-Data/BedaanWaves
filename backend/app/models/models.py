@@ -611,6 +611,38 @@ class MacroIndicator(Base):
     source = Column(String(50))
     as_of = Column(Date, index=True)
 
+    __table_args__ = (
+        UniqueConstraint("indicator_code", "period", name="uix_macro_indicator"),
+    )
+
+
+class MacroForecast(Base):
+    """Free macro-economic forecasts (ARIMA/naive) produced from stored history.
+
+    No external prediction API is used: forecasts are generated in-process from
+    the historical ``MacroIndicator`` values already persisted locally.
+    """
+    __tablename__ = "macro_forecasts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    indicator_code = Column(String(50), nullable=False, index=True)
+    model_name = Column(String(100), nullable=False, default="ARIMA")
+    horizon = Column(Integer, nullable=False)  # periods ahead (e.g. 1, 3, 6)
+    frequency = Column(String(20), nullable=False, default="monthly")
+    forecast_date = Column(Date, nullable=False, index=True)  # base date of the forecast
+    forecast_value = Column(Numeric(20, 6))
+    lower_ci = Column(Numeric(20, 6))
+    upper_ci = Column(Numeric(20, 6))
+    confidence = Column(Numeric(5, 2), default=0.0)  # 0-1
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    __table_args__ = (
+        UniqueConstraint(
+            "indicator_code", "model_name", "horizon", "forecast_date",
+            name="uix_macro_forecast",
+        ),
+    )
+
 
 # ===========================================================================
 # 10. Financial Statements & Fundamental Ratios (NASDAQ)

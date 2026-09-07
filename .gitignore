@@ -162,6 +162,9 @@ frontend/test-parser.js
 # Root-level utility scripts
 scripts/
 
+# Temporary database audit scripts
+db_quality_audit.py
+
 # Machine learning artifacts
 *.joblib
 

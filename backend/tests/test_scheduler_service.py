@@ -306,3 +306,27 @@ class TestScoringJobsRegistration:
                     assert len(r2["skip_reason"]) > 0
         finally:
             await svc.shutdown()
+
+
+class TestSecFinancialsJobRegistration:
+    async def test_sec_financials_bulk_refresh_job_registered(self):
+        """SecFinancialsBulkRefresh job is registered after initialize()."""
+        svc = _TestScheduler(service_name="SecJobsCheck")
+        await svc.initialize()
+        try:
+            status = svc.get_job_status("SecFinancialsBulkRefresh")
+            assert status is not None
+            assert status["interval_seconds"] == 604800
+        finally:
+            await svc.shutdown()
+
+    async def test_fundamental_data_refresh_still_registered(self):
+        """FundamentalDataRefresh job remains registered after adding SEC job."""
+        svc = _TestScheduler(service_name="FundamentalJobsCheck")
+        await svc.initialize()
+        try:
+            status = svc.get_job_status("FundamentalDataRefresh")
+            assert status is not None
+            assert status["interval_seconds"] == 86400
+        finally:
+            await svc.shutdown()

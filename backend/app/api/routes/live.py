@@ -189,6 +189,24 @@ async def live_news_snapshot(
     return _get_stream_status(orch, stream_key)
 
 
+@router.get("/orderbook/{symbol}", summary="Last emitted order book snapshot for a symbol")
+async def live_orderbook_snapshot(
+    request: Request,
+    symbol: str,
+) -> dict[str, Any]:
+    """
+    Return the most recent order book event for the symbol.
+
+    Use this after detecting a sequence gap on the SSE stream to reset
+    the frontend's sequence baseline without missing intermediate ticks.
+    """
+    safe_symbol = validate_symbol(symbol, param_name="symbol")
+    _authenticate(request)
+    orch = _get_orchestrator()
+    stream_key = f"orderbook:{safe_symbol}"
+    return _get_stream_status(orch, stream_key)
+
+
 @router.get("/streams", summary="List all active live stream keys + status")
 async def live_streams_list(
     request: Request,

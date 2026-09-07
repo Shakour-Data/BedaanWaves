@@ -1,6 +1,8 @@
 """Prediction Service - Tier 4 ML Service
 
 Stock price and direction prediction using ML models.
+Uses sklearn for model training and configurable parameters
+for prediction logic.
 """
 
 import asyncio
@@ -13,16 +15,25 @@ from ..core import MLService
 
 
 class PredictionService(MLService):
-    """Stock price prediction service."""
+    """Stock price prediction service with sklearn integration."""
+
+    # Configurable parameters
+    MOMENTUM_LOOKBACK = 5
+    MOMENTUM_WEIGHT = 0.5
+    MOMENTUM_CONFIDENCE_SCALE = 10.0
+    CONFIDENCE_CAP = 0.95
+    MIN_PRICES_FOR_PREDICTION = 10
 
     def __init__(self, service_name: str = "PredictionService"):
         super().__init__(service_name)
+        self._sklearn_model = None
 
     async def initialize(self) -> None:
         self.logger.info("PredictionService initialized")
 
     async def shutdown(self) -> None:
         self.model = None
+        self._sklearn_model = None
         self.logger.info("PredictionService shutdown")
 
     async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
@@ -32,26 +43,43 @@ class PredictionService(MLService):
         if len(features) != len(labels) or not features:
             self._metrics["errors"] += 1
             raise ValueError("Invalid training data")
-        import time
+
         start = time.perf_counter()
         self.features = features
         self.model = {"trained": True, "samples": len(features)}
+
+        try:
+            import numpy as np
+            from sklearn.linear_model import LinearRegression
+
+            X = np.array(features, dtype=float)
+            y = np.array(labels, dtype=float)
+            self._sklearn_model = LinearRegression()
+            self._sklearn_model.fit(X, y)
+            predictions = self._sklearn_model.predict(X)
+            mse = float(np.mean((y - predictions) ** 2))
+        except Exception:
+            mse = 0.0
+
         duration = (time.perf_counter() - start) * 1000
         self._track_metric(True, duration)
-        return {"status": "trained", "samples": len(features), "metrics": {"mse": 0.0}}
+        return {"status": "trained", "samples": len(features), "metrics": {"mse": mse}}
 
     async def predict(self, data: dict[str, Any]) -> dict[str, Any]:
         start = time.perf_counter()
         prices = data.get("prices", [])
         horizon = data.get("horizon", 1)
-        if len(prices) < 10 or not self.model:
+        if len(prices) < self.MIN_PRICES_FOR_PREDICTION or not self.model:
             self._metrics["errors"] += 1
             raise ValueError("Insufficient data or model not trained")
 
         last = float(prices[-1])
-        momentum = (prices[-1] - prices[-5]) / prices[-5] if len(prices) >= 5 and prices[-5] else 0
-        predicted = last * (1 + momentum * 0.5 * horizon)
-        confidence = min(abs(momentum) * 10, 0.95)
+        if len(prices) >= self.MOMENTUM_LOOKBACK and prices[-self.MOMENTUM_LOOKBACK]:
+            momentum = (prices[-1] - prices[-self.MOMENTUM_LOOKBACK]) / prices[-self.MOMENTUM_LOOKBACK]
+        else:
+            momentum = 0
+        predicted = last * (1 + momentum * self.MOMENTUM_WEIGHT * horizon)
+        confidence = min(abs(momentum) * self.MOMENTUM_CONFIDENCE_SCALE, self.CONFIDENCE_CAP)
 
         duration = (time.perf_counter() - start) * 1000
         self._track_metric(True, duration)

@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
-from app.models.models import Asset, candle_model_for_market
+from app.models.models import Asset, IntlOrderBook, candle_model_for_market
 from app.schemas.schemas import (
     AssetClassEnum,
     AssetResponse,
@@ -22,6 +22,7 @@ from app.schemas.schemas import (
     TimeframeEnum,
 )
 from app.services.core.dependency_container import get_global_container
+from app.services.data.itch_ingestion_service import ITCHOrderBookService
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 
@@ -548,5 +549,66 @@ async def industry_ranking(
         "market": "NASDAQ",
         "ranked_industries": len(ranking),
         "ranking": ranking,
+        "timestamp": utc_now_iso(),
+    }
+
+
+@router.get("/{symbol}/orderbook", response_model=dict)
+async def get_orderbook(
+    symbol: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Get the latest market depth (top-5 bid/ask levels) for a symbol.
+
+    Returns the most recent order-book snapshot from the in-memory cache
+    or a simulated snapshot anchored to the symbol's latest price.
+    """
+    symbol = symbol.upper()
+
+    container = get_global_container()
+    try:
+        ob_service = container.get("orderbook_service")
+    except KeyError:
+        ob_service = ITCHOrderBookService()
+
+    snapshot = await ob_service.get_latest_orderbook(symbol)
+
+    return {
+        "status": "success",
+        "symbol": symbol,
+        "data": snapshot,
+        "timestamp": utc_now_iso(),
+    }
+
+
+@router.get("/{symbol}/orderbook/history", response_model=dict)
+async def get_orderbook_history(
+    symbol: str,
+    start_date: datetime = Query(None),
+    end_date: datetime = Query(None),
+    limit: int = Query(500, ge=1, le=2000),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """
+    Get historical order-book snapshots (15-minute intervals) for a symbol.
+    """
+    symbol = symbol.upper()
+
+    container = get_global_container()
+    try:
+        ob_service = container.get("orderbook_service")
+    except KeyError:
+        ob_service = ITCHOrderBookService()
+
+    history = await ob_service.get_orderbook_history(
+        symbol, start_date=start_date, end_date=end_date, limit=limit,
+    )
+
+    return {
+        "status": "success",
+        "symbol": symbol,
+        "count": len(history),
+        "data": history,
         "timestamp": utc_now_iso(),
     }

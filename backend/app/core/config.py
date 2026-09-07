@@ -83,6 +83,22 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: list[str] = ["*"]
 
     # ============================================================
+    # NEWS INGESTION
+    # ============================================================
+    NEWS_INGESTION_ENABLED: bool = True
+    NEWS_INGESTION_SUPERVISOR_INTERVAL: int = 900
+    NEWS_DEFAULT_CACHE_TTL: int = 30
+    NEWS_BACKFILL_YEARS: int = 5
+    NEWS_BACKFILL_BATCH_SIZE: int = 200
+    NEWS_TIER0_INTERVAL: int = 60
+    NEWS_TIER1_INTERVAL: int = 120
+    NEWS_TIER2_INTERVAL: int = 300
+    NEWS_TIER3_INTERVAL: int = 900
+    NEWS_CLASSIFIER_USE_OLLAMA: bool = False
+    NEWS_OLLAMA_URL: str = "http://localhost:11434"
+    NEWS_OLLAMA_MODEL: str = "llama3.2:3b"
+
+    # ============================================================
     # SECURITY & AUTHENTICATION
     # ============================================================
     SECRET_KEY: str

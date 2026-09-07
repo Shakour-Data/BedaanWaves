@@ -403,14 +403,11 @@ class RealTimeMarketDataService(BaseService):
         if self._cache is None:
             return None
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                future = asyncio.run_coroutine_threadsafe(
-                    self._cache.get(key, namespace="market_data"), loop
-                )
-                result = future.result(timeout=2)
-            else:
-                result = loop.run_until_complete(self._cache.get(key, namespace="market_data"))
+            loop = asyncio.get_running_loop()
+            future = asyncio.run_coroutine_threadsafe(
+                self._cache.get(key, namespace="market_data"), loop
+            )
+            result = future.result(timeout=2)
             if hasattr(result, 'value') and hasattr(result, 'is_success'):
                 if result.is_success:
                     return result.value
@@ -424,19 +421,16 @@ class RealTimeMarketDataService(BaseService):
         if self._cache is None:
             return
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                future = asyncio.run_coroutine_threadsafe(
-                    self._cache.set(key, value, namespace="market_data", ttl=ttl), loop
-                )
-                future.result(timeout=2)
-            else:
-                loop.run_until_complete(self._cache.set(key, value, namespace="market_data", ttl=ttl))
+            loop = asyncio.get_running_loop()
+            future = asyncio.run_coroutine_threadsafe(
+                self._cache.set(key, value, namespace="market_data", ttl=ttl), loop
+            )
+            future.result(timeout=2)
         except Exception:
             pass
 
     async def _run_blocking(self, func, *args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
 
     def _fetch_yfinance_quote(self, symbol: str) -> dict[str, Any] | None:

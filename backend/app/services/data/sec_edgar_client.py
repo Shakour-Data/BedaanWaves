@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.config import get_settings
@@ -122,8 +123,52 @@ class SEDGARFinancialService(DataService):
             logger.error(f"Company facts error for CIK {cik}: {exc}")
             return None
 
-    async def ingest_sec_financials(self, symbol: str, asset_id: str) -> dict[str, int]:
+    MIN_QUARTERS_DEFAULT = 20
+
+    async def count_quarters_in_db(self, asset_id: str) -> int:
+        """Count distinct quarterly periods already stored for a symbol."""
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(func.count())
+                .select_from(FinancialStatement)
+                .where(
+                    FinancialStatement.asset_id == asset_id,
+                    FinancialStatement.statement_type == "INCOME",
+                )
+                .where(FinancialStatement.period.like("%Q%"))
+            )
+            return result.scalar() or 0
+
+    async def ingest_sec_financials(
+        self,
+        symbol: str,
+        asset_id: str,
+        min_quarters: int = 0,
+        skip_if_sufficient: bool = False,
+    ) -> dict[str, int]:
+        """Fetch and store financial statements from SEC EDGAR.
+
+        Args:
+            symbol: Ticker symbol (e.g. ``"AAPL"``
+            asset_id: UUID of the asset in the database.
+            min_quarters: If greater than zero, only ingest quarters that are
+                newer than the existing count minus ``min_quarters``.  When
+                combined with ``skip_if_sufficient`` this lets callers ensure
+                a minimum historical depth (e.g. 20 quarters).
+            skip_if_sufficient: If ``True`` and the symbol already has at least
+                ``min_quarters`` quarterly income statements in the database,
+                no SEC EDGAR fetch is performed.
+        """
         asset_uuid = asset_id if isinstance(asset_id, str) else str(asset_id)
+
+        if skip_if_sufficient and min_quarters > 0:
+            existing = await self.count_quarters_in_db(asset_uuid)
+            if existing >= min_quarters:
+                logger.info(
+                    f"{symbol}: already has {existing} quarters (>= {min_quarters}); skipping SEC EDGAR"
+                )
+                return {"statements": 0, "ratios": 0, "errors": 0, "skipped": True}
+
         company_name = ""
         ticker = None
 
@@ -208,9 +253,14 @@ class SEDGARFinancialService(DataService):
             units = fact.get("units", {})
             return [e for e in units.get("USD", []) if e.get("form") == form_type]
 
+        income_periods: set[str] = set()
+        balance_periods: set[str] = set()
+        cashflow_periods: set[str] = set()
+
         for key in income_keys:
             for entry in _extract_entries(key, "10-Q"):
                 period = _to_period(entry.get("fp", ""), entry.get("fy"), entry.get("end"))
+                income_periods.add(period)
                 try:
                     as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
                 except Exception:
@@ -247,6 +297,7 @@ class SEDGARFinancialService(DataService):
         for key in balance_keys:
             for entry in _extract_entries(key, "10-Q"):
                 period = _to_period(entry.get("fp", ""), entry.get("fy"), entry.get("end"))
+                balance_periods.add(period)
                 try:
                     as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
                 except Exception:
@@ -283,6 +334,7 @@ class SEDGARFinancialService(DataService):
         for key in cashflow_keys:
             for entry in _extract_entries(key, "10-Q"):
                 period = _to_period(entry.get("fp", ""), entry.get("fy"), entry.get("end"))
+                cashflow_periods.add(period)
                 try:
                     as_of = datetime.strptime(entry["end"], "%Y-%m-%d").date()
                 except Exception:
@@ -371,4 +423,10 @@ class SEDGARFinancialService(DataService):
                     await session.execute(upsert)
                 await session.commit()
 
-        return {"statements": len(statements), "ratios": len(ratios), "errors": 0}
+        result = {"statements": len(statements), "ratios": len(ratios), "errors": 0}
+        if min_quarters > 0:
+            result["quarterly_periods_fetched"] = len(income_periods)
+            result["balance_periods_fetched"] = len(balance_periods)
+            result["cashflow_periods_fetched"] = len(cashflow_periods)
+            result["min_quarters_requested"] = min_quarters
+        return result

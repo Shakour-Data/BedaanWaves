@@ -5,7 +5,8 @@ export type LiveStreamKey =
   | 'scores'
   | 'news'
   | `quote:${string}`
-  | `intraday:${string}:${string}`;
+  | `intraday:${string}:${string}`
+  | `orderbook:${string}`;
 
 export type ConnectionHealth =
   | 'live'
@@ -181,6 +182,10 @@ export function getStreamEndpoint(key: LiveStreamKey): string {
   if (key === 'market') return '/live-sse/market/stream';
   if (key === 'scores') return '/live-sse/scores/stream?scope=NASDAQ';
   if (key === 'news') return '/live-sse/news/stream';
+  if (key.startsWith('orderbook:')) {
+    const symbol = key.slice('orderbook:'.length);
+    return `/live-sse/orderbook/${encodeURIComponent(symbol)}/stream`;
+  }
   if (key.startsWith('quote:')) {
     const symbol = key.slice('quote:'.length);
     return `/live-sse/quote/${encodeURIComponent(symbol)}/stream`;
@@ -202,6 +207,10 @@ export function getSnapshotEndpoint(key: LiveStreamKey): string {
   if (key === 'market') return '/live/market';
   if (key === 'scores') return '/live/scores?scope=NASDAQ';
   if (key === 'news') return '/live/news';
+  if (key.startsWith('orderbook:')) {
+    const symbol = key.slice('orderbook:'.length);
+    return `/live/orderbook/${encodeURIComponent(symbol)}`;
+  }
   if (key.startsWith('quote:')) {
     const symbol = key.slice('quote:'.length);
     return `/live/quote/${encodeURIComponent(symbol)}/snapshot`;
