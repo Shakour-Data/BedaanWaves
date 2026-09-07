@@ -125,7 +125,7 @@ export default function ProfilePage() {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10"
+                className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-200 ease-out focus:border-error focus:ring-4 focus:ring-error/10"
               />
             </div>
 
@@ -141,7 +141,7 @@ export default function ProfilePage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
-                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
+                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-200 ease-out focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
                     placeholder="Current Password"
                   />
                   <button
@@ -162,7 +162,7 @@ export default function ProfilePage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={loading}
-                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
+                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-200 ease-out focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
                     placeholder={t("app.settings.profile.new_password")}
                   />
                   <input
@@ -170,7 +170,7 @@ export default function ProfilePage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={loading}
-                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-fast ease-flow focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
+                    className="w-full rounded-xl px-4 py-3 border border-border bg-surface outline-none transition duration-200 ease-out focus:border-error focus:ring-4 focus:ring-error/10 disabled:opacity-60"
                     placeholder={t("app.settings.profile.confirm_password")}
                   />
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 interface ModalProps {
@@ -29,11 +29,17 @@ export function Modal({
   footer,
   size = "md",
 }: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (isOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      modalRef.current?.focus();
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
+      previousActiveElement.current?.focus();
     }
     return () => {
       document.body.style.overflow = "";
@@ -50,6 +56,39 @@ export function Modal({
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusableElements = modal.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements.length === 0) return;
+
+    const first = focusableElements[0];
+    const last = focusableElements[focusableElements.length - 1];
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    modal.addEventListener("keydown", handleTab);
+    return () => modal.removeEventListener("keydown", handleTab);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -60,8 +99,10 @@ export function Modal({
         aria-hidden="true"
       />
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className={cn(
-          "relative w-full rounded-xl border border-border bg-surface shadow-xl",
+          "relative w-full rounded-xl border border-border bg-surface shadow-xl outline-none",
           "animate-in fade-in zoom-in-95 duration-200",
           sizeClasses[size]
         )}
@@ -89,7 +130,7 @@ export function Modal({
         )}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral transition-colors"
+          className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral transition-colors"
           aria-label="Close modal"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

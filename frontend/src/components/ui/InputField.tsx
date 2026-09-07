@@ -77,10 +77,10 @@ export function InputField({
           id={inputId}
           type={type}
           className={cn(
-            "peer w-full rounded-md border bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)]",
+            "peer w-full rounded-md border bg-[var(--color-surface)] px-4 py-3 text-base text-[var(--color-text-primary)]",
             "outline-none transition-colors duration-150",
             "focus:ring-2 focus:ring-offset-0",
-            icon ? "ps-10" : "ps-3",
+            icon ? "ps-12" : "ps-4",
             stateClasses,
             className,
           )}

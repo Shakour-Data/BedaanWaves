@@ -91,7 +91,7 @@ apiClient.interceptors.response.use(
       }
 
       refreshPromise = Promise.race([
-        axios.post(`${API_BASE_URL}/auth/refresh`, { refresh_token: refreshToken }).then(
+        axios.post(`${API_BASE_URL}/auth/refresh?token=${encodeURIComponent(refreshToken)}`).then(
           (response) => response.data.access_token
         ),
         new Promise<never>((_, reject) =>

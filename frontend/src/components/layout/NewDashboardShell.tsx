@@ -5,15 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { NewSidebar } from "./NewSidebar";
 import { NewTopbar } from "./NewTopbar";
-import { Breadcrumbs, type BreadcrumbItem } from "@/components/ux/Breadcrumbs";
 
 interface NewDashboardShellProps {
   title: string;
   children: React.ReactNode;
-  breadcrumbs?: BreadcrumbItem[];
 }
 
-export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboardShellProps) {
+export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.loading);
   const router = useRouter();
@@ -45,16 +43,19 @@ export function NewDashboardShell({ title, children, breadcrumbs }: NewDashboard
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-background)]">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[var(--color-primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <NewSidebar />
 
       <div className="flex flex-1 flex-col min-w-0 lg:ml-64">
-        <NewTopbar title={title} breadcrumbs={breadcrumbs} />
+        <NewTopbar title={title} />
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6" tabIndex={-1}>
           <div className="w-full max-w-[90rem]">
-            {breadcrumbs && breadcrumbs.length > 0 && (
-              <Breadcrumbs items={breadcrumbs} />
-            )}
             {children}
           </div>
         </main>

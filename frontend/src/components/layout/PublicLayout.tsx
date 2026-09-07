@@ -91,7 +91,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
+              className="md:hidden flex items-center justify-center h-11 w-11 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
               aria-label="Toggle menu"
             >
               {mobileOpen ? (
@@ -182,13 +182,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 Product
               </h4>
               <ul className="space-y-3">
-                {["Features", "Leaderboard", "Markets", "Pricing"].map((item) => (
-                  <li key={item}>
+                {[
+                  { label: "Features", href: "/services" },
+                  { label: "Leaderboard", href: "/leaderboard" },
+                  { label: "Markets", href: "/stocks" },
+                  { label: "Pricing", href: "/services#pricing" },
+                ].map((item) => (
+                  <li key={item.label}>
                     <Link
-                      href={item === "Features" ? "/services" : item === "Leaderboard" ? "/leaderboard" : item === "Markets" ? "/stocks" : "/services"}
+                      href={item.href}
                       className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors"
                     >
-                      {item}
+                      {item.label}
                     </Link>
                   </li>
                 ))}
@@ -216,11 +221,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 Legal
               </h4>
               <ul className="space-y-3">
-                {["Privacy Policy", "Terms of Service", "Security", "Cookies"].map((item) => (
-                  <li key={item}>
-                    <span className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors cursor-pointer">
-                      {item}
-                    </span>
+                {[
+                  { label: "Privacy Policy", href: "/legal/privacy" },
+                  { label: "Terms of Service", href: "/legal/terms" },
+                  { label: "Security", href: "/legal/security" },
+                  { label: "Cookies", href: "/legal/cookies" },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors"
+                    >
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>

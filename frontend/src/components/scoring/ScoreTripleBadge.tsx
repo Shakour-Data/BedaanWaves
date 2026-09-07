@@ -82,8 +82,8 @@ function pickDeltaOrDimension(
 ): { delta: number | null; pct: number | null } {
   if (!dim) {
     return {
-      delta: (df as any).overall_delta ?? (df as any).overall ?? null,
-      pct: (df as any).overall_delta_pct ?? (df as any).overall_pct ?? null,
+      delta: df.overall_delta ?? df.overall ?? null,
+      pct: df.overall_delta_pct ?? df.overall_pct ?? null,
     };
   }
   const d = df.dimension_deltas?.[dim];

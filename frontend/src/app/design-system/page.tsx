@@ -2,642 +2,305 @@
 
 import { useState } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { InputField } from "@/components/ui/InputField";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Modal } from "@/components/ui/Modal";
+import { ProgressBar } from "@/components/ui/ProgressBar";
+import { Spinner } from "@/components/ui/Spinner";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+
+const colors = [
+  { name: "Primary", var: "--color-primary", value: "#005A9C" },
+  { name: "Primary Hover", var: "--color-primary-hover", value: "#004578" },
+  { name: "Primary Light", var: "--color-primary-light", value: "#E6F0FA" },
+  { name: "Secondary", var: "--color-secondary", value: "#64748B" },
+  { name: "Success", var: "--color-success", value: "#22C55E" },
+  { name: "Warning", var: "--color-warning", value: "#F59E0B" },
+  { name: "Error", var: "--color-error", value: "#EF4444" },
+  { name: "Background", var: "--color-background", value: "#F8FAFC" },
+  { name: "Surface", var: "--color-surface", value: "#FFFFFF" },
+  { name: "Text Primary", var: "--color-text-primary", value: "#0F172A" },
+  { name: "Text Secondary", var: "--color-text-secondary", value: "#64748B" },
+  { name: "Border", var: "--color-border", value: "#E2E8F0" },
+];
+
+const spacingScale = [
+  { label: "xs", value: "0.25rem" },
+  { label: "sm", value: "0.5rem" },
+  { label: "md", value: "0.75rem" },
+  { label: "lg", value: "1rem" },
+  { label: "xl", value: "1.5rem" },
+  { label: "2xl", value: "2rem" },
+  { label: "3xl", value: "3rem" },
+];
 
 export default function DesignSystemPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
 
   return (
     <NewDashboardShell title="Design System">
-      <div className="min-h-screen bg-[var(--color-background)]">
-      <header className="navbar">
-        <span className="navbar-brand">Design System</span>
-        <div className="navbar-actions">
-          <button
-            className="btn btn-ghost btn-md"
-            onClick={() => setToastVisible(true)}
-          >
-            Show Toast
-          </button>
-        </div>
-      </header>
-
-      <main className="container py-8 space-y-12">
-        {/* Page Header */}
-        <section className="page-header">
-          <h1>Design System Showcase</h1>
-          <p>
-            Standard, beautiful, and universal UI components for web applications.
-            Built with CSS custom properties, accessible by default, and responsive
-            across all breakpoints.
-          </p>
-        </section>
+      <div className="space-y-10">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Design System</h1>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              Standard, accessible, and responsive UI components built with CSS custom properties.
+            </p>
+          </div>
+        </header>
 
         {/* Colors */}
         <section>
-          <h2 className="mb-4">1. Color Palette</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[
-              { name: "Primary", var: "--color-primary" },
-              { name: "Primary Hover", var: "--color-primary-hover" },
-              { name: "Secondary", var: "--color-secondary" },
-              { name: "Success", var: "--color-success" },
-              { name: "Warning", var: "--color-warning" },
-              { name: "Error", var: "--color-error" },
-              { name: "Background", var: "--color-background" },
-              { name: "Surface", var: "--color-surface" },
-              { name: "Text Primary", var: "--color-text-primary" },
-              { name: "Text Secondary", var: "--color-text-secondary" },
-              { name: "Border", var: "--color-border" },
-            ].map((color) => (
-              <div key={color.name} className="card">
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">1. Color Palette</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {colors.map((color) => (
+              <Card key={color.name} padding="sm">
                 <div
-                  className="h-16 rounded-md mb-2"
-                  style={{ backgroundColor: `var(${color.var})` }}
+                  className="h-16 rounded-md mb-3"
+                  style={{ backgroundColor: color.value }}
                 />
-                <p className="text-sm font-medium">{color.name}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  {color.var}
-                </p>
-              </div>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">{color.name}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{color.var}</p>
+                <p className="text-xs text-[var(--color-text-muted)] font-mono">{color.value}</p>
+              </Card>
             ))}
           </div>
         </section>
 
         {/* Typography */}
         <section>
-          <h2 className="mb-4">2. Typography Scale</h2>
-          <div className="card space-y-4">
-            <div>
-              <h1>Heading 1 – The quick brown fox jumps over the lazy dog</h1>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                2.5rem / 700 / 1.2
-              </p>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">2. Typography Scale</h2>
+          <Card>
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-4xl font-bold text-[var(--color-text-primary)]">Heading 1 – The quick brown fox</h1>
+                <p className="text-sm text-[var(--color-text-muted)]">2.25rem / 700 / 1.2</p>
+              </div>
+              <div>
+                <h2 className="text-3xl font-semibold text-[var(--color-text-primary)]">Heading 2 – The quick brown fox</h2>
+                <p className="text-sm text-[var(--color-text-muted)]">1.875rem / 600 / 1.3</p>
+              </div>
+              <div>
+                <h3 className="text-2xl font-semibold text-[var(--color-text-primary)]">Heading 3 – The quick brown fox</h3>
+                <p className="text-sm text-[var(--color-text-muted)]">1.5rem / 600 / 1.4</p>
+              </div>
+              <div>
+                <h4 className="text-xl font-semibold text-[var(--color-text-primary)]">Heading 4 – The quick brown fox</h4>
+                <p className="text-sm text-[var(--color-text-muted)]">1.25rem / 600 / 1.4</p>
+              </div>
+              <div>
+                <p className="text-base text-[var(--color-text-primary)]">
+                  Body text – The quick brown fox jumps over the lazy dog. This is an example of body text used throughout the application.
+                </p>
+                <p className="text-sm text-[var(--color-text-muted)]">1.0rem / 400 / 1.6</p>
+              </div>
+              <div>
+                <p className="text-sm text-[var(--color-text-primary)]">Small text – The quick brown fox jumps over the lazy dog.</p>
+                <p className="text-sm text-[var(--color-text-muted)]">0.875rem / 400 / 1.5</p>
+              </div>
+              <div>
+                <p className="text-xs text-[var(--color-text-primary)]">Caption text – The quick brown fox jumps over the lazy dog.</p>
+                <p className="text-sm text-[var(--color-text-muted)]">0.75rem / 400 / 1.4</p>
+              </div>
             </div>
-            <div>
-              <h2>Heading 2 – The quick brown fox jumps over the lazy dog</h2>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                2.0rem / 600 / 1.3
-              </p>
-            </div>
-            <div>
-              <h3>Heading 3 – The quick brown fox jumps over the lazy dog</h3>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                1.5rem / 600 / 1.4
-              </p>
-            </div>
-            <div>
-              <h4>Heading 4 – The quick brown fox jumps over the lazy dog</h4>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                1.25rem / 600 / 1.4
-              </p>
-            </div>
-            <div>
-              <p className="text-base">
-                Body text – The quick brown fox jumps over the lazy dog. This is
-                an example of body text used throughout the application. It
-                should be readable and comfortable for long-form content.
-              </p>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                1.0rem / 400 / 1.6
-              </p>
-            </div>
-            <div>
-              <p className="text-sm">
-                Small text – The quick brown fox jumps over the lazy dog.
-              </p>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                0.875rem / 400 / 1.5
-              </p>
-            </div>
-            <div>
-              <p className="text-xs">
-                Caption text – The quick brown fox jumps over the lazy dog.
-              </p>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                0.75rem / 400 / 1.4
-              </p>
-            </div>
-          </div>
+          </Card>
         </section>
 
         {/* Spacing */}
         <section>
-          <h2 className="mb-4">3. Spacing Scale</h2>
-          <div className="card flex flex-wrap gap-4">
-            {[
-              { label: "xs", value: "var(--spacing-vxs)" },
-              { label: "sm", value: "var(--spacing-vsm)" },
-              { label: "md", value: "var(--spacing-vmd)" },
-              { label: "lg", value: "var(--spacing-vlg)" },
-              { label: "xl", value: "var(--spacing-vxl)" },
-              { label: "2xl", value: "var(--spacing-v2xl)" },
-              { label: "3xl", value: "var(--spacing-v3xl)" },
-            ].map((space) => (
-              <div key={space.label} className="flex flex-col items-center gap-2">
-                <div
-                  className="bg-[var(--color-primary)] rounded"
-                  style={{ width: space.value, height: space.value }}
-                />
-                <span className="text-xs text-[var(--color-text-secondary)]">
-                  {space.label}
-                </span>
-              </div>
-            ))}
-          </div>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">3. Spacing Scale</h2>
+          <Card>
+            <div className="flex flex-wrap items-end gap-4">
+              {spacingScale.map((space) => (
+                <div key={space.label} className="flex flex-col items-center gap-2">
+                  <div
+                    className="bg-[var(--color-primary)] rounded"
+                    style={{ width: space.value, height: space.value }}
+                  />
+                  <span className="text-xs text-[var(--color-text-secondary)]">{space.label}</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{space.value}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
         </section>
 
         {/* Buttons */}
         <section>
-          <h2 className="mb-4">4. Buttons</h2>
-          <div className="card space-y-6">
-            <div>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                Variants
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button className="btn btn-primary btn-md">Primary</button>
-                <button className="btn btn-secondary btn-md">
-                  Secondary
-                </button>
-                <button className="btn btn-ghost btn-md">Ghost</button>
-                <button className="btn btn-destructive btn-md">
-                  Destructive
-                </button>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">4. Buttons</h2>
+          <Card>
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">Variants</p>
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="primary">Primary</Button>
+                  <Button variant="secondary">Secondary</Button>
+                  <Button variant="outline">Outline</Button>
+                  <Button variant="ghost">Ghost</Button>
+                  <Button variant="destructive">Destructive</Button>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">Sizes</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button size="sm">Small</Button>
+                  <Button size="md">Medium</Button>
+                  <Button size="lg">Large</Button>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">States</p>
+                <div className="flex flex-wrap gap-3">
+                  <Button>Default</Button>
+                  <Button disabled>Disabled</Button>
+                  <Button variant="outline" disabled>Disabled Outline</Button>
+                </div>
               </div>
             </div>
-            <div>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                Sizes
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <button className="btn btn-primary btn-md">Medium</button>
-                <button className="btn btn-primary btn-lg">Large</button>
-              </div>
-            </div>
-            <div>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                States
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button className="btn btn-primary btn-md">Default</button>
-                <button className="btn btn-primary btn-md" disabled>
-                  Disabled
-                </button>
-                <button className="btn btn-primary btn-md btn-loading">
-                  Processing...
-                </button>
-              </div>
-            </div>
-          </div>
+          </Card>
         </section>
 
         {/* Inputs */}
         <section>
-          <h2 className="mb-4">5. Form Inputs</h2>
-          <div className="card space-y-6 max-w-2xl">
-            <div className="form-group">
-              <label className="form-label" htmlFor="name">
-                Full Name
-              </label>
-              <input
-                id="name"
-                className="form-input"
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">5. Form Inputs</h2>
+          <Card>
+            <div className="max-w-2xl space-y-5">
+              <InputField
+                label="Full Name"
                 placeholder="John Doe"
-                type="text"
+                helpText="Enter your full legal name"
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">
-                Email Address
-              </label>
-              <input
-                id="email"
-                className="form-input"
-                placeholder="john@example.com"
+              <InputField
+                label="Email Address"
                 type="email"
+                placeholder="john@example.com"
+                helpText="We will never share your email"
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="message">
-                Message
-              </label>
-              <textarea
-                id="message"
-                className="form-textarea"
-                placeholder="Write your message here..."
-                rows={4}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="error-input">
-                With Error
-              </label>
-              <input
-                id="error-input"
-                className="form-input error"
+              <InputField
+                label="With Error"
+                validationState="invalid"
+                validationMessage="This field contains an error."
                 defaultValue="Invalid value"
-                type="text"
               />
-              <p className="form-error-message">
-                This field contains an error.
-              </p>
+              <InputField
+                label="Disabled"
+                disabled
+                defaultValue="Cannot edit"
+              />
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="success-input">
-                With Success
-              </label>
-              <div className="relative">
-                <input
-                  id="success-input"
-                  className="form-input success"
-                  defaultValue="Valid value"
-                  type="text"
-                />
-                <span className="form-success-icon">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-          </div>
+          </Card>
         </section>
 
-        {/* Cards */}
+        {/* Progress */}
         <section>
-          <h2 className="mb-4">6. Cards</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="card">
-              <div className="card-header">
-                <h3 className="text-lg font-semibold">Standard Card</h3>
-              </div>
-              <div className="card-body">
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  This is a standard card with a border, shadow, and consistent
-                  padding.
-                </p>
-              </div>
-              <div className="card-footer">
-                <button className="btn btn-ghost btn-sm">Cancel</button>
-                <button className="btn btn-primary btn-sm">Action</button>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">6. Progress</h2>
+          <Card>
+            <div className="max-w-xl space-y-6">
+              <ProgressBar currentStep={2} totalSteps={4} stepLabels={["Setup", "Configure", "Review", "Launch"]} />
+              <div className="flex items-center gap-3">
+                <Spinner size="sm" />
+                <Spinner size="md" />
+                <Spinner size="lg" />
               </div>
             </div>
-            <div className="card card-borderless">
-              <div className="card-body">
-                <h3 className="text-lg font-semibold mb-2">
-                  Borderless Card
-                </h3>
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  This card has no border, only a shadow for elevation.
-                </p>
-              </div>
-            </div>
-            <div className="card">
-              <div className="card-body">
-                <h3 className="text-lg font-semibold mb-2">Stat Card</h3>
-                <p className="text-3xl font-bold">$45,231</p>
-                <span className="badge badge-success badge-md mt-2">
-                  +12.5%
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Modal */}
-        <section>
-          <h2 className="mb-4">7. Modal / Dialog</h2>
-          <button
-            className="btn btn-primary btn-md"
-            onClick={() => setModalOpen(true)}
-          >
-            Open Modal
-          </button>
-          <div
-            className={`modal-overlay ${modalOpen ? "open" : ""}`}
-            onClick={() => setModalOpen(false)}
-          >
-            <div
-              className="modal-content modal-md"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-header">
-                <h3 className="modal-title">Confirm Action</h3>
-                <button
-                  className="modal-close"
-                  onClick={() => setModalOpen(false)}
-                  aria-label="Close modal"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="modal-body">
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  Are you sure you want to proceed? This action cannot be
-                  undone. Please review the details before confirming.
-                </p>
-              </div>
-              <div className="modal-footer">
-                <button
-                  className="btn btn-ghost btn-md"
-                  onClick={() => setModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary btn-md"
-                  onClick={() => setModalOpen(false)}
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Navigation */}
-        <section>
-          <h2 className="mb-4">8. Navigation</h2>
-          <div className="card">
-            <nav className="navbar" style={{ position: "static", boxShadow: "none", borderBottom: "none" }}>
-              <span className="navbar-brand">Brand</span>
-              <div className="navbar-actions">
-                <a href="#" className="sidebar-item" style={{ marginBottom: 0 }}>
-                  Dashboard
-                </a>
-                <a href="#" className="sidebar-item active" style={{ marginBottom: 0 }}>
-                  Portfolio
-                </a>
-                <a href="#" className="sidebar-item" style={{ marginBottom: 0 }}>
-                  Settings
-                </a>
-              </div>
-            </nav>
-          </div>
-        </section>
-
-        {/* Table */}
-        <section>
-          <h2 className="mb-4">9. Tables</h2>
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Name</th>
-                  <th>Price</th>
-                  <th>Change</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="font-medium">AAPL</td>
-                  <td>Apple Inc.</td>
-                  <td>$178.45</td>
-                  <td>
-                    <span className="badge badge-success badge-sm">+2.3%</span>
-                  </td>
-                  <td>
-                    <span className="badge badge-primary badge-sm">
-                      Active
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="font-medium">MSFT</td>
-                  <td>Microsoft Corp.</td>
-                  <td>$415.20</td>
-                  <td>
-                    <span className="badge badge-error badge-sm">-1.1%</span>
-                  </td>
-                  <td>
-                    <span className="badge badge-primary badge-sm">
-                      Active
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="font-medium">GOOGL</td>
-                  <td>Alphabet Inc.</td>
-                  <td>$175.10</td>
-                  <td>
-                    <span className="badge badge-warning badge-sm">0.0%</span>
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral badge-sm">
-                      Pending
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Alerts */}
-        <section>
-          <h2 className="mb-4">10. Alerts</h2>
-          <div className="space-y-4">
-            <div className="alert alert-info" role="alert">
-              <span className="alert-icon" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 16v-4" />
-                  <path d="M12 8h.01" />
-                </svg>
-              </span>
-              <span>This is an informational alert message.</span>
-            </div>
-            <div className="alert alert-success" role="alert">
-              <span className="alert-icon" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              </span>
-              <span>Operation completed successfully.</span>
-            </div>
-            <div className="alert alert-warning" role="alert">
-              <span className="alert-icon" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                  <path d="M12 9v4" />
-                  <path d="M12 17h.01" />
-                </svg>
-              </span>
-              <span>Please review before proceeding.</span>
-            </div>
-            <div className="alert alert-error" role="alert">
-              <span className="alert-icon" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="m15 9-6 6" />
-                  <path d="m9 9 6 6" />
-                </svg>
-              </span>
-              <span>An error occurred. Please try again.</span>
-            </div>
-          </div>
+          </Card>
         </section>
 
         {/* Badges */}
         <section>
-          <h2 className="mb-4">11. Badges / Tags</h2>
-          <div className="card">
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">7. Badges</h2>
+          <Card>
             <div className="flex flex-wrap gap-3">
-              <span className="badge badge-primary badge-md">Primary</span>
-              <span className="badge badge-success badge-md">Success</span>
-              <span className="badge badge-warning badge-md">Warning</span>
-              <span className="badge badge-error badge-md">Error</span>
-              <span className="badge badge-neutral badge-md">Neutral</span>
+              <Badge variant="default">Default</Badge>
+              <Badge variant="success">Success</Badge>
+              <Badge variant="error">Error</Badge>
+              <Badge variant="warning">Warning</Badge>
+              <Badge variant="info">Info</Badge>
+              <Badge variant="neutral">Neutral</Badge>
             </div>
             <div className="flex flex-wrap gap-3 mt-4">
-              <span className="badge badge-primary badge-sm">Small</span>
-              <span className="badge badge-primary badge-md">Medium</span>
+              <Badge variant="default" size="sm">Small</Badge>
+              <Badge variant="default" size="md">Medium</Badge>
             </div>
-          </div>
+          </Card>
         </section>
 
-        {/* Grid System */}
+        {/* Table */}
         <section>
-          <h2 className="mb-4">12. Responsive Grid System</h2>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            12-column fluid grid with 16px gutters. Resize the browser to see
-            responsive behavior.
-          </p>
-          <div className="grid grid-cols-12 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-md p-4 text-center text-sm font-medium"
-              >
-                {i + 1}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            {["Column 1", "Column 2", "Column 3", "Column 4"].map((col) => (
-              <div
-                key={col}
-                className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md p-4 text-center text-sm"
-              >
-                {col}
-              </div>
-            ))}
-          </div>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">8. Tables</h2>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Symbol</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead numeric>Price</TableHead>
+                  <TableHead numeric>Change</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">AAPL</TableCell>
+                  <TableCell>Apple Inc.</TableCell>
+                  <TableCell numeric>$178.45</TableCell>
+                  <TableCell numeric><Badge variant="success">+2.3%</Badge></TableCell>
+                  <TableCell><Badge variant="default">Active</Badge></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">MSFT</TableCell>
+                  <TableCell>Microsoft Corp.</TableCell>
+                  <TableCell numeric>$415.20</TableCell>
+                  <TableCell numeric><Badge variant="error">-1.1%</Badge></TableCell>
+                  <TableCell><Badge variant="default">Active</Badge></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">GOOGL</TableCell>
+                  <TableCell>Alphabet Inc.</TableCell>
+                  <TableCell numeric>$175.10</TableCell>
+                  <TableCell numeric><Badge variant="warning">0.0%</Badge></TableCell>
+                  <TableCell><Badge variant="neutral">Pending</Badge></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Card>
         </section>
 
-        {/* Dark Mode Toggle */}
+        {/* Modal Trigger */}
         <section>
-          <h2 className="mb-4">13. Dark Mode</h2>
-          <button
-            className="btn btn-secondary btn-md"
-            onClick={() => {
-              const current = document.documentElement.getAttribute(
-                "data-theme"
-              );
-              const next = current === "dark" ? "light" : "dark";
-              document.documentElement.setAttribute("data-theme", next);
-            }}
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">9. Modal</h2>
+          <Button onClick={() => setModalOpen(true)}>Open Modal</Button>
+          <Modal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            title="Confirm Action"
+            description="Please review the details before confirming."
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
+                <Button onClick={() => setModalOpen(false)}>Confirm</Button>
+              </>
+            }
           >
-            Toggle Dark Mode
-          </button>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Are you sure you want to proceed? This action cannot be undone.
+            </p>
+          </Modal>
         </section>
-      </main>
 
-      {/* Toast */}
-      {toastVisible && (
-        <div className="toast-container">
-          <div className="toast">
-            <span className="alert-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--color-primary)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </span>
-            <span>This is a toast notification.</span>
-            <button
-              className="alert-close"
-              onClick={() => setToastVisible(false)}
-              aria-label="Close toast"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-)}
+        {/* Error Message */}
+        <section>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--color-text-primary)]">10. Error Message</h2>
+          <ErrorMessage
+            message="Something went wrong. Please try again."
+            actions={[{ label: "Retry", onAction: () => {} }]}
+            helpTitle="Troubleshooting steps"
+            moreHelpSteps={["Check your connection", "Verify your input", "Contact support"]}
+          />
+        </section>
       </div>
     </NewDashboardShell>
   );

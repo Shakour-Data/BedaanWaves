@@ -62,7 +62,7 @@ export function TableHead({ children, className, header = true, numeric }: Table
   return (
     <th
       className={cn(
-        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+        "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
         numeric && "text-right tabular-nums",
         header && "whitespace-nowrap",
         className
@@ -75,7 +75,7 @@ export function TableHead({ children, className, header = true, numeric }: Table
 
 export function TableCell({ children, className, numeric }: TableCellProps) {
   return (
-    <td className={cn("px-4 py-3 text-foreground", numeric && "text-right tabular-nums", className)}>
+    <td className={cn("px-5 py-3.5 text-foreground", numeric && "text-right tabular-nums", className)}>
       {children}
     </td>
   );

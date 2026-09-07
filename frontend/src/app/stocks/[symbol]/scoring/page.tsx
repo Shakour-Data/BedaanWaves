@@ -85,20 +85,6 @@ interface RawHierarchyScores {
   [key: string]: unknown;
 }
 
-interface RawTrendPointShape {
-  date?: string;
-  effective_at?: string;
-  time?: string;
-  overall?: number | null;
-  level_scores?: Record<string, number>;
-  scores?: Record<string, number>;
-  dimension_scores?: Record<string, number | string>;
-  sub_dimension_scores?: Record<string, number | string>;
-  aspect_scores?: Record<string, number | string>;
-  sub_aspect_scores?: Record<string, number | string>;
-  [key: string]: unknown;
-}
-
 interface RawWeightShape {
   level1?: ScoreItemShape[];
   level2?: ScoreItemShape[];
@@ -174,7 +160,7 @@ function snapshotTrendsToLegacy(snap: SnapshotResponse, tab: ScoringTab): ScoreH
   const series = tab === "HISTORICAL" ? snap.trends?.daily ?? [] : snap.trends?.intraday ?? [];
   return series.map((pt) => {
     const dateStr = pt.date ?? pt.effective_at;
-    const levelScores = (pt as any).level_scores ?? {};
+    const levelScores = pt.level_scores ?? {};
     const dimScores: Record<string, number> = {};
     const subDimScores: Record<string, number> = {};
     const aspectScores: Record<string, number> = {};
@@ -193,7 +179,7 @@ function snapshotTrendsToLegacy(snap: SnapshotResponse, tab: ScoringTab): ScoreH
     });
     return {
       date: dateStr,
-      overall: num((pt as any).overall ?? 0),
+      overall: num(pt.overall ?? 0),
       dimension_scores: dimScores,
       sub_dimension_scores: subDimScores,
       aspect_scores: aspectScores,

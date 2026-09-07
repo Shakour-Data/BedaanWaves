@@ -10,9 +10,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const sizeClasses: Record<string, string> = {
-  sm: "h-8 px-3 text-xs font-medium",
-  md: "h-10 px-4 text-sm font-medium",
-  lg: "h-12 px-6 text-base font-medium",
+  sm: "h-11 px-4 text-sm font-medium",
+  md: "h-12 px-5 text-base font-medium",
+  lg: "h-14 px-6 text-lg font-medium",
 };
 
 const variantClasses: Record<string, string> = {

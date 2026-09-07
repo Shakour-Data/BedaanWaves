@@ -8,166 +8,131 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }));
 
-vi.mock('@/store/useDateStore', () => ({
-  useSnapshot: vi.fn(),
-  useSnapshotId: vi.fn(),
-  useSnapshotTimestamp: vi.fn(),
-  useSnapshotLoading: vi.fn(),
-  useSnapshotIndex: vi.fn(),
-  useLoadSnapshot: vi.fn(),
-  useLoadSnapshotIndex: vi.fn(() => Promise.resolve(null)),
-  useSelectSnapshotById: vi.fn(),
-}));
-
-vi.mock('@/lib/api/dashboard', () => ({
-  fetchSubDimensionTrend: vi.fn(),
-  fetchAspectTrend: vi.fn(),
-  fetchSubAspectTrend: vi.fn(),
-  fetchCoefficientHistory: vi.fn(),
-  fetchCoefficientHistoryByLevel: vi.fn(),
-  fetchDashboardSnapshot: vi.fn(),
-  fetchDashboardSnapshots: vi.fn(),
-}));
-
 vi.mock('@/components/layout/NewDashboardShell', () => ({
-  NewDashboardShell: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-shell">{children}</div>,
-}));
-
-vi.mock('@/components/ui/TarotCard', () => ({
-  TarotCard: ({ children, title }: { children: React.ReactNode; title?: string }) => <div data-testid="tarot-card">{title}</div>,
+  NewDashboardShell: ({ children, title }: { children: React.ReactNode; title?: string }) => (
+    <div data-testid="dashboard-shell" data-title={title ?? ''}>
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('@/components/ui/PageLoading', () => ({
   PageLoading: () => <div data-testid="page-loading">Loading</div>,
 }));
 
-import { useSnapshot, useSnapshotId, useSnapshotTimestamp, useSnapshotLoading, useSnapshotIndex, useLoadSnapshot, useLoadSnapshotIndex, useSelectSnapshotById } from '@/store/useDateStore';
-import { fetchSubDimensionTrend, fetchAspectTrend, fetchSubAspectTrend, fetchCoefficientHistory, fetchCoefficientHistoryByLevel } from '@/lib/api/dashboard';
+vi.mock('@/components/ui/ErrorMessage', () => ({
+  ErrorMessage: ({ message }: { message: string }) => <div data-testid="error-message">{message}</div>,
+}));
 
-describe('DashboardPage', () => {
-  const mockSnapshot = {
-    scores: {
-      daily: {
-        overall: 65.5,
-        dimension: { fundamental: 70, technical: 65, sentiment: 60, risk: 55, macro: 60, ai: 65 },
-        sub_dimension: { fundamental_valuation: 72, fundamental_profitability: 68, technical_moving_averages: 64, technical_momentum: 66 },
-        aspect: { fundamental_valuation_aspect_1: 75, fundamental_valuation_aspect_2: 70 },
-        sub_aspect: { fundamental_valuation_aspect_1_detail_1: 78, fundamental_valuation_aspect_1_detail_2: 72 },
-      },
-      hourly: { overall: 65.5, dimension: {}, sub_dimension: {}, aspect: {}, sub_aspect: {} },
-      current: { overall: 65.5, dimension: {}, sub_dimension: {}, aspect: {}, sub_aspect: {} },
-    },
-    deltas: {
-      hourly_vs_daily: { overall: 0, dimensions: {}, sub_dimensions: {}, aspects: {}, sub_aspects: {} },
-      current_vs_hourly: { overall: 0, dimensions: {}, sub_dimensions: {}, aspects: {}, sub_aspects: {} },
-      current_vs_daily: { overall: 0, dimensions: {}, sub_dimensions: {}, aspects: {}, sub_aspects: {} },
-    },
-    weights: {
-      dimension: { fundamental: 0.25, technical: 0.20, sentiment: 0.15, risk: 0.20, macro: 0.10, ai: 0.10 },
-      sub_dimension: {},
-      aspect: {},
-      sub_aspect: {},
-    },
-    weight_trends: { daily: [] },
-    weight_deltas: { daily: { delta: 0, delta_pct: 0, weights: {} } },
-    trends: { daily: [], intraday: [] },
-  } as const;
+const { mockFetchDashboardData, mockFetchGeneralDashboard, mockUseUnifiedSearch } = vi.hoisted(() => ({
+  mockFetchDashboardData: vi.fn(),
+  mockFetchGeneralDashboard: vi.fn(),
+  mockUseUnifiedSearch: vi.fn(),
+}));
 
+vi.mock('@/lib/api/dashboard', () => ({
+  fetchDashboardData: mockFetchDashboardData,
+  fetchGeneralDashboard: mockFetchGeneralDashboard,
+}));
+
+vi.mock('@/components/search/UnifiedSearchBar', () => ({
+  UnifiedSearchBar: () => <div data-testid="unified-search" />,
+}));
+
+import { fetchDashboardData, fetchGeneralDashboard } from '@/lib/api/dashboard';
+
+const generalResponse = {
+  status: 'success',
+  summary: { total_symbols: 1234, total_signals: 12, total_news: 50 },
+  dimensions: {
+    fundamental: { avg_score: 72, min_score: 30, max_score: 95, stdev: 10, count: 100, distribution: { strong: 40, neutral: 40, weak: 20 } },
+    technical: { avg_score: 65, min_score: 25, max_score: 90, stdev: 12, count: 100, distribution: { strong: 30, neutral: 50, weak: 20 } },
+    sentiment: { avg_score: 55, min_score: 10, max_score: 85, stdev: 18, count: 100, distribution: { strong: 20, neutral: 50, weak: 30 } },
+  },
+  coefficients: [
+    { key: 'fundamental', label: 'Fundamental', weight: 0.4 },
+    { key: 'technical', label: 'Technical', weight: 0.3 },
+    { key: 'sentiment', label: 'Sentiment', weight: 0.3 },
+  ],
+  symbols: [],
+  top_performers: [
+    { symbol: 'AAPL', name: 'Apple Inc.', overall_score: 92.3 },
+    { symbol: 'NVDA', name: 'NVIDIA', overall_score: 89.1 },
+  ],
+  bottom_performers: [
+    { symbol: 'XYZ', name: 'XYZ Corp', overall_score: 22.1 },
+  ],
+  latest_date: '2025-01-15',
+  timestamp: '2025-01-15T00:00:00Z',
+};
+
+const legacyResponse = {
+  marketStats: [{ label: 'Active Symbols', value: '1,234', changePct: 0 }],
+  topMovers: [
+    { symbol: 'AAPL', name: 'Apple Inc.', market: 'NASDAQ' as const, price: 178.45, changePct: 2.3 },
+  ],
+  watchlist: [],
+  news: [
+    { title: 'Markets hit new high', source: 'Bloomberg', time: '2m ago' },
+  ],
+  live: true,
+};
+
+describe('DashboardPage (new)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSnapshot as unknown as { mockReturnValue: (val: unknown) => void }).mockReturnValue(mockSnapshot);
-    (useSnapshotId as unknown as { mockReturnValue: (val: string) => void }).mockReturnValue('snap-123');
-    (useSnapshotTimestamp as unknown as { mockReturnValue: (val: string) => void }).mockReturnValue('2025-01-01T00:00:00Z');
-    (useSnapshotLoading as unknown as { mockReturnValue: (val: boolean) => void }).mockReturnValue(false);
-    (useSnapshotIndex as unknown as { mockReturnValue: (val: unknown) => void }).mockReturnValue(null);
-    (useLoadSnapshot as unknown as { mockReturnValue: (val: () => Promise<unknown>) => void }).mockReturnValue(() => Promise.resolve(null));
-    (useLoadSnapshotIndex as unknown as { mockReturnValue: (val: () => Promise<unknown>) => void }).mockReturnValue(() => Promise.resolve(null));
-    (useSelectSnapshotById as unknown as { mockReturnValue: (val: unknown) => void }).mockReturnValue(null);
-
-    (fetchSubDimensionTrend as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
-      status: 'success',
-      level: 'sub_dimension',
-      days: 30,
-      market: 'NASDAQ',
-      count: 10,
-      keys: ['fundamental_valuation', 'fundamental_profitability'],
-      series: [],
-      latest_date: '2025-01-01',
-      timestamp: '2025-01-01T00:00:00Z',
-    });
-    (fetchAspectTrend as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
-      status: 'success',
-      level: 'aspect',
-      days: 30,
-      market: 'NASDAQ',
-      count: 10,
-      keys: ['fundamental_valuation_aspect_1', 'fundamental_valuation_aspect_2'],
-      series: [],
-      latest_date: '2025-01-01',
-      timestamp: '2025-01-01T00:00:00Z',
-    });
-    (fetchSubAspectTrend as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
-      status: 'success',
-      level: 'sub_aspect',
-      days: 30,
-      market: 'NASDAQ',
-      count: 10,
-      keys: ['fundamental_valuation_aspect_1_detail_1', 'fundamental_valuation_aspect_1_detail_2'],
-      series: [],
-      latest_date: '2025-01-01',
-      timestamp: '2025-01-01T00:00:00Z',
-    });
-    (fetchCoefficientHistory as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
-      status: 'success',
-      days: 30,
-      market: 'NASDAQ',
-      count: 10,
-      dimensions: ['fundamental', 'technical', 'sentiment', 'risk', 'macro', 'ai'],
-      series: [],
-      latest_date: '2025-01-01',
-      timestamp: '2025-01-01T00:00:00Z',
-    });
-    (fetchCoefficientHistoryByLevel as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
-      status: 'success',
-      level: 'sub_dimension',
-      days: 30,
-      market: 'NASDAQ',
-      parent: null,
-      count: 10,
-      latest_date: '2025-01-01',
-      series: [],
-      timestamp: '2025-01-01T00:00:00Z',
-    });
+    mockFetchGeneralDashboard.mockResolvedValue(generalResponse);
+    mockFetchDashboardData.mockResolvedValue(legacyResponse);
   });
 
-  it('should render dashboard shell', async () => {
+  it('renders the dashboard shell', async () => {
     render(<DashboardPage />);
-    expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument());
   });
 
-  it('should render general tab by default', async () => {
+  it('shows a loading skeleton on first render', () => {
+    mockFetchGeneralDashboard.mockImplementation(() => new Promise(() => {}));
+    mockFetchDashboardData.mockImplementation(() => new Promise(() => {}));
     render(<DashboardPage />);
-    expect(screen.getByText('General')).toBeInTheDocument();
+    expect(screen.getByTestId('page-loading')).toBeInTheDocument();
   });
 
-  it('should render all dimension tabs', async () => {
+  it('shows KPI cards once data is loaded', async () => {
     render(<DashboardPage />);
-    expect(screen.getByText('Fundamental')).toBeInTheDocument();
-    expect(screen.getByText('Technical')).toBeInTheDocument();
-    expect(screen.getByText('Sentiment')).toBeInTheDocument();
-    expect(screen.getByText('Risk')).toBeInTheDocument();
-    expect(screen.getByText('Macro')).toBeInTheDocument();
-    expect(screen.getByText('AI')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Universe')).toBeInTheDocument());
+    expect(screen.getByText('Avg Score')).toBeInTheDocument();
+    expect(screen.getByText('Top Scorer')).toBeInTheDocument();
+    expect(screen.getByText('1,234')).toBeInTheDocument();
   });
 
-  it('should render dimension cards at level 1', async () => {
+  it('renders the dimension scores card with bars', async () => {
     render(<DashboardPage />);
     await waitFor(() => expect(screen.getByText('Fundamental')).toBeInTheDocument());
     expect(screen.getByText('Technical')).toBeInTheDocument();
+    expect(screen.getByText('Sentiment')).toBeInTheDocument();
   });
 
-  it('should show symbol input', async () => {
+  it('renders the top performers and underperformers', async () => {
     render(<DashboardPage />);
-    expect(screen.getByPlaceholderText('Symbol (e.g. AAPL)')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('AAPL')).toBeInTheDocument());
+    expect(screen.getByText('NVDA')).toBeInTheDocument();
+    expect(screen.getByText('XYZ')).toBeInTheDocument();
+  });
+
+  it('renders news headlines', async () => {
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByText('Markets hit new high')).toBeInTheDocument());
+  });
+
+  it('renders the unified search bar', async () => {
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByTestId('unified-search')).toBeInTheDocument());
+  });
+
+  it('shows an error state when both endpoints fail', async () => {
+    mockFetchGeneralDashboard.mockRejectedValue(new Error('boom'));
+    mockFetchDashboardData.mockRejectedValue(new Error('boom'));
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
   });
 });

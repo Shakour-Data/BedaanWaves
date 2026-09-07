@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
+import { UnifiedSearchBar } from "@/components/search/UnifiedSearchBar";
 
 interface NavItem {
   label: string;
@@ -66,7 +67,9 @@ export function NewSidebar() {
   const [userExpanded, setUserExpanded] = useState<Set<string>>(new Set(["Analytics"]));
 
   const isActive = useCallback((href: string) => {
-    return pathname.startsWith(href);
+    if (href === "/dashboard") return pathname === "/" || pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
   }, [pathname]);
 
   const autoExpanded = useMemo(() => {
@@ -134,6 +137,9 @@ export function NewSidebar() {
           </div>
 
           <div className="flex-1 overflow-y-auto py-4">
+            <div className="px-3 pb-3">
+              <UnifiedSearchBar variant="sidebar" placeholder="Search stocks, news, pages…" />
+            </div>
             <nav className="flex flex-col gap-1 px-3">
               {categories.map((cat) => {
                 const isExpanded = expandedCategories.has(cat.label);
@@ -144,7 +150,7 @@ export function NewSidebar() {
                     <button
                       onClick={() => toggleCategory(cat.label)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200",
                         hasActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)]"
                       )}
                     >
@@ -170,22 +176,22 @@ export function NewSidebar() {
                         {cat.items.map((item) => {
                           const active = isActive(item.href);
                           return (
-                             <Link
-                               key={item.href}
-                               href={item.href}
-                               onClick={() => setSidebarOpen(false)}
-                               className={cn(
-                                 "group flex items-center gap-3 rounded-r-lg px-3 py-2 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
-                                 active
-                                   ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)]"
-                                   : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
-                               )}
-                             >
-                              <span
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setSidebarOpen(false)}
                                 className={cn(
-                                  "flex h-5 w-5 items-center justify-center rounded transition-colors text-[10px] font-bold",
-                                  active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                                  "group flex items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
+                                active
+                                  ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
+                                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
                                 )}
+                              >
+                               <span
+                                 className={cn(
+                                   "flex h-6 w-6 items-center justify-center rounded transition-colors text-xs font-bold",
+                                   active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                                 )}
                               >
                                 {item.marker}
                               </span>
@@ -214,25 +220,25 @@ export function NewSidebar() {
               {bottomItems.map((item) => {
                 const active = isActive(item.href);
                 return (
-                   <Link
-                     key={item.href}
-                     href={item.href}
-                     onClick={() => setSidebarOpen(false)}
-                     className={cn(
-                       "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
-                       active
-                         ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)]"
-                         : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
-                     )}
-                   >
-                    <span
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
                       className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded transition-colors text-[10px] font-bold",
-                        active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
+                        active
+                          ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
+                          : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
                       )}
                     >
-                      {item.marker}
-                    </span>
+                     <span
+                       className={cn(
+                         "flex h-6 w-6 items-center justify-center rounded transition-colors text-xs font-bold",
+                         active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                       )}
+                     >
+                       {item.marker}
+                     </span>
                     <span className="flex-1">{item.label}</span>
                     {active && (
                       <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)]" />

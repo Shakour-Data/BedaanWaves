@@ -651,6 +651,8 @@ export interface HierarchyScores {
 export interface DeltaFrame {
   overall_delta: number | null;
   overall_delta_pct: number | null;
+  overall?: number | null;
+  overall_pct?: number | null;
   dimension_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;
   sub_dimension_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;
   aspect_deltas: Record<string, { delta: number | null; delta_pct: number | null }>;

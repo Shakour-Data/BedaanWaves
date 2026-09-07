@@ -52,7 +52,7 @@ export function ProgressBar({
             <span
               key={stepNum}
               className={cn(
-                "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
+                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
                 "transition-colors duration-150",
                 isComplete
                   ? "bg-success text-white"

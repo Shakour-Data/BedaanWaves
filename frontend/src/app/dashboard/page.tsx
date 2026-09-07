@@ -1,447 +1,221 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { cn } from "@/lib/cn";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import Link from "next/link";
+import {
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Trophy,
+  Newspaper,
+  Sparkles,
+  RefreshCw,
+  BarChart3,
+  Globe,
+  ArrowUpRight,
+  Zap,
+  Newspaper as NewspaperIcon,
+} from "lucide-react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { PageLoading } from "@/components/ui/PageLoading";
-import { TarotCard } from "@/components/ui/TarotCard";
-import { SpiderChart } from "@/components/charts/SpiderChart";
-import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
-import { ColumnChart } from "@/components/charts/ColumnChart";
-import { BarChart } from "@/components/charts/BarChart";
-import { DonutChart } from "@/components/charts/DonutChart";
-import { AsOfStamp } from "@/components/scoring/AsOfStamp";
-import { ScoreTripleBadge } from "@/components/scoring/ScoreTripleBadge";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/cn";
 import {
-  fetchCoefficientHistory,
-  fetchCoefficientHistoryByLevel,
-  fetchSubDimensionTrend,
-  fetchAspectTrend,
-  fetchSubAspectTrend,
-  type CoefficientHistoryResponse,
-  type CoefficientHistoryByLevelResponse,
-  type LevelTrendResponse,
-  type WeightSnapshot,
+  fetchDashboardData,
+  fetchGeneralDashboard,
+  type GeneralDashboardResponse,
 } from "@/lib/api/dashboard";
-import {
-  useSnapshot,
-  useSnapshotId,
-  useSnapshotTimestamp,
-  useSnapshotLoading,
-  useSnapshotIndex,
-  useLoadSnapshot,
-  useLoadSnapshotIndex,
-  useSelectSnapshotById,
-} from "@/store/useDateStore";
+import { useUXStore } from "@/store/useUXStore";
+import { UnifiedSearchBar } from "@/components/search/UnifiedSearchBar";
 
-type Level = 1 | 2 | 3 | 4;
-type Tab = "general" | "fundamental" | "technical" | "sentiment" | "risk" | "macro" | "ai";
-
-const V2_HIERARCHY: Record<string, string> = {
-  valuation: "fundamental", profitability: "fundamental", growth: "fundamental", liquidity: "fundamental",
-  trend: "technical", momentum: "technical", volatility: "technical", volume: "technical",
-  news: "sentiment",
-  market_risk: "risk",
-  rates: "macro", commodity: "macro",
-  ml_signal: "ai",
-};
-
-const V2_ASPECT_TO_SUBDIM: Record<string, string> = {
-  pe_band: "valuation", roe_block: "profitability", growth_block: "growth", liquidity_block: "liquidity",
-  trend_block: "trend", momentum_block: "momentum", volatility_block: "volatility", volume_block: "volume",
-  news_block: "news", risk_block: "market_risk", rates_block: "rates", commodity_block: "commodity",
-  ml_block: "ml_signal",
-};
-
-const V2_SUBASPECT_TO_ASPECT: Record<string, string> = {
-  pe_ratio: "pe_band", pb_ratio: "pe_band", ev_ebitda: "pe_band",
-  roe: "roe_block", roa: "roe_block", profit_margin: "roe_block",
-  revenue_growth: "growth_block", eps_growth: "growth_block",
-  current_ratio: "liquidity_block", quick_ratio: "liquidity_block",
-  macd_histogram: "trend_block", bb_width: "trend_block",
-  rsi_14: "momentum_block",
-  realized_vol_30d: "volatility_block", atr_value: "volatility_block",
-  volume_ratio: "volume_block",
-  news_sentiment_avg: "news_block", news_volume: "news_block",
-  volatility_z: "risk_block", max_drawdown: "risk_block",
-  treasury_yield_10y: "rates_block", dollar_index: "rates_block",
-  oil_price: "commodity_block", gold_price: "commodity_block",
-  expected_return: "ml_block", confidence: "ml_block",
-};
-
-interface DrillState {
-  level: Level;
-  selectedKey: string | null;
-  selectedLabel: string | null;
+interface DimensionSummary {
+  avg_score: number;
+  min_score: number;
+  max_score: number;
+  count: number;
 }
 
-const LEVEL_LABELS: Record<Level, string> = {
-  1: "Dimensions",
-  2: "Sub-Dimensions",
-  3: "Aspects",
-  4: "Sub-Aspects",
-};
-
-const PALETTE = [
-  "#2563EB",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#06B6D4",
-  "#F97316",
-];
-
-const TABS: { id: Tab; label: string; marker: string }[] = [
-  { id: "general", label: "General", marker: "G" },
-  { id: "fundamental", label: "Fundamental", marker: "F" },
-  { id: "technical", label: "Technical", marker: "T" },
-  { id: "sentiment", label: "Sentiment", marker: "S" },
-  { id: "risk", label: "Risk", marker: "R" },
-  { id: "macro", label: "Macro", marker: "M" },
-  { id: "ai", label: "AI", marker: "A" },
-];
-
-function getParentKey(key: string, level: Level): string | null {
-  if (level === 1) return null;
-  if (level === 2) {
-    return V2_HIERARCHY[key] || null;
-  }
-  if (level === 3) {
-    return V2_ASPECT_TO_SUBDIM[key] || null;
-  }
-  if (level === 4) {
-    return V2_SUBASPECT_TO_ASPECT[key] || null;
-  }
-  return null;
+interface DashboardSnapshot {
+  stats: { label: string; value: string; changePct?: number }[];
+  topPerformers: { symbol: string; name: string; score: number }[];
+  bottomPerformers: { symbol: string; name: string; score: number }[];
+  movers: { symbol: string; name: string; market: "NASDAQ"; price: number; changePct: number }[];
+  watchlist: { symbol: string; name: string; market: "NASDAQ"; price: number; changePct: number }[];
+  news: { title: string; source: string; time: string }[];
+  dimensions: { key: string; label: string; weight: number; data?: DimensionSummary }[];
+  latestDate: string | null;
 }
 
-function getLabel(key: string): string {
-  const parts = key.split("_");
-  return parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+function gradeLabel(score: number): { grade: string; tone: "success" | "primary" | "warning" | "error" } {
+  if (score >= 80) return { grade: "A", tone: "success" };
+  if (score >= 65) return { grade: "B", tone: "primary" };
+  if (score >= 50) return { grade: "C", tone: "warning" };
+  return { grade: "D", tone: "error" };
+}
+
+function fmtScore(score: number | null | undefined): string {
+  if (typeof score !== "number" || !Number.isFinite(score)) return "—";
+  return score.toFixed(1);
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "—";
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function DashboardPage() {
-  const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as Tab) || "general";
-  const [activeTab, setActiveTab] = useState<Tab>(TABS.find((t) => t.id === initialTab) ? initialTab : "general");
-  const [selectedSymbol, setSelectedSymbol] = useState<string>("");
-  const [symbolInput, setSymbolInput] = useState<string>("");
+  const addToast = useUXStore((s) => s.addToast);
+  const [data, setData] = useState<DashboardSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const snapshot = useSnapshot();
-  const snapshotId = useSnapshotId();
-  const snapshotTimestamp = useSnapshotTimestamp();
-  const snapshotLoading = useSnapshotLoading();
-  const snapshotIndex = useSnapshotIndex();
-  const loadSnapshot = useLoadSnapshot();
-  const loadSnapshotIndex = useLoadSnapshotIndex();
-  const selectSnapshotById = useSelectSnapshotById();
-
-  const [drill, setDrill] = useState<DrillState>({ level: 1, selectedKey: null, selectedLabel: null });
-
-  const [subDimTrend, setSubDimTrend] = useState<LevelTrendResponse | null>(null);
-  const [aspectTrend, setAspectTrend] = useState<LevelTrendResponse | null>(null);
-  const [subAspectTrend, setSubAspectTrend] = useState<LevelTrendResponse | null>(null);
-  const [subDimCoeffHistory, setSubDimCoeffHistory] = useState<CoefficientHistoryByLevelResponse | null>(null);
-  const [aspectCoeffHistory, setAspectCoeffHistory] = useState<CoefficientHistoryByLevelResponse | null>(null);
-  const [subAspectCoeffHistory, setSubAspectCoeffHistory] = useState<CoefficientHistoryByLevelResponse | null>(null);
-  const [coeffHistory, setCoeffHistory] = useState<CoefficientHistoryResponse | null>(null);
-
-  useEffect(() => {
-    loadSnapshotIndex({ hourly_limit: 168, daily_limit: 90 });
-  }, [loadSnapshotIndex]);
-
-  useEffect(() => {
-    async function load() {
-      await loadSnapshot({
-        window_daily: 30,
-        window_intraday: "24h",
-        symbol: selectedSymbol || undefined,
-      });
-    }
-    load();
-  }, [loadSnapshot, activeTab, selectedSymbol]);
-
-  useEffect(() => {
-    if (!snapshot) return;
-    let active = true;
-    async function load() {
-      const latestDate = snapshotTimestamp ? new Date(snapshotTimestamp).toISOString().split("T")[0] : null;
-      const baseOptions = latestDate ? { endDate: latestDate } : { latest: true };
-
-      const [subDim, asp, subAsp, subDimCoeff, aspCoeff, subAspCoeff, coeff] = await Promise.allSettled([
-        fetchSubDimensionTrend(30, "NASDAQ", baseOptions),
-        fetchAspectTrend(30, "NASDAQ", baseOptions),
-        fetchSubAspectTrend(30, "NASDAQ", baseOptions),
-        fetchCoefficientHistoryByLevel("sub_dimension", 30, "NASDAQ", drill.level >= 2 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-        fetchCoefficientHistoryByLevel("aspect", 30, "NASDAQ", drill.level >= 3 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-        fetchCoefficientHistoryByLevel("sub_aspect", 30, "NASDAQ", drill.level >= 4 ? { ...baseOptions, parent: drill.selectedKey || undefined } : baseOptions),
-        fetchCoefficientHistory(30, "NASDAQ", baseOptions),
+  const load = useCallback(async (mode: "initial" | "refresh") => {
+    if (mode === "initial") setLoading(true);
+    else setRefreshing(true);
+    setError(null);
+    try {
+      const [general, legacy] = await Promise.allSettled([
+        fetchGeneralDashboard(),
+        fetchDashboardData(),
       ]);
 
-      if (!active) return;
-      if (subDim.status === "fulfilled") setSubDimTrend(subDim.value);
-      if (asp.status === "fulfilled") setAspectTrend(asp.value);
-      if (subAsp.status === "fulfilled") setSubAspectTrend(subAsp.value);
-      if (subDimCoeff.status === "fulfilled") setSubDimCoeffHistory(subDimCoeff.value);
-      if (aspCoeff.status === "fulfilled") setAspectCoeffHistory(aspCoeff.value);
-      if (subAspCoeff.status === "fulfilled") setSubAspectCoeffHistory(subAspCoeff.value);
-      if (coeff.status === "fulfilled") setCoeffHistory(coeff.value);
-    }
-    load();
-    return () => { active = false; };
-  }, [snapshot, drill.level, drill.selectedKey, snapshotTimestamp]);
-
-  const mergedSnapshotIndex = useMemo(() => {
-    if (!snapshotIndex) return [];
-    const hourly = Array.isArray(snapshotIndex.hourly) ? snapshotIndex.hourly : [];
-    const daily = Array.isArray(snapshotIndex.daily) ? snapshotIndex.daily : [];
-    const all = [...hourly, ...daily].filter(
-      (e) => e && typeof e.effectiveAt === "string" && typeof e.snapshotId === "string"
-    );
-    all.sort((a, b) => new Date(b.effectiveAt).getTime() - new Date(a.effectiveAt).getTime());
-    return all;
-  }, [snapshotIndex]);
-
-  const [sliderIndex, setSliderIndex] = useState(0);
-
-  useEffect(() => {
-    if (!mergedSnapshotIndex || mergedSnapshotIndex.length === 0) return;
-    if (sliderIndex >= 0 && sliderIndex < mergedSnapshotIndex.length) {
-      const entry = mergedSnapshotIndex[sliderIndex];
-      if (entry.snapshotId && entry.snapshotId !== snapshotId) {
-        selectSnapshotById(entry.snapshotId);
+      if (general.status === "rejected" && legacy.status === "rejected") {
+        const msg =
+          (general.reason instanceof Error && general.reason.message) ||
+          (legacy.reason instanceof Error && legacy.reason.message) ||
+          "Failed to load dashboard data";
+        setError(msg);
+        if (mode === "initial") {
+          addToast({ type: "error", message: msg });
+        }
+        return;
       }
-    }
-  }, [sliderIndex, mergedSnapshotIndex, snapshotId, selectSnapshotById]);
 
-  const hierarchyScores = useMemo(() => {
-    if (!snapshot) return null;
-    return snapshot.scores.daily;
-  }, [snapshot]);
+      const g: GeneralDashboardResponse | null =
+        general.status === "fulfilled" ? general.value : null;
+      const l =
+        legacy.status === "fulfilled"
+          ? legacy.value
+          : null;
 
-  const weights = useMemo<WeightSnapshot | null>(() => {
-    if (!snapshot) return null;
-    return snapshot.weights;
-  }, [snapshot]);
-
-  const itemsForLevel = useMemo(() => {
-    if (!hierarchyScores) return [];
-    if (drill.level === 1) {
-      return Object.entries(hierarchyScores.dimension || {}).map(([key, value]) => ({
+      const dimensions = Object.entries(g?.dimensions ?? {}).map(([key, value]) => ({
         key,
-        label: getLabel(key),
-        score: value,
+        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
+        weight: 0,
+        data: value as DimensionSummary,
       }));
-    }
-    if (drill.level === 2) {
-      const parent = drill.selectedKey || "";
-      return Object.entries(hierarchyScores.sub_dimension || {}).map(([key, value]) => {
-        const keyParent = getParentKey(key, 2);
-        if (keyParent !== parent && parent) return null;
-        return {
-          key,
-          label: getLabel(key.replace(`${parent}_`, "").replace("_", " ")),
-          score: value,
-        };
-      }).filter(Boolean) as { key: string; label: string; score: number }[];
-    }
-    if (drill.level === 3) {
-      const parent = drill.selectedKey || "";
-      return Object.entries(hierarchyScores.aspect || {}).map(([key, value]) => {
-        const keyParent = getParentKey(key, 3);
-        if (keyParent !== parent && parent) return null;
-        return {
-          key,
-          label: getLabel(key.replace(`${parent}_`, "").replace("_aspect_", " Aspect ")),
-          score: value,
-        };
-      }).filter(Boolean) as { key: string; label: string; score: number }[];
-    }
-    const parent = drill.selectedKey || "";
-    return Object.entries(hierarchyScores.sub_aspect || {}).map(([key, value]) => {
-      const keyParent = getParentKey(key, 4);
-      if (keyParent !== parent && parent) return null;
-      return {
-        key,
-        label: getLabel(key.replace(`${parent}_`, "").replace("_detail_", " Detail ")),
-        score: value,
+
+      const coeffs = g?.coefficients ?? [];
+      const dimMap = new Map(dimensions.map((d) => [d.key, d]));
+      for (const c of coeffs) {
+        const existing = dimMap.get(c.key);
+        if (existing) existing.weight = c.weight;
+      }
+
+      const merged: DashboardSnapshot = {
+        stats: [
+          { label: "Universe", value: String(g?.summary?.total_symbols ?? l?.marketStats?.[0]?.value ?? "—") },
+          { label: "Avg Score", value: g ? fmtScore(g.dimensions && Object.values(g.dimensions)[0]?.avg_score) : "—" },
+          {
+            label: "Top Scorer",
+            value: g?.top_performers?.[0]
+              ? `${g.top_performers[0].symbol} ${fmtScore(g.top_performers[0].overall_score)}`
+              : "—",
+          },
+          {
+            label: "Latest Snapshot",
+            value: g?.latest_date ? new Date(g.latest_date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—",
+          },
+        ],
+        topPerformers: (g?.top_performers ?? []).slice(0, 5).map((p) => ({
+          symbol: p.symbol,
+          name: p.name,
+          score: p.overall_score,
+        })),
+        bottomPerformers: (g?.bottom_performers ?? []).slice(0, 5).map((p) => ({
+          symbol: p.symbol,
+          name: p.name,
+          score: p.overall_score,
+        })),
+        movers: l?.topMovers ?? [],
+        watchlist: l?.watchlist ?? [],
+        news: l?.news ?? [],
+        dimensions: dimMap.size > 0
+          ? Array.from(dimMap.values())
+          : [
+              { key: "fundamental", label: "Fundamental", weight: 0.2, data: undefined },
+              { key: "technical", label: "Technical", weight: 0.2, data: undefined },
+              { key: "sentiment", label: "Sentiment", weight: 0.15, data: undefined },
+              { key: "risk", label: "Risk", weight: 0.15, data: undefined },
+              { key: "macro", label: "Macro", weight: 0.15, data: undefined },
+              { key: "ai", label: "AI", weight: 0.15, data: undefined },
+            ],
+        latestDate: g?.latest_date ?? null,
       };
-    }).filter(Boolean) as { key: string; label: string; score: number }[];
-  }, [hierarchyScores, drill.level, drill.selectedKey]);
-
-  const spiderData = useMemo(() => itemsForLevel.map((i) => ({ label: i.label, value: i.score })), [itemsForLevel]);
-
-  const level1TrendSeries = useMemo(() => {
-    if (!snapshot || drill.level !== 1) return [];
-    const dailyPoints = snapshot.trends.daily || [];
-    const dims = Object.keys(hierarchyScores?.dimension || {});
-    return dims.map((dim, i) => ({
-      key: dim,
-      label: getLabel(dim),
-      color: PALETTE[i % PALETTE.length],
-      data: dailyPoints.map((pt) => ({
-        time: pt.date,
-        value: (pt.level_scores && typeof pt.level_scores[dim] === 'number') ? pt.level_scores[dim] : (pt.overall ?? 0),
-      })),
-    }));
-  }, [snapshot, drill.level, hierarchyScores]);
-
-  const level1ChangeSeries = useMemo(() => {
-    if (!snapshot || drill.level !== 1) return [];
-    const dailyPoints = snapshot.trends.daily || [];
-    const dims = Object.keys(hierarchyScores?.dimension || {});
-    return dims.map((dim, i) => {
-      const series = dailyPoints.map((pt, idx) => {
-        const curr = (pt.level_scores && typeof pt.level_scores[dim] === 'number') ? pt.level_scores[dim] : (pt.overall ?? 0);
-        const prev = idx > 0 ? ((dailyPoints[idx - 1].level_scores && typeof dailyPoints[idx - 1].level_scores[dim] === 'number') ? dailyPoints[idx - 1].level_scores[dim] : (dailyPoints[idx - 1].overall ?? 0)) : curr;
-        return { time: pt.date, value: curr - prev };
-      });
-      return {
-        key: dim,
-        label: getLabel(dim),
-        color: PALETTE[i % PALETTE.length],
-        data: series,
-      };
-    });
-  }, [snapshot, drill.level, hierarchyScores]);
-
-  const trendSeriesForLevel = useMemo(() => {
-    if (!hierarchyScores || !itemsForLevel.length) return [];
-    if (drill.level === 1) return level1TrendSeries;
-    const trendResponse = drill.level === 2 ? subDimTrend : drill.level === 3 ? aspectTrend : subAspectTrend;
-    if (!trendResponse || trendResponse.series.length === 0) return [];
-    const keys = trendResponse.keys.filter((k) => trendResponse.series.some((pt) => (pt.avg_scores[k] ?? 0) > 0));
-    return keys.map((key, i) => ({
-      key,
-      label: getLabel(key),
-      color: PALETTE[i % PALETTE.length],
-      data: trendResponse.series.map((pt) => ({ time: pt.date, value: pt.avg_scores[key] ?? 0 })),
-    }));
-  }, [hierarchyScores, itemsForLevel, drill.level, level1TrendSeries, subDimTrend, aspectTrend, subAspectTrend]);
-
-  const changeSeriesForLevel = useMemo(() => {
-    if (!hierarchyScores || !itemsForLevel.length) return [];
-    if (drill.level === 1) {
-      return level1ChangeSeries.flatMap((series) => series.data.map((pt) => ({ ...pt, color: pt.value >= 0 ? "#10b981" : "#ef4444" })));
+      setData(merged);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load dashboard";
+      setError(msg);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    const trendResponse = drill.level === 2 ? subDimTrend : drill.level === 3 ? aspectTrend : subAspectTrend;
-    if (!trendResponse || trendResponse.series.length === 0) return [];
-    return trendResponse.series.map((pt) => {
-      const total = Object.values(pt.score_changes ?? {}).reduce((sum, v) => sum + v, 0);
-      return { time: pt.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
-    });
-  }, [hierarchyScores, itemsForLevel, drill.level, level1ChangeSeries, subDimTrend, aspectTrend, subAspectTrend]);
+  }, [addToast]);
 
-  const coeffSeriesForLevel = useMemo(() => {
-    if (!hierarchyScores || drill.level === 1) return [];
-    const coeffHistory = drill.level === 2 ? subDimCoeffHistory : drill.level === 3 ? aspectCoeffHistory : subAspectCoeffHistory;
-    if (!coeffHistory || coeffHistory.series.length === 0) return [];
-    const dims = coeffHistory.series[0]?.metrics ? Object.keys(coeffHistory.series[0].metrics) : [];
-    return dims.map((dim, i) => ({
-      key: dim,
-      label: getLabel(dim),
-      color: PALETTE[i % PALETTE.length],
-      data: coeffHistory.series.map((p) => ({ time: p.date, value: p.metrics?.[dim] ?? 0 })),
-    }));
-  }, [hierarchyScores, drill.level, subDimCoeffHistory, aspectCoeffHistory, subAspectCoeffHistory]);
-
-  const coeffChangeSeries = useMemo(() => {
-    if (!hierarchyScores || drill.level === 1) return [];
-    const coeffHistory = drill.level === 2 ? subDimCoeffHistory : drill.level === 3 ? aspectCoeffHistory : subAspectCoeffHistory;
-    if (!coeffHistory || coeffHistory.series.length === 0) return [];
-    return coeffHistory.series.map((p) => {
-      const total = Object.values(p.metric_changes ?? {}).reduce((sum, v) => sum + v, 0);
-      return { time: p.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
-    });
-  }, [hierarchyScores, drill.level, subDimCoeffHistory, aspectCoeffHistory, subAspectCoeffHistory]);
-
-  const level1CoeffChangeSeries = useMemo(() => {
-    if (!coeffHistory || drill.level !== 1) return [];
-    return coeffHistory.series.map((pt) => {
-      const total = Object.values(pt.dimension_changes ?? {}).reduce((sum, v) => sum + v, 0);
-      return { time: pt.date, value: total, color: total >= 0 ? "#10b981" : "#ef4444" };
-    });
-  }, [coeffHistory, drill.level]);
-
-  const donutDataForLevel = useMemo(() => {
-    if (!weights) return [];
-    if (drill.level === 1) {
-      return Object.entries(weights.dimension || {}).map(([key, value], i) => ({
-        label: getLabel(key),
-        value,
-        color: PALETTE[i % PALETTE.length],
-      }));
+  const initialLoadRef = useRef(true);
+  useEffect(() => {
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      void load("initial");
     }
-    if (drill.level === 2) {
-      const parent = drill.selectedKey || "";
-      const entries = Object.entries(weights.sub_dimension || {});
-      const filtered = parent ? entries.filter(([k]) => getParentKey(k, 2) === parent) : entries;
-      return filtered.map(([key, value], i) => ({
-        label: getLabel(key.replace(`${parent}_`, "").replace("_", " ")),
-        value,
-        color: PALETTE[i % PALETTE.length],
-      }));
-    }
-    if (drill.level === 3) {
-      const parent = drill.selectedKey || "";
-      const entries = Object.entries(weights.aspect || {});
-      const filtered = parent ? entries.filter(([k]) => getParentKey(k, 3) === parent) : entries;
-      return filtered.map(([key, value], i) => ({
-        label: getLabel(key.replace(`${parent}_`, "").replace("_aspect_", " Aspect ")),
-        value,
-        color: PALETTE[i % PALETTE.length],
-      }));
-    }
-    const parent = drill.selectedKey || "";
-    const entries = Object.entries(weights.sub_aspect || {});
-    const filtered = parent ? entries.filter(([k]) => getParentKey(k, 4) === parent) : entries;
-    return filtered.map(([key, value], i) => ({
-      label: getLabel(key.replace(`${parent}_`, "").replace("_detail_", " Detail ")),
-      value,
-      color: PALETTE[i % PALETTE.length],
-    }));
-  }, [weights, drill.level, drill.selectedKey]);
+  }, [load]);
 
-  const handleDrillDown = useCallback((item: { key: string; label: string }) => {
-    setDrill({
-      level: Math.min(drill.level + 1, 4) as Level,
-      selectedKey: item.key,
-      selectedLabel: item.label,
-    });
-  }, [drill.level]);
+  const maxDimAvg = useMemo(() => {
+    if (!data) return 100;
+    const vals = data.dimensions
+      .map((d) => d.data?.avg_score ?? 0)
+      .filter((v) => v > 0);
+    return Math.max(100, ...vals);
+  }, [data]);
 
-  const handleBreadcrumb = useCallback((level: Level) => {
-    setDrill({
-      level,
-      selectedKey: level === 1 ? null : drill.selectedKey,
-      selectedLabel: level === 1 ? null : drill.selectedLabel,
-    });
-  }, [drill.selectedKey, drill.selectedLabel]);
+  if (loading) {
+    return (
+      <NewDashboardShell title="Dashboard">
+        <PageLoading />
+      </NewDashboardShell>
+    );
+  }
 
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setDrill({ level: 1, selectedKey: null, selectedLabel: null });
-  };
+  if (error && !data) {
+    return (
+      <NewDashboardShell title="Dashboard">
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <ErrorMessage
+            message={error}
+            actions={[{ label: "Retry", onAction: () => load("initial") }]}
+            moreHelpSteps={[
+              "Check that the backend API is running on port 3000",
+              "Verify your authentication token is still valid",
+              "Try again in a few seconds",
+            ]}
+            helpTitle="Troubleshooting steps"
+          />
+        </div>
+      </NewDashboardShell>
+    );
+  }
 
-  const handleSymbolSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const sym = symbolInput.trim().toUpperCase();
-    if (sym) {
-      setSelectedSymbol(sym);
-      setDrill({ level: 1, selectedKey: null, selectedLabel: null });
-    }
-  };
-
-  const handleClearSymbol = () => {
-    setSelectedSymbol("");
-    setSymbolInput("");
-    setDrill({ level: 1, selectedKey: null, selectedLabel: null });
-  };
-
-  if (snapshotLoading) {
+  if (!data) {
     return (
       <NewDashboardShell title="Dashboard">
         <PageLoading />
@@ -450,295 +224,332 @@ export default function DashboardPage() {
   }
 
   return (
-    <NewDashboardShell title="Hierarchical Dashboard">
+    <NewDashboardShell title="Dashboard">
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-              Hierarchical Market Dashboard
-            </h1>
-            <div className="mt-2">
-              <AsOfStamp
-                effectiveAt={snapshotTimestamp ?? null}
-                snapshotId={snapshotId ?? null}
-                loading={snapshotLoading}
-                variant="emphasis"
-              />
-            </div>
-          </div>
-          <form onSubmit={handleSymbolSubmit} className="flex items-center gap-2">
-            <input
-              type="text"
-              value={symbolInput}
-              onChange={(e) => setSymbolInput(e.target.value)}
-              placeholder="Symbol (e.g. AAPL)"
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="rounded-xl border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white"
-            >
-              Go
-            </button>
-            {selectedSymbol && (
-              <button
-                type="button"
-                onClick={handleClearSymbol}
-                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-              >
-                Clear
-              </button>
-            )}
-          </form>
-        </div>
-
-        {snapshot && (
-          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
+                <Sparkles className="h-5 w-5" />
+              </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
-                  THREE-FRAME SCORE REFERENCE
-                </h2>
-                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                  PREV DAY (00:00 UTC) · PREV HOUR · CURRENT LIVE · source snapshot #{snapshotId?.slice(0, 8) ?? "—"}
-                  {selectedSymbol && ` · Symbol: ${selectedSymbol}`}
+                <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
+                  Market Dashboard
+                </h1>
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  Live NASDAQ overview · last update {fmtDate(data.latestDate)}
                 </p>
               </div>
             </div>
-            <ScoreTripleBadge
-              scores={snapshot.scores}
-              deltas={snapshot.deltas}
-              showDailyDelta
-              size="md"
-            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => load("refresh")}
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+              Refresh
+            </button>
+            <Link
+              href="/leaderboard"
+              className="inline-flex items-center gap-2 rounded-xl border border-transparent bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
+            >
+              View leaderboard
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </header>
+
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-[var(--color-primary)]" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              Quick search
+            </h2>
+          </div>
+          <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
+            Search any stock, news headline, or page in the sidebar. Or use the quick search below.
+          </p>
+          <UnifiedSearchBar variant="topbar" placeholder="Search stocks, news, or pages…" />
+        </section>
+
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {data.stats.map((s) => (
+            <Card key={s.label} className="flex flex-col gap-1 p-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                {s.label}
+              </span>
+              <span className="text-xl font-bold text-[var(--color-text-primary)]">{s.value}</span>
+            </Card>
+          ))}
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-[var(--color-primary)]" />
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                  Dimension scores
+                </h2>
+              </div>
+              <Link
+                href="/scoring"
+                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+              >
+                View details →
+              </Link>
+            </div>
+            <ul className="flex flex-col gap-3">
+              {data.dimensions.map((d) => {
+                const avg = d.data?.avg_score ?? 0;
+                const pct = Math.max(0, Math.min(100, (avg / maxDimAvg) * 100));
+                const { grade, tone } = gradeLabel(avg);
+                return (
+                  <li key={d.key} className="flex items-center gap-3">
+                    <span className="w-28 text-sm font-medium text-[var(--color-text-primary)]">{d.label}</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--color-muted)]">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          tone === "success" && "bg-[var(--color-success)]",
+                          tone === "primary" && "bg-[var(--color-primary)]",
+                          tone === "warning" && "bg-[var(--color-warning)]",
+                          tone === "error" && "bg-[var(--color-error)]"
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="w-16 text-right text-sm font-semibold text-[var(--color-text-primary)]">
+                      {fmtScore(avg)}
+                    </span>
+                    <span
+                      className={cn(
+                        "inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
+                        tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+                        tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+                        tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+                        tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
+                      )}
+                    >
+                      {grade}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-[var(--color-primary)]" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Latest news
+              </h2>
+            </div>
+            {data.news.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-muted)]">No news available right now.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {data.news.slice(0, 6).map((n, i) => (
+                  <li key={i} className="border-b border-[var(--color-border)] pb-3 last:border-b-0 last:pb-0">
+                    <p className="line-clamp-2 text-sm font-medium text-[var(--color-text-primary)]">{n.title}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                      {n.source}
+                      {n.time ? ` · ${n.time}` : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href="/news"
+              className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              See all news <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </Card>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-[var(--color-warning)]" />
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                  Top performers
+                </h2>
+              </div>
+              <Link
+                href="/leaderboard"
+                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+              >
+                See all →
+              </Link>
+            </div>
+            {data.topPerformers.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-muted)]">No data available.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {data.topPerformers.map((p) => {
+                  const { grade, tone } = gradeLabel(p.score);
+                  return (
+                    <li key={p.symbol}>
+                      <Link
+                        href={`/stocks/${p.symbol}`}
+                        className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--color-muted)]"
+                      >
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold",
+                            tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+                            tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+                            tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+                            tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
+                          )}
+                        >
+                          {grade}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{p.symbol}</p>
+                          <p className="truncate text-xs text-[var(--color-text-secondary)]">{p.name}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm font-semibold text-[var(--color-success)]">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          {fmtScore(p.score)}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-[var(--color-error)]" />
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                  Underperformers
+                </h2>
+              </div>
+              <Link
+                href="/movers"
+                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+              >
+                See all →
+              </Link>
+            </div>
+            {data.bottomPerformers.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-muted)]">No data available.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {data.bottomPerformers.map((p) => {
+                  const { grade, tone } = gradeLabel(p.score);
+                  return (
+                    <li key={p.symbol}>
+                      <Link
+                        href={`/stocks/${p.symbol}`}
+                        className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--color-muted)]"
+                      >
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold",
+                            tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+                            tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+                            tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+                            tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
+                          )}
+                        >
+                          {grade}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{p.symbol}</p>
+                          <p className="truncate text-xs text-[var(--color-text-secondary)]">{p.name}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm font-semibold text-[var(--color-error)]">
+                          <TrendingDown className="h-3.5 w-3.5" />
+                          {fmtScore(p.score)}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        </section>
+
+        {data.watchlist.length > 0 && (
+          <section>
+            <Card className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-[var(--color-primary)]" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                    Your watchlist
+                  </h2>
+                </div>
+                <Link
+                  href="/watchlist"
+                  className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  Open watchlist →
+                </Link>
+              </div>
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {data.watchlist.slice(0, 6).map((w) => {
+                  const positive = w.changePct >= 0;
+                  return (
+                    <li key={w.symbol}>
+                      <Link
+                        href={`/stocks/${w.symbol}`}
+                        className="flex items-center justify-between rounded-lg border border-[var(--color-border)] p-3 transition-colors hover:border-[var(--color-primary)]/30"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">{w.symbol}</p>
+                          <p className="text-xs text-[var(--color-text-secondary)]">{w.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                            ${w.price.toFixed(2)}
+                          </p>
+                          <p
+                            className={cn(
+                              "text-xs font-medium",
+                              positive ? "text-[var(--color-success)]" : "text-[var(--color-error)]"
+                            )}
+                          >
+                            {positive ? "+" : ""}
+                            {w.changePct.toFixed(2)}%
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
           </section>
         )}
 
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap",
-                activeTab === tab.id
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text-primary)]"
-              )}
-            >
-              <span>{tab.marker}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {mergedSnapshotIndex && mergedSnapshotIndex.length > 0 && (
-          <TarotCard title="[SR] SNAPSHOT REPLAY — Drag to travel in time">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="font-mono text-muted-foreground">
-                  EARLIEST · {mergedSnapshotIndex[mergedSnapshotIndex.length - 1]?.effectiveAt?.slice(0, 16)?.replace("T", " ") ?? "—"}
-                </span>
-                <span className="font-semibold text-[var(--color-primary)]">
-                  {mergedSnapshotIndex[sliderIndex]?.effectiveAt?.slice(0, 16)?.replace("T", " ") ?? "NOW"}
-                </span>
-                <span className="font-mono text-muted-foreground">
-                  LATEST · {mergedSnapshotIndex[0]?.effectiveAt?.slice(0, 16)?.replace("T", " ") ?? "—"}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={mergedSnapshotIndex.length - 1}
-                value={sliderIndex}
-                onChange={(e) => setSliderIndex(parseInt(e.target.value, 10))}
-                aria-label="Snapshot time travel slider"
-                className="w-full h-2 bg-[var(--color-neutral)] rounded-full appearance-none cursor-pointer accent-[var(--color-primary)]"
-              />
-            </div>
-          </TarotCard>
-        )}
-
-        {drill.level > 1 && (
-          <div className="flex items-center gap-2 text-sm">
-            <button
-              type="button"
-              onClick={() => handleBreadcrumb(1)}
-              className={cn(
-                "rounded-full px-3 py-1 transition",
-                drill.level === 1
-                  ? "bg-primary/10 font-semibold text-primary"
-                  : "text-muted-foreground hover:bg-neutral"
-              )}
-            >
-              {LEVEL_LABELS[1]}
-            </button>
-            {drill.level >= 2 && drill.selectedLabel && (
-              <>
-                <span className="text-muted-foreground">/</span>
-                <button
-                  type="button"
-                  onClick={() => handleBreadcrumb(2)}
-                  className={cn(
-                    "rounded-full px-3 py-1 transition",
-                    drill.level === 2
-                      ? "bg-primary/10 font-semibold text-primary"
-                      : "text-muted-foreground hover:bg-neutral"
-                  )}
-                >
-                  {drill.selectedLabel}
-                </button>
-              </>
-            )}
-            {drill.level >= 3 && drill.selectedLabel && (
-              <>
-                <span className="text-muted-foreground">/</span>
-                <button
-                  type="button"
-                  onClick={() => handleBreadcrumb(3)}
-                  className={cn(
-                    "rounded-full px-3 py-1 transition",
-                    drill.level === 3
-                      ? "bg-primary/10 font-semibold text-primary"
-                      : "text-muted-foreground hover:bg-neutral"
-                  )}
-                >
-                  {drill.selectedLabel}
-                </button>
-              </>
-            )}
-            {drill.level >= 4 && drill.selectedLabel && (
-              <>
-                <span className="text-muted-foreground">/</span>
-                <span className="text-foreground">{drill.selectedLabel}</span>
-              </>
-            )}
+        <footer className="flex items-center justify-between rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 text-xs text-[var(--color-text-muted)]">
+          <div className="flex items-center gap-2">
+            <NewspaperIcon className="h-3.5 w-3.5" />
+            <span>
+              Use the search in the sidebar to jump to any stock, news headline, or page.
+            </span>
           </div>
-        )}
-
-        {spiderData.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Spider Chart (Radar)`}>
-            <div className="flex justify-center">
-              <SpiderChart
-                data={spiderData}
-                size={360}
-                color={PALETTE[0]}
-                onLabelClick={drill.level < 4 ? (label) => {
-                  const item = itemsForLevel.find((i) => i.label === label);
-                  if (item) handleDrillDown(item);
-                } : undefined}
-              />
-            </div>
-          </TarotCard>
-        )}
-
-        {trendSeriesForLevel.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Trend (30-Day)`}>
-            <ScoreTrendChart showLegend series={trendSeriesForLevel} height={280} />
-          </TarotCard>
-        )}
-
-        {changeSeriesForLevel.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Score Changes (Daily Delta)`}>
-            {drill.level === 1 ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {level1ChangeSeries.map((series) => (
-                  <div key={series.key} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: series.color }} />
-                      <span className="text-xs font-medium text-[var(--color-text-secondary)]">{series.label}</span>
-                    </div>
-                    <ColumnChart data={series.data} height={120} valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <ColumnChart
-                data={changeSeriesForLevel}
-                height={220}
-                valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
-              />
-            )}
-          </TarotCard>
-        )}
-
-        {donutDataForLevel.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Weights (Donut)`}>
-            <div className="flex justify-center">
-              <DonutChart data={donutDataForLevel} size={280} thickness={50} />
-            </div>
-          </TarotCard>
-        )}
-
-        {coeffSeriesForLevel.length > 0 && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficient Trend (30-Day)`}>
-            <ScoreTrendChart showLegend series={coeffSeriesForLevel} height={260} />
-          </TarotCard>
-        )}
-
-        {(drill.level === 1 ? coeffChangeSeries.length > 0 || level1CoeffChangeSeries.length > 0 : coeffChangeSeries.length > 0) && (
-          <TarotCard title={`${LEVEL_LABELS[drill.level]} — Coefficient Changes (Daily Delta)`}>
-            {drill.level === 1 && coeffHistory ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 text-[var(--color-text-secondary)]">Column View</h4>
-                  <ColumnChart
-                    data={level1CoeffChangeSeries}
-                    height={200}
-                    valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(4)}
-                  />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 text-[var(--color-text-secondary)]">Horizontal Bar View</h4>
-                  <BarChart
-                    data={level1CoeffChangeSeries}
-                    height={200}
-                  />
-                </div>
-              </div>
-            ) : (
-              <ColumnChart
-                data={coeffChangeSeries}
-                height={200}
-                valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(4)}
-              />
-            )}
-          </TarotCard>
-        )}
-
-        {itemsForLevel.length > 0 && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {itemsForLevel.map((item) => (
-              <TarotCard
-                key={item.key}
-                className="cursor-pointer transition hover:border-[var(--color-primary)]/30"
-                onClick={() => handleDrillDown(item)}
-                aria-label={`Drill down into ${item.label}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase">{item.label}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="font-bold text-lg">{item.score?.toFixed(1)}</span>
-                      <div className="h-1.5 flex-1 mx-2 bg-border rounded-full overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            (item.score ?? 0) >= 70 ? "bg-green-600" : (item.score ?? 0) >= 40 ? "bg-yellow-500" : "bg-red-600"
-                          )}
-                          style={{ width: `${Math.max(0, Math.min(100, item.score ?? 0))}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {drill.level < 4 ? "Click to drill →" : "Lowest level"}
-                  </div>
-                </div>
-              </TarotCard>
-            ))}
-          </div>
-        )}
+          <Link
+            href="/methodology"
+            className="font-medium text-[var(--color-primary)] hover:underline"
+          >
+            How scores are calculated →
+          </Link>
+        </footer>
       </div>
     </NewDashboardShell>
   );

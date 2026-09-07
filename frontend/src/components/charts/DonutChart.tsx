@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 interface DonutChartProps {
   data: { label: string; value: number; color?: string }[];
   size?: number;
@@ -19,6 +21,30 @@ const DEFAULT_COLORS = [
 
 export function DonutChart({ data, size = 240, thickness = 40 }: DonutChartProps) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
+  const radius = (size - thickness) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const offsets = useMemo(() => {
+    const result: number[] = [];
+    let currentOffset = 0;
+    for (const d of data) {
+      result.push(currentOffset);
+      const fraction = d.value / total;
+      currentOffset += fraction * circumference;
+    }
+    return result;
+  }, [data, total, circumference]);
+
+  const segments = useMemo(() => {
+    return data.map((d, i) => ({
+      ...d,
+      fraction: d.value / total,
+      segmentLength: (d.value / total) * circumference,
+      offset: offsets[i] ?? 0,
+      color: d.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+    }));
+  }, [data, total, circumference, offsets]);
+
   if (total <= 0 || data.length === 0) {
     return (
       <div
@@ -30,29 +56,16 @@ export function DonutChart({ data, size = 240, thickness = 40 }: DonutChartProps
     );
   }
 
-  const radius = (size - thickness) / 2;
-  const circumference = 2 * Math.PI * radius;
-  let currentOffset = 0;
-
-  const segments = data.map((d, i) => {
-    const fraction = d.value / total;
-    const segmentLength = fraction * circumference;
-    const offset = currentOffset;
-    currentOffset += segmentLength;
-    return {
-      ...d,
-      fraction,
-      segmentLength,
-      offset,
-      color: d.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
-    };
-  });
-
   const center = size / 2;
 
   return (
     <div className="relative inline-flex flex-col items-center gap-4">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="transform -rotate-90"
+      >
         <circle
           cx={center}
           cy={center}

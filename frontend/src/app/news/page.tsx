@@ -257,7 +257,7 @@ export default function NewsPage() {
   const setCategory = useCallback((cat: string | null) => {
     setFilter((prev) => ({
       ...prev,
-      category: cat as NewsFilterState["category"],
+      category: (cat ?? "all") as NewsFilterState["category"],
       marketMovingOnly: false,
     }));
   }, []);

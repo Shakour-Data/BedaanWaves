@@ -82,7 +82,7 @@ export function ConditionRow({ condition, fields, onUpdate, onRemove }: Conditio
     setValueTypeError(false);
   };
 
-  const inputClass = "h-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 transition duration-fast ease-flow";
+  const inputClass = "h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-base text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 transition duration-200 ease-out";
 
   const renderValueInput = () => {
     if (condition.operator === "is_null" || condition.operator === "is_not_null") {

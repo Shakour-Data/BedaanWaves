@@ -586,7 +586,7 @@ export default function StockDetailPage() {
                     type="button"
                     onClick={() => setRange(r.key)}
                     className={cn(
-                      "rounded-full px-3 py-1 text-sm transition duration-fast ease-flow",
+                       "rounded-full px-3 py-1.5 text-sm transition duration-200 ease-out",
                       range === r.key
                         ? "bg-primary/10 font-semibold text-primary"
                         : "text-muted-foreground hover:bg-neutral"

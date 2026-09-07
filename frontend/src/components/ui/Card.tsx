@@ -33,8 +33,9 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-surface shadow-sm transition-all duration-200",
-        hoverable && "hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5 cursor-pointer",
+        "rounded-xl border border-border bg-surface shadow-sm",
+        "transition-shadow duration-200 transition-transform duration-200",
+        hoverable && "hover:shadow-lg hover:border-primary/30 hover:-translate-y-1 cursor-pointer",
         onClick && "cursor-pointer",
         className
       )}

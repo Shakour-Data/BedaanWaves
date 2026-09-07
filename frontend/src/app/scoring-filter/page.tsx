@@ -235,6 +235,7 @@ export default function ScoringFilterPage() {
           </div>
         )}
       </div>
+      </div>
     </NewDashboardShell>
   );
 }
