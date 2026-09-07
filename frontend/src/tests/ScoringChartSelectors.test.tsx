@@ -6,7 +6,7 @@ import {
   ParentSelector,
   levelItemsFromHierarchy,
 } from "@/components/scoring/ChartWrappers";
-import type { ScoringLevel, HierarchyScores, LevelItem } from "@/store/useDateStore";
+import type { HierarchyScores } from "@/store/useDateStore";
 
 describe("ViewHeaderControls (AC6 tabs + windows + view mode)", () => {
   const noop = vi.fn();

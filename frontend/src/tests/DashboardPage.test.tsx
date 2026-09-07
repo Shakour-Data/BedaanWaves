@@ -24,10 +24,9 @@ vi.mock('@/components/ui/ErrorMessage', () => ({
   ErrorMessage: ({ message }: { message: string }) => <div data-testid="error-message">{message}</div>,
 }));
 
-const { mockFetchDashboardData, mockFetchGeneralDashboard, mockUseUnifiedSearch } = vi.hoisted(() => ({
+const { mockFetchDashboardData, mockFetchGeneralDashboard } = vi.hoisted(() => ({
   mockFetchDashboardData: vi.fn(),
   mockFetchGeneralDashboard: vi.fn(),
-  mockUseUnifiedSearch: vi.fn(),
 }));
 
 vi.mock('@/lib/api/dashboard', () => ({
@@ -39,7 +38,7 @@ vi.mock('@/components/search/UnifiedSearchBar', () => ({
   UnifiedSearchBar: () => <div data-testid="unified-search" />,
 }));
 
-import { fetchDashboardData, fetchGeneralDashboard } from '@/lib/api/dashboard';
+// fetchDashboardData and fetchGeneralDashboard are mocked above
 
 const generalResponse = {
   status: 'success',
