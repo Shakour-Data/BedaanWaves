@@ -1594,10 +1594,10 @@ asyncio.run(main())
                     stmt = pg_insert(MacroIndicator).values(
                         {
                             "indicator_code": code,
-                            "name": meta.get("name", code),
+                            "name": meta.get("name", code)[:255],
                             "value": Decimal(str(value)),
                             "period": _period_for(freq, as_of),
-                            "unit": meta.get("unit", ""),
+                            "unit": (meta.get("unit", "") or "")[:20],
                             "source": meta.get("source", "derived"),
                             "as_of": as_of,
                         }
