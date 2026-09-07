@@ -21,19 +21,20 @@ const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boole
   items.some((item) => checkActive(item.href));
 
 const categories: NavCategory[] = [
-  {
-    label: "Analytics",
-    items: [
-      { label: "Leaderboard", href: "/leaderboard", marker: "LB" },
-      { label: "Biggest Movers", href: "/movers", marker: "MV" },
-      { label: "Stocks", href: "/stocks", marker: "S" },
-      { label: "Analysis", href: "/analysis", marker: "A" },
-      { label: "Scoring", href: "/scoring", marker: "SC" },
-      { label: "Scoring Filter", href: "/scoring-filter", marker: "SF" },
-      { label: "Portfolio", href: "/portfolio", marker: "P" },
-      { label: "Rankings", href: "/ranking", marker: "RN" },
-    ],
-  },
+   {
+     label: "Analytics",
+     items: [
+       { label: "Dashboard", href: "/dashboard", marker: "DB" },
+       { label: "Leaderboard", href: "/leaderboard", marker: "LB" },
+       { label: "Biggest Movers", href: "/movers", marker: "MV" },
+       { label: "Stocks", href: "/stocks", marker: "S" },
+       { label: "Analysis", href: "/analysis", marker: "A" },
+       { label: "Scoring", href: "/scoring", marker: "SC" },
+       { label: "Scoring Filter", href: "/scoring-filter", marker: "SF" },
+       { label: "Portfolio", href: "/portfolio", marker: "P" },
+       { label: "Rankings", href: "/ranking", marker: "RN" },
+     ],
+   },
   {
     label: "Intelligence",
     items: [
@@ -121,7 +122,7 @@ export function NewSidebar() {
       >
         <div className="flex h-screen flex-col">
           <div className="flex h-16 items-center border-b border-[var(--color-border)] px-5 shrink-0">
-            <Link href="/leaderboard" className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
                 <span className="font-bold text-lg">B</span>
               </div>
@@ -246,3 +247,6 @@ export function NewSidebar() {
     </>
   );
 }
+
+NewSidebar.categories = categories;
+NewSidebar.bottomItems = bottomItems;

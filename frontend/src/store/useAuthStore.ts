@@ -92,8 +92,6 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           localStorage.removeItem('auth-storage');
-          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-          window.location.assign('/login');
         }
       },
     }),

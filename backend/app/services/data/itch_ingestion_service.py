@@ -388,33 +388,32 @@ class ITCHOrderBookService(BaseService):
         )
         rows = (await session.execute(stmt)).scalars().all()
 
-            by_ts: dict[str, dict[str, Any]] = {}
-            for row in rows:
-                ts_key = row.snapshot_time.isoformat() if row.snapshot_time else ""
-                if ts_key not in by_ts:
-                    by_ts[ts_key] = {
-                        "symbol": symbol.upper(),
-                        "snapshot_time": ts_key,
-                        "bids": [],
-                        "asks": [],
-                        "source": row.source or "BRS",
-                    }
-                if row.bid_price is not None:
-                    by_ts[ts_key]["bids"].append({
-                        "rank": row.rank,
-                        "price": float(row.bid_price),
-                        "volume": row.bid_volume,
-                        "order_count": 0,
-                    })
-                if row.ask_price is not None:
-                    by_ts[ts_key]["asks"].append({
-                        "rank": row.rank,
-                        "price": float(row.ask_price),
-                        "volume": row.ask_volume,
-                        "order_count": 0,
-                    })
-            return list(by_ts.values())
-        return []
+        by_ts: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            ts_key = row.snapshot_time.isoformat() if row.snapshot_time else ""
+            if ts_key not in by_ts:
+                by_ts[ts_key] = {
+                    "symbol": symbol.upper(),
+                    "snapshot_time": ts_key,
+                    "bids": [],
+                    "asks": [],
+                    "source": row.source or "BRS",
+                }
+            if row.bid_price is not None:
+                by_ts[ts_key]["bids"].append({
+                    "rank": row.rank,
+                    "price": float(row.bid_price),
+                    "volume": row.bid_volume,
+                    "order_count": 0,
+                })
+            if row.ask_price is not None:
+                by_ts[ts_key]["asks"].append({
+                    "rank": row.rank,
+                    "price": float(row.ask_price),
+                    "volume": row.ask_volume,
+                    "order_count": 0,
+                })
+        return list(by_ts.values())
 
     # ------------------------------------------------------------------
     # Live simulation loop (for streaming)

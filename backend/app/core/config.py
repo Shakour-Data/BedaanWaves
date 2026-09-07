@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     ENABLE_DOCS: bool = True
 
     # ============================================================
+    # SECURITY CONFIGURATION
+    # ============================================================
+    TRUSTED_PROXIES: list[str] = []
+
+    # ============================================================
     # CORS CONFIGURATION
     # ============================================================
     CORS_ORIGINS: list[str] = [
@@ -80,7 +85,12 @@ class Settings(BaseSettings):
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-    CORS_ALLOW_HEADERS: list[str] = ["*"]
+    CORS_ALLOW_HEADERS: list[str] = [
+        "Authorization",
+        "Content-Type",
+        "X-Correlation-ID",
+        "X-Request-ID",
+    ]
 
     # ============================================================
     # NEWS INGESTION

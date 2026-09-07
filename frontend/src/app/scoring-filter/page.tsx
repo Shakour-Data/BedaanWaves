@@ -10,6 +10,7 @@ import { LEVEL_LABELS, LEVEL_COLORS } from "@/types/filter";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useUXStore } from "@/store/useUXStore";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -120,7 +121,8 @@ export default function ScoringFilterPage() {
   }, []);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <NewDashboardShell title="Advanced Scoring Filter">
+      <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
           Advanced Scoring Filter
@@ -233,6 +235,6 @@ export default function ScoringFilterPage() {
           </div>
         )}
       </div>
-    </div>
+    </NewDashboardShell>
   );
 }

@@ -9,6 +9,7 @@ import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useUXStore } from "@/store/useUXStore";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 
 const LEVEL_LABELS: Record<Level, string> = {
   overall: "Overall Top Performers",
@@ -85,7 +86,8 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <NewDashboardShell title="Leaderboard">
+      <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
         <div className="mb-6 flex items-start justify-between">
           <div>
@@ -208,6 +210,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </NewDashboardShell>
   );
 }

@@ -14,6 +14,7 @@ Provides four FastAPI/Starlette middlewares:
 """
 
 import logging
+import threading
 import time
 import uuid
 from collections import deque
@@ -32,7 +33,9 @@ settings = get_settings()
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        client_host = request.client.host if request.client else "unknown"
+        if client_host in settings.TRUSTED_PROXIES:
+            return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -124,6 +127,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._windows: dict[str, deque] = {}
         self._last_activity: dict[str, float] = {}
         self._eviction_interval = 3600
+        self._lock = threading.Lock()
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not self.enabled:
@@ -159,30 +163,31 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _fallback_rate_limit(self, key: str, now: float) -> bool:
         """In-memory fallback when Redis is unavailable. Returns True if blocked."""
-        self._last_activity[key] = now
-        if len(self._windows) > 1000:
-            cutoff = now - self._eviction_interval
-            inactive_keys = [k for k, t in self._last_activity.items() if t < cutoff]
-            for k in inactive_keys:
-                self._windows.pop(k, None)
-                self._last_activity.pop(k, None)
+        with self._lock:
+            self._last_activity[key] = now
+            if len(self._windows) > 1000:
+                cutoff = now - self._eviction_interval
+                inactive_keys = [k for k, t in self._last_activity.items() if t < cutoff]
+                for k in inactive_keys:
+                    self._windows.pop(k, None)
+                    self._last_activity.pop(k, None)
 
-        window = self._windows.setdefault(key, deque())
-        cutoff = now - 3600
-        while window and window[0] < cutoff:
-            window.popleft()
+            window = self._windows.setdefault(key, deque())
+            cutoff = now - 3600
+            while window and window[0] < cutoff:
+                window.popleft()
 
-        if len(window) >= self.per_hour:
-            return True
+            if len(window) >= self.per_hour:
+                return True
 
-        minute_cutoff = now - 60
-        while window and window[0] < minute_cutoff:
-            window.popleft()
-        if len(window) >= self.per_minute:
-            return True
+            minute_cutoff = now - 60
+            while window and window[0] < minute_cutoff:
+                window.popleft()
+            if len(window) >= self.per_minute:
+                return True
 
-        window.append(now)
-        return False
+            window.append(now)
+            return False
 
     @staticmethod
     def _too_many_requests(detail: str) -> JSONResponse:

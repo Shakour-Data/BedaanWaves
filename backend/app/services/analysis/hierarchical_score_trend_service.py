@@ -26,87 +26,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, RawPerformanceScore
+from app.services.analysis.hierarchy import (
+    ASPECT_TO_PARENT,
+    SUB_ASPECT_TO_PARENT,
+    SUB_DIMENSION_TO_PARENT,
+    is_aspect_key,
+    is_sub_aspect_key,
+    is_sub_dimension_key,
+)
 from app.services.core import BaseService
 
 logger = logging.getLogger(__name__)
-
-
-# Map score-json keys -> (level, parent)
-# The "parent" is the key at the level above (None for sub-dimensions). This is
-# used both for filtering and for the response metadata so the frontend can
-# build chart legends without re-deriving the hierarchy.
-SUB_DIMENSION_TO_PARENT: dict[str, str] = {
-    "fundamental_price_history": "fundamental",
-    "fundamental_ohlcv": "fundamental",
-    "fundamental_corporate_actions": "fundamental",
-    "technical_moving_averages": "technical",
-    "technical_momentum": "technical",
-    "technical_volatility": "technical",
-    "technical_volume": "technical",
-    "technical_trend": "technical",
-    "sentiment_news_sentiment": "sentiment",
-    "sentiment_social_sentiment": "sentiment",
-    "sentiment_analyst_sentiment": "sentiment",
-    "risk_beta": "risk",
-    "risk_var": "risk",
-    "risk_volatility": "risk",
-    "risk_drawdown": "risk",
-    "macro_interest_rates": "macro",
-    "macro_inflation": "macro",
-    "macro_gdp": "macro",
-    "ai_signal_quality": "ai",
-    "ai_model_confidence": "ai",
-}
-
-
-def _is_sub_dimension_key(key: str) -> bool:
-    return key in SUB_DIMENSION_TO_PARENT
-
-
-def _is_aspect_key(key: str) -> bool:
-    """Aspect keys follow the ``<dimension>_<subdim>_aspect_<n>`` pattern."""
-    parts = key.split("_")
-    if len(parts) < 4 or "aspect" not in parts:
-        return False
-    return key.endswith("_aspect_1") or key.endswith("_aspect_2")
-
-
-def _aspect_parent(key: str) -> str | None:
-    """Return the parent sub-dimension key for an aspect key, or None."""
-    parts = key.split("_")
-    if len(parts) < 4 or "aspect" not in parts:
-        return None
-    idx = parts.index("aspect")
-    if idx < 1:
-        return None
-    return "_".join(parts[:idx])
-
-
-def _is_sub_aspect_key(key: str) -> bool:
-    """Sub-aspect keys are anything that isn't a dimension / sub-dim / aspect."""
-    if _is_sub_dimension_key(key) or _is_aspect_key(key):
-        return False
-    # The known top-level dimension names. Anything else under a known prefix
-    # is treated as a sub-aspect.
-    if not any(key.startswith(f"{d}_") for d in (
-        "fundamental", "technical", "sentiment", "risk", "macro", "ai"
-    )):
-        return False
-    return True
-
-
-def _sub_aspect_parent(key: str) -> str | None:
-    """Return parent aspect key for a sub-aspect, or None.
-
-    We don't have a ground-truth parent map for sub-aspects, so we use the
-    ``<dim>_<subdim>`` prefix as a best-effort parent. The frontend just
-    uses this for filtering by parent aspect, so a slightly loose mapping
-    is acceptable.
-    """
-    parts = key.split("_")
-    if len(parts) < 4:
-        return None
-    return "_".join(parts[:3])
 
 
 class HierarchicalScoreTrendService(BaseService):
@@ -282,7 +212,7 @@ class HierarchicalScoreTrendService(BaseService):
         rows = result.all()
 
         # Per-date accumulators
-        by_date: dict[date, dict[str, list[float]]] = {}
+        by_date: dict[str, dict[str, list[float]]] = {}
 
         column_name = {
             "sub_dimension": "sub_dimension_scores",
@@ -290,26 +220,31 @@ class HierarchicalScoreTrendService(BaseService):
             "sub_aspect": "sub_aspect_scores",
         }[level]
 
-        parent_filter = {
-            "sub_dimension": lambda k: parent is None or SUB_DIMENSION_TO_PARENT.get(k) == parent,
-            "aspect": lambda k: parent is None or _aspect_parent(k) == parent,
-            "sub_aspect": lambda k: parent is None or _sub_aspect_parent(k) == parent,
-        }[level]
+        parent_map = {
+            "aspect": ASPECT_TO_PARENT,
+            "sub_aspect": SUB_ASPECT_TO_PARENT,
+        }.get(level)
+
+        def _parent_filter(key: str) -> bool:
+            if parent is None:
+                return True
+            if parent_map is None:
+                return SUB_DIMENSION_TO_PARENT.get(key) == parent
+            return parent_map.get(key) == parent
 
         level_filter = {
-            "sub_dimension": _is_sub_dimension_key,
-            "aspect": _is_aspect_key,
-            "sub_aspect": _is_sub_aspect_key,
+            "sub_dimension": is_sub_dimension_key,
+            "aspect": is_aspect_key,
+            "sub_aspect": is_sub_aspect_key,
         }[level]
 
-        symbol_counts: dict[date, int] = {}
+        symbol_counts: dict[str, int] = {}
 
         for row in rows:
-            if hasattr(row, "capture_date"):
-                capture_date = row.capture_date
-            elif hasattr(row, "day"):
-                capture_date = row.day
-            else:
+            capture_date = getattr(row, "capture_date", None)
+            if capture_date is None:
+                capture_date = getattr(row, "day", None)
+            if capture_date is None:
                 continue
             if isinstance(capture_date, datetime):
                 capture_date = capture_date.date()
@@ -328,7 +263,7 @@ class HierarchicalScoreTrendService(BaseService):
             for raw_key, raw_value in scores.items():
                 if not level_filter(raw_key):
                     continue
-                if not parent_filter(raw_key):
+                if not _parent_filter(raw_key):
                     continue
                 try:
                     value = float(raw_value)

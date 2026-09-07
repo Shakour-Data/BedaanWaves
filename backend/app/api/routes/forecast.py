@@ -321,7 +321,7 @@ async def batch_forecast(
             failed=len([r for r in results if r.status == "error"]),
             results=[r for r in results if r.status == "success"],
             errors=[{"symbol": r.symbol, "error": r.error} for r in results if r.status == "error"],
-            generated_at=datetime.utcnow(),
+            generated_at=utc_now_iso(),
             processing_time_ms=processing_time,
         )
 
@@ -455,7 +455,7 @@ async def get_model_performance(
                 "end": end_date,
             },
             "metrics": performance,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": utc_now_iso(),
         }
 
     except Exception as e:
@@ -514,7 +514,7 @@ async def backtest_model(
                 "stop_loss_pct": stop_loss_pct,
             },
             "results": backtest_result,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": utc_now_iso(),
         }
 
     except Exception as e:

@@ -1,7 +1,7 @@
 """History Routes"""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -30,8 +30,8 @@ async def get_price_history(
 
     service = StockService()
     await service.initialize()
-    end = datetime.utcnow().date().isoformat()
-    start = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    end = datetime.now(UTC).date().isoformat()
+    start = (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
     history = await service.get_history(asset.symbol, start_date=start, end_date=end, interval="daily")
     await service.shutdown()
 
@@ -57,8 +57,8 @@ async def get_volume_history(
 
     service = StockService()
     await service.initialize()
-    end = datetime.utcnow().date().isoformat()
-    start = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    end = datetime.now(UTC).date().isoformat()
+    start = (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
     history = await service.get_history(asset.symbol, start_date=start, end_date=end, interval="daily")
     await service.shutdown()
 

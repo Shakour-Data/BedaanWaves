@@ -297,6 +297,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr

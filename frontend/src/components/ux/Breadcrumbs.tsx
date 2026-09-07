@@ -19,7 +19,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
       <ol className="flex items-center gap-1.5 text-sm">
         <li>
           <Link
-            href="/leaderboard"
+            href="/dashboard"
             className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors"
           >
             Home

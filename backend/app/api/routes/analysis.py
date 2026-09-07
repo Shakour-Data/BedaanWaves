@@ -2,7 +2,7 @@
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select
@@ -11,7 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.rate_limiting import rate_limit
 from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
-from app.models.models import Asset, MacroIndicator, MLSignal, candle_model_for_market
+from app.models.models import (
+    Asset,
+    MacroForecast,
+    MacroIndicator,
+    MLSignal,
+    candle_model_for_market,
+)
 from app.schemas.schemas import MLSignalResponse
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
 from app.services.analysis.momentum_service import MomentumService
@@ -725,7 +731,7 @@ async def get_symbol_scoring(
         "symbol": asset.symbol,
         "scoring": result,
         "hierarchy": service.get_hierarchy_info(),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -757,7 +763,7 @@ async def get_sentiment_analysis(
         "status": "success",
         "symbol": symbol,
         "sentiment": result,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -977,3 +983,64 @@ async def get_scoring_coefficients(
         return result
     finally:
         await service.shutdown()
+
+
+@router.get("/macro/indicators", response_model=dict)
+async def get_macro_indicators(
+    db: AsyncSession = Depends(get_async_session),
+    limit: int = Query(50, ge=1, le=200),
+    codes: Optional[str] = Query(None, description="Comma-separated indicator codes"),
+) -> dict:
+    """Latest free macroeconomic indicators (FRED/BLS/yfinance, no API key)."""
+    query = select(MacroIndicator).order_by(MacroIndicator.as_of.desc()).limit(limit)
+    if codes:
+        code_list = [c.strip() for c in codes.split(",") if c.strip()]
+        query = query.where(MacroIndicator.indicator_code.in_(code_list))
+    result = await db.execute(query)
+    indicators = result.scalars().all()
+    out: dict[str, Any] = {}
+    for ind in indicators:
+        out[ind.indicator_code] = {
+            "name": ind.name,
+            "value": float(ind.value) if ind.value is not None else None,
+            "period": ind.period,
+            "unit": ind.unit,
+            "source": ind.source,
+            "as_of": ind.as_of.isoformat() if ind.as_of else None,
+        }
+    return {"indicators": out, "count": len(indicators)}
+
+
+@router.get("/macro/forecast", response_model=dict)
+async def get_macro_forecast(
+    db: AsyncSession = Depends(get_async_session),
+    codes: Optional[str] = Query(None, description="Comma-separated indicator codes"),
+    horizon: Optional[int] = Query(None, ge=1, description="Max forecast horizon"),
+) -> dict:
+    """Latest macro forecasts (in-process ARIMA/naive, free, no external API)."""
+    query = select(MacroForecast).order_by(
+        MacroForecast.forecast_date.desc(), MacroForecast.horizon
+    )
+    if codes:
+        code_list = [c.strip() for c in codes.split(",") if c.strip()]
+        query = query.where(MacroForecast.indicator_code.in_(code_list))
+    if horizon:
+        query = query.where(MacroForecast.horizon <= horizon)
+    result = await db.execute(query)
+    forecasts = result.scalars().all()
+    out: dict[str, list[dict[str, Any]]] = {}
+    for fc in forecasts:
+        out.setdefault(fc.indicator_code, []).append(
+            {
+                "model_name": fc.model_name,
+                "horizon": fc.horizon,
+                "frequency": fc.frequency,
+                "forecast_date": fc.forecast_date.isoformat() if fc.forecast_date else None,
+                "forecast_value": float(fc.forecast_value) if fc.forecast_value is not None else None,
+                "lower_ci": float(fc.lower_ci) if fc.lower_ci is not None else None,
+                "upper_ci": float(fc.upper_ci) if fc.upper_ci is not None else None,
+                "confidence": float(fc.confidence) if fc.confidence is not None else 0.0,
+                "created_at": fc.created_at.isoformat() if fc.created_at else None,
+            }
+        )
+    return {"forecasts": out, "count": len(forecasts)}

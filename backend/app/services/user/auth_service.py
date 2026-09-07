@@ -91,6 +91,10 @@ async def ensure_admin_user() -> None:
         return
     admin_password = os.environ.get("ADMIN_PASSWORD")
     if not admin_password:
+        if os.environ.get("ENVIRONMENT", "development") == "production":
+            raise RuntimeError(
+                "ADMIN_PASSWORD must be set in environment for production deployments"
+            )
         admin_password = secrets.token_urlsafe(16)
         hashed = hash_password(admin_password)
         logging.getLogger(__name__).warning(

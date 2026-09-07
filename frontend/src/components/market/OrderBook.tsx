@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/cn";
 import { useLiveData, type LiveStreamKey } from "@/hooks/useLiveData";
 
@@ -27,12 +27,11 @@ export interface OrderBookProps {
 }
 
 interface OrderBookRowProps {
-  level: OrderBookLevel;
+  level: { price: number; volume: number; rank: number; order_count?: number };
   isBid: boolean;
   maxVolume: number;
   showCumulative: boolean;
   cumulative: number;
-  previousCumulative: number;
 }
 
 function OrderBookRow({
@@ -41,7 +40,6 @@ function OrderBookRow({
   maxVolume,
   showCumulative,
   cumulative,
-  previousCumulative,
 }: OrderBookRowProps) {
   const pct = maxVolume > 0 ? (level.volume / maxVolume) * 100 : 0;
   const cumPct = maxVolume > 0 ? (cumulative / maxVolume) * 100 : 0;
@@ -120,13 +118,7 @@ export function OrderBook({
     },
   });
 
-  const [snapshot, setSnapshot] = useState<OrderBookData | null>(null);
-
-  useEffect(() => {
-    if (liveData.data) {
-      setSnapshot(liveData.data);
-    }
-  }, [liveData.data]);
+  const snapshot = liveData.data;
 
   const displayBids = useMemo(() => {
     const bids = snapshot?.bids || [];
@@ -233,7 +225,6 @@ export function OrderBook({
       <div className="relative grid grid-cols-3">
         <div className="space-y-0.5">
           {displayBids.map((level, i) => {
-            const prevCum = i > 0 ? bidCumulative[i - 1] : 0;
             return (
               <OrderBookRow
                 key={`bid-${level.rank}`}
@@ -242,7 +233,6 @@ export function OrderBook({
                 maxVolume={maxVolume}
                 showCumulative={showCumulative}
                 cumulative={bidCumulative[i]}
-                previousCumulative={prevCum}
               />
             );
           })}
@@ -264,7 +254,6 @@ export function OrderBook({
 
         <div className="space-y-0.5">
           {displayAsks.map((level, i) => {
-            const prevCum = i > 0 ? askCumulative[i - 1] : 0;
             return (
               <OrderBookRow
                 key={`ask-${level.rank}`}
@@ -273,7 +262,6 @@ export function OrderBook({
                 maxVolume={maxVolume}
                 showCumulative={showCumulative}
                 cumulative={askCumulative[i]}
-                previousCumulative={prevCum}
               />
             );
           })}

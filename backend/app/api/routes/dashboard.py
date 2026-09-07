@@ -1,10 +1,5 @@
 """Dashboard API Routes - Leaderboard & Biggest Movers"""
 
-from datetime import datetime, timezone, timedelta, date
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy import select, func, and_, case, Numeric
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
 import logging
 from datetime import datetime
 
@@ -14,26 +9,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
 from app.services.analysis.dashboard_service import DashboardService
+from app.services.analysis.coefficient_history_service import DIMENSION_KEYS
 from app.services.analysis.hierarchical_score_trend_service import (
-    SUB_DIMENSION_TO_PARENT,
+    HierarchicalScoreTrendService,
 )
+from app.services.analysis.hierarchy import ALL_TREND_KEYS
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 from app.services.analysis.temporal_snapshot_service import TemporalSnapshotService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
 
-SUB_DIMENSION_TREND_KEYS = tuple(SUB_DIMENSION_TO_PARENT.keys())
-ASPECT_TREND_KEYS = tuple(
-    f"{k.rsplit('_', 1)[0]}_aspect_{i}"
-    for k in SUB_DIMENSION_TREND_KEYS
-    for i in (1, 2)
-)
-SUB_ASPECT_TREND_KEYS = tuple(
-    f"{k}_detail_{i}"
-    for k in ASPECT_TREND_KEYS
-    for i in range(1, 5)
-)
+SUB_DIMENSION_TREND_KEYS = ALL_TREND_KEYS["sub_dimension"]
+ASPECT_TREND_KEYS = ALL_TREND_KEYS["aspect"]
+SUB_ASPECT_TREND_KEYS = ALL_TREND_KEYS["sub_aspect"]
 
 VALID_LEVELS = ("overall", "dimension", "sub_dimension", "aspect", "sub_aspect")
 CANONICAL_DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
@@ -398,10 +387,6 @@ async def get_hierarchical_trend(
     but not multi-day series; in those cases we transparently fall back to
     HierarchicalScoreTrendService which reads the same up-to-date DB tables.
     """
-    from app.services.analysis.hierarchical_score_trend_service import (
-        HierarchicalScoreTrendService,
-    )
-
     if level not in ("sub_dimension", "aspect", "sub_aspect", "dimension"):
         raise HTTPException(status_code=400, detail="level must be dimension, sub_dimension, aspect, or sub_aspect")
     try:
@@ -499,10 +484,6 @@ async def get_sub_dimension_trend(
     snapshot.trends.daily; fallback path is always authoritative until trends
     builder is extended.
     """
-    from app.services.analysis.hierarchical_score_trend_service import (
-        HierarchicalScoreTrendService,
-    )
-
     if market is None or market.upper() != "NASDAQ":
         raise HTTPException(
             status_code=400,
@@ -573,10 +554,6 @@ async def get_aspect_trend(
     HierarchicalScoreTrendService for the authoritative L3 series (same DB
     tables the snapshot composer materializes tier roots from).
     """
-    from app.services.analysis.hierarchical_score_trend_service import (
-        HierarchicalScoreTrendService,
-    )
-
     if market is None or market.upper() != "NASDAQ":
         raise HTTPException(
             status_code=400,
@@ -648,10 +625,6 @@ async def get_sub_aspect_trend(
     Calls TemporalSnapshotService as parity warm-up hook, then delegates to
     HierarchicalScoreTrendService for the authoritative L4 series.
     """
-    from app.services.analysis.hierarchical_score_trend_service import (
-        HierarchicalScoreTrendService,
-    )
-
     if market is None or market.upper() != "NASDAQ":
         raise HTTPException(
             status_code=400,

@@ -1527,6 +1527,7 @@ asyncio.run(main())
             INDICATOR_REGISTRY,
             BUNDLED_MACRO_SNAPSHOT,
             derive_indicators,
+            derive_history_map,
         )
 
         monthly_ids = [
@@ -1536,9 +1537,14 @@ asyncio.run(main())
         ]
         quarterly_ids = ["GDPC1", "GDP"]
 
-        # FRED allows many ids in one graph request → a single free HTTP call.
+        # FRED graph CSV endpoint accepts up to ~10 series per request.
+        # Split into chunks and merge results to stay within the limit.
         series_ids = monthly_ids + quarterly_ids + ["FEDFUNDS", "DGS10", "DGS2", "T10Y2Y", "DGS30"]
-        history_map = await asyncio.to_thread(fetch_history_map, series_ids)
+        history_map: dict[str, list[tuple[Any, float]]] = {}
+        for i in range(0, len(series_ids), 10):
+            batch = series_ids[i:i + 10]
+            chunk = await asyncio.to_thread(fetch_history_map, batch)
+            history_map.update(chunk)
 
         # Frequency cap on how much history we persist per series.
         lookback = {"monthly": 24, "quarterly": 8, "daily": 60}
@@ -1557,7 +1563,7 @@ asyncio.run(main())
                             "indicator_code": code,
                             "name": meta.get("name", code),
                             "value": Decimal(str(value)),
-                            "period": _period_for(code, as_of, freq),
+                             "period": _period_for(freq, as_of),
                             "unit": meta.get("unit", ""),
                             "source": meta.get("source", "FRED"),
                             "as_of": as_of,
@@ -1577,30 +1583,39 @@ asyncio.run(main())
                     count += 1
 
             # Derived indicators (inflation YoY, GDP q/q, payroll/mo, wage YoY).
+            # Persist the full derived history so derived indicators are
+            # forecastable (forecast_and_persist needs >= 3 points).
+            derived_history = derive_history_map(history_map)
+            for code, points in derived_history.items():
+                meta = INDICATOR_REGISTRY.get(code, {})
+                freq = meta.get("frequency", "monthly")
+                keep = points[-lookback.get(freq, 24):]
+                for as_of, value in keep:
+                    stmt = pg_insert(MacroIndicator).values(
+                        {
+                            "indicator_code": code,
+                            "name": meta.get("name", code),
+                            "value": Decimal(str(value)),
+                            "period": _period_for(freq, as_of),
+                            "unit": meta.get("unit", ""),
+                            "source": meta.get("source", "derived"),
+                            "as_of": as_of,
+                        }
+                    )
+                    stmt = stmt.on_conflict_do_update(
+                        constraint="uix_macro_indicator",
+                        set_={
+                            "value": stmt.excluded.value,
+                            "as_of": stmt.excluded.as_of,
+                            "unit": stmt.excluded.unit,
+                            "source": stmt.excluded.source,
+                        },
+                    )
+                    await session.execute(stmt)
+                    count += 1
+
+            # Latest derived values for backward-compat aliases below.
             derived = derive_indicators(history_map)
-            for code, info in derived.items():
-                stmt = pg_insert(MacroIndicator).values(
-                    {
-                        "indicator_code": code,
-                        "name": INDICATOR_REGISTRY.get(code, {}).get("name", code),
-                        "value": Decimal(str(info["value"])),
-                        "period": info.get("period", ""),
-                        "unit": info.get("unit", ""),
-                        "source": info.get("source", "derived"),
-                        "as_of": _parse_period_date(info.get("period")) or today_local(),
-                    }
-                )
-                stmt = stmt.on_conflict_do_update(
-                    constraint="uix_macro_indicator",
-                    set_={
-                        "value": stmt.excluded.value,
-                        "as_of": stmt.excluded.as_of,
-                        "unit": stmt.excluded.unit,
-                        "source": stmt.excluded.source,
-                    },
-                )
-                await session.execute(stmt)
-                count += 1
 
             # Backward-compat aliases used elsewhere in the codebase.
             aliases = {"US_FED_RATE": "FEDFUNDS", "US_INFLATION": "INFLATION"}
@@ -1614,7 +1629,7 @@ asyncio.run(main())
                                 "indicator_code": alias,
                                 "name": INDICATOR_REGISTRY.get(alias, {}).get("name", alias),
                                 "value": Decimal(str(value)),
-                                "period": _period_for(real, as_of, INDICATOR_REGISTRY.get(real, {}).get("frequency", "monthly")),
+                                "period": _period_for(INDICATOR_REGISTRY.get(real, {}).get("frequency", "monthly"), as_of),
                                 "unit": "%",
                                 "source": "FRED",
                                 "as_of": as_of,

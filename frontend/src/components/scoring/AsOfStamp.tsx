@@ -27,13 +27,14 @@ import { cn } from "@/lib/cn";
 import { formatTimeAgo } from "@/lib/utils";
 
 export interface AsOfStampProps {
-  timestamp: string | null;
+  effectiveAt: string | null;
   snapshotId?: string | null;
   loading?: boolean;
   error?: string | null;
   variant?: "default" | "compact" | "emphasis";
   className?: string;
   label?: string;
+  stale?: boolean;
 }
 
 function safeIsoToDate(ts: string | null | undefined): Date | null {
@@ -57,15 +58,16 @@ function formatCompactDate(d: Date): string {
 }
 
 export function AsOfStamp({
-  timestamp,
+  effectiveAt,
   snapshotId,
   loading = false,
   error = null,
   variant = "default",
   className,
   label = "AS OF",
+  stale = false,
 }: AsOfStampProps) {
-  const date = useMemo(() => safeIsoToDate(timestamp), [timestamp]);
+  const date = useMemo(() => safeIsoToDate(effectiveAt), [effectiveAt]);
   const timeAgo = useMemo(() => {
     if (!date) return null;
     return formatTimeAgo(date.toISOString());
@@ -97,7 +99,8 @@ export function AsOfStamp({
     );
   }
 
-  if (error || !timestamp || !date) {
+  if (error || !effectiveAt || !date || stale) {
+    const displayText = error ? "DATA STALE" : stale ? "STALE" : "NO DATA";
     return (
       <div
         role="status"
@@ -109,7 +112,7 @@ export function AsOfStamp({
           className,
         )}
       >
-        <span>{error ? "DATA STALE" : "NO DATA"}</span>
+        <span>{displayText}</span>
         {error && (
           <span className="sr-only">
             Reason: {error}
@@ -170,8 +173,8 @@ export function AsOfStamp({
         </>
       )}
       <span className="sr-only">
-        Data current as of {date.toISOString()}.
-        {timeAgo ? ` That was ${timeAgo}.` : ""}
+        Snapshot as-of timestamp loaded.
+        {timeAgo ? ` Last updated ${timeAgo}.` : ""}
       </span>
     </div>
   );

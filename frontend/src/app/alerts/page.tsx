@@ -58,8 +58,8 @@ export default function AlertsPage() {
       setAlertHistory([]);
 
       try {
-        const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists/watchlists");
-        const notificationsRes = await apiClient.get<Notification[]>("/notifications/notifications?limit=20");
+        const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists");
+        const notificationsRes = await apiClient.get<Notification[]>("/notifications?limit=20");
 
         if (!active) return;
 

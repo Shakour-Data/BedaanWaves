@@ -229,5 +229,5 @@ def format_comparison_response(
         symbols=[c.symbol for c in comparisons],
         comparisons=comparisons,
         historical_data=historical_data,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=utc_now_iso(),
     )

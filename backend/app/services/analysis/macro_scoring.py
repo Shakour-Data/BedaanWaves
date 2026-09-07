@@ -203,6 +203,56 @@ def derive_indicators(history_map: dict[str, list[tuple[date, float]]]) -> dict[
     return out
 
 
+def _derive_series_history(
+    points: list[tuple[date, float]], periods: int
+) -> list[tuple[date, float]]:
+    """Compute trailing YoY/MoM percent-change history (oldest first).
+
+    For each point after index *periods*, compares value to the value
+    ``periods`` entries earlier (12 for YoY, 1 for MoM/QoQ).
+    """
+    out: list[tuple[date, float]] = []
+    for i in range(periods, len(points)):
+        prev = points[i - periods][1]
+        curr = points[i][1]
+        if prev in (0, None) or curr is None:
+            continue
+        yoy = round((curr / prev - 1.0) * 100.0, 4)
+        out.append((points[i][0], yoy))
+    return out
+
+
+def derive_history_map(
+    history_map: dict[str, list[tuple[date, float]]]
+) -> dict[str, list[tuple[date, float]]]:
+    """Compute full derived histories (YoY/MoM rates) for derived indicators.
+
+    Returns code -> chronological (date, value) points suitable for
+    forecasting (forecast_and_persist needs >= 3 points). Non-empty results only.
+    """
+    out: dict[str, list[tuple[date, float]]] = {}
+
+    cpi_hist = sorted(history_map.get("CPIAUCSL", []), key=lambda x: x[0])
+    out["INFLATION"] = _derive_series_history(cpi_hist, 12)
+
+    core_cpi_hist = sorted(history_map.get("CPILFESL", []), key=lambda x: x[0])
+    out["CORE_INFLATION"] = _derive_series_history(core_cpi_hist, 12)
+
+    gdp_hist = sorted(history_map.get("GDPC1", []), key=lambda x: x[0])
+    out["GDP_QOQ"] = _derive_series_history(gdp_hist, 1)
+
+    payrolls_hist = sorted(history_map.get("PAYEMS", []), key=lambda x: x[0])
+    out["PAYROLLS_MOM"] = _derive_series_history(payrolls_hist, 1)
+
+    wage_hist = sorted(
+        history_map.get("CES0501000000000000050Q0", history_map.get("WAGE", [])),
+        key=lambda x: x[0],
+    )
+    out["WAGE_YOY"] = _derive_series_history(wage_hist, 12)
+
+    return {k: v for k, v in out.items() if v}
+
+
 def _score_inflation(inflation: Optional[float]) -> Optional[float]:
     if inflation is None:
         return None
@@ -262,7 +312,7 @@ def compute_macro_scores(latest: dict[str, float]) -> dict[str, Any]:
     xr = _score_exchange_rates(latest.get("DX-Y.NYB"), latest.get("DEXUSEU"))
     comm = _score_commodities(latest.get("CL=F"), latest.get("GC=F"))
 
-    sub = {
+    sub: dict[str, Any] = {
         "gdp": g if g is not None else 50.0,
         "inflation": inf if inf is not None else 50.0,
         "interest_rates": ir if ir is not None else 50.0,

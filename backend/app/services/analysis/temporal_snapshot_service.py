@@ -21,14 +21,14 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utils import utc_now_iso
-from app.models.models import Asset, ScoreHistory
+from app.models.models import Asset, RawPerformanceScore, ScoreHistory
 from app.models.scoring_snapshot import ScoringSnapshot, SnapshotTier
 from app.services.analysis.coefficient_history_service import (
     DIMENSION_KEYS,
     CoefficientHistoryService,
 )
-from app.services.analysis.hierarchical_score_trend_service import (
-    SUB_DIMENSION_TO_PARENT,
+from app.services.analysis.hierarchy import (
+    tier_scores_with_aliases,
 )
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 
@@ -98,6 +98,16 @@ def _dict_delta(new_map: dict | None, old_map: dict | None) -> dict[str, tuple[f
         b = float(old_map[key]) if old_map.get(key) is not None else None
         out[key] = _compute_delta(a, b)
     return out
+
+
+def _plural_to_singular(plural: str) -> str:
+    """Map a plural tier key to its singular form."""
+    return {
+        "dimensions": "dimension",
+        "sub_dimensions": "sub_dimension",
+        "aspects": "aspect",
+        "sub_aspects": "sub_aspect",
+    }.get(plural, plural.rstrip("s"))
 
 
 class TemporalSnapshotService:
@@ -223,13 +233,58 @@ class TemporalSnapshotService:
         sh_res = await db.execute(sh_q)
         sh_rows = sh_res.all()
 
-        scores: dict[str, Any] = {"dimensions": {}}
+        # Aggregate from RawPerformanceScore for sub-dimension / aspect / sub-aspect
+        rps_effective_date = None
+        rps_q = (
+            select(
+                func.max(func.date(RawPerformanceScore.captured_at)).label("max_date"),
+                RawPerformanceScore.sub_dimension_scores,
+                RawPerformanceScore.aspect_scores,
+                RawPerformanceScore.sub_aspect_scores,
+            )
+            .join(Asset, Asset.id == RawPerformanceScore.asset_id, isouter=True)
+            .where(
+                and_(
+                    Asset.active,
+                    Asset.market == "NASDAQ",
+                    Asset.asset_class.in_(["EQUITY", "ETF"]),
+                    RawPerformanceScore.data_quality.in_(("VALIDATED", "CLEANED")),
+                )
+            )
+            .order_by(desc(RawPerformanceScore.captured_at))
+        )
+        if symbol:
+            rps_q = rps_q.where(func.lower(Asset.symbol) == func.lower(symbol)).limit(1)
+        else:
+            rps_q = rps_q.limit(500)
+
+        rps_res = await db.execute(rps_q)
+        rps_rows = rps_res.all()
+
+        # Aggregate RawPerformanceScore JSON columns into market means
+        def _avg_jsonb(rows: list, col_name: str) -> dict[str, float]:
+            sums: dict[str, list[float]] = {}
+            for row in rows:
+                col_val = getattr(row, col_name, None) or {}
+                if not isinstance(col_val, dict):
+                    col_val = getattr(row, "_mapping", {}).get(col_name, {}) or {}
+                for k, v in col_val.items():
+                    try:
+                        sums.setdefault(k, []).append(float(v))
+                    except (TypeError, ValueError):
+                        continue
+            return {k: round(sum(vs) / len(vs), 4) for k, vs in sums.items() if vs}
+
+        sub_dimension_scores = _avg_jsonb(rps_rows, "sub_dimension_scores")
+        aspect_scores = _avg_jsonb(rps_rows, "aspect_scores")
+        sub_aspect_scores = _avg_jsonb(rps_rows, "sub_aspect_scores")
+
+        if rps_rows and rps_rows[0].max_date:
+            rps_effective_date = rps_rows[0].max_date
+
+        scores: dict[str, Any] = {"dimension": {}, "dimensions": {}}
         overall_list: list[float] = []
         dim_map: dict[str, list[float]] = {d: [] for d in CANONICAL_DIMS}
-
-        sub_dimensions: dict[str, float] = {}
-        aspects: dict[str, float] = {}
-        sub_aspects: dict[str, float] = {}
 
         for sh, asset in sh_rows:
             if not sh_effective_date:
@@ -256,13 +311,27 @@ class TemporalSnapshotService:
             scores["overall"] = round(sum(overall_list) / len(overall_list), 4)
         for d, vs in dim_map.items():
             if vs:
-                scores["dimensions"][d] = round(sum(vs) / len(vs), 4)
+                dim_val = round(sum(vs) / len(vs), 4)
+                scores["dimension"][d] = dim_val
+                scores["dimensions"][d] = dim_val
 
         # (Optional) Pull sub-dim / aspect / sub-aspect from snap_row.extra_fields
         # if present; otherwise keep empty dict so UI renders — never None.
-        scores.setdefault("sub_dimensions", sub_dimensions)
-        scores.setdefault("aspects", aspects)
-        scores.setdefault("sub_aspects", sub_aspects)
+        # Use RawPerformanceScore aggregation as the authoritative source.
+        if snap_row and snap_row.extra_fields:
+            ef = snap_row.extra_fields if isinstance(snap_row.extra_fields, dict) else {}
+            for level in ("sub_dimensions", "aspects", "sub_aspects",
+                          "sub_dimension", "aspect", "sub_aspect"):
+                val = ef.get(level)
+                if isinstance(val, dict) and val:
+                    scores.setdefault(level, {}).update({k: round(float(v), 4) for k, v in val.items()})
+
+        scores.setdefault("sub_dimension", sub_dimension_scores)
+        scores.setdefault("sub_dimensions", sub_dimension_scores)
+        scores.setdefault("aspect", aspect_scores)
+        scores.setdefault("aspects", aspect_scores)
+        scores.setdefault("sub_aspect", sub_aspect_scores)
+        scores.setdefault("sub_aspects", sub_aspect_scores)
 
         if not scores.get("overall") and snap_row:
             scores["overall"] = float(snap_row.score) if snap_row.score else None
@@ -296,7 +365,7 @@ class TemporalSnapshotService:
         return TierRoot(
             tier="current",
             effective_at=now,
-            scores={"overall": 0.0, "dimensions": {}, "sub_dimensions": {}, "aspects": {}, "sub_aspects": {}},
+            scores={"overall": 0.0, "dimension": {}, "dimensions": {}, "sub_dimension": {}, "sub_dimensions": {}, "aspect": {}, "aspects": {}, "sub_aspect": {}, "sub_aspects": {}},
         )
 
     def _build_deltas(self, daily: TierRoot, hourly: TierRoot, current: TierRoot) -> dict[str, Any]:
@@ -305,25 +374,18 @@ class TemporalSnapshotService:
                 float(newer.scores.get("overall")) if newer.scores.get("overall") is not None else None,
                 float(older.scores.get("overall")) if older.scores.get("overall") is not None else None,
             )
-            dim_deltas = _dict_delta(newer.scores.get("dimensions"), older.scores.get("dimensions"))
-            dim_frame: dict[str, Any] = {}
-            for k, (vabs, vpct) in dim_deltas.items():
-                dim_frame[k] = {"delta": vabs, "delta_pct": vpct}
 
-            sub_dim_deltas = _dict_delta(newer.scores.get("sub_dimensions"), older.scores.get("sub_dimensions"))
-            sub_dim_frame: dict[str, Any] = {
-                k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in sub_dim_deltas.items()
-            }
+            def _deltas_for(plat: str) -> dict[str, Any]:
+                singular = _plural_to_singular(plat)
+                newer_map = newer.scores.get(plat) or newer.scores.get(singular) or {}
+                older_map = older.scores.get(plat) or older.scores.get(singular) or {}
+                d = _dict_delta(newer_map, older_map)
+                return {k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in d.items()}
 
-            aspect_deltas = _dict_delta(newer.scores.get("aspects"), older.scores.get("aspects"))
-            aspect_frame: dict[str, Any] = {
-                k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in aspect_deltas.items()
-            }
-
-            sub_aspect_deltas = _dict_delta(newer.scores.get("sub_aspects"), older.scores.get("sub_aspects"))
-            sub_aspect_frame: dict[str, Any] = {
-                k: {"delta": vabs, "delta_pct": vpct} for k, (vabs, vpct) in sub_aspect_deltas.items()
-            }
+            dim_frame = _deltas_for("dimensions")
+            sub_dim_frame = _deltas_for("sub_dimensions")
+            aspect_frame = _deltas_for("aspects")
+            sub_aspect_frame = _deltas_for("sub_aspects")
 
             return {
                 "overall": overall_abs,
@@ -360,10 +422,17 @@ class TemporalSnapshotService:
                         current_weights[k] = float(v)
 
             weight_snapshot["dimension"] = current_weights
-            # sub_dimension / aspect / sub_aspect: stubs that mirror coefficient
-            weight_snapshot["sub_dimension"] = {k: 1.0 / max(1, len(SUB_DIMENSION_TO_PARENT)) for k in list(SUB_DIMENSION_TO_PARENT.keys())[:6]}
+            # sub_dimension / aspect / sub_aspect weights from canonical hierarchy
+            from app.services.analysis.hierarchy import (
+                V2_SUB_DIMENSIONS,
+            )
+            weight_snapshot["dimensions"] = current_weights
+            weight_snapshot["sub_dimension"] = {k: 1.0 / max(1, len(V2_SUB_DIMENSIONS)) for k in V2_SUB_DIMENSIONS}
+            weight_snapshot["sub_dimensions"] = weight_snapshot["sub_dimension"]
             weight_snapshot["aspect"] = {}
             weight_snapshot["sub_aspect"] = {}
+            weight_snapshot["aspects"] = {}
+            weight_snapshot["sub_aspects"] = {}
 
             for pt in series:
                 weight_trends.append({
@@ -386,7 +455,7 @@ class TemporalSnapshotService:
         except Exception as exc:
             logger.warning(f"Coefficient snapshot fallback: {exc}")
             return (
-                {"dimension": {}, "sub_dimension": {}, "aspect": {}, "sub_aspect": {}},
+                {"dimension": {}, "dimensions": {}, "sub_dimension": {}, "sub_dimensions": {}, "aspect": {}, "aspects": {}, "sub_aspect": {}, "sub_aspects": {}},
                 [],
                 [],
             )
@@ -407,10 +476,11 @@ class TemporalSnapshotService:
             data = await svc.get_trend(days=window_daily, market="NASDAQ", db=db)
             for pt in data or []:
                 daily_points.append({
-                    "timestamp": str(pt.get("date")),
-                    "avg_score": float(pt.get("avg_score")) if isinstance(pt.get("avg_score"), (int, float)) else None,
-                    "dimensions": pt.get("avg_dimensions") or {},
-                    "symbol_count": int(pt.get("symbol_count")) if pt.get("symbol_count") is not None else None,
+                    "date": str(pt.get("date")),
+                    "effective_at": str(pt.get("date")),
+                    "overall": float(pt.get("avg_score")) if isinstance(pt.get("avg_score"), (int, float)) else None,
+                    "level_scores": pt.get("avg_dimensions") or {},
+                    "count": int(pt.get("symbol_count")) if pt.get("symbol_count") is not None else None,
                 })
         except Exception as exc:
             logger.warning(f"market daily trend fallback: {exc}")
@@ -455,10 +525,11 @@ class TemporalSnapshotService:
                 b = bucket[ts]
                 if b["count"]:
                     intraday_points.append({
-                        "timestamp": ts,
-                        "avg_score": round(b["sum_score"] / b["count"], 4),
-                        "dimensions": {},
-                        "symbol_count": b["count"],
+                        "date": ts,
+                        "effective_at": ts,
+                        "overall": round(b["sum_score"] / b["count"], 4),
+                        "level_scores": {},
+                        "count": b["count"],
                     })
         except Exception as exc:
             logger.warning(f"intraday trend fallback: {exc}")
@@ -504,13 +575,13 @@ class TemporalSnapshotService:
             daily = TierRoot(
                 tier="daily",
                 effective_at=_floor_to_day(now_utc),
-                scores={"overall": 0.0, "dimensions": {}, "sub_dimensions": {}, "aspects": {}, "sub_aspects": {}},
+                scores={"overall": 0.0, "dimension": {}, "dimensions": {}, "sub_dimension": {}, "sub_dimensions": {}, "aspect": {}, "aspects": {}, "sub_aspect": {}, "sub_aspects": {}},
             )
         if not hourly:
             hourly = TierRoot(
                 tier="hourly",
                 effective_at=_floor_to_hour(now_utc),
-                scores={"overall": 0.0, "dimensions": {}, "sub_dimensions": {}, "aspects": {}, "sub_aspects": {}},
+                scores={"overall": 0.0, "dimension": {}, "dimensions": {}, "sub_dimension": {}, "sub_dimensions": {}, "aspect": {}, "aspects": {}, "sub_aspect": {}, "sub_aspects": {}},
             )
         current = await self._resolve_current(db, symbol=symbol)
 
@@ -525,13 +596,14 @@ class TemporalSnapshotService:
         universe_total = await self._active_assets_count(db)
 
         def _tier_scores(tr: TierRoot) -> dict[str, Any]:
-            return {
-                "overall": tr.scores.get("overall"),
-                "dimensions": tr.scores.get("dimensions") or {},
-                "sub_dimensions": tr.scores.get("sub_dimensions") or {},
-                "aspects": tr.scores.get("aspects") or {},
-                "sub_aspects": tr.scores.get("sub_aspects") or {},
-            }
+            result = tier_scores_with_aliases(
+                dimension_scores=tr.scores.get("dimensions") or tr.scores.get("dimension") or {},
+                sub_dimension_scores=tr.scores.get("sub_dimensions") or tr.scores.get("sub_dimension") or {},
+                aspect_scores=tr.scores.get("aspects") or tr.scores.get("aspect") or {},
+                sub_aspect_scores=tr.scores.get("sub_aspects") or tr.scores.get("sub_aspect") or {},
+            )
+            result["overall"] = tr.scores.get("overall")
+            return result
 
         payload: dict[str, Any] = {
             "snapshotId": snapshot_id_val,

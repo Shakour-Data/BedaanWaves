@@ -118,7 +118,7 @@ describe("ViewHeaderControls (AC6 tabs + windows + view mode)", () => {
 });
 
 describe("ScoringLevelSelector (AC6 5-level L0..L4)", () => {
-  it("renders five levels: OVERALL, DIMENSION, SUB-DIMENSION, ASPECT, SUB-ASPECT", () => {
+  it("renders five levels: OVERALL, DIM, SUB-DIM, ASP, SUB-ASP", () => {
     render(
       <ScoringLevelSelector
         value="dimension"
@@ -126,10 +126,10 @@ describe("ScoringLevelSelector (AC6 5-level L0..L4)", () => {
       />
     );
     expect(screen.getByText(/OVERALL/)).not.toBeNull();
-    expect(screen.getByText(/DIMENSION/)).not.toBeNull();
-    expect(screen.getByText(/SUB-DIMENSION/)).not.toBeNull();
-    expect(screen.getByText(/ASPECT/)).not.toBeNull();
-    expect(screen.getByText(/SUB-ASPECT/)).not.toBeNull();
+    expect(screen.getByText("DIM")).not.toBeNull();
+    expect(screen.getByText("SUB-DIM")).not.toBeNull();
+    expect(screen.getByText("ASP")).not.toBeNull();
+    expect(screen.getByText("SUB-ASP")).not.toBeNull();
   });
 
   it("calls onChange when OVERALL level clicked", () => {
@@ -141,7 +141,7 @@ describe("ScoringLevelSelector (AC6 5-level L0..L4)", () => {
 });
 
 describe("ParentSelector (AC6 parent picker + ALL)", () => {
-  it("renders ALL plus provided options", () => {
+  it("renders provided options", () => {
     render(
       <ParentSelector
         level="dimension"
@@ -150,7 +150,6 @@ describe("ParentSelector (AC6 parent picker + ALL)", () => {
         options={["fundamental", "technical", "sentiment"]}
       />
     );
-    expect(screen.getByText(/ALL/)).not.toBeNull();
     expect(screen.getByText(/fundamental/)).not.toBeNull();
     expect(screen.getByText(/technical/)).not.toBeNull();
     expect(screen.getByText(/sentiment/)).not.toBeNull();
@@ -177,10 +176,10 @@ describe("levelItemsFromHierarchy (3-form tolerance helper)", () => {
       overall: 60.0,
       level1: [{ key: "technical", label: "Technical", value: 65.0 }],
     } as unknown as HierarchyScores;
-    const out: LevelItem[] = levelItemsFromHierarchy(legacy, "dimension");
+    const out = levelItemsFromHierarchy(legacy, "dimension");
     expect(out.length).toBeGreaterThan(0);
     expect(out[0].key).toBe("technical");
-    expect(out[0].value).toBe(65.0);
+    expect(out[0].score).toBe(65.0);
   });
 
   it("reads from Pydantic short-key dict form (dimension / sub_dimension)", () => {
@@ -192,9 +191,9 @@ describe("levelItemsFromHierarchy (3-form tolerance helper)", () => {
     const dims = levelItemsFromHierarchy(pydantic, "dimension");
     const subs = levelItemsFromHierarchy(pydantic, "sub_dimension");
     expect(dims[0].key).toBe("fundamental");
-    expect(dims[0].value).toBe(70.0);
+    expect(dims[0].score).toBe(70.0);
     expect(subs[0].key).toBe("valuation");
-    expect(subs[0].value).toBe(62.0);
+    expect(subs[0].score).toBe(62.0);
   });
 
   it("returns empty array when level has no data", () => {

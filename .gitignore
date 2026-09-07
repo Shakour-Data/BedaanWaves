@@ -102,6 +102,17 @@ backend/validate_*.py
 backend/create_*.py
 backend/temp_*.py
 _db_check.py
+backend/debug_*.py
+backend/debug_*.txt
+backend/*_raw.csv
+backend/mypy.ini
+backend/run*.txt
+backend/test_*_output.txt
+count_mypy.py
+eslint_*.txt
+fix_*.py
+backups/
+backend/database/alembic/versions/*_manual.sql
 
 # Temporary backend output files
 backend/ls_out.txt

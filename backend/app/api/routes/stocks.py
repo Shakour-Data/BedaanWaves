@@ -8,7 +8,7 @@ import io
 import json as json_module
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile
 
 from app.core.config import get_settings
 from app.core.utils import utc_now_iso
@@ -125,7 +125,7 @@ async def get_stock(
 
 @router.post("/batch", response_model=dict)
 async def get_multiple_stocks(
-    tickers: list[str],
+    tickers: list[str] = Body(..., description="List of ticker symbols"),
     service: StockService = Depends(get_stock_service),
     response: Response = None
 ) -> dict:
@@ -153,7 +153,7 @@ async def get_multiple_stocks(
 
 @router.post("/v2/batch", response_model=dict)
 async def get_multiple_stocks_v2(
-    tickers: list[str],
+    tickers: list[str] = Body(..., description="List of ticker symbols"),
     include_history: bool = Query(False, description="Include historical data"),
     service: StockService = Depends(get_stock_service),
     response: Response = None
@@ -192,7 +192,7 @@ async def get_multiple_stocks_v2(
 
 @router.post("/export", response_model=dict)
 async def export_portfolio_data(
-    tickers: list[str] | None = None,
+    tickers: list[str] | None = Body(default=None, description="Optional list of tickers to export"),
     format: str = Query("json", pattern="^(json|csv)$"),
     service: StockService = Depends(get_stock_service),
     response: Response = None

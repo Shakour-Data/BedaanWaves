@@ -496,7 +496,7 @@ async def get_alert_stats(
             "status": "success",
             "user_id": current_user["id"],
             "stats": stats,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utc_now_iso(),
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

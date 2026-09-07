@@ -15,6 +15,8 @@ Only implemented tiers are imported here so the package stays importable as
 the remaining tiers are filled in.
 """
 
+import logging
+
 # Tier 1: Core Services
 from .core.cache_service import CacheService
 from .core.config_service import ConfigService
@@ -52,14 +54,14 @@ try:
     from .analysis.technical_service import TechnicalAnalysisService
     from .analysis.user_filtered_scoring_service import UserFilteredScoringService
     from .analysis.volatility_service import VolatilityService
-except Exception:
-    pass
+except Exception as exc:
+    logging.getLogger(__name__).warning(f"Failed to import analysis services: {exc}")
 
 # Tier 4: ML Services
 try:
     from .ml import CoefficientLearningService
-except Exception:
-    pass
+except Exception as exc:
+    logging.getLogger(__name__).warning(f"Failed to import ML services: {exc}")
 
 # Tier 5: NLP Services
 try:
@@ -69,8 +71,8 @@ try:
     from .nlp.news_summarization_service import NewsSummarizationService
     from .nlp.search_service import SearchService
     from .nlp.sentiment_analysis_service import SentimentAnalysisService
-except Exception:
-    pass
+except Exception as exc:
+    logging.getLogger(__name__).warning(f"Failed to import NLP services: {exc}")
 
 # Tier 9: System Services
 try:
@@ -79,8 +81,8 @@ try:
     from .system.queue_service import QueueService
     from .system.scheduler_service import SchedulerService
     from .system.settings_migration_service import SettingsMigrationService
-except Exception:
-    pass
+except Exception as exc:
+    logging.getLogger(__name__).warning(f"Failed to import system services: {exc}")
 
 __all__ = [
     # Tier 1

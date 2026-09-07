@@ -19,14 +19,15 @@ from __future__ import annotations
 import csv
 import io
 import logging
-import urllib.error
-import urllib.request
 from datetime import date, timedelta
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
 HTTP_TIMEOUT = 25
+_HTTP_RETRIES = 2
 USER_AGENT = (
     "BedaanWaves/2.0 (+https://bedaanwaves.com; free BLS data fetcher; "
     "contact@bedaanwaves.com) "
@@ -42,17 +43,36 @@ CORE_CPI_SERIES = "CUSR0000SA0"  # Core CPI uses CUXR0SAD in BLS; we fall back t
 UNEMPLOYMENT_RATE_SERIES = "LNS14000000"  # Civilian Unemployment Rate
 
 
+def _http_get(url: str) -> Optional[str]:
+    """GET a URL and return decoded response text, or None on failure.
+
+    Uses requests (not urllib.request) for reliable HTTPS transport.
+    Retries once on transient DNS/connection errors.
+    """
+    headers = {"User-Agent": USER_AGENT, "Accept": "text/csv, */*;q=0.8"}
+    for attempt in range(_HTTP_RETRIES):
+        try:
+            resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)  # noqa: S310
+            resp.raise_for_status()
+            return resp.text
+        except requests.exceptions.ConnectionError as exc:
+            if attempt < _HTTP_RETRIES - 1:
+                logger.debug("Transient connection error for %s, retrying: %s", url, exc)
+                continue
+            logger.warning("HTTP GET failed for %s: %s", url, exc)
+            return None
+        except requests.exceptions.RequestException as exc:
+            logger.warning("HTTP request error for %s: %s", url, exc)
+            return None
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Unexpected HTTP error for %s: %s", url, exc)
+            return None
+    return None
+
+
 def _download(url: str) -> Optional[str]:
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:  # noqa: S310
-            return resp.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-        logger.warning("BLS download failed for %s: %s", url, exc)
-        return None
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Unexpected BLS download error for %s: %s", url, exc)
-        return None
+    """Download a BLS flat-file URL. Returns None on failure."""
+    return _http_get(url)
 
 
 def _parse_bls_rows(raw: str) -> list[tuple[str, int, str, float]]:

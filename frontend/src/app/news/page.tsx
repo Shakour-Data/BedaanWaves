@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { cn } from "@/lib/cn";
-import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { formatTimeAgo } from "@/lib/utils";
 import {
@@ -135,7 +134,6 @@ export default function NewsPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
 
     async function loadNews() {
       try {

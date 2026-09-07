@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { UXProviders } from "@/providers/UXProviders";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import { ErrorBoundary } from "@/components/ux/ErrorBoundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,7 +31,9 @@ export default function RootLayout({
     <html lang="en" dir="ltr" data-scroll-behavior="smooth">
       <body>
         <ReactQueryProvider>
-          <UXProviders>{children}</UXProviders>
+          <ErrorBoundary>
+            <UXProviders>{children}</UXProviders>
+          </ErrorBoundary>
         </ReactQueryProvider>
       </body>
     </html>

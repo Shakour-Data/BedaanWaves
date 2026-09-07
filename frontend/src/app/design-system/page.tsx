@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 
 export default function DesignSystemPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)]">
+    <NewDashboardShell title="Design System">
+      <div className="min-h-screen bg-[var(--color-background)]">
       <header className="navbar">
         <span className="navbar-brand">Design System</span>
         <div className="navbar-actions">
@@ -635,7 +637,8 @@ export default function DesignSystemPage() {
             </button>
           </div>
         </div>
-      )}
-    </div>
+)}
+      </div>
+    </NewDashboardShell>
   );
 }

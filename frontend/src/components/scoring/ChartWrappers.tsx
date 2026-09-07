@@ -107,6 +107,18 @@ export const LEVEL_META: Record<ScoringLevel, { label: string; short: string; ke
   4: { label: "Sub-Aspects", short: "SUB-ASP", key: "level4" },
 };
 
+export const LEVEL_ALIASES: Record<string, ScoringLevel> = {
+  overall: 0,
+  dimension: 1,
+  dimensions: 1,
+  sub_dimension: 2,
+  sub_dimensions: 2,
+  aspect: 3,
+  aspects: 3,
+  sub_aspect: 4,
+  sub_aspects: 4,
+};
+
 const PALETTE = [
   "#2563EB",
   "#10B981",
@@ -129,24 +141,32 @@ function pickOverall(h: HierarchyScores): number {
 
 export function levelItemsFromHierarchy(
   hierarchy: HierarchyScores | null | undefined,
-  level: ScoringLevel,
+  level: ScoringLevel | string,
   parentKey: string | null = null
-): Array<{ key: string; label: string; score: number; weight: number }> {
+): Array<{ key: string; label: string; score: number; value: number; weight: number }> {
+  const numericLevel: ScoringLevel = typeof level === "number"
+    ? level
+    : LEVEL_ALIASES[level] ?? 0;
+
   if (!hierarchy) return [];
-  let all: Array<{ key: string; label: string; score: number; weight: number }> = [];
-  if (level === 0) {
-    all = [{ key: "overall", label: "Overall", score: pickOverall(hierarchy), weight: 1.0 }];
+  let all: Array<{ key: string; label: string; score: number; value: number; weight: number }> = [];
+  if (numericLevel === 0) {
+    all = [{ key: "overall", label: "Overall", score: pickOverall(hierarchy), value: pickOverall(hierarchy), weight: 1.0 }];
   } else {
-    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
+    const k = LEVEL_META[numericLevel].key as "level1" | "level2" | "level3" | "level4";
     const raw = hierarchy as unknown as RawHierarchyScoreShape;
     const arr = raw[k];
     if (Array.isArray(arr)) {
-      all = arr.map((it) => ({
-        key: it.key ?? it.level_key ?? it.label ?? String(Math.random()).slice(2),
-        label: it.label ?? it.name ?? it.key ?? "Item",
-        score: num(it.score ?? it.value ?? it.level_score ?? 0),
-        weight: num(it.weight ?? it.coefficient ?? it.w ?? 0),
-      }));
+      all = arr.map((it) => {
+        const s = num(it.score ?? it.value ?? it.level_score ?? 0);
+        return {
+          key: it.key ?? it.level_key ?? it.label ?? String(Math.random()).slice(2),
+          label: it.label ?? it.name ?? it.key ?? "Item",
+          score: s,
+          value: s,
+          weight: num(it.weight ?? it.coefficient ?? it.w ?? 0),
+        };
+      });
     } else {
       const dimKeyMap: Record<ScoringLevel, string> = {
         0: "overall",
@@ -155,18 +175,23 @@ export function levelItemsFromHierarchy(
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = raw[dimKeyMap[level]] as Record<string, number> | undefined;
+      const singular = dimKeyMap[numericLevel];
+      const bucket = (raw[singular] ?? raw[singular + "s"]) as Record<string, number> | undefined;
       if (bucket && typeof bucket === "object") {
-        all = Object.entries(bucket).map(([k2, v]) => ({
-          key: k2,
-          label: k2.replace(/_/g, " "),
-          score: num(v),
-          weight: 0,
-        }));
+        all = Object.entries(bucket).map(([k2, v]) => {
+          const s = num(v);
+          return {
+            key: k2,
+            label: k2.replace(/_/g, " "),
+            score: s,
+            value: s,
+            weight: 0,
+          };
+        });
       }
     }
   }
-  if (parentKey && level >= 2) {
+  if (parentKey && numericLevel >= 2) {
     return all.filter((it) => it.key.startsWith(parentKey) || it.label.toLowerCase().includes(parentKey.toLowerCase()));
   }
   return all;
@@ -852,35 +877,59 @@ export function ViewHeaderControls({
 }
 
 interface ScoringLevelSelectorProps {
-  level: ScoringLevel;
-  onLevelChange: (l: ScoringLevel) => void;
+  level?: ScoringLevel;
+  value?: string;
+  onLevelChange?: (l: ScoringLevel) => void;
+  onChange?: (level: string) => void;
   className?: string;
   includeOverall?: boolean;
 }
 
+const LEVEL_SHORT_TO_NUM: Record<string, ScoringLevel> = {
+  overall: 0,
+  dimension: 1,
+  sub_dimension: 2,
+  aspect: 3,
+  sub_aspect: 4,
+};
+
 export function ScoringLevelSelector({
   level,
+  value,
   onLevelChange,
+  onChange,
   className,
   includeOverall = true,
 }: ScoringLevelSelectorProps) {
+  const currentLevel: ScoringLevel = level ?? (value ? LEVEL_SHORT_TO_NUM[value] ?? 0 : 0);
   const levels: ScoringLevel[] = includeOverall ? [0, 1, 2, 3, 4] : [1, 2, 3, 4];
+  const handleChange = (lvl: ScoringLevel) => {
+    onLevelChange?.(lvl);
+    if (onChange) onChange(LEVEL_META[lvl].key);
+  };
   return (
-    <div className={cn("flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap", className)} role="group" aria-label="Hierarchy level">
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap",
+        className,
+      )}
+      role="group"
+      aria-label="Hierarchy level"
+    >
       {levels.map((lvl) => {
         const meta = LEVEL_META[lvl];
         return (
           <button
             key={lvl}
             type="button"
-            onClick={() => onLevelChange(lvl)}
+            onClick={() => handleChange(lvl)}
             className={cn(
               "rounded-md px-3 py-1 text-xs font-semibold transition whitespace-nowrap",
-              level === lvl
+              currentLevel === lvl
                 ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
-            aria-pressed={level === lvl}
+            aria-pressed={currentLevel === lvl}
           >
             {meta.short}
           </button>
@@ -891,63 +940,85 @@ export function ScoringLevelSelector({
 }
 
 interface ParentSelectorProps {
-  hierarchy: HierarchyScores | null | undefined;
-  level: ScoringLevel;
-  parentLevel: Exclude<ScoringLevel, 0 | 4>;
-  parentKey: string | null;
-  onParentChange: (parentKey: string | null) => void;
+  hierarchy?: HierarchyScores | null | undefined;
+  level?: ScoringLevel;
+  parentLevel?: Exclude<ScoringLevel, 0 | 4>;
+  parentKey?: string | null;
+  onParentChange?: (parentKey: string | null) => void;
+  options?: string[];
+  value?: string | null;
+  onChange?: (key: string) => void;
   className?: string;
 }
 
 export function ParentSelector({
   hierarchy,
-  level,
-  parentLevel,
+  level: _level,
+  parentLevel: _parentLevel,
   parentKey,
   onParentChange,
+  options,
+  value,
+  onChange,
   className,
 }: ParentSelectorProps) {
   const parents = useMemo(
-    () => levelItemsFromHierarchy(hierarchy, parentLevel),
-    [hierarchy, parentLevel]
+    () => (_parentLevel && hierarchy ? levelItemsFromHierarchy(hierarchy, _parentLevel) : []),
+    [hierarchy, _parentLevel],
   );
-  if (level <= parentLevel) return null;
-  const label = LEVEL_META[parentLevel].label;
+  const showOptions = options !== undefined;
+  const items = showOptions ? options! : parents.map((p) => p.key);
+
+  if (!showOptions && (!_level || !_parentLevel || _level <= _parentLevel)) return null;
+  const label = _parentLevel ? LEVEL_META[_parentLevel].label : "Parent";
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         Parent {label}:
       </span>
-      <div className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap" role="group" aria-label={`Parent ${label}`}>
-        <button
-          type="button"
-          onClick={() => onParentChange(null)}
-          className={cn(
-            "rounded-md px-3 py-1 text-xs font-semibold transition",
-            parentKey === null
-              ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-          aria-pressed={parentKey === null}
-        >
-          ALL
-        </button>
-        {parents.map((p) => (
+      <div
+        className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap"
+        role="group"
+        aria-label={`Parent ${label}`}
+      >
+        {!showOptions && (
           <button
-            key={p.key}
             type="button"
-            onClick={() => onParentChange(p.key)}
+            onClick={() => onParentChange?.(null)}
             className={cn(
-              "rounded-md px-3 py-1 text-xs font-semibold transition whitespace-nowrap",
-              parentKey === p.key
+              "rounded-md px-3 py-1 text-xs font-semibold transition",
+              parentKey === null
                 ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
-            aria-pressed={parentKey === p.key}
+            aria-pressed={parentKey === null}
           >
-            {p.label}
+            ALL
           </button>
-        ))}
+        )}
+        {items.map((p) => {
+          const key = p;
+          const isActive = showOptions ? value === p : parentKey === p;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                if (showOptions) onChange?.(p);
+                else onParentChange?.(p);
+              }}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-semibold transition whitespace-nowrap",
+                isActive
+                  ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              aria-pressed={isActive}
+            >
+              {p}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
