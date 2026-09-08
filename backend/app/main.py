@@ -29,6 +29,7 @@ from app.api.middleware import (
     RateLimitMiddleware,
     RequestLoggingMiddleware,
 )
+from app.api.middleware.security_headers import SecurityHeadersMiddleware
 from app.api.routes import (
     analysis_router,
     auth_router,
@@ -614,6 +615,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
 app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)

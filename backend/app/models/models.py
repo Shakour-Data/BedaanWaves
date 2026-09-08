@@ -70,7 +70,7 @@ class Asset(Base):
 
     # Geographic
     country_code = Column(String(2))
-    currency = Column(String(3), default="IRR")
+    currency = Column(String(3), default="USD")
 
     # Identifiers
     isin_code = Column(String(12))
@@ -279,7 +279,7 @@ class Portfolio(Base):
     description = Column(Text)
     portfolio_type = Column(String(20), default="PERSONAL")  # PERSONAL, WATCHLIST, PAPER_TRADING
 
-    base_currency = Column(String(3), default="IRR")
+    base_currency = Column(String(3), default="USD")
     rebalance_frequency = Column(String(20))
     target_allocation = Column(JSONB, default=dict)
 
@@ -351,6 +351,10 @@ class User(Base):
     preferred_language = Column(String(10), default="fa")
     theme = Column(String(20), default="light")
     notifications_enabled = Column(Boolean, default=True)
+
+    email_verified = Column(Boolean, default=False)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
@@ -1371,11 +1375,8 @@ class DataSource(Base):
     source_type = Column(String(50), nullable=False)
     base_url = Column(String(500))
     api_key_required = Column(Boolean, default=False)
-    auth_token_encrypted = Column(String(1000))  # Fernet-encrypted at rest
-    auth_token = Column(
-        String(500),
-        info={"deprecated": "Use auth_token_encrypted instead; stored plaintext for legacy migration."},
-    )  # TODO: remove after migration
+    auth_token_encrypted = Column(String(1000))
+
     data_format = Column(String(50))
     last_verification = Column(DateTime)
     verification_count = Column(Integer, default=0)

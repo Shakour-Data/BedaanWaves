@@ -1,0 +1,193 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedaanwaves-backend
+  labels:
+    app: bedaanwaves
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: backend
+        image: bedaanwaves/backend:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL_CORE
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: database-url-core
+        - name: DATABASE_URL_MARKET
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: database-url-market
+        - name: DATABASE_URL_ML
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: database-url-ml
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: redis-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: jwt-secret
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        - name: EVENT_BUS_BACKEND
+          value: "kafka"
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: TRACING_ENABLED
+          value: "true"
+        - name: ENABLE_DOCS
+          value: "false"
+        - name: REQUIRE_AUTH
+          value: "true"
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: CORS_ORIGINS
+          value: "https://bedaanwaves.com,https://app.bedaanwaves.com"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sh", "-c", "sleep 10"]
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bedaanwaves-backend
+  labels:
+    app: bedaanwaves
+    tier: backend
+spec:
+  selector:
+    app: bedaanwaves
+    tier: backend
+  ports:
+  - port: 80
+    targetPort: 8000
+    name: http
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bedaanwaves-backend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bedaanwaves-backend
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bedaanwaves-config
+data:
+  APP_NAME: "BedaanWaves"
+  APP_VERSION: "1.0.0"
+  ENVIRONMENT: "production"
+  DATABASE_POOL_SIZE: "20"
+  DATABASE_MAX_OVERFLOW: "10"
+  REDIS_URL: "redis://redis:6379/0"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  EVENT_BUS_BACKEND: "kafka"
+  LOG_LEVEL: "INFO"
+  TRACING_ENABLED: "true"
+  ENABLE_DOCS: "false"
+  REQUIRE_AUTH: "true"
+  RATE_LIMIT_ENABLED: "true"
+  CORS_ORIGINS: "https://bedaanwaves.com,https://app.bedaanwaves.com"
+  PRIMARY_REGION: "us-east-1"
+  REPLICA_REGION: "us-west-2"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bedaanwaves-secrets
+type: Opaque
+stringData:
+  database-url-core: "postgresql+asyncpg://user:pass@postgres-core:5432/bedaanwaves"
+  database-url-market: "postgresql+asyncpg://user:pass@postgres-market:5432/bedaanwaves_market"
+  database-url-ml: "postgresql+asyncpg://user:pass@postgres-ml:5432/bedaanwaves_ml"
+  redis-url: "redis://redis:6379/0"
+  jwt-secret: "change-me-in-production"
+  data-encryption-key: "change-me-in-production"
+  backup-encryption-key: "change-me-in-production"
+  admin-password: "change-me-in-production"

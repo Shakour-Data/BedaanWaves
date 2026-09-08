@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bedaanwaves-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.io/ssl-redirect: "true"
+    nginx.ingress.io/rate-limit: "100"
+    nginx.ingress.io/rate-limit-window: "1m"
+    nginx.ingress.io/proxy-read-timeout: "300"
+    nginx.ingress.io/proxy-connect-timeout: "30"
+spec:
+  tls:
+  - hosts:
+    - api.bedaanwaves.com
+    secretName: bedaanwaves-tls
+  rules:
+  - host: api.bedaanwaves.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bedaanwaves-backend
+            port:
+              number: 80
