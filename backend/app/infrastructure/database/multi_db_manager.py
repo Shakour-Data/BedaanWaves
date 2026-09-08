@@ -8,6 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import get_settings
 
+
+class ConfigurationError(Exception):
+    """Raised when required configuration is missing or invalid."""
+
+
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,12 @@ class MultiDatabaseManager:
     def _build_config(self, role: DatabaseRole) -> DatabaseConfig:
         base_url = getattr(settings, f"DATABASE_URL_{role.value.upper()}", None)
         if not base_url:
-            base_url = settings.DATABASE_URL
+            raise ConfigurationError(
+                f"DATABASE_URL_{role.value.upper()} is not configured. "
+                f"Set it in .env (e.g. DATABASE_URL_CORE=postgresql+asyncpg://...). "
+                f"Refusing to silently fall back to the default DATABASE_URL — "
+                f"that would collapse all roles into a single database (SPOF)."
+            )
         return DatabaseConfig(
             role=role,
             url=base_url,

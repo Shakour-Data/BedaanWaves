@@ -13,6 +13,8 @@ Provides four FastAPI/Starlette middlewares:
 * ``RequestLoggingMiddleware`` - logs incoming requests and responses with timing.
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -28,6 +30,14 @@ from app.infrastructure.utils.redis_rate_limiter import RedisRateLimiter
 from app.services.user.auth_service import decode_token
 
 settings = get_settings()
+
+__all__ = [
+    "CorrelationIdMiddleware",
+    "AuthGuardMiddleware",
+    "RateLimitMiddleware",
+    "RequestLoggingMiddleware",
+    "_client_ip",
+]
 
 
 def _client_ip(request: Request) -> str:
@@ -53,7 +63,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
 class AuthGuardMiddleware(BaseHTTPMiddleware):
     """Enforce a valid Bearer access token on protected API paths."""
 
-    def __init__(self, app, *, enabled: bool = True):
+    def __init__(self, app, *, enabled: bool = True) -> None:
         super().__init__(app)
         self.enabled = enabled
         self.api_prefix = settings.API_V1_STR
@@ -70,7 +80,6 @@ class AuthGuardMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not self.enabled:
-            # Still record a user id when a valid token is present (best effort).
             self._try_attach_user(request)
             return await call_next(request)
 
@@ -118,13 +127,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Falls back to in-memory limiting when Redis is unavailable.
     """
 
-    def __init__(self, app, *, enabled: bool = True):
+    def __init__(self, app, *, enabled: bool = True) -> None:
         super().__init__(app)
         self.enabled = enabled
         self.per_minute = settings.RATE_LIMIT_REQUESTS_PER_MINUTE
         self.per_hour = settings.RATE_LIMIT_REQUESTS_PER_HOUR
         self._redis_limiter = RedisRateLimiter(redis_url=settings.REDIS_URL)
-        self._windows: dict[str, deque] = {}
+        self._windows: dict[str, deque[float]] = {}
         self._last_activity: dict[str, float] = {}
         self._eviction_interval = 3600
         self._lock = threading.Lock()
@@ -149,16 +158,23 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return self._too_many_requests("Rate limit exceeded (fallback)")
 
         if not allowed:
-            return self._too_many_requests(
+            response = self._too_many_requests(
                 "Hourly rate limit exceeded"
                 if info.get("hour_count", 0) >= self.per_hour
                 else "Rate limit exceeded"
             )
+            response.headers["Retry-After"] = (
+                str(3600) if info.get("hour_count", 0) >= self.per_hour else str(60)
+            )
+            return response
 
         response = await call_next(request)
         response.headers["X-RateLimit-Limit-Minute"] = str(self.per_minute)
-        remaining = max(0, self.per_minute - info.get("minute_count", 0))
-        response.headers["X-RateLimit-Remaining-Minute"] = str(remaining)
+        response.headers["X-RateLimit-Limit-Hour"] = str(self.per_hour)
+        remaining_minute = max(0, self.per_minute - info.get("minute_count", 0))
+        remaining_hour = max(0, self.per_hour - info.get("hour_count", 0))
+        response.headers["X-RateLimit-Remaining-Minute"] = str(remaining_minute)
+        response.headers["X-RateLimit-Remaining-Hour"] = str(remaining_hour)
         return response
 
     def _fallback_rate_limit(self, key: str, now: float) -> bool:
@@ -190,32 +206,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return False
 
     @staticmethod
-    def _too_many_requests(detail: str) -> JSONResponse:
+    def _too_many_requests(detail: str) -> Response:
         return JSONResponse(
             status_code=429,
             content={"status": "error", "error_code": "RATE_LIMITED", "message": detail},
         )
 
 
-def protected_dependencies() -> list:
-    """Router-level dependencies enforcing auth when the global guard is enabled.
-
-    Returns a list containing ``Depends(get_current_active_user)`` only when
-    ``REQUIRE_AUTH`` is on, so development keeps working with the guard disabled.
-    """
-    if not settings.REQUIRE_AUTH:
-        return []
-    from fastapi import Depends
-
-    from app.api.dependencies import get_current_active_user
-
-    return [Depends(get_current_active_user)]
-
-
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Log incoming requests and responses."""
 
-    def __init__(self, app, *, enabled: bool = True):
+    def __init__(self, app, *, enabled: bool = True) -> None:
         super().__init__(app)
         self.enabled = enabled
 
@@ -224,31 +225,38 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         start_time = time.monotonic()
-
-        # Log incoming request
-        correlation_id = getattr(request.state, 'correlation_id', 'unknown')
+        correlation_id = getattr(request.state, "correlation_id", "unknown")
         logger = logging.getLogger(__name__)
         logger.info(
-            f"Request: {request.method} {request.url.path} "
-            f"[correlation_id={correlation_id}] "
-            f"client={_client_ip(request)}"
+            "Request: %s %s [correlation_id=%s] client=%s",
+            request.method,
+            request.url.path,
+            correlation_id,
+            _client_ip(request),
         )
 
         try:
             response = await call_next(request)
-        except Exception as e:
+        except Exception as exc:
             process_time = time.monotonic() - start_time
             logger.error(
-                f"Request failed: {request.method} {request.url.path} "
-                f"[correlation_id={correlation_id}] "
-                f"duration={process_time:.3f}s error={e!s}"
+                "Request failed: %s %s [correlation_id=%s] duration=%.3fs error=%s",
+                request.method,
+                request.url.path,
+                correlation_id,
+                process_time,
+                exc,
             )
             raise
 
         process_time = time.monotonic() - start_time
+        response.headers["X-Process-Time"] = f"{process_time:.3f}"
         logger.info(
-            f"Response: {request.method} {request.url.path} "
-            f"[correlation_id={correlation_id}] "
-            f"status={response.status_code} duration={process_time:.3f}s"
+            "Response: %s %s [correlation_id=%s] status=%d duration=%.3fs",
+            request.method,
+            request.url.path,
+            correlation_id,
+            response.status_code,
+            process_time,
         )
         return response

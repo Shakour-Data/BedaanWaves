@@ -8,6 +8,7 @@ Enhanced with full automation:
 - Directory creation
 """
 
+import asyncio
 import logging
 import os
 import signal
@@ -341,6 +342,12 @@ async def lifespan(app: FastAPI):
         data_integrity_svc = DataIntegrityService(event_bus=event_bus)
         container.register_instance("data_integrity_service", data_integrity_svc)
 
+        # Event-driven cache invalidation
+        from app.services.core.cache_invalidation_service import CacheInvalidationService
+        cache_invalidation_svc = CacheInvalidationService(event_bus=event_bus, cache_service=cache_svc)
+        await cache_invalidation_svc.start()
+        container.register_instance("cache_invalidation_service", cache_invalidation_svc)
+
         # Analysis services
         coefficient_svc = CoefficientLearningService()
         scoring_svc = ScoringService()
@@ -376,6 +383,32 @@ async def lifespan(app: FastAPI):
         container.register_instance("queue_service", queue_svc)
         container.register_instance("queue", queue_svc)
 
+        # Self-healing service — register critical services for automatic recovery
+        from app.services.system.self_healing_service import SelfHealingService
+        self_healing_svc = SelfHealingService()
+        self_healing_svc.register_service(
+            "DatabaseService",
+            database_svc.health_check,
+            restart_cmd="systemctl --user restart bedaanwaves-backend.service",
+            critical=True,
+        )
+        self_healing_svc.register_service(
+            "CacheService",
+            cache_svc.health_check,
+            critical=False,
+        )
+        self_healing_svc.register_service(
+            "HealthChecker",
+            health_svc.health_check,
+            critical=False,
+        )
+        self_healing_svc.register_recovery_policy("DatabaseService", {
+            "min_instances": 1,
+            "max_instances": 1,
+            "target_cpu": 0.85,
+        })
+        container.register_instance("self_healing_service", self_healing_svc)
+
         # Scheduler with all real services injected
         scheduler_svc = SchedulerService(
             scoring_service=scoring_svc,
@@ -396,6 +429,21 @@ async def lifespan(app: FastAPI):
 
         await scheduler_svc.initialize()
         logger.info("SchedulerService started")
+
+        # Schedule periodic self-healing checks (every 30s)
+        async def _periodic_self_heal():
+            while True:
+                try:
+                    await asyncio.sleep(30)
+                    sh = container.get("self_healing_service")
+                    report = await sh.check_and_heal()
+                    if report.get("services_healed", 0) > 0:
+                        logger.warning("Self-healing actions performed: %s", report.get("details"))
+                except Exception as exc:
+                    logger.error("Self-healing check failed: %s", exc)
+
+        asyncio.create_task(_periodic_self_heal())
+        logger.info("SelfHealingService periodic checks scheduled (interval=30s)")
 
         # Notification dispatcher (shared, used by SLOMonitor)
         notification_dispatcher_svc = NotificationDispatcher()
