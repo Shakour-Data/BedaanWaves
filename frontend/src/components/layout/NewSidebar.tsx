@@ -36,23 +36,30 @@ const categories: NavCategory[] = [
        { label: "Rankings", href: "/ranking", marker: "RN" },
      ],
    },
-  {
-    label: "Intelligence",
-    items: [
-      { label: "News", href: "/news", marker: "NW" },
-      { label: "Alerts", href: "/alerts", marker: "AL" },
-      { label: "Search", href: "/search-demo", marker: "SR" },
-      { label: "Watchlist", href: "/watchlist", marker: "WL" },
-    ],
-  },
-  {
-    label: "Resources",
-    items: [
-      { label: "Methodology", href: "/methodology", marker: "M" },
-      { label: "Help", href: "/help", marker: "H" },
-    ],
-  },
-];
+   {
+     label: "Markets",
+     items: [
+       { label: "NASDAQ", href: "/dashboard", marker: "NQ" },
+       { label: "TSE / Neark", href: "/tse/nerk", marker: "TSE" },
+     ],
+   },
+   {
+     label: "Intelligence",
+     items: [
+       { label: "News", href: "/news", marker: "NW" },
+       { label: "Alerts", href: "/alerts", marker: "AL" },
+       { label: "Search", href: "/search-demo", marker: "SR" },
+       { label: "Watchlist", href: "/watchlist", marker: "WL" },
+     ],
+   },
+   {
+     label: "Resources",
+     items: [
+       { label: "Methodology", href: "/methodology", marker: "M" },
+       { label: "Help", href: "/help", marker: "H" },
+     ],
+   },
+ ];
 
 const bottomItems: NavItem[] = [
   { label: "Settings", href: "/settings", marker: "ST" },

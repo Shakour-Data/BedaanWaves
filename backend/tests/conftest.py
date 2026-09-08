@@ -211,6 +211,19 @@ class FakeAsyncSession:
         return None
 
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def client():
+    from app.api.routes.health import router as health_router
+    _app = FastAPI()
+    _app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
+    _app.include_router(health_router, prefix="/health", tags=["health"])
+    return TestClient(_app)
+
+
 class _FakeResult:
     def __init__(self, rows):
         self._rows = rows
@@ -226,6 +239,12 @@ class _FakeResult:
 
     def scalar(self):
         return self._rows[0] if self._rows else None
+
+    def scalar_one_or_none(self):
+        return self._rows[0] if self._rows else None
+
+    def mappings(self):
+        return self
 
 
 @pytest.fixture

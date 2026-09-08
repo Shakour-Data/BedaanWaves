@@ -103,7 +103,7 @@ class Asset(Base):
             raise ValueError(
                 f"Asset.market must be one of {sorted(ALLOWED_MARKETS)} "
                 f"(got {value!r}). Crypto, forex, commodities, bonds, and "
-                f"non-Nasdaq equities are not allowed in this codebase."
+                f"unsupported equities are not allowed in this codebase."
             )
         return value
 
@@ -113,7 +113,7 @@ class Asset(Base):
             raise ValueError(
                 f"Asset.asset_class must be one of {sorted(ALLOWED_ASSET_CLASSES)} "
                 f"(got {value!r}). Crypto, forex, commodities, bonds, and "
-                f"indexes are not allowed in this codebase."
+                f"unsupported asset classes are not allowed in this codebase."
             )
         return value
 
@@ -173,8 +173,15 @@ class IntlPriceCandle(CandleMixin, Base):
     __tablename__ = "intl_price_candles"
 
 
+class TSEPriceCandle(CandleMixin, Base):
+    """Tehran Stock Exchange (TSE) price candles for Neark index constituents."""
+    __tablename__ = "tse_price_candles"
+
+
 def candle_model_for_market(market: str):
     """Return the appropriate candle model for the given market."""
+    if market == "TSE":
+        return TSEPriceCandle
     return IntlPriceCandle  # default: international markets (NASDAQ, NYSE, LSE, etc.)
 
 
@@ -214,8 +221,15 @@ class IntlOrderBook(OrderBookMixin, Base):
     __tablename__ = "intl_order_book"
 
 
+class TSEOrderBook(OrderBookMixin, Base):
+    """Tehran Stock Exchange (TSE) market depth (top 5 quotes)"""
+    __tablename__ = "tse_order_book"
+
+
 def order_book_model_for_market(market: str):
     """Return the appropriate market depth model for the given market."""
+    if market == "TSE":
+        return TSEOrderBook
     return IntlOrderBook
 
 

@@ -414,7 +414,8 @@ class RealTimeMarketDataService(BaseService):
             elif isinstance(result, dict):
                 return result
             return None
-        except Exception:
+        except Exception as exc:
+            self.logger.debug(f"Cache get miss for {key}: {exc}")
             return None
 
     def _set_cached(self, key: str, value: Any, ttl: int) -> None:
@@ -426,8 +427,8 @@ class RealTimeMarketDataService(BaseService):
                 self._cache.set(key, value, namespace="market_data", ttl=ttl), loop
             )
             future.result(timeout=2)
-        except Exception:
-            pass
+        except Exception as exc:
+            self.logger.debug(f"Cache set failed for {key}: {exc}")
 
     async def _run_blocking(self, func, *args, **kwargs):
         loop = asyncio.get_running_loop()

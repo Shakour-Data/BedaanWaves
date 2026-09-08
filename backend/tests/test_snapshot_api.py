@@ -224,8 +224,8 @@ class TestSnapshotCacheParityAC2:
         assert a == b, "snapshotId replay must produce byte-parity payload"
         # AC2 perf: cache hit path < 100 ms
         assert elapsed_ms < 100.0, f"cache hit too slow: {elapsed_ms:.2f} ms"
-        # cache behavior: 1 set, 2 total gets (1 miss first pass, 1 hit second pass)
-        assert kv.sets == 1
+        # cache behavior: 2 sets (snapshotId + latest key), 2 total gets (1 miss first pass, 1 hit second pass)
+        assert kv.sets == 2
         assert kv.gets >= 1
 
 

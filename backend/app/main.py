@@ -53,6 +53,7 @@ from app.api.routes import (
     stocks_router,
     symbols_router,
     system_router,
+    tse_router,
     users_router,
     watchlists_router,
 )
@@ -80,6 +81,7 @@ from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
 from app.services.data.news_service import NewsService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
+from app.services.data.tse_ingestion_service import TseIngestionService
 from app.services.live import (
     FreshnessValidator,
     LiveDataOrchestrator,
@@ -358,6 +360,7 @@ async def lifespan(app: FastAPI):
 
         # Data services
         nasdaq_svc = NasdaqIngestionService()
+        tse_svc = TseIngestionService()
         ingest_svc = IntelligentIngestionService()
         news_svc = NewsService()
         market_hours_svc = MarketHoursService()
@@ -367,6 +370,8 @@ async def lifespan(app: FastAPI):
         )
         container.register_instance("nasdaq_service", nasdaq_svc)
         container.register_instance("nasdaq_ingestion_service", nasdaq_svc)
+        container.register_instance("tse_service", tse_svc)
+        container.register_instance("tse_ingestion_service", tse_svc)
         container.register_instance("data_ingest_service", ingest_svc)
         container.register_instance("news_service", news_svc)
         container.register_instance("continuous_news_ingestion_service", ingestion_svc)
@@ -552,6 +557,7 @@ async def lifespan(app: FastAPI):
     app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
     app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
     app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+    app.include_router(tse_router, prefix="/api/v1/tse", tags=["tse"])
     app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
     app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
     app.include_router(health_router, prefix="/api/v1/health", tags=["health"])

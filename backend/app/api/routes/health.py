@@ -20,106 +20,115 @@ router = APIRouter(tags=["health"])
 @router.get("/")
 async def health_check():
     """Root health check endpoint."""
-    health_checker = HealthChecker()
+    checks = {}
+    try:
+        health_checker = HealthChecker()
+        container = get_global_container()
+        db_service = container.get("database_service")
+        cache_service = container.get("cache_service")
+        health_checker.register_check("database", lambda: check_database(db_service))
+        health_checker.register_check("cache", lambda: check_cache(cache_service))
+        health_checker.register_check("memory", check_memory)
+        health_checker.register_check("disk", check_disk)
+        result = await health_checker.run_all_checks()
+        checks = result.get('checks', {})
+    except Exception as exc:
+        logger.warning(f"Health check degraded: {exc}")
+        checks = {"error": str(exc)}
 
-    # Register common health checks
-    container = get_global_container()
-    db_service = container.get("database_service")
-    cache_service = container.get("cache_service")
-
-    health_checker.register_check("database", lambda: check_database(db_service))
-    health_checker.register_check("cache", lambda: check_cache(cache_service))
-    health_checker.register_check("memory", check_memory)
-    health_checker.register_check("disk", check_disk)
-
-    result = await health_checker.run_all_checks()
-
+    status = "healthy" if all(v.get("status") == "healthy" for v in checks.values() if isinstance(v, dict)) else "degraded"
     return {
-        "status": "success",
+        "status": status,
         "service": "health_check",
         "timestamp": utc_now_iso(),
-        "overall_status": result.get('overall_status', 'unknown'),
-        "checks": result.get('checks', {})
+        "overall_status": status,
+        "checks": checks,
     }
 
 
 @router.get("/services")
 async def list_service_health():
     """Get health status for all services."""
-    health_checker = HealthChecker()
-
-    # Register common health checks
-    container = get_global_container()
-    db_service = container.get("database_service")
-    cache_service = container.get("cache_service")
-
-    health_checker.register_check("database", lambda: check_database(db_service))
-    health_checker.register_check("cache", lambda: check_cache(cache_service))
-    health_checker.register_check("memory", check_memory)
-    health_checker.register_check("disk", check_disk)
-
-    result = await health_checker.run_all_checks()
+    checks = {}
+    try:
+        health_checker = HealthChecker()
+        container = get_global_container()
+        db_service = container.get("database_service")
+        cache_service = container.get("cache_service")
+        health_checker.register_check("database", lambda: check_database(db_service))
+        health_checker.register_check("cache", lambda: check_cache(cache_service))
+        health_checker.register_check("memory", check_memory)
+        health_checker.register_check("disk", check_disk)
+        result = await health_checker.run_all_checks()
+        checks = result.get('checks', {})
+    except Exception as exc:
+        logger.warning(f"Service health degraded: {exc}")
+        checks = {"error": str(exc)}
 
     return {
         "status": "success",
         "timestamp": utc_now_iso(),
-        "services": result.get('checks', {})
+        "services": checks,
     }
 
 
 @router.get("/services/{service}")
 async def get_service_health(service: str):
     """Get health status for specific service."""
-    health_checker = HealthChecker()
+    checks = {}
+    try:
+        health_checker = HealthChecker()
+        container = get_global_container()
+        db_service = container.get("database_service")
+        cache_service = container.get("cache_service")
+        health_checker.register_check("database", lambda: check_database(db_service))
+        health_checker.register_check("cache", lambda: check_cache(cache_service))
+        health_checker.register_check("memory", check_memory)
+        health_checker.register_check("disk", check_disk)
+        result = await health_checker.run_check(service)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Health check not registered for {service}")
+        checks = result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning(f"Service health degraded for {service}: {exc}")
+        checks = {"status": "error", "error": str(exc)}
 
-    # Register common health checks
-    container = get_global_container()
-    db_service = container.get("database_service")
-    cache_service = container.get("cache_service")
-
-    health_checker.register_check("database", lambda: check_database(db_service))
-    health_checker.register_check("cache", lambda: check_cache(cache_service))
-    health_checker.register_check("memory", check_memory)
-    health_checker.register_check("disk", check_disk)
-
-    result = await health_checker.run_check(service)
-    if not result:
-        raise HTTPException(status_code=404, detail=f"Health check not registered for {service}")
-    if result.get('status') == 'unhealthy':
-        result['error'] = result.get('error', 'Service is unhealthy')
+    if checks.get("status") == "unhealthy":
+        checks["error"] = checks.get("error", "Service is unhealthy")
     return {
         "status": "success",
         "service": service,
-        "health": result
+        "health": checks,
     }
 
 
 @router.get("/ready")
 async def readiness_check():
     """Readiness probe for load balancers and monitoring systems."""
-    health_checker = HealthChecker()
+    checks = {}
+    try:
+        health_checker = HealthChecker()
+        container = get_global_container()
+        db_service = container.get("database_service")
+        cache_service = container.get("cache_service")
+        health_checker.register_check("database", lambda: check_database(db_service))
+        health_checker.register_check("cache", lambda: check_cache(cache_service))
+        result = await health_checker.run_all_checks()
+        checks = result.get('checks', {})
+    except Exception as exc:
+        logger.warning(f"Readiness check degraded: {exc}")
+        checks = {"error": str(exc)}
 
-    # Check critical services only for readiness
-    container = get_global_container()
-    db_service = container.get("database_service")
-    cache_service = container.get("cache_service")
-
-    # Register only critical checks
-    health_checker.register_check("database", lambda: check_database(db_service))
-    health_checker.register_check("cache", lambda: check_cache(cache_service))
-
-    result = await health_checker.run_all_checks()
-
-    # Readiness requires database and cache to be healthy
-    db_status = result.get('checks', {}).get('database', {}).get('status', 'unknown')
-    cache_status = result.get('checks', {}).get('cache', {}).get('status', 'unknown')
-
-    is_ready = db_status == 'healthy' and cache_status == 'healthy'
+    db_status = checks.get("database", {}).get("status", "unknown") if isinstance(checks.get("database"), dict) else "unknown"
+    cache_status = checks.get("cache", {}).get("status", "unknown") if isinstance(checks.get("cache"), dict) else "unknown"
+    is_ready = db_status == "healthy" and cache_status == "healthy"
 
     return {
         "status": "ready" if is_ready else "not_ready",
         "timestamp": utc_now_iso(),
-        "checks": result.get('checks', {})
+        "checks": checks,
     }
 
 

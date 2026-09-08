@@ -12,6 +12,7 @@ from app.db.base import async_session_maker
 from app.models.models import User
 from app.services.core.dependency_container import get_global_container
 from app.services.core.health_checker import HealthChecker
+from app.services.user.auth_service import decode_token
 from app.services.user.authorization_service import AuthorizationService
 
 settings = get_settings()
@@ -25,7 +26,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        payload = decode_token(token)
+        if payload is None:
+            raise credentials_exception
         username: str = payload.get("sub")
         token_type: str = payload.get("type")
         if username is None or token_type != "access":

@@ -22,6 +22,7 @@ from app.services.user.auth_service import (
     create_access_token,
     create_refresh_token,
     create_user,
+    decode_token,
     get_user_by_email,
     get_user_by_username,
     hash_password,
@@ -86,7 +87,9 @@ async def refresh_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        payload = decode_token(token)
+        if payload is None:
+            raise Exception("Invalid token")
     except Exception:
         raise HTTPException(
             status_code=401,

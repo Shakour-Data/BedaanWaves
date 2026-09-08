@@ -4,8 +4,11 @@ import logging
 import os
 import secrets
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 
 import bcrypt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from jose import JWTError, jwt
 from sqlalchemy import select, update
 
@@ -14,6 +17,33 @@ from app.db.base import async_session_maker
 from app.models.models import User
 
 settings = get_settings()
+
+
+def _generate_rsa_keys():
+    """Generate RSA key pair for RS256 JWT signing."""
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode()
+    return private_pem, public_pem
+
+
+@lru_cache(maxsize=1)
+def _get_jwt_keys():
+    """Return (signing_key, verification_key) based on configured algorithm."""
+    if settings.JWT_ALGORITHM == "RS256":
+        private_key = settings.JWT_PRIVATE_KEY
+        public_key = settings.JWT_PUBLIC_KEY
+        if not private_key or not public_key:
+            private_key, public_key = _generate_rsa_keys()
+        return private_key, public_key
+    return settings.JWT_SECRET, settings.JWT_SECRET
 
 
 def hash_password(password: str) -> str:
@@ -34,19 +64,22 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    key, _ = _get_jwt_keys()
+    return jwt.encode(to_encode, key, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS))
     to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    key, _ = _get_jwt_keys()
+    return jwt.encode(to_encode, key, algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> dict | None:
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        _, verification_key = _get_jwt_keys()
+        payload = jwt.decode(token, verification_key, algorithms=[settings.JWT_ALGORITHM])
         return payload
     except JWTError:
         return None

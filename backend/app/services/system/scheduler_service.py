@@ -1459,7 +1459,6 @@ asyncio.run(main())
                     if not info:
                         continue
 
-                    info.get("market_cap", 0) / info.get("sharesOutstanding", 1) if info.get("sharesOutstanding") else None
                     eps = info.get("trailingEps")
                     pe = info.get("trailingPE")
                     pb = info.get("priceToBook")
@@ -2118,7 +2117,7 @@ asyncio.run(main())
                     continue
                 if job.next_run and now >= job.next_run:
                     job._task = asyncio.create_task(self._execute_job(job))
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
 
     def get_job_status(self, name: str) -> dict[str, Any] | None:
         if name not in self._jobs:
