@@ -17,19 +17,19 @@ import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
+from fastapi..cors import CORS
+from fastapi..gzip import GZip
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.middleware import (
-    AuthGuardMiddleware,
-    CorrelationIdMiddleware,
-    RateLimitMiddleware,
-    RequestLoggingMiddleware,
+from app.api. import (
+    AuthGuard,
+    CorrelationId,
+    RateLimit,
+    RequestLogging,
 )
-from app.api.middleware.security_headers import SecurityHeadersMiddleware
+from app.api..security_headers import SecurityHeaders
 from app.api.routes import (
     analysis_router,
     auth_router,
@@ -614,15 +614,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
-app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
-app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
+app.add_(GZip, minimum_size=1000)
+app.add_(SecurityHeaders)
+app.add_(CorrelationId)
+app.add_(AuthGuard, enabled=settings.REQUIRE_AUTH)
+app.add_(RateLimit, enabled=settings.RATE_LIMIT_ENABLED)
+app.add_ngs.LOG_LEVEL.upper() == "INFO")
 
-app.add_middleware(
-    CORSMiddleware,
+app.add_(
+    CORS,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
     allow_methods=settings.CORS_ALLOW_METHODS,

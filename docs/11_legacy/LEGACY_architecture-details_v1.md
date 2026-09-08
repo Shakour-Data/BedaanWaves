@@ -827,7 +827,7 @@ src/components/
 ```typescript
 // src/stores/index.ts
 import { create } from 'zustand';
-import { persist, subscribeWithSelector } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/';
 
 // Market Store
 export const useMarketStore = create<MarketState>()(

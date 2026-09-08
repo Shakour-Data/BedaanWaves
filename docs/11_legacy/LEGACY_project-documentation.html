@@ -482,7 +482,7 @@ BE --> DB : SQL queries
 BE --> YF : upstream fetch
 
 note right of BE
-Middlewares:
+s:
 - CorrelationId
 - RateLimit
 - AuthGuard (JWT)
@@ -755,8 +755,8 @@ flowchart LR
         <h4>Level 1 DFD</h4>
         <div class="diagram-code">
 flowchart LR
-  FE[Frontend] -->|Authorization: Bearer access_token| M[Middleware]
-  M -->|decode JWT| AUTHZ[AuthGuardMiddleware]
+  FE[Frontend] -->|Authorization: Bearer access_token| M[]
+  M -->|decode JWT| AUTHZ[AuthGuard]
   AUTHZ -->|request.state.user_id| ROUTE[Router protected deps]
   ROUTE -->|get_current_active_user| USER_SVC[Auth dependencies]
   USER_SVC --> DBU[(PostgreSQL users)]
@@ -764,7 +764,7 @@ flowchart LR
   ROUTE -->|user_id resolved| PORT[Portfolios/Notifications/Users routers]
   PORT --> DB[(PostgreSQL domain tables)]
         </div>
-        <p>Data Flows: JWT Access Token from FE to Middleware, AuthGuardMiddleware JWT decode, request.state.user_id setting, get_route_user_id resolution, user_id resolved to protected routers, domain tables queries</p>
+        <p>Data Flows: JWT Access Token from FE to , AuthGuard JWT decode, request.state.user_id setting, get_route_user_id resolution, user_id resolved to protected routers, domain tables queries</p>
       </div>
 
       <div id="dfd-2" class="tab-content">
@@ -836,7 +836,7 @@ flowchart TD
   FE --> N4[DELETE /notifications/{id}]
 
   subgraph Auth[Auth & User Context]
-    FE --> G[AuthGuardMiddleware]
+    FE --> G[AuthGuard]
     G --> UID[get_route_user_id]
   end
 
@@ -904,9 +904,9 @@ flowchart TD
   %% Path A: GET /api/v1/market/symbols
   pathA[Path A: GET /market/symbols]
   Client --> APP[FastAPI App main.py]
-  APP --> MID1[CorrelationIdMiddleware]
-  APP --> MID2[RateLimitMiddleware]
-  APP --> MID3[AuthGuardMiddleware]
+  APP --> MID1[CorrelationId]
+  APP --> MID2[RateLimit]
+  APP --> MID3[AuthGuard]
   APP --> R1[market router /market/symbols]
   R1 --> DB1[DB: Asset table]
   DB1 --> R1
@@ -916,7 +916,7 @@ flowchart TD
   %% Path B: GET /api/v1/analysis/technical/{symbol}
   pathB[Path B: GET /analysis/technical/{symbol}]
   Client --> APP2[FastAPI App]
-  APP2 --> MID[middleware chain]
+  APP2 --> MID[ chain]
   APP --> R2[analysis router /technical/{symbol}]
   R2 --> S[TechnicalAnalysisService]
   S --> DB2[PostgreSQL]
@@ -926,7 +926,7 @@ flowchart TD
 
   %% Path C: POST /portfolios/{id}/holdings
   pathC[Path C: POST /portfolios/{id}/holdings]
-  User --> GUARD[AuthGuardMiddleware]
+  User --> GUARD[AuthGuard]
   GUARD --> ROUTE_ID[get_route_user_id]
   ROUTE_ID --> R3[portfolios router]
   R3 --> DB3[DB]
@@ -942,7 +942,7 @@ flowchart TD
   YF --> R4
   R4 --> Client
         </div>
-        <p>End-to-End paths from Request → Middleware → Service → DB/Upstream covering all major API endpoints</p>
+        <p>End-to-End paths from Request →  → Service → DB/Upstream covering all major API endpoints</p>
       </div>
     </div>
     </div>
@@ -1347,7 +1347,7 @@ graph TD
         </div>
         <div class="card">
           <h3>7. Logging and Monitoring Pattern</h3>
-          <p>Structured JSON logging with structured context, Correlation ID on every response (X-Correlation-ID header), Request logging with correlation IDs via CorrelationIdMiddleware, Metrics collection via MetricsService, Health monitoring via HealthChecker service.</p>
+          <p>Structured JSON logging with structured context, Correlation ID on every response (X-Correlation-ID header), Request logging with correlation IDs via CorrelationId, Metrics collection via MetricsService, Health monitoring via HealthChecker service.</p>
           <p>Dashboard: Grafana dashboards for API latency, Database query performance, Memory/CPU usage, Error rates, Signal generation metrics. Alerts: Email/SMS push notifications for critical issues.</p>
         </div>
       </div>

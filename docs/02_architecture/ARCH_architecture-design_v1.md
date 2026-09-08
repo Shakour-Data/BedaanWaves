@@ -129,7 +129,7 @@ Manages system operations and infrastructure:
 
 ### User Request Flow
 1. **Request**: HTTP request enters via API routes
-2. **Authentication**: AuthGuardMiddleware validates JWT tokens
+2. **Authentication**: AuthGuard validates JWT tokens
 3. **Authorization**: AuthorizationService checks RBAC permissions
 4. **Processing**: Request routed to appropriate service via DependencyContainer
 5. **Execution**: Service performs business logic and data operations
@@ -220,7 +220,7 @@ BedaanWaves/
 │       │   ├── __init__.py
 │       │   ├── config.py         # Configuration management
 │       │   ├── dependencies.py   # FastAPI dependencies
-│       │   ├── middleware.py     # Custom middleware
+│       │   ├── .py     # Custom 
 │       │   └── services.py       # Service registration helpers
 │       ├── api/                  # API route definitions
 │       │   ├── __init__.py
@@ -331,7 +331,7 @@ BedaanWaves/
 - **Plugin Architecture**: Planned for custom service integration
 - **Configuration Override**: Environment-specific settings
 - **Service Extension**: Inheritance from base service classes
-- **Middleware Chains**: Custom processing pipelines
+- ** Chains**: Custom processing pipelines
 - **Database Migrations**: Alembic for schema evolution
 
 ### Technology Upgrades

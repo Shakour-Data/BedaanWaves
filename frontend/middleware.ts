@@ -27,7 +27,7 @@ function getLocaleFromRequest(request: NextRequest): string {
   return DEFAULT_LOCALE;
 }
 
-export function middleware(request: NextRequest) {
+export function (request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
 

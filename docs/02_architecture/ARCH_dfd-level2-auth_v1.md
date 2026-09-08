@@ -5,8 +5,8 @@ Separation of data flows related to JWT and propagation of user information.
 ## Diagram (Mermaid)
 ```mermaid
 flowchart LR
-  FE[Frontend] -->|Authorization: Bearer access_token| M[Middleware]
-  M -->|decode JWT| AUTHZ[AuthGuardMiddleware]
+  FE[Frontend] -->|Authorization: Bearer access_token| M[]
+  M -->|decode JWT| AUTHZ[AuthGuard]
 
   AUTHZ -->|request.state.user_id| ROUTE[Router protected deps]
   ROUTE -->|get_current_active_user| USER_SVC[Auth dependencies]
@@ -19,8 +19,8 @@ flowchart LR
 ```
 
 ## Data Flows
-- **JWT Access Token**: Sent from FE to Middleware.
-- **AuthGuardMiddleware**:
+- **JWT Access Token**: Sent from FE to .
+- **AuthGuard**:
   - JWT decode
   - Check `type == access`
   - Set `request.state.user_id` and `request.state.username`

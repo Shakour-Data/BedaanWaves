@@ -11,7 +11,7 @@
   - [x] Identify all tables and relationships (Asset, PriceCandle, etc.)
   - [x] Document current API endpoints (16 routers)
     - [x] Analyze data import/export processes (yahoo_finance_client.py)
-  - [x] Review error handling patterns (middleware.py, global exception handlers)
+  - [x] Review error handling patterns (.py, global exception handlers)
   - [x] Test data consistency (via HealthChecker + DatabaseService)
 
 - [x] **Bedaan6D-project Frontend**
@@ -38,14 +38,14 @@
 #### Backend Setup Completed
 - [x] Created `backend/api/` directory structure
 - [x] Initialized FastAPI application in `backend/app/main.py`
-- [x] CORS middleware configuration (configurable via CORS_ORIGINS)
-- [x] Authentication middleware (JWT via AuthGuardMiddleware)
+- [x] CORS  configuration (configurable via CORS_ORIGINS)
+- [x] Authentication  (JWT via AuthGuard)
 - [x] Pydantic models in `backend/app/schemas/schemas.py`
 - [x] Environment configuration in `backend/app/core/config.py` (100+ settings)
 - [x] Database connection pool (DatabaseService in core/)
-- [x] Request/response logging (CorrelationIdMiddleware)
-- [x] Error handling middleware (middleware.py + global exception handlers)
-- [x] GZip compression middleware
+- [x] Request/response logging (CorrelationId)
+- [x] Error handling  (.py + global exception handlers)
+- [x] GZip compression 
 
 #### Test API Setup  DONE
 - [x] Unit tests for API initialization (test_*.py files in backend/tests/)
@@ -73,7 +73,7 @@
 - [x] Pagination working
 - [x] Response format compliance verified
 - [x] Authentication requirements enforced
-- [x] Rate limiting (RateLimitMiddleware)
+- [x] Rate limiting (RateLimit)
 - [x] Performance benchmarks documented
 
 #### Deliverables  DONE

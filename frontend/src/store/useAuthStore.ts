@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist } from "zustand/";
 import { apiClient } from '../lib/api';
 
 export interface UserProfile {

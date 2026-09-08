@@ -14,7 +14,7 @@
  */
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist } from "zustand/";
 import type {
   SnapshotResponse,
   SnapshotIndexResponse,

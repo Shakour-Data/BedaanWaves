@@ -37,7 +37,7 @@ CHECKLIST — PRE-MITIGATION R-01 (Execute 2026-09-04 06:00 UTC)
         $ pg_dump -Fc -Z 9 -U postgres bedaanwaves_db > bedaanwaves-db-v1.0.0-20260904T055000Z-base.dump
         Expected filesize: ~800-1200 MB. Checksum with sha256sum → store in /backups/offline.
   ☐ 4. Confirm PostgreSQL wal_level = replica + archive_command is working.
-  ☐ 5. Deploy "read-only mode" middleware switch to backend:
+  ☐ 5. Deploy "read-only mode"  backend:
         $ curl -X POST localhost:3000/api/v1/admin/maintenance-mode -d '{"enabled":true}'
         → returns HTTP 503 with Retry-After for all write endpoints.
   ☐ 6. Create 3 additional PostgreSQL REPLICA SLOTs for manual point-in-time recovery (PITR):
@@ -99,7 +99,7 @@ STEP 7 (T+13:00 — Smoke-test platform on v1.0.0)
   • curl http://localhost:3000/api/v1/health → status: "healthy", version: "1.0.0"
   • Login via Playwright test run: npx playwright test e2e/auth.spec.ts --project=chromium → 8/8 pass
   • Browse dashboard, ranking, AAPL detail → confirm v1 UI (no forecast, no comparison tabs)
-  • Disable maintenance-mode middleware: curl -X POST /api/v1/admin/maintenance-mode -d '{"enabled":false}'
+  • Disable maintenance-mode POST /api/v1/admin/maintenance-mode -d '{"enabled":false}'
 
 STEP 8 (T+14:00 — CLOSE ROLLBACK)
   • IC announces "Rollback R-01 complete"
@@ -202,7 +202,7 @@ CHECKLIST — PRE-MITIGATION R-03 (Execute 2026-09-04 18:00 UTC)
   ☐ 3. Run forecast warm-up test suite against staging (not production) — 30 requests × 7 symbols × 3 horizons:
         python tests/integration/test_forecast_engine_coldstart.py
         → Expected: 630/630 HTTP 200, 0 NaN in any series[*].forecast_usd field
-  ☐ 4. Add defensive middleware: forecast route pre-checks scaler version tag before inference:
+  ☐ 4. Add defensive  route pre-checks scaler version tag before inference:
         scaler_meta = joblib.load(scaler_path).metadata  # Add sklearn_version field to artifacts
         if scaler_meta['sklearn_version'] != sklearn.__version__: raise HTTP_503_FORECAST_WARMUP_REQUIRED
   ☐ 5. Add a "Forecast Engine Warmup" POST endpoint (ADMIN only):

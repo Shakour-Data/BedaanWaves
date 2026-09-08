@@ -37,7 +37,7 @@ BedaanWaves/
 │   ├── core/config.py               # 100+ settings via pydantic-settings
 │   ├── api/
 │   │   ├── routes/                  # 16 routers (auth, stocks, market, analysis, etc.)
-│   │   ├── middleware.py            # AuthGuard, CorrelationId, RateLimit
+│   │   ├── .py            # AuthGuard, CorrelationId, RateLimit
 │   │   └── dependencies.py          # FastAPI dependency injection
 │   ├── services/
 │   │   ├── core/                    # Tier 1: BaseService, Config, Logger, Cache, DB, Health
@@ -90,9 +90,9 @@ The INTEGRATION_FRAMEWORK.md and ARCHITECTURE_DETAILS.md are **historical planni
 - **Planned**: `/api/v1/` on port 3000
 - **Actual**: Configurable via `settings.API_V1_STR` and `settings.API_PORT`, running on port 8000 (dev)
 
-### 5. Middleware
-- **Planned**: Basic FastAPI middleware
-- **Actual**: AuthGuardMiddleware, CorrelationIdMiddleware, RateLimitMiddleware, GZipMiddleware
+### 5. 
+- **Planned**: Basic FastAPI 
+- **Actual**: AuthGuard, CorrelationId, RateLimit, GZip
 
 ### 6. Database Migrations
 - **Planned**: Alembic migrations not yet implemented
@@ -155,7 +155,7 @@ pytest --cov=app --cov-report=html
 - **Migrations**: Alembic
 - **Validation**: Pydantic (v2)
 - **Caching**: Redis (optional, memory fallback)
-- **Auth**: JWT (via AuthGuardMiddleware)
+- **Auth**: JWT (via AuthGuard)
 - **Monitoring**: Prometheus metrics via MetricsService
 
 ### Frontend (Planned)

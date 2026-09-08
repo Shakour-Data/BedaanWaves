@@ -203,7 +203,7 @@ backend/
 ├── app/
 │   ├── api/
 │   │   ├── routes/          # 27 router modules
-│   │   ├── middleware.py    # RateLimit, CorrelationId, AuthGuard, RequestLogging
+│   │   ├── .py    # RateLimit, CorrelationId, AuthGuard, RequestLogging
 │   │   └── dependencies.py
 │   ├── core/                # config.py, exceptions.py, rate_limiting.py, services.py
 │   ├── db/                  # base.py (async_session_maker)

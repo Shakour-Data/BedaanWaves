@@ -71,7 +71,7 @@ bedaanwaves-v2.0.0-master.zip
 │   │       ├── playwright.config.ts
 │   │       ├── vitest.config.ts
 │   │       ├── eslint.config.mjs
-│   │       ├── middleware.ts
+│   │       ├── 
 │   │       ├── postcss.config.mjs
 │   │       └── next-env.d.ts
 │   │

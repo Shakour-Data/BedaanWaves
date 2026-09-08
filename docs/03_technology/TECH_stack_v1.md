@@ -194,7 +194,7 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
 ### Framework & Language
 - **Framework**: Next.js 14+ (App Router)
   - Selected for: Server Components, streaming SSR, incremental static regeneration
-  - Features: File-system routing, API routes, middleware, image optimization
+  - Features: File-system routing, API routes, , image optimization
 - **Language**: TypeScript 5.0+
   - Selected for: Type safety, IDE support, refactoring tools, ecosystem
   - Features: Strict null checking, path mapping, declaration merging
@@ -215,7 +215,7 @@ BedaanWaves utilizes a modern, carefully selected technology stack designed for 
 
 ### State Management
 - **State Library**: Zustand 4.5.0+
-  - Selected for: Minimal boilerplate, excellent TypeScript support, middleware
+  - Selected for: Minimal boilerplate, excellent TypeScript support, 
   - Features: Persistence, devtools, selectors, async actions
 - **Server State**: TanStack Query (React Query) 5.0+
   - Selected for: Background updates, stale-while-revalidate, garbage collection

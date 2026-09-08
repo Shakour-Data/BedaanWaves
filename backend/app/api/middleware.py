@@ -1,16 +1,16 @@
-"""Global API Middleware
+"""Global API 
 
-Provides four FastAPI/Starlette middlewares:
+Provides four FastAPI/Starlette s:
 
-* ``CorrelationIdMiddleware``  - attaches a request id (X-Correlation-ID) used for
+* ``CorrelationId``  - attaches a request id (X-Correlation-ID) used for
   tracing and request logging.
-* ``AuthGuardMiddleware``      - the global authentication guard. When
+* ``AuthGuard``      - the global authentication guard. When
   ``REQUIRE_AUTH`` is enabled it rejects unauthenticated requests to every
   protected API path (with a configurable public allow-list).
-* ``RateLimitMiddleware``     - Redis-backed distributed sliding-window rate
+* ``RateLimit``     - Redis-backed distributed sliding-window rate
   limiting keyed by client IP, honoring the ``RATE_LIMIT_*`` configuration.
   Falls back to in-memory limiting when Redis is unavailable.
-* ``RequestLoggingMiddleware`` - logs incoming requests and responses with timing.
+* ``RequestLogging`` - logs incoming requests and responses with timing.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import time
 import uuid
 from collections import deque
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette..base import BaseHTTP, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -32,10 +32,10 @@ from app.services.user.auth_service import decode_token
 settings = get_settings()
 
 __all__ = [
-    "CorrelationIdMiddleware",
-    "AuthGuardMiddleware",
-    "RateLimitMiddleware",
-    "RequestLoggingMiddleware",
+    "CorrelationId",
+    "AuthGuard",
+    "RateLimit",
+    "RequestLogging",
     "_client_ip",
 ]
 
@@ -49,7 +49,7 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-class CorrelationIdMiddleware(BaseHTTPMiddleware):
+class CorrelationId(BaseHTTP):
     """Generate/propagate a correlation id for every request."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -60,7 +60,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class AuthGuardMiddleware(BaseHTTPMiddleware):
+class AuthGuard(BaseHTTP):
     """Enforce a valid Bearer access token on protected API paths."""
 
     def __init__(self, app, *, enabled: bool = True) -> None:
@@ -121,7 +121,7 @@ class AuthGuardMiddleware(BaseHTTPMiddleware):
         )
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
+class RateLimit(BaseHTTP):
     """Redis-backed distributed sliding-window rate limiter keyed by client IP.
 
     Falls back to in-memory limiting when Redis is unavailable.
@@ -213,7 +213,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
+class RequestLogging(BaseHTTP):
     """Log incoming requests and responses."""
 
     def __init__(self, app, *, enabled: bool = True) -> None:

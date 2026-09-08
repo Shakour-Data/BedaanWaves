@@ -31,7 +31,7 @@ end
 @startuml
 actor User
 participant "Frontend" as FE
-participant "Middleware Chain\nCorrelation/Rate/AuthGuard" as MID
+participant " Chain\nCorrelation/Rate/AuthGuard" as MID
 participant "Router /analysis/signals/{symbol}" as R
 participant "DB (AsyncSession)" as DB
 participant "MLSignal model" as MS
@@ -57,7 +57,7 @@ participant "Router /portfolios/{id}/holdings" as R
 participant "DB" as DB
 
 User -> FE : POST /api/v1/portfolios/{pid}/holdings\nAuthorization: Bearer ...
-FE -> AUTH : middleware resolves request.state.user_id
+FE -> AUTH :  resolves request.state.user_id
 AUTH --> R : user_id
 R -> DB : load Portfolio(portfolio_id)
 DB --> R : portfolio or None

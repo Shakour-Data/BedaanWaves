@@ -1,11 +1,11 @@
-"""Security Headers Middleware - Adds OWASP-recommended security headers."""
+"""Security Headers  - Adds OWASP-recommended security headers."""
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette..base import BaseHTTP
 from starlette.requests import Request
 from starlette.responses import Response
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+class SecurityHeaders(BaseHTTP):
     """
     Adds security headers to every response per OWASP guidelines.
 

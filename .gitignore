@@ -187,5 +187,8 @@ backend/sec_cik_cache.json
 # Data files
 backend/nasdaq_symbols.csv
 
+# Trae AI internal state
+.trae/
+
 # Backup files
 backend/*.backup

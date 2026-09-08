@@ -1,7 +1,7 @@
 """Authorization Service (Tier 6: User Services)
 
 Centralizes role/permission resolution and authorization helpers used both by
-the global auth guard middleware and by per-route permission dependencies.
+the global auth guard  and by per-route permission dependencies.
 """
 
 from collections.abc import Iterable

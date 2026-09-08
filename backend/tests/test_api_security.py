@@ -1,26 +1,26 @@
 """
-Security route/middleware tests (0.1, 0.2, 0.4).
+Security route/ tests (0.1, 0.2, 0.4).
 
 Covers:
-- 0.1 AuthGuardMiddleware rejects unauthenticated requests with 401
+- 0.1 AuthGuard rejects unauthenticated requests with 401
 - 0.2 Portfolio IDOR: user A cannot read/update/delete user B portfolio
 """
 
 import uuid
 
 import pytest
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette..base import BaseHTTP
 
-from app.api.middleware import AuthGuardMiddleware
+from app.api. import AuthGuard
 from app.core.config import get_settings
 from app.services.user.auth_service import create_access_token, create_refresh_token
 
 
 # ---------------------------------------------------------------------------
-# 0.1 AuthGuardMiddleware tests
+# 0.1 AuthGuard tests
 # ---------------------------------------------------------------------------
 
-class _AuthGuardApp(BaseHTTPMiddleware):
+class _AuthGuardApp(BaseHTTP):
     """Minimal ASGI app that records the response status."""
 
     def __init__(self, handler):
@@ -33,25 +33,25 @@ class _AuthGuardApp(BaseHTTPMiddleware):
         return response
 
 
-class TestAuthGuardMiddleware:
-    """0.1: AuthGuardMiddleware rejects unauthenticated requests with 401."""
+class TestAuthGuard:
+    """0.1: AuthGuard rejects unauthenticated requests with 401."""
 
     @pytest.fixture
-    def middleware(self):
+    def (self):
         settings = get_settings()
-        return AuthGuardMiddleware(app=None, enabled=True)
+        return AuthGuard(app=None, enabled=True)
 
     @pytest.fixture
-    def _app(self, middleware):
+    def _app(self, ):
         async def handler(scope, receive, send):
             from starlette.responses import JSONResponse
             response = JSONResponse({"status": "ok"}, status_code=200)
             await response(scope, receive, send)
         app = _AuthGuardApp(handler)
-        app.add_middleware(AuthGuardMiddleware, enabled=True)
+        app.add_(AuthGuard, enabled=True)
         return app
 
-    def test_missing_auth_header_returns_401(self, middleware):
+    def test_missing_auth_header_returns_401(self, ):
         from starlette.requests import Request
         from starlette.responses import Response
         import asyncio
@@ -67,10 +67,10 @@ class TestAuthGuardMiddleware:
             "query_string": b"",
             "server": ("testserver", 80),
         }, None)
-        response = asyncio.run(middleware.dispatch(request, call_next))
+        response = asyncio.run(.dispatch(request, call_next))
         assert response.status_code == 401
 
-    def test_invalid_token_returns_401(self, middleware):
+    def test_invalid_token_returns_401(self, ):
         from starlette.requests import Request
         from starlette.responses import Response
         import asyncio
@@ -86,10 +86,10 @@ class TestAuthGuardMiddleware:
             "query_string": b"",
             "server": ("testserver", 80),
         }, None)
-        response = asyncio.run(middleware.dispatch(request, call_next))
+        response = asyncio.run(.dispatch(request, call_next))
         assert response.status_code == 401
 
-    def test_valid_access_token_allows_request(self, middleware):
+    def test_valid_access_token_allows_request(self, ):
         from starlette.requests import Request
         from starlette.responses import Response
         import asyncio
@@ -107,10 +107,10 @@ class TestAuthGuardMiddleware:
             "query_string": b"",
             "server": ("testserver", 80),
         }, None)
-        response = asyncio.run(middleware.dispatch(request, call_next))
+        response = asyncio.run(.dispatch(request, call_next))
         assert response.status_code == 200
 
-    def test_public_path_allows_unauthenticated(self, middleware):
+    def test_public_path_allows_unauthenticated(self, ):
         from starlette.requests import Request
         from starlette.responses import Response
         import asyncio
@@ -126,7 +126,7 @@ class TestAuthGuardMiddleware:
             "query_string": b"",
             "server": ("testserver", 80),
         }, None)
-        response = asyncio.run(middleware.dispatch(request, call_next))
+        response = asyncio.run(.dispatch(request, call_next))
         assert response.status_code == 200
 
 

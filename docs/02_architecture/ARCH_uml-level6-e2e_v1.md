@@ -1,4 +1,4 @@
-# UML Level 6 — End-to-End Paths (Request → Middleware → Service → DB/Upstream)
+# UML Level 6 — End-to-End Paths (Request →  → Service → DB/Upstream)
 
 This level describes several real paths from a UML perspective.
 
@@ -7,9 +7,9 @@ This level describes several real paths from a UML perspective.
 @startuml
 actor Client
 participant "FastAPI App\nmain.py" as APP
-participant "CorrelationIdMiddleware" as MID1
-participant "RateLimitMiddleware" as MID2
-participant "AuthGuardMiddleware (optional)" as MID3
+participant "CorrelationId" as MID1
+participant "RateLimit" as MID2
+participant "AuthGuard (optional)" as MID3
 participant "market router\n/market/symbols" as R
 participant "DB (Async SQLAlchemy)" as DB
 participant "Asset table" as T
@@ -31,7 +31,7 @@ APP --> Client : 200 JSON
 @startuml
 actor Client
 participant "FastAPI App" as APP
-participant "middleware chain" as MID
+participant " chain" as MID
 participant "analysis router\n/technical/{symbol}" as R
 participant "TechnicalAnalysisService" as S
 participant "PostgreSQL" as DB
@@ -54,7 +54,7 @@ APP --> Client : 200
 ```plantuml
 @startuml
 actor User
-participant "AuthGuardMiddleware" as GUARD
+participant "AuthGuard" as GUARD
 participant "get_route_user_id" as ROUTE_ID
 participant "portfolios router\n/add holding" as R
 participant "DB" as DB

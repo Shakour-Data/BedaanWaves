@@ -67,7 +67,7 @@ Both describe the same 9-tier architecture overview and project status. The key 
 - `12_core_services.md` (2.1 KB) — Brief stub listing 9 core services, including RateLimiterService and ErrorHandlerService (not in 08)
 
 **Content overlap:**
-Both describe Tier 1 core services. 08 is detailed and authoritative. 12 adds RateLimiterService and ErrorHandlerService which are not documented in 08 but exist in the codebase (middleware: RateLimitMiddleware, global exception handlers in main.py).
+Both describe Tier 1 core services. 08 is detailed and authoritative. 12 adds RateLimiterService and ErrorHandlerService which are not documented in 08 but exist in the codebase (: RateLimit, global exception handlers in main.py).
 
 **Decision:** **Both retained** — 08 is the primary document; 12 supplements with 2 additional services.
 

@@ -65,7 +65,7 @@ These files are explicitly labeled as historical or contain planning information
 | File | Review Notes |
 |------|-------------|
 | `SERVICES_catalog_v1.md` | Contains service descriptions that partially overlap with `OVERVIEW_implementation-status_v1.md` and `ARCH_architecture-design_v1.md`. Consider consolidating key service summaries into `SERVICES_catalog_v1.md` and removing redundant mentions from overview docs. |
-| `ARCH_core-services-supplement_v1.md` | Adds RateLimiterService and ErrorHandlerService not documented in the primary `ARCH_core-services_v1.md`. These services **do exist** in the code (middleware: `RateLimitMiddleware`; handlers in `main.py`). **Recommendation:** Merge the supplemental content into the primary core services doc. |
+| `ARCH_core-services-supplement_v1.md` | Adds RateLimiterService and ErrorHandlerService not documented in the primary `ARCH_core-services_v1.md`. These services **do exist** in the code (: `RateLimit`; handlers in `main.py`). **Recommendation:** Merge the supplemental content into the primary core services doc. |
 | `SERVICES_ml-tier4-supplement_v1.md` | Contains an architecture diagram and service descriptions with no conflicts. **Recommendation:** Merge into `SERVICES_ml-tier4_v1.md` as an "Architecture" section. |
 
 ---

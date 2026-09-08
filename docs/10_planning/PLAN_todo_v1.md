@@ -74,11 +74,11 @@
 - [x] Implement FastAPI routes for all implemented tiers (`market`, `analysis`, `stocks`, `portfolios`, `history`, `news`, `auth`, `ml`, `live`, `specialized`, `users`, `watchlists`, `notifications`)
 - [x] API versioning (`/api/v1` prefix)
 - [x] Request/response validation (Pydantic schemas in `app/schemas`)
-- [x] Authentication & authorization middleware (global guard via `AuthGuardMiddleware` + router-level `Depends(get_current_active_user)`; gated by `REQUIRE_AUTH`, default off for local dev)
-- [x] Rate limiting (`RateLimitMiddleware`, in-memory sliding window)
+- [x] Authentication & authorization  (global guard via `AuthGuard` + router-level `Depends(get_current_active_user)`; gated by `REQUIRE_AUTH`, default off for local dev)
+- [x] Rate limiting (`RateLimit`, in-memory sliding window)
 - [x] API documentation (Swagger/OpenAPI at `/api/v1/docs`)
-- [x] Error handling middleware (`app/api/dependencies.py` / exception handlers)
-- [x] CORS configuration (`CORSMiddleware` in `main.py`)
+- [x] Error handling  (`app/api/dependencies.py` / exception handlers)
+- [x] CORS configuration (`CORS` in `main.py`)
 
 ## Database
 - [x] Alembic migration setup (existing `backend/database/alembic` + initial migration)
@@ -143,6 +143,6 @@
 - [x] Replace TODO.md with comprehensive project tracker (synced to actual code state — Tiers 1-7 marked complete)
 - [~] Implement proper error handling in all services (global exception handlers in `main.py` / `api/dependencies.py`; partial — service-level handling not yet uniform)
 - [~] Add comprehensive input validation (Pydantic schemas exist; partial — not yet enforced across all endpoints/services)
-- [x] Implement request logging with correlation IDs (`CorrelationIdMiddleware` sets `X-Correlation-ID` on every response)
+- [x] Implement request logging with correlation IDs (`CorrelationId` sets `X-Correlation-ID` on every response)
 - [ ] Add metrics collection for all services (MetricsService is Tier 9 — pending)
 

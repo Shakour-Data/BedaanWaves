@@ -123,8 +123,8 @@ Archive of historical financial data for backup and reference.
 - \
 un.py\ - Runner script
 
-#### Layer 2: Middleware Stack
-1. CORS Middleware - Cross-origin requests
+#### Layer 2:  Stack
+1. CORS  - Cross-origin requests
 2. GZip Compression - Response compression
 3. Rate Limiting - DDoS protection (100 req/min)
 4. Security Headers - HSTS, CSP, X-Frame-Options
@@ -319,13 +319,13 @@ risk_score (20%)
 macro_score (10%)
 ai_score (10%)
 
-final_score = S(weight × score)
+final_score = S(weight ï¿½ score)
 normalized to 1-100
 \\\
 
 #### ML Coefficient Learning
 \\\
-coefficient_t = 0.8 × coefficient_t-1 + 0.2 × performance
+coefficient_t = 0.8 ï¿½ coefficient_t-1 + 0.2 ï¿½ performance
 performance = correlation with actual returns
 ensemble: Random Forest, XGBoost, LightGBM, NN, SVM
 \\\
@@ -378,76 +378,76 @@ The frontend implements a sophisticated design system based on:
 \\\
 src/
 +-- app/                          # Next.js App Router
-¦   +-- api/
-¦   ¦   +-- hierarchy/
-¦   ¦   +-- symbols/
-¦   ¦   +-- scores/
-¦   +-- layout.tsx               # Root layout
-¦   +-- page.tsx                 # Home page
-¦   +-- error.tsx                # Error boundary
-¦   +-- globals.css              # Global styles
+ï¿½   +-- api/
+ï¿½   ï¿½   +-- hierarchy/
+ï¿½   ï¿½   +-- symbols/
+ï¿½   ï¿½   +-- scores/
+ï¿½   +-- layout.tsx               # Root layout
+ï¿½   +-- page.tsx                 # Home page
+ï¿½   +-- error.tsx                # Error boundary
+ï¿½   +-- globals.css              # Global styles
 
 +-- components/                  # React components
-¦   +-- magic/                  # Magic system
-¦   ¦   +-- MagicButton.tsx
-¦   ¦   +-- MagicCard.tsx
-¦   ¦   +-- MagicForm.tsx
-¦   ¦   +-- MagicGrid.tsx
-¦   ¦   +-- MagicTypography.tsx
-¦   +-- ui/                     # shadcn/ui (40+ components)
-¦   ¦   +-- accordion.tsx
-¦   ¦   +-- alert.tsx
-¦   ¦   +-- button.tsx
-¦   ¦   +-- card.tsx
-¦   ¦   +-- dialog.tsx
-¦   ¦   +-- dropdown-menu.tsx
-¦   ¦   +-- form.tsx
-¦   ¦   +-- input.tsx
-¦   ¦   +-- tabs.tsx
-¦   ¦   +-- ... (30+ more)
-¦   +-- pages/                  # Page components
-¦       +-- DashboardTab.tsx
-¦       +-- CompaniesTab.tsx
-¦       +-- HierarchyExplorer.tsx
-¦       +-- ...
+ï¿½   +-- magic/                  # Magic system
+ï¿½   ï¿½   +-- MagicButton.tsx
+ï¿½   ï¿½   +-- MagicCard.tsx
+ï¿½   ï¿½   +-- MagicForm.tsx
+ï¿½   ï¿½   +-- MagicGrid.tsx
+ï¿½   ï¿½   +-- MagicTypography.tsx
+ï¿½   +-- ui/                     # shadcn/ui (40+ components)
+ï¿½   ï¿½   +-- accordion.tsx
+ï¿½   ï¿½   +-- alert.tsx
+ï¿½   ï¿½   +-- button.tsx
+ï¿½   ï¿½   +-- card.tsx
+ï¿½   ï¿½   +-- dialog.tsx
+ï¿½   ï¿½   +-- dropdown-menu.tsx
+ï¿½   ï¿½   +-- form.tsx
+ï¿½   ï¿½   +-- input.tsx
+ï¿½   ï¿½   +-- tabs.tsx
+ï¿½   ï¿½   +-- ... (30+ more)
+ï¿½   +-- pages/                  # Page components
+ï¿½       +-- DashboardTab.tsx
+ï¿½       +-- CompaniesTab.tsx
+ï¿½       +-- HierarchyExplorer.tsx
+ï¿½       +-- ...
 
 +-- contexts/                    # React Context
-¦   +-- MagicContext.tsx        # Magic system state
+ï¿½   +-- MagicContext.tsx        # Magic system state
 
 +-- hooks/                       # Custom hooks
-¦   +-- use-mobile.ts           # Mobile detection
-¦   +-- use-magic-api.ts        # API management
+ï¿½   +-- use-mobile.ts           # Mobile detection
+ï¿½   +-- use-magic-api.ts        # API management
 
 +-- lib/                         # Utilities
-¦   +-- design-tokens.ts        # Design tokens
-¦   +-- utils.ts                # Helpers
-¦   +-- hierarchy.ts            # Hierarchy logic
-¦   +-- scoring.ts              # Scoring calculations
-¦   +-- persian.ts              # Persian utilities
-¦   +-- references.ts           # References
-¦   +-- prisma.ts               # Prisma setup
+ï¿½   +-- design-tokens.ts        # Design tokens
+ï¿½   +-- utils.ts                # Helpers
+ï¿½   +-- hierarchy.ts            # Hierarchy logic
+ï¿½   +-- scoring.ts              # Scoring calculations
+ï¿½   +-- persian.ts              # Persian utilities
+ï¿½   +-- references.ts           # References
+ï¿½   +-- prisma.ts               # Prisma setup
 
 +-- services/                    # API services
-¦   +-- magic-api.ts            # API client
-¦   +-- symbol-service.ts       # Symbol management
-¦   +-- scoring-service.ts      # Scoring logic
-¦   +-- hierarchy-service.ts    # Hierarchy logic
-¦   +-- history-service.ts      # History management
-¦   +-- todo-service.ts         # Todo management
+ï¿½   +-- magic-api.ts            # API client
+ï¿½   +-- symbol-service.ts       # Symbol management
+ï¿½   +-- scoring-service.ts      # Scoring logic
+ï¿½   +-- hierarchy-service.ts    # Hierarchy logic
+ï¿½   +-- history-service.ts      # History management
+ï¿½   +-- todo-service.ts         # Todo management
 
 +-- stores/                      # State (Zustand)
-¦   +-- magicStore.ts           # Magic system state
-¦   +-- __tests__/
+ï¿½   +-- magicStore.ts           # Magic system state
+ï¿½   +-- __tests__/
 
 +-- test/                        # Tests
-¦   +-- api-routes.test.ts
-¦   +-- components/
-¦   +-- services/
-¦   +-- ...
+ï¿½   +-- api-routes.test.ts
+ï¿½   +-- components/
+ï¿½   +-- services/
+ï¿½   +-- ...
 
 +-- prisma/
-¦   +-- schema.prisma           # Database schema
-¦   +-- seed.ts                 # Seed data
+ï¿½   +-- schema.prisma           # Database schema
+ï¿½   +-- seed.ts                 # Seed data
 
 +-- package.json                 # Dependencies
 +-- tsconfig.json                # TypeScript config

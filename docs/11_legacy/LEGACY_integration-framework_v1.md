@@ -358,7 +358,7 @@ backend/api/
 │   ├── schemas.py                   # Pydantic models
 │   ├── responses.py                 # Response schemas
 │   └── errors.py                    # Error models
-├── middleware/
+├── /
 │   ├── auth.py                      # JWT authentication
 │   ├── logging.py                   # Request logging
 │   └── cors.py                      # CORS configuration
@@ -375,9 +375,9 @@ backend/api/
 ```python
 # backend/api/main.py
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi..cors import CORS
 from .routes import market, analysis
-from .middleware import auth, logging
+from . import auth, logging
 
 app = FastAPI(
     title="Bedaan Unified API",
@@ -385,14 +385,14 @@ app = FastAPI(
     docs_url="/api/v1/docs"
 )
 
-# Add middleware
-app.add_middleware(
-    CORSMiddleware,
+# Add 
+app.add_(
+    CORS,
     allow_origins=["http://localhost:3005", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(logging.LoggingMiddleware)
+app.add_(logging.Logging)
 
 # Include routers
 app.include_router(market.router, prefix="/api/v1/market")
@@ -1304,7 +1304,7 @@ src/
 ```typescript
 // src/stores/market-store.ts
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/';
 
 interface MarketState {
   // State

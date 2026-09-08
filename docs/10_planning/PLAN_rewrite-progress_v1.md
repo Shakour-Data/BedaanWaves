@@ -218,7 +218,7 @@
 - Technical indicators (50+) planned
 - ML ensemble architecture captured
 - Database schema (16+ tables) planned
-- Middleware stack captured
+-  stack captured
 - Error handling patterns documented
 
 ### From Bedaan6D-project (Frontend UI)
