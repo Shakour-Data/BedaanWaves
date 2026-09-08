@@ -1,0 +1,31 @@
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 5
+findtime = 600
+bantime = 3600
+
+[nginx-http-auth]
+enabled = true
+port = http,https
+filter = nginx
+logpath = /var/log/nginx/access.log
+maxretry = 5
+
+[nginx-limit-req]
+enabled = true
+port = http,https
+filter = nginx-limit-req
+logpath = /var/log/nginx/error.log
+maxretry = 10
+
+[recidive]
+enabled = true
+filter = recidive
+logpath = /var/log/fail2ban.log
+action = iptables-allports[name=recidive, protocol=all]
+bantime = 604800
+findtime = 86400
+maxretry = 5

@@ -68,20 +68,47 @@ async def login(data: LoginRequest) -> Token:
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(data: RefreshTokenRequest) -> Token:
-    token = data.refresh_token
+async def refresh_token(
+    data: RefreshTokenRequest | None = None,
+    token: str | None = None,
+) -> Token:
+    """Exchange a valid refresh token for new tokens.
+
+    Accepts the refresh token either in the JSON request body
+    (``{"refresh_token": "..."}``) or as a query parameter (``?token=...``).
+    """
+    if data is not None:
+        token = data.refresh_token
+    if token is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     username: str = payload.get("sub")
     token_type: str = payload.get("type")
     if username is None or token_type != "refresh":
-        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     user = await get_user_by_username(username)
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(
+            status_code=401,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     async with async_session_maker() as session:
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -94,7 +121,11 @@ async def refresh_token(data: RefreshTokenRequest) -> Token:
         )
         stored = result.scalars().first()
         if stored is None:
-            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         await session.execute(
             update(RefreshToken).where(RefreshToken.id == stored.id).values(revoked=True)

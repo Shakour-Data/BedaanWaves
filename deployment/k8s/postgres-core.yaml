@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-core-pv
+  labels:
+    app: bedaanwaves
+    tier: database
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/postgresql/core
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-core-pvc
+  labels:
+    app: bedaanwaves
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: standard
+  selector:
+    matchLabels:
+      app: bedaanwaves
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-core
+  labels:
+    app: bedaanwaves
+    tier: database
+    db: core
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: database
+      db: core
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: database
+        db: core
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:17-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: "bedaanwaves"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-db-secrets
+              key: postgres-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-db-secrets
+              key: postgres-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - bedaanwaves
+            - -d
+            - bedaanwaves
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - bedaanwaves
+            - -d
+            - bedaanwaves
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - bedaanwaves
+            - -d
+            - bedaanwaves
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-core-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-core
+  labels:
+    app: bedaanwaves
+    tier: database
+    db: core
+spec:
+  selector:
+    app: bedaanwaves
+    tier: database
+    db: core
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-core-config
+data:
+  postgres.conf: |
+    # Connection settings
+    max_connections = 200
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    work_mem = 8MB
+    maintenance_work_mem = 64MB
+    
+    # WAL settings
+    wal_level = replica
+    max_wal_senders = 10
+    wal_keep_size = 1GB
+    
+    # Query optimization
+    random_page_cost = 1.1
+    seq_page_cost = 1.0
+    effective_io_concurrency = 200
+    
+    # Logging
+    log_statement = 'ddl'
+    log_min_duration_statement = 1000
+    
+    # Extensions
+    shared_preload_libraries = 'pg_stat_statements, pg_cron'

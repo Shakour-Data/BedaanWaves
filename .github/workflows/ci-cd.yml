@@ -1,14 +1,33 @@
-name: BedaanWaves CI/CD
+name: BedaanWaves CI/CD (Native - No Docker)
 
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      deploy_type:
+        description: 'Deploy type'
+        required: true
+        default: 'rolling'
+        type: choice
+        options:
+          - rolling
+          - blue-green
 
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
+  ARTIFACT_RETENTION_DAYS: 7
 
 jobs:
   security-scan:
@@ -16,6 +35,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
     - name: Run Gitleaks secret scan
       uses: gitleaks/gitleaks-action@v2
@@ -52,19 +73,12 @@ jobs:
         cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-asyncio
+        pip install pytest pytest-cov pytest-asyncio bandit
     
     - name: Run backend tests with coverage
       run: |
         cd backend
-        pytest app/tests/ --cov=app --cov-report=xml --cov-report=term
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./backend/coverage.xml
-        flags: backend
-        fail_ci_if_error: true
+        pytest app/tests/ --cov=app --cov-report=xml --cov-report=term --junitxml=test-results.xml
     
     - name: Run mypy type checking
       run: |
@@ -77,6 +91,21 @@ jobs:
         cd backend
         pip install ruff
         ruff check app/ --output-format=github
+    
+    - name: Run Bandit security scan
+      run: |
+        cd backend
+        bandit -r app/ -f json -o bandit-results.json || true
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-test-results
+        path: |
+          backend/coverage.xml
+          backend/test-results.xml
+          backend/bandit-results.json
+        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -108,63 +137,319 @@ jobs:
     - name: Run unit tests
       run: |
         cd frontend
-        npx vitest run --coverage
+        npx vitest run --coverage --reporter=json --outputFile=vitest-results.json
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-test-results
+        path: |
+          frontend/coverage/
+          frontend/vitest-results.json
+        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
-  docker-build:
+  build-artifacts:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
-    if: github.ref == 'refs/heads/main'
+    outputs:
+      backend_artifact_path: ${{ steps.build.outputs.backend_path }}
+      frontend_artifact_path: ${{ steps.build.outputs.frontend_path }}
+      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        python-version: ${{ env.PYTHON_VERSION }}
     
-    - name: Build and push backend image
-      uses: docker/build-push-action@v5
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
       with:
-        context: ./backend
-        file: ./backend/Dockerfile
-        push: true
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/bedaanwaves-backend:latest
-          ${{ secrets.DOCKER_USERNAME }}/bedaanwaves-backend:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        node-version: ${{ env.NODE_VERSION }}
     
-    - name: Build and push frontend image
-      uses: docker/build-push-action@v5
+    - name: Build backend artifact
+      id: build
+      run: |
+        echo "Building BedaanWaves artifacts..."
+        
+        # Backend
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install build
+        python -m build --wheel --outdir ../dist-backend
+        
+        # Frontend
+        cd ../frontend
+        npm ci
+        npm run build
+        
+        # Package for deployment
+        cd ..
+        mkdir -p deploy-package/backend deploy-package/frontend
+        cp -r backend/dist-backend/* deploy-package/backend/
+        cp -r frontend/.next deploy-package/frontend/
+        cp -r frontend/public deploy-package/frontend/
+        cp frontend/package.json deploy-package/frontend/
+        cp frontend/package-lock.json deploy-package/frontend/
+        
+        # Create tarball
+        tar -czf bedaanwaves-${{ github.sha }}.tar.gz -C deploy-package .
+        
+        echo "backend_path=bedaanwaves-${{ github.sha }}.tar.gz" >> $GITHUB_OUTPUT
+        echo "frontend_path=bedaanwaves-${{ github.sha }}.tar.gz" >> $GITHUB_OUTPUT
+        echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+        
+        echo "Build completed successfully"
+    
+    - name: Upload deployment artifact
+      uses: actions/upload-artifact@v4
       with:
-        context: ./frontend
-        file: ./frontend/Dockerfile
-        push: true
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/bedaanwaves-frontend:latest
-          ${{ secrets.DOCKER_USERNAME }}/bedaanwaves-frontend:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        name: deployment-package-${{ github.sha }}
+        path: bedaanwaves-${{ github.sha }}.tar.gz
+        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+        compression-level: 9
 
-  deploy:
+  deploy-staging:
     runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.ref == 'refs/heads/main'
-    environment: production
+    needs: build-artifacts
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    environment: staging
     steps:
-    - name: Deploy to production
+    - name: Download deployment artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-package-${{ github.sha }}
+        path: ./
+    
+    - name: Deploy to staging via SSH
       uses: appleboy/ssh-action@v1.0.0
       with:
-        host: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USERNAME }}
-        key: ${{ secrets.DEPLOY_KEY }}
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USERNAME }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        port: ${{ secrets.STAGING_SSH_PORT || 22 }}
         script: |
-          cd /opt/bedaanwaves
-          docker-compose pull
-          docker-compose up -d --force-recreate
-          docker system prune -f
+          set -e
+          echo "Starting staging deployment..."
+          
+          # Create deployment directory
+          DEPLOY_DIR="/opt/bedaanwaves/staging"
+          sudo mkdir -p $DEPLOY_DIR
+          sudo chown -R $USER:$USER $DEPLOY_DIR
+          
+          # Backup current version
+          if [ -d "$DEPLOY_DIR/current" ]; then
+            echo "Creating backup of current version..."
+            mv $DEPLOY_DIR/current $DEPLOY_DIR/previous
+            sudo systemctl stop bedaanwaves-staging || true
+          fi
+          
+          # Extract new version
+          mkdir -p $DEPLOY_DIR/releases/${{ github.sha }}
+          tar -xzf bedaanwaves-${{ github.sha }}.tar.gz -C $DEPLOY_DIR/releases/${{ github.sha }}
+          
+          # Setup symlink
+          ln -sfn $DEPLOY_DIR/releases/${{ github.sha }} $DEPLOY_DIR/current
+          
+          # Install dependencies
+          cd $DEPLOY_DIR/current/backend
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r ../../dist-backend/*.whl || pip install -r requirements.txt
+          
+          cd $DEPLOY_DIR/current/frontend
+          npm ci --production
+          
+          # Run migrations
+          cd $DEPLOY_DIR/current/backend
+          source venv/bin/activate
+          alembic upgrade head || true
+          
+          # Update systemd service symlink
+          sudo ln -sfn $DEPLOY_DIR/current/backend/-bedanwaves-staging.service /etc/systemd/system/bedaanwaves-staging.service
+          sudo systemctl daemon-reload
+          
+          # Start service
+          sudo systemctl enable --now bedaanwaves-staging.service
+          
+          # Wait for health check
+          echo "Waiting for service to be healthy..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/api/v1/health > /dev/null; then
+              echo "Staging deployment successful!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Health check failed, rolling back..."
+              sudo systemctl stop bedaanwaves-staging
+              rm -f $DEPLOY_DIR/current
+              ln -sfn $DEPLOY_DIR/previous $DEPLOY_DIR/current
+              sudo systemctl start bedaanwaves-staging
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          # Cleanup old releases (keep last 5)
+          cd $DEPLOY_DIR/releases
+          ls -t | tail -n +6 | xargs -r rm -rf
+          
+          echo "Staging deployment completed"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build-artifacts, deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+    - name: Download deployment artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-package-${{ github.sha }}
+        path: ./
+    
+    - name: Manual approval for production
+      uses: trinsic/approval-action@v1
+      with:
+        message: "Deploy ${{ github.sha }} to production?"
+        required-approvers: "ops-team"
+    
+    - name: Deploy to production via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          set -e
+          echo "Starting production deployment..."
+          
+          DEPLOY_DIR="/opt/bedaanwaves/production"
+          sudo mkdir -p $DEPLOY_DIR
+          sudo chown -R $USER:$USER $DEPLOY_DIR
+          
+          # Blue-Green deployment
+          BLUE_DIR="$DEPLOY_DIR/blue"
+          GREEN_DIR="$DEPLOY_DIR/green"
+          ACTIVE_DIR="$DEPLOY_DIR/active"
+          
+          # Determine which environment to deploy to
+          if [ -L "$ACTIVE_DIR" ] && [ "$(readlink $ACTIVE_DIR)" == "$BLUE_DIR" ]; then
+            TARGET_DIR="$GREEN_DIR"
+            INACTIVE_DIR="$BLUE_DIR"
+          else
+            TARGET_DIR="$BLUE_DIR"
+            INACTIVE_DIR="$GREEN_DIR"
+          fi
+          
+          echo "Deploying to: $TARGET_DIR"
+          
+          # Extract new version
+          mkdir -p $TARGET_DIR
+          tar -xzf bedaanwaves-${{ github.sha }}.tar.gz -C $TARGET_DIR
+          
+          # Setup environment
+          cd $TARGET_DIR/backend
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r ../../dist-backend/*.whl || pip install -r requirements.txt
+          
+          cd $TARGET_DIR/frontend
+          npm ci --production
+          
+          # Run migrations
+          cd $TARGET_DIR/backend
+          source venv/bin/activate
+          alembic upgrade head || true
+          
+          # Create systemd service for target
+          sudo tee /etc/systemd/system/bedaanwaves-production.service > /dev/null << EOF
+[Unit]
+Description=BedaanWaves Production Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=$USER
+Group=$USER
+WorkingDirectory=$TARGET_DIR/backend
+Environment=PATH=$TARGET_DIR/backend/venv/bin
+EnvironmentFile=$TARGET_DIR/backend/.env
+ExecStart=$TARGET_DIR/backend/venv/bin/uvicorn app.main:app --workers 4 --host 0.0.0.0 --port 3000
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+          
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now bedaanwaves-production.service
+          
+          # Health check
+          echo "Waiting for production service..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/api/v1/health > /dev/null; then
+              echo "Production health check passed!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Production health check failed!"
+              sudo systemctl stop bedaanwaves-production
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          # Switch traffic (update nginx upstream)
+          sudo tee /etc/nginx/sites-available/bedaanwaves > /dev/null << EOF
+upstream bedaanwaves_backend {
+    server 127.0.0.1:3000 max_fails=3 fail_timeout=30s;
+}
+
+server {
+    listen 80;
+    server_name _;
+    
+    client_max_body_size 50M;
+    
+    location /api/v1/ {
+        proxy_pass http://bedaanwaves_backend/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    location / {
+        proxy_pass http://127.0.0.1:3005;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+          
+          sudo nginx -t && sudo systemctl reload nginx
+          
+          # Switch active symlink
+          ln -sfn $TARGET_DIR $ACTIVE_DIR
+          
+          echo "Production deployment completed successfully!"
+          
+          # Keep only last 3 releases per environment
+          cd $DEPLOY_DIR
+          ls -d blue/releases/* 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf
+          ls -d green/releases/* 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf

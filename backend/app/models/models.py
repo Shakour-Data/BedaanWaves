@@ -372,6 +372,20 @@ class RefreshToken(Base):
     expires_at = Column(DateTime, nullable=False)
     revoked = Column(Boolean, default=False)
     user_agent = Column(String(512))
+
+
+class UserMFA(Base):
+    """Multi-Factor Authentication settings for users"""
+    __tablename__ = "user_mfa"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+
+    secret = Column(String(255), nullable=False)
+    backup_codes = Column(JSONB, nullable=True)
+    is_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     ip_address = Column(String(64))
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))

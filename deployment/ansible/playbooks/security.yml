@@ -1,0 +1,156 @@
+---
+- name: Harden Server Security
+  hosts: all
+  become: yes
+  vars:
+    ssh_port: 22
+    allowed_ssh_users: []
+    fail2ban_enabled: true
+    ufw_enabled: true
+
+  tasks:
+    - name: Update all packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
+    - name: Install security packages
+      apt:
+        name:
+          - ufw
+          - fail2ban
+          - unattended-upgrades
+          - apt-listchanges
+          - aide
+          - rkhunter
+          - chkrootkit
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Configure automatic security updates
+      template:
+        src: ../templates/auto-updates.j2
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades
+        mode: '0644'
+
+    - name: Enable unattended upgrades
+      template:
+        src: ../templates/auto-updates-config.j2
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        mode: '0644'
+
+    - name: Configure UFW firewall
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Allow SSH through UFW
+      ufw:
+        rule: allow
+        port: "{{ ssh_port }}"
+        proto: tcp
+
+    - name: Allow HTTP through UFW
+      ufw:
+        rule: allow
+        port: 80
+        proto: tcp
+
+    - name: Allow HTTPS through UFW
+      ufw:
+        rule: allow
+        port: 443
+        proto: tcp
+
+    - name: Configure fail2ban for SSH
+      template:
+        src: ../templates/fail2ban-jail.j2
+        dest: /etc/fail2ban/jail.local
+        mode: '0644'
+      notify: restart fail2ban
+
+    - name: Configure fail2ban filter for nginx
+      template:
+        src: ../templates/fail2ban-nginx.j2
+        dest: /etc/fail2ban/filter.d/nginx-auth.conf
+        mode: '0644'
+      notify: restart fail2ban
+
+    - name: Ensure fail2ban is running
+      systemd:
+        name: fail2ban
+        state: started
+        enabled: yes
+
+    - name: Harden SSH configuration
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no' }
+        - { regexp: '^PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+        - { regexp: '^PermitEmptyPasswords', line: 'PermitEmptyPasswords no' }
+        - { regexp: '^X11Forwarding', line: 'X11Forwarding no' }
+        - { regexp: '^MaxAuthTries', line: 'MaxAuthTries 3' }
+        - { regexp: '^ClientAliveInterval', line: 'ClientAliveInterval 300' }
+        - { regexp: '^ClientAliveCountMax', line: 'ClientAliveCountMax 2' }
+      notify: restart sshd
+
+    - name: Create deployment user
+      user:
+        name: bedaanwaves
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+        create_home: yes
+
+    - name: Set up SSH key authentication for deployment user
+      authorized_key:
+        user: bedaanwaves
+        key: "{{ lookup('file', '~/.ssh/bedaanwaves_deploy.pub') }}"
+        state: present
+
+    - name: Disable root login
+      user:
+        name: root
+        password_lock: yes
+
+    - name: Install and configure auditd
+      apt:
+        name: auditd
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start auditd
+      systemd:
+        name: auditd
+        state: started
+        enabled: yes
+
+    - name: Configure audit rules
+      template:
+        src: ../templates/audit-rules.j2
+        dest: /etc/audit/rules.d/bedaanwaves.rules
+        mode: '0644'
+      notify: restart auditd
+
+  handlers:
+    - name: restart fail2ban
+      systemd:
+        name: fail2ban
+        state: restarted
+
+    - name: restart sshd
+      systemd:
+        name: sshd
+        state: restarted
+
+    - name: restart auditd
+      systemd:
+        name: auditd
+        state: restarted

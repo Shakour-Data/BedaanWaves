@@ -1,0 +1,73 @@
+---
+- name: Deploy BedaanWaves Application
+  hosts: all
+  become: yes
+  vars:
+    app_name: bedaanwaves
+    deploy_user: bedaanwaves
+    deploy_group: bedaanwaves
+    python_version: "3.11"
+    node_version: "20"
+    postgres_version: "14"
+    redis_enabled: false
+    backup_enabled: true
+    backup_retention_days: 7
+
+  pre_tasks:
+    - name: Ensure system is updated
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - python3.11
+          - python3.11-venv
+          - python3-pip
+          - postgresql-14
+          - postgresql-contrib
+          - nodejs
+          - npm
+          - nginx
+          - ufw
+          - fail2ban
+          - htop
+          - curl
+          - wget
+          - git
+          - unzip
+          - pkg-config
+          - libpq-dev
+          - build-essential
+        state: present
+      when: ansible_os_family == "Debian"
+
+  roles:
+    - role: bedaanwaves
+      tags: [deploy, app]
+
+    - role: monitoring
+      tags: [monitoring]
+
+    - role: security
+      tags: [security]
+
+  post_tasks:
+    - name: Verify deployment
+      uri:
+        url: "http://localhost:{{ app_port }}/api/v1/health"
+        status_code: 200
+        timeout: 30
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+
+    - name: Display deployment info
+      debug:
+        msg:
+          - "Deployment completed successfully!"
+          - "Environment: {{ app_environment }}"
+          - "Service: http://localhost:{{ app_port }}"

@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-market-pv
+  labels:
+    app: bedaanwaves
+    tier: database
+spec:
+  capacity:
+    storage: 200Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/postgresql/market
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-market-pvc
+  labels:
+    app: bedaanwaves
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: standard
+  selector:
+    matchLabels:
+      app: bedaanwaves
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-market
+  labels:
+    app: bedaanwaves
+    tier: database
+    db: market
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bedaanwaves
+      tier: database
+      db: market
+  template:
+    metadata:
+      labels:
+        app: bedaanwaves
+        tier: database
+        db: market
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:17-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: "bedaanwaves_market"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-db-secrets
+              key: postgres-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-db-secrets
+              key: postgres-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - bedaanwaves
+            - -d
+            - bedaanwaves_market
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - bedaanwaves
+            - -d
+            - bedaanwaves_market
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - bedaanwaves
+            - -d
+            - bedaanwaves_market
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-market-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-market
+  labels:
+    app: bedaanwaves
+    tier: database
+    db: market
+spec:
+  selector:
+    app: bedaanwaves
+    tier: database
+    db: market
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-market-config
+data:
+  postgres.conf: |
+    max_connections = 300
+    shared_buffers = 512MB
+    effective_cache_size = 2GB
+    work_mem = 16MB
+    maintenance_work_mem = 128MB
+    wal_level = replica
+    max_wal_senders = 10
+    wal_keep_size = 2GB
+    random_page_cost = 1.1
+    seq_page_cost = 1.0
+    effective_io_concurrency = 200
+    log_statement = 'ddl'
+    log_min_duration_statement = 500
+    shared_preload_libraries = 'pg_stat_statements, pg_cron'
