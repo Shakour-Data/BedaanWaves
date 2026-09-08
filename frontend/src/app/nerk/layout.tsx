@@ -1,4 +1,4 @@
-export default function TseLayout({
+export default function NerkLayout({
   children,
 }: {
   children: React.ReactNode;

@@ -109,7 +109,7 @@ export default function LeaderboardPage() {
             <select
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
             >
               <option value={5}>Top 5</option>
               <option value={10}>Top 10</option>

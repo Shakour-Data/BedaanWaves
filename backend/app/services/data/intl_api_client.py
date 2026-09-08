@@ -1,7 +1,7 @@
 """
 International Market API Client - Tier 2 Data Service
 
-Provides unified access to international market data APIs (NYSE, NASDAQ, LSE, TSE)
+Provides unified access to international market data APIs (NYSE, NASDAQ, LSE, TSX)
 with automatic provider fallback, caching, and symbol normalisation.
 
 When INTL_API_KEY is set in the environment, IntlApiClient makes real HTTP
@@ -28,7 +28,7 @@ class IntlApiClient(ExternalAPIService):
     results instead of mock data.
     """
 
-    SUPPORTED_EXCHANGES = ["NASDAQ", "NYSE", "LSE", "TSE", "TSX", "XETRA"]
+    SUPPORTED_EXCHANGES = ["NASDAQ", "NYSE", "LSE", "TSX", "XETRA"]
     DEFAULT_BASE_URL = "https://api.twelvedata.com"
 
     def __init__(

@@ -17,12 +17,10 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 class AssetClassEnum(StrEnum):
     EQUITY = "EQUITY"
     ETF = "ETF"
-    INDEX = "INDEX"
 
 
 class MarketEnum(StrEnum):
     NASDAQ = "NASDAQ"
-    TSE = "TSE"
 
 
 class ScoreTierEnum(StrEnum):
@@ -579,17 +577,19 @@ class DataProviderHealthResponse(BaseModel):
     details: dict[str, Any] | None = None
 
 
-# TSE / Neark Response Schemas
-class TseConstituentResponse(BaseModel):
+# Neark (نزدک) Index Response Schemas
+class NearkConstituentResponse(BaseModel):
     symbol: str
     name: str
     sector: str | None = None
     asset_class: str
     market: str
+    is_nerk_constituent: bool
+    nerk_weight: Decimal | None = None
     active: bool
 
 
-class TseOverviewResponse(BaseModel):
+class NearkOverviewResponse(BaseModel):
     index: str
     exchange: str
     market_overview: dict[str, Any]
@@ -599,7 +599,7 @@ class TseOverviewResponse(BaseModel):
     avg_change_pct: float
 
 
-class TseMarketOverviewResponse(BaseModel):
+class NearkMarketOverviewResponse(BaseModel):
     market: str
     total_symbols: int
     active_symbols: int
@@ -609,7 +609,7 @@ class TseMarketOverviewResponse(BaseModel):
     last_updated: str
 
 
-class TsePriceHistoryResponse(BaseModel):
+class NearkPriceHistoryResponse(BaseModel):
     symbol: str
     name: str
     market: str

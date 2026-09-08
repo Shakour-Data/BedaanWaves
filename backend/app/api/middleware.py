@@ -44,11 +44,11 @@ __all__ = [
 
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        client_host = request.client.host if request.client else "unknown"
-        if client_host in settings.TRUSTED_PROXIES:
-            return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    client = getattr(request, "client", None)
+    client_host = getattr(client, "host", None) if client is not None else None
+    if forwarded and client_host and client_host in settings.TRUSTED_PROXIES:
+        return forwarded.split(",")[0].strip()
+    return client_host or "unknown"
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
@@ -262,6 +262,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             process_time,
         )
         return response
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Adds security headers to every response per OWASP guidelines.
@@ -314,8 +316,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # XSS protection (legacy)
         response.headers["X-XSS-Protection"] = "1; mode=block"
 
-        # Remove server identity disclosure
-        response.headers.pop("Server", None)
-        response.headers.pop("X-Powered-By", None)
+        # Remove server identity disclosure safely
+        for header_name in ("Server", "X-Powered-By"):
+            try:
+                del response.headers[header_name]
+            except KeyError:
+                pass
 
         return response

@@ -3,9 +3,11 @@
 from . import (
     analysis,
     auth,
+    compare,
     dashboard,
     data_health,
     filter,
+    forecast,
     health,
     history,
     live,
@@ -23,7 +25,7 @@ from . import (
     stocks,
     symbols,
     system,
-    tse,
+    nerk,
     users,
     watchlists,
 )
@@ -43,7 +45,7 @@ notifications_router = notifications.router
 specialized_router = specialized.router
 system_router = system.router
 symbols_router = symbols.router
-tse_router = tse.router
+nerk_router = nerk.router
 live_router = live.router
 live_sse_router = live_sse.router
 health_router = health.router
@@ -80,6 +82,8 @@ __all__ = [
     "market_router",
     "ml",
     "ml_router",
+    "nerk",
+    "nerk_router",
     "news",
     "news_router",
     "notifications",
@@ -100,8 +104,6 @@ __all__ = [
     "symbols_router",
     "system",
     "system_router",
-    "tse",
-    "tse_router",
     "users",
     "users_router",
     "watchlists",

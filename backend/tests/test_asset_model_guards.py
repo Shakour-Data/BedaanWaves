@@ -63,11 +63,6 @@ def test_asset_rejects_binance_market():
         _make_asset(market="BINANCE")
 
 
-def test_asset_rejects_tse_market():
-    with pytest.raises(ValueError, match="Asset.market"):
-        _make_asset(market="TSE")
-
-
 def test_asset_rejects_crypto_market():
     with pytest.raises(ValueError, match="Asset.market"):
         _make_asset(market="CRYPTO")

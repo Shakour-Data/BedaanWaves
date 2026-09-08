@@ -2,12 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
-  Globe,
-} from "lucide-react";
+import { TrendingUp, TrendingDown, RefreshCw, Globe } from "lucide-react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { PageLoading } from "@/components/ui/PageLoading";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -16,32 +11,23 @@ import { cn } from "@/lib/cn";
 import {
   fetchNerkConstituents,
   fetchNerkOverview,
-  fetchTseMarketOverview,
-  type TseConstituent,
-  type TseOverviewResponse,
-} from "@/lib/api/tse";
+  type NerkConstituent,
+  type NerkOverviewResponse,
+} from "@/lib/api/nerk";
 import { useUXStore } from "@/store/useUXStore";
 
 interface MoversRow {
   symbol: string;
   name: string;
-  market: "TSE";
+  market: "NASDAQ";
   price: number;
   changePct: number;
 }
 
-export default function TseNerekPage() {
+export default function NerkConstituentsPage() {
   const addToast = useUXStore((s) => s.addToast);
-  const [overview, setOverview] = useState<TseOverviewResponse | null>(null);
-  const [marketOverview, setMarketOverview] = useState<{
-    total_symbols: number;
-    active_symbols: number;
-    currency: string;
-    timezone: string;
-    index: string;
-    last_updated: string;
-  } | null>(null);
-  const [constituents, setConstituents] = useState<TseConstituent[]>([]);
+  const [overview, setOverview] = useState<NerkOverviewResponse | null>(null);
+  const [constituents, setConstituents] = useState<NerkConstituent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,17 +37,16 @@ export default function TseNerekPage() {
     else setRefreshing(true);
     setError(null);
     try {
-      const [overviewData, marketData, constituentsData] = await Promise.allSettled([
+      const [overviewData, constituentsData] = await Promise.allSettled([
         fetchNerkOverview(),
-        fetchTseMarketOverview(),
         fetchNerkConstituents(),
       ]);
 
-      if (overviewData.status === "rejected" && marketData.status === "rejected") {
+      if (overviewData.status === "rejected" && constituentsData.status === "rejected") {
         const msg =
           (overviewData.reason instanceof Error && overviewData.reason.message) ||
-          (marketData.reason instanceof Error && marketData.reason.message) ||
-          "Failed to load TSE data";
+          (constituentsData.reason instanceof Error && constituentsData.reason.message) ||
+          "Failed to load Neark data";
         setError(msg);
         if (mode === "initial") {
           addToast({ type: "error", message: msg });
@@ -72,14 +57,11 @@ export default function TseNerekPage() {
       if (overviewData.status === "fulfilled") {
         setOverview(overviewData.value);
       }
-      if (marketData.status === "fulfilled") {
-        setMarketOverview(marketData.value.data);
-      }
       if (constituentsData.status === "fulfilled") {
         setConstituents(constituentsData.value);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load TSE data";
+      const msg = err instanceof Error ? err.message : "Failed to load Neark data";
       setError(msg);
     } finally {
       setLoading(false);
@@ -100,7 +82,7 @@ export default function TseNerekPage() {
       (overview?.top_gainers ?? []).map((g) => ({
         symbol: g.symbol,
         name: g.name,
-        market: "TSE" as const,
+        market: "NASDAQ" as const,
         price: g.price,
         changePct: g.change_pct,
       })),
@@ -112,7 +94,7 @@ export default function TseNerekPage() {
       (overview?.top_losers ?? []).map((g) => ({
         symbol: g.symbol,
         name: g.name,
-        market: "TSE" as const,
+        market: "NASDAQ" as const,
         price: g.price,
         changePct: g.change_pct,
       })),
@@ -121,17 +103,17 @@ export default function TseNerekPage() {
 
   const stats = useMemo(
     () => [
-      { label: "Nerek Constituents", value: String(overview?.constituents_count ?? constituents.length ?? "—") },
+      { label: "Constituents", value: String(overview?.constituents_count ?? constituents.length ?? "—") },
       { label: "Avg Change", value: overview ? `${overview.avg_change_pct.toFixed(2)}%` : "—" },
-      { label: "Active Symbols", value: String(marketOverview?.active_symbols ?? "—") },
-      { label: "Currency", value: marketOverview?.currency ?? "IRR" },
+      { label: "Gainers", value: String(overview?.market_overview?.gainers_count ?? topGainers.length) },
+      { label: "Losers", value: String(overview?.market_overview?.losers_count ?? topLosers.length) },
     ],
-    [overview, constituents.length, marketOverview]
+    [overview, constituents.length, topGainers.length, topLosers.length]
   );
 
   if (loading) {
     return (
-      <NewDashboardShell title="TSE / Neark Index">
+      <NewDashboardShell title="Neark Constituents">
         <PageLoading />
       </NewDashboardShell>
     );
@@ -139,7 +121,7 @@ export default function TseNerekPage() {
 
   if (error && !overview) {
     return (
-      <NewDashboardShell title="TSE / Neark Index">
+      <NewDashboardShell title="Neark Constituents">
         <ErrorMessage
           message={error}
           actions={[
@@ -151,10 +133,10 @@ export default function TseNerekPage() {
   }
 
   return (
-    <NewDashboardShell title="TSE / Neark Index">
+    <NewDashboardShell title="Neark Constituents">
       <div className="mb-6 flex items-center justify-between">
         <p className="text-[var(--color-text-muted)]">
-          Tehran Stock Exchange Neark (نزدک) constituents and market overview
+          Neark (نزدک) constituents overview
         </p>
         <button
           onClick={() => load("refresh")}
@@ -209,7 +191,7 @@ export default function TseNerekPage() {
                         +{item.changePct.toFixed(2)}%
                       </p>
                       <p className="text-xs text-[var(--color-text-muted)]">
-                        {item.price.toLocaleString()} {marketOverview?.currency ?? "IRR"}
+                        {item.price.toLocaleString()} IRR
                       </p>
                     </div>
                   </Link>
@@ -244,7 +226,7 @@ export default function TseNerekPage() {
                         {item.changePct.toFixed(2)}%
                       </p>
                       <p className="text-xs text-[var(--color-text-muted)]">
-                        {item.price.toLocaleString()} {marketOverview?.currency ?? "IRR"}
+                        {item.price.toLocaleString()} IRR
                       </p>
                     </div>
                   </Link>
@@ -256,7 +238,7 @@ export default function TseNerekPage() {
 
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Constituents</h2>
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">All Constituents</h2>
             <Globe className="h-5 w-5 text-[var(--color-primary)]" />
           </div>
           <div className="mt-4 overflow-x-auto">
@@ -267,7 +249,8 @@ export default function TseNerekPage() {
                   <th className="pb-2 font-medium text-[var(--color-text-muted)]">Name</th>
                   <th className="pb-2 font-medium text-[var(--color-text-muted)]">Sector</th>
                   <th className="pb-2 font-medium text-[var(--color-text-muted)]">Class</th>
-                  <th className="pb-2 font-medium text-[var(--color-text-muted)]">Status</th>
+                  <th className="pb-2 font-medium text-[var(--color-text-muted)]">Price</th>
+                  <th className="pb-2 font-medium text-[var(--color-text-muted)]">Change</th>
                 </tr>
               </thead>
               <tbody>
@@ -284,16 +267,18 @@ export default function TseNerekPage() {
                     <td className="py-2 text-[var(--color-text-primary)]">{item.name}</td>
                     <td className="py-2 text-[var(--color-text-muted)]">{item.sector ?? "—"}</td>
                     <td className="py-2 text-[var(--color-text-muted)]">{item.asset_class}</td>
+                    <td className="py-2 text-[var(--color-text-primary)]">
+                      {item.price ? item.price.toLocaleString() : "—"}
+                    </td>
                     <td className="py-2">
                       <span
                         className={cn(
-                          "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-                          item.active
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-gray-100 text-gray-600"
+                          "text-sm font-medium",
+                          (item.change_pct ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"
                         )}
                       >
-                        {item.active ? "Active" : "Inactive"}
+                        {(item.change_pct ?? 0) >= 0 ? "+" : ""}
+                        {(item.change_pct ?? 0).toFixed(2)}%
                       </span>
                     </td>
                   </tr>

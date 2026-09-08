@@ -15,7 +15,6 @@ describe("isNasdaqEquityLike", () => {
   it("rejects explicit non-NASDAQ markets", () => {
     expect(isNasdaqEquityLike({ market: "NYSE", symbol: "JPM" })).toBe(false);
     expect(isNasdaqEquityLike({ market: "BINANCE", symbol: "BTCUSDT" })).toBe(false);
-    expect(isNasdaqEquityLike({ market: "TSE", symbol: "7203" })).toBe(false);
   });
 
   it("rejects crypto-style suffixes even if market is missing", () => {

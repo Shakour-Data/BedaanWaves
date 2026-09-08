@@ -36,13 +36,13 @@ const categories: NavCategory[] = [
        { label: "Rankings", href: "/ranking", marker: "RN" },
      ],
    },
-   {
-     label: "Markets",
-     items: [
-       { label: "NASDAQ", href: "/dashboard", marker: "NQ" },
-       { label: "TSE / Neark", href: "/tse/nerk", marker: "TSE" },
-     ],
-   },
+{
+      label: "Markets",
+      items: [
+        { label: "NASDAQ", href: "/dashboard", marker: "NQ" },
+        { label: "Neark", href: "/nerk", marker: "NK" },
+      ],
+    },
    {
      label: "Intelligence",
      items: [
@@ -159,20 +159,20 @@ export function NewSidebar() {
                     <button
                       onClick={() => toggleCategory(cat.label)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200",
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 min-h-[44px]",
                         hasActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)]"
                       )}
                     >
                       <span
                         className={cn(
-                          "h-1.5 w-1.5 rounded-full transition-colors",
+                          "h-2.5 w-2.5 rounded-full transition-colors flex-shrink-0",
                           hasActive ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]"
                         )}
                       />
                       <span className="flex-1 text-left">{cat.label}</span>
                       <span
                         className={cn(
-                          "text-xs text-[var(--color-text-muted)] transition-transform duration-200 font-mono",
+                          "text-xs text-[var(--color-text-muted)] transition-transform duration-200 font-mono flex-shrink-0",
                           isExpanded && "rotate-180"
                         )}
                       >
@@ -185,30 +185,30 @@ export function NewSidebar() {
                         {cat.items.map((item) => {
                           const active = isActive(item.href);
                           return (
-                              <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setSidebarOpen(false)}
-                                className={cn(
-                                  "group flex items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
-                                active
-                                  ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
-                                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
-                                )}
-                              >
-                               <span
+                               <Link
+                                 key={item.href}
+                                 href={item.href}
+                                 onClick={() => setSidebarOpen(false)}
                                  className={cn(
-                                   "flex h-6 w-6 items-center justify-center rounded transition-colors text-xs font-bold",
-                                   active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                                   "group flex items-center gap-3 rounded-r-lg px-3 py-3 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent min-h-[44px]",
+                                 active
+                                   ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
+                                   : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
                                  )}
-                              >
-                                {item.marker}
-                              </span>
-                              <span className="flex-1">{item.label}</span>
-                              {active && (
-                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)]" />
-                              )}
-                            </Link>
+                               >
+                                <span
+                                  className={cn(
+                                    "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
+                                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                                  )}
+                               >
+                                 {item.marker}
+                               </span>
+                               <span className="flex-1">{item.label}</span>
+                               {active && (
+                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" />
+                               )}
+                             </Link>
                           );
                         })}
                       </div>
@@ -234,7 +234,7 @@ export function NewSidebar() {
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent",
+                        "group flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent min-h-[44px]",
                         active
                           ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
                           : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
@@ -242,7 +242,7 @@ export function NewSidebar() {
                     >
                      <span
                        className={cn(
-                         "flex h-6 w-6 items-center justify-center rounded transition-colors text-xs font-bold",
+                         "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
                          active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
                        )}
                      >
@@ -250,7 +250,7 @@ export function NewSidebar() {
                      </span>
                     <span className="flex-1">{item.label}</span>
                     {active && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" />
                     )}
                   </Link>
                 );

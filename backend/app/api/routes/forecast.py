@@ -28,8 +28,8 @@ from pydantic import BaseModel, Field, validator
 
 from app.services.core.cache_service import CacheService
 
-from ....services.ml.prediction_service import PredictionService
-from ....services.user.auth_service import get_current_user
+from app.api.dependencies import get_current_user
+from ...services.ml.prediction_service import PredictionService
 
 router = APIRouter(prefix="/forecast", tags=["Forecast"])
 

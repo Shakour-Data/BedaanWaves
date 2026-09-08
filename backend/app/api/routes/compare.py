@@ -17,12 +17,12 @@ USAGE:
 """
 
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query
 from pydantic import BaseModel, Field
 
-from ....services.analysis.scoring_service import ScoringService
-from ....services.core.cache_service import CacheService
-from ....services.data.stock_service import StockService
+from ...services.analysis.scoring_service import ScoringService
+from ...services.core.cache_service import CacheService
+from ...services.data.stock_service import StockService
 
 router = APIRouter(prefix="/compare", tags=["Compare"])
 
@@ -178,8 +178,8 @@ async def compare_metrics(
 
 @router.post("/historical")
 async def compare_historical(
-    symbols: list[str] = Field(..., min_items=2, max_items=5),
-    days: int = Field(30, ge=1, le=365),
+    symbols: list[str] = Body(..., min_items=2, max_items=5),
+    days: int = Body(30, ge=1, le=365),
     stock_service: StockService = Depends(),
 ):
     """

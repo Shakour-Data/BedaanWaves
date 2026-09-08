@@ -37,12 +37,11 @@ from app.db.base import Base
 # ---------------------------------------------------------------------------
 # Market categorization (for selecting correct candle/orderbook table)
 # ---------------------------------------------------------------------------
-# Only instruments that participate in the formation of the Nasdaq index
-# are allowed in this codebase. Crypto, forex, commodities, bonds, indexes
-# (other than the kept ^IXIC reference row), and any non-Nasdaq equity
-# (NYSE, TSE, LSE, FWB, HKEX, BINANCE, KRAKEN, COINBASE, etc.) are
-# rejected at the model layer in addition to the database CHECK
-# constraints added by the 20260902_purge_non_nasdaq migration.
+# Supported markets: NASDAQ (US equities) only.
+# Neark index constituents are flagged via the `is_nerk_constituent`
+# boolean column on the Asset model — no separate market value is needed.
+# Crypto, forex, commodities, bonds, and other unsupported markets are
+# rejected at the model layer in addition to database CHECK constraints.
 ALLOWED_MARKETS = frozenset({"NASDAQ"})
 ALLOWED_ASSET_CLASSES = frozenset({"EQUITY", "ETF"})
 
@@ -80,6 +79,12 @@ class Asset(Base):
     active = Column(Boolean, default=True, index=True)
     listing_date = Column(DateTime)
     delisting_date = Column(DateTime)
+
+    # Neark index membership — assets that are constituents of the Neark
+    # (نزدک) index are flagged here so they can be queried and displayed
+    # without needing a separate market value or table.
+    is_nerk_constituent = Column(Boolean, default=False, index=True)
+    nerk_weight = Column(Numeric(10, 4))
 
     # Metadata
     meta = Column("metadata", JSONB, default=dict)
@@ -173,16 +178,14 @@ class IntlPriceCandle(CandleMixin, Base):
     __tablename__ = "intl_price_candles"
 
 
-class TSEPriceCandle(CandleMixin, Base):
-    """Tehran Stock Exchange (TSE) price candles for Neark index constituents."""
-    __tablename__ = "tse_price_candles"
-
-
 def candle_model_for_market(market: str):
-    """Return the appropriate candle model for the given market."""
-    if market == "TSE":
-        return TSEPriceCandle
-    return IntlPriceCandle  # default: international markets (NASDAQ, NYSE, LSE, etc.)
+    """Return the appropriate candle model for the given market.
+
+    Only NASDAQ is supported; all candle data is stored in the
+    ``intl_price_candles`` table.  Neark constituents are regular
+    NASDAQ-listed assets flagged via ``Asset.is_nerk_constituent``.
+    """
+    return IntlPriceCandle
 
 
 # ===========================================================================
@@ -221,15 +224,12 @@ class IntlOrderBook(OrderBookMixin, Base):
     __tablename__ = "intl_order_book"
 
 
-class TSEOrderBook(OrderBookMixin, Base):
-    """Tehran Stock Exchange (TSE) market depth (top 5 quotes)"""
-    __tablename__ = "tse_order_book"
-
-
 def order_book_model_for_market(market: str):
-    """Return the appropriate market depth model for the given market."""
-    if market == "TSE":
-        return TSEOrderBook
+    """Return the appropriate market depth model for the given market.
+
+    Only NASDAQ is supported; all order-book data is stored in the
+    ``intl_order_book`` table.
+    """
     return IntlOrderBook
 
 
