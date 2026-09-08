@@ -156,7 +156,8 @@ class BehavioralEconomicsService(AnalysisService):
             return {"error": f"Invalid survey source: {source}"}
 
         try:
-            async with self.session.get(url, timeout=30) as response:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with self.session.get(url, timeout=timeout) as response:
                 if response.status == 200:
                     return await response.json()
                 return {"error": f"Survey API returned {response.status}"}

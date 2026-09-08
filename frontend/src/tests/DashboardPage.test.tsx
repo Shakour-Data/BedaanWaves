@@ -101,7 +101,7 @@ describe('DashboardPage (new)', () => {
     await waitFor(() => expect(screen.getByText('Universe')).toBeInTheDocument());
     expect(screen.getByText('Avg Score')).toBeInTheDocument();
     expect(screen.getByText('Top Scorer')).toBeInTheDocument();
-    expect(screen.getByText('1,234')).toBeInTheDocument();
+    expect(screen.getByText('1234')).toBeInTheDocument();
   });
 
   it('renders the dimension scores card with bars', async () => {

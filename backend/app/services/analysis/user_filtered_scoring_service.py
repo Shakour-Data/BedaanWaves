@@ -47,7 +47,7 @@ class UserFilteredScoringService(BaseService):
         self.stock_service = stock_service
         self.market_service = market_service
 
-        self.default_preferences = {
+        self.default_preferences: dict[str, Any] = {
             "sectors": [],
             "industries": [],
         }

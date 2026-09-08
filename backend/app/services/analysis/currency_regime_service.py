@@ -58,7 +58,7 @@ class CurrencyRegimeClassifier(AnalysisService):
 
         # Add transition matrix
         results["transition_matrix"] = self.transition_matrix.tolist()
-        results["regimes"] = self.REGIMES
+        results["regimes"] = list(self.REGIMES)  # type: ignore[assignment]
 
         return results
 
@@ -98,7 +98,7 @@ class CurrencyRegimeClassifier(AnalysisService):
         }
         return factors.get(regime, 1.0)
 
-    async def _currency_pressure(self, currency: str, data: dict[str, Any]) -> dict[str, float]:
+    async def _currency_pressure(self, currency: str, data: dict[str, Any]) -> dict[str, Any]:
         """Calculate currency pressure indicator: capital flight, reserve depletion, peg pressure."""
         capital_flight = data.get(f"{currency}_capital_flight", 0.0)
         reserve_depletion = data.get(f"{currency}_reserve_depletion", 0.0)

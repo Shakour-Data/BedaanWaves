@@ -534,8 +534,8 @@ class TechnicalAnalysisService(AnalysisService):
             return 50.0
         typical = [(highs[i] + lows[i] + closes[i]) / 3 for i in range(len(closes))]
         raw_mf = [typical[i] * volumes[i] for i in range(len(typical))]
-        pos = []
-        neg = []
+        pos: list[float] = []
+        neg: list[float] = []
         for i in range(1, len(typical)):
             if typical[i] > typical[i - 1]:
                 pos.append(raw_mf[i])

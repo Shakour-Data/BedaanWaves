@@ -55,8 +55,8 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    symbol = Column(String(50), nullable=False, unique=True, index=True)
-    name = Column(String(255), nullable=False)
+    symbol = Column(String(50), nullable=False, unique=True, index=True, comment='Ticker symbol, unique per asset')
+    name = Column(String(255), nullable=False, comment='Display name of the asset')
 
     # Classification — both columns are validated below. Only Nasdaq-listed
     # equities and ETFs are allowed.
@@ -125,7 +125,7 @@ class CandleMixin:
     """Shared OHLCV candle columns (for three separate tables)."""
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
     timestamp = Column(DateTime, nullable=False, index=True)
     timeframe = Column(String(10), nullable=False)  # 1h, 1d, 1w, 1M, 5m, 15m, 4h ...
 
@@ -185,7 +185,7 @@ class OrderBookMixin:
     """Shared market depth columns (top 5 levels)."""
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
     snapshot_time = Column(DateTime, nullable=False, index=True)
     rank = Column(Integer, nullable=False)  # 1..5 (top quote)
 
@@ -227,7 +227,7 @@ class MLSignal(Base):
     __tablename__ = "ml_signals"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
 
     confidence = Column(Numeric(5, 2), nullable=False)  # 0-100
 
@@ -257,6 +257,11 @@ class MLSignal(Base):
     __table_args__ = (
         Index('idx_signal_active_generated', 'is_active', 'generated_at'),
         Index('idx_signal_model', 'ml_model_version'),
+        Index('idx_signal_technical_gin', 'technical_factors', postgresql_using='gin'),
+        Index('idx_signal_fundamental_gin', 'fundamental_factors', postgresql_using='gin'),
+        Index('idx_signal_sentiment_gin', 'sentiment_factors', postgresql_using='gin'),
+        CheckConstraint('confidence >= 0 AND confidence <= 100', name='chk_signal_confidence'),
+        CheckConstraint('risk_score IS NULL OR (risk_score >= 0 AND risk_score <= 100)', name='chk_signal_risk_score'),
     )
 
 
@@ -297,8 +302,8 @@ class Position(Base):
     __tablename__ = "positions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    portfolio_id = Column(UUID(as_uuid=True), ForeignKey("portfolios.id"), nullable=False, index=True)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False)
+    portfolio_id = Column(UUID(as_uuid=True), ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False)
 
     quantity = Column(Numeric(20, 8), nullable=False)
     entry_price = Column(Numeric(20, 8), nullable=False)
@@ -335,9 +340,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String(100), nullable=False, unique=True, index=True)
-    email = Column(String(255), nullable=False, unique=True, index=True)
-    hashed_password = Column(String(255), nullable=False)
+    username = Column(String(100), nullable=False, unique=True, index=True, comment='Unique login username')
+    email = Column(String(255), nullable=False, unique=True, index=True, comment='User email address')
+    hashed_password = Column(String(255), nullable=False, comment='Bcrypt-hashed password')
 
     full_name = Column(String(255))
     is_active = Column(Boolean, default=True)
@@ -357,7 +362,7 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     token_hash = Column(String(255), nullable=False, unique=True)
     expires_at = Column(DateTime, nullable=False)
@@ -379,7 +384,7 @@ class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     token_hash = Column(String(255), nullable=False, unique=True, index=True)
     expires_at = Column(DateTime, nullable=False)
@@ -395,7 +400,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
 
     action = Column(String(100), nullable=False)
     entity = Column(String(100))
@@ -412,7 +417,7 @@ class Alert(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"))
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"))
 
     alert_type = Column(String(20), nullable=False)  # PRICE, SIGNAL, NEWS, etc.
     condition = Column(JSONB, nullable=False)
@@ -477,8 +482,8 @@ class WatchlistItem(Base):
     __tablename__ = "watchlist_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    watchlist_id = Column(UUID(as_uuid=True), ForeignKey("watchlists.id"), nullable=False, index=True)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    watchlist_id = Column(UUID(as_uuid=True), ForeignKey("watchlists.id", ondelete="CASCADE"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
 
     note = Column(Text, nullable=True)
     alert_threshold_pct = Column(Numeric(8, 4), nullable=True)
@@ -559,7 +564,7 @@ class CorporateEvent(Base):
     __tablename__ = "corporate_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     event_type = Column(String(30), nullable=False)  # DIVIDEND, CAPITAL_INCREASE, AGM, SUSPENSION
     event_date = Column(Date, nullable=False, index=True)
@@ -576,7 +581,7 @@ class Sector(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code = Column(String(50), nullable=False, unique=True)
     name = Column(String(255), nullable=False)
-    parent_id = Column(UUID(as_uuid=True), ForeignKey("sectors.id"), nullable=True, index=True)
+    parent_id = Column(UUID(as_uuid=True), ForeignKey("sectors.id", ondelete="SET NULL"), nullable=True, index=True)
     level = Column(Integer, default=0)
 
     parent = relationship("Sector", remote_side=[id])
@@ -652,7 +657,7 @@ class FinancialStatement(Base):
     __tablename__ = "financial_statements"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
     market = Column(String(20), nullable=False, default="NASDAQ", index=True)
     period = Column(String(20), nullable=False)
     statement_type = Column(String(20), nullable=False)
@@ -670,7 +675,7 @@ class FundamentalRatio(Base):
     __tablename__ = "fundamental_ratios"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
     market = Column(String(20), nullable=False, default="NASDAQ", index=True)
     period = Column(String(20), nullable=False)
     eps = Column(Numeric(20, 4))
@@ -696,7 +701,7 @@ class CompanyLeadership(Base):
     __tablename__ = "company_leadership"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
 
     name = Column(String(255), nullable=False)
     title = Column(String(255), nullable=False)
@@ -729,7 +734,7 @@ class News(Base):
     region = Column(String(50), nullable=True, index=True)
     priority = Column(String(10), nullable=False, default="NORMAL", index=True)
     language = Column(String(5), default="en", index=True)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     published_at = Column(DateTime, index=True)
     fetched_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
@@ -776,8 +781,8 @@ class NewsSentiment(Base):
     __tablename__ = "news_sentiment"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    news_id = Column(UUID(as_uuid=True), ForeignKey("news.id"), nullable=False, index=True)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    news_id = Column(UUID(as_uuid=True), ForeignKey("news.id", ondelete="CASCADE"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     sentiment_label = Column(String(20))  # POSITIVE / NEGATIVE / NEUTRAL
     sentiment_score = Column(Numeric(5, 2))
@@ -790,7 +795,7 @@ class NewsSummary(Base):
     __tablename__ = "news_summaries"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    news_id = Column(UUID(as_uuid=True), ForeignKey("news.id"), nullable=False, index=True)
+    news_id = Column(UUID(as_uuid=True), ForeignKey("news.id", ondelete="CASCADE"), nullable=False, index=True)
     summary_text = Column(Text)
     model_version = Column(String(50))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -820,8 +825,8 @@ class MLPrediction(Base):
     __tablename__ = "ml_predictions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
-    model_id = Column(UUID(as_uuid=True), ForeignKey("ml_models.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
+    model_id = Column(UUID(as_uuid=True), ForeignKey("ml_models.id", ondelete="SET NULL"), nullable=True, index=True)
 
     model_version = Column(String(50), nullable=False)
     horizon = Column(String(20), nullable=False)  # 7d / 30d
@@ -841,7 +846,7 @@ class Anomaly(Base):
     __tablename__ = "anomalies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
 
     detected_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
     score = Column(Numeric(10, 4))
@@ -860,7 +865,7 @@ class ScreeningResult(Base):
     __tablename__ = "screening_results"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
 
     name = Column(String(255), nullable=False)
     criteria = Column(JSONB, default=dict)
@@ -877,7 +882,7 @@ class RawMarketData(Base):
     __tablename__ = "raw_market_data"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     # Symbol in raw form (e.g. "AAPL", "MSFT")
     raw_symbol = Column(String(50), nullable=False, index=True)
@@ -928,7 +933,7 @@ class MarketDataSnapshot(Base):
     __tablename__ = "market_data_snapshots"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Snapshot time (UTC, aligned to interval)
     snapshot_time = Column(DateTime(timezone=True), nullable=False, index=True)
@@ -981,6 +986,7 @@ class MarketDataSnapshot(Base):
         UniqueConstraint('asset_id', 'snapshot_time', 'interval', name='uix_snapshot'),
         Index('idx_snapshot_fresh', 'asset_id', 'is_fresh', 'snapshot_time'),
         Index('idx_snapshot_interval', 'asset_id', 'interval', 'snapshot_time'),
+        Index('idx_snapshot_ml_features_gin', 'features', postgresql_using='gin'),
         CheckConstraint('freshness_score >= 0 AND freshness_score <= 100', name='chk_freshness_score_range'),
         CheckConstraint('high >= low', name='chk_snapshot_high_low'),
         CheckConstraint('volume >= 0', name='chk_snapshot_volume_non_negative'),
@@ -1004,7 +1010,7 @@ class RawPerformanceScore(Base):
     captured_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
     # Asset reference
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     # Market classification (NASDAQ, NYSE, etc.)
     market = Column(String(20), nullable=False, index=True)
@@ -1052,6 +1058,10 @@ class RawPerformanceScore(Base):
         Index('idx_raw_perf_market', 'market', 'exchange'),
         Index('idx_raw_perf_captured', 'captured_at'),
         Index('idx_raw_perf_processed', 'is_processed'),
+        Index('idx_raw_perf_dims_gin', 'dimension_scores', postgresql_using='gin'),
+        Index('idx_raw_perf_sub_dims_gin', 'sub_dimension_scores', postgresql_using='gin'),
+        Index('idx_raw_perf_aspects_gin', 'aspect_scores', postgresql_using='gin'),
+        Index('idx_raw_perf_sub_aspects_gin', 'sub_aspect_scores', postgresql_using='gin'),
     )
 
 
@@ -1065,8 +1075,8 @@ class ProcessedFeatureData(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # References
-    raw_data_id = Column(UUID(as_uuid=True), ForeignKey("raw_performance_scores.id"), nullable=False)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True)
+    raw_data_id = Column(UUID(as_uuid=True), ForeignKey("raw_performance_scores.id", ondelete="CASCADE"), nullable=False)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True)
 
     # Processing timestamp
     processed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
@@ -1076,7 +1086,7 @@ class ProcessedFeatureData(Base):
     exchange = Column(String(50), nullable=False)
 
     # Feature vector (L2-normalized, fixed length for model compatibility)
-    feature_vector = Column(ARRAY(Numeric(20, 8)), nullable=False)
+    feature_vector = Column(ARRAY(Numeric(20, 8)), nullable=False)  # type: ignore[var-annotated]
 
     # Processed/restructured scores by hierarchy level
     dimension_features = Column(JSONB, nullable=False)  # Processed dimension scores
@@ -1120,7 +1130,7 @@ class CoefficientAdjustment(Base):
     adjustment_cycle = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
     # Asset context (nullable for global adjustments)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     # Hierarchy level
     level = Column(String(20), nullable=False, index=True)  # dimensions, sub_dimensions, aspects, sub_aspects
@@ -1166,7 +1176,7 @@ class CoefficientHistory(Base):
     effective_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
     # Asset context
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
     # Market context
     market = Column(String(20), nullable=False)
@@ -1361,7 +1371,11 @@ class DataSource(Base):
     source_type = Column(String(50), nullable=False)
     base_url = Column(String(500))
     api_key_required = Column(Boolean, default=False)
-    auth_token = Column(String(500))  # TODO: encrypt at rest; avoid plaintext tokens
+    auth_token_encrypted = Column(String(1000))  # Fernet-encrypted at rest
+    auth_token = Column(
+        String(500),
+        info={"deprecated": "Use auth_token_encrypted instead; stored plaintext for legacy migration."},
+    )  # TODO: remove after migration
     data_format = Column(String(50))
     last_verification = Column(DateTime)
     verification_count = Column(Integer, default=0)
@@ -1386,7 +1400,7 @@ class HistoricalDataImportLog(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     import_batch_id = Column(String(100), nullable=False, index=True)
-    source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"))
+    source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id", ondelete="SET NULL"))
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     records_imported = Column(Integer, default=0)
@@ -1566,7 +1580,7 @@ class SymbolMarketSettings(Base):
     __tablename__ = "symbol_market_settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4())
-    symbol_id = Column(Integer, ForeignKey("symbol_data.symbol_id"), nullable=False, index=True)
+    symbol_id = Column(Integer, ForeignKey("symbol_data.symbol_id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     # Market classification
@@ -1605,7 +1619,7 @@ class ScoreHistory(Base):
     __tablename__ = "score_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, index=True)
 
     date = Column(Date, nullable=False, index=True)
 
@@ -1615,14 +1629,19 @@ class ScoreHistory(Base):
     sub_aspect_scores = Column(JSONB, nullable=False, default=dict)
     overall_score = Column(Numeric(8, 4), nullable=False)
     grade = Column(String(20), nullable=False)
+    data_quality = Column(String(20), default="CONFIRMED")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     asset = relationship("Asset")
 
     __table_args__ = (
+        CheckConstraint("data_quality IN ('RAW', 'CLEANED', 'VALIDATED', 'CONFIRMED')", name='chk_score_history_data_quality'),
+        CheckConstraint("grade IN ('STRONG_BULLISH', 'BULLISH', 'NEUTRAL', 'BEARISH', 'STRONG_BEARISH')", name='chk_score_history_grade'),
         UniqueConstraint('asset_id', 'date', name='uix_score_history_asset_date'),
         Index('idx_score_history_asset_date', 'asset_id', 'date'),
         Index('idx_score_history_date', 'date'),
+        Index('idx_score_history_dims_gin', 'dimension_scores', postgresql_using='gin'),
+        Index('idx_score_history_sub_dims_gin', 'sub_dimension_scores', postgresql_using='gin'),
     )
 
 

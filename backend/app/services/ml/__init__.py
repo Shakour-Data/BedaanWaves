@@ -14,10 +14,7 @@ from .coefficient_learning_service import CoefficientLearningService
 
 __all__ = [
     "AnomalyDetectionService",
-    "ClusteringService",
     "CoefficientLearningService",
-    "EnsembleService",
-    "FeatureEngineeringService",
     "MLService",
     "PricePredictionService"
 ]
@@ -33,15 +30,6 @@ def __getattr__(name: str):
     elif name == "AnomalyDetectionService":
         from .anomaly_detection_service import AnomalyDetectionService
         return AnomalyDetectionService
-    elif name == "ClusteringService":
-        from .pattern_recognition_service import ClusteringService
-        return ClusteringService
-    elif name == "EnsembleService":
-        from .recommendation_service import EnsembleService
-        return EnsembleService
-    elif name == "FeatureEngineeringService":
-        from .time_series_forecasting_service import FeatureEngineeringService
-        return FeatureEngineeringService
     elif name == "CoefficientLearningService":
         from .coefficient_learning_service import CoefficientLearningService
         return CoefficientLearningService

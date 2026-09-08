@@ -147,7 +147,7 @@ class VolatilityService(AnalysisService):
         Returns:
             Volatility cluster information
         """
-        clusters = []
+        clusters: list[dict[str, Any]] = []
         if not returns:
             return clusters
 

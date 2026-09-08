@@ -1,0 +1,86 @@
+# Prometheus Alert Rules for BedaanWaves
+# Defines alert thresholds for system health monitoring
+
+groups:
+  - name: bedaanwaves_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(bedaanwaves_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate detected on {{ $labels.endpoint }}"
+          description: "Error rate is above 5% for the last 5 minutes on endpoint {{ $labels.endpoint }}"
+          runbook: "https://docs.bedaanwaves.com/runbooks/high-error-rate"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(bedaanwaves_request_latency_seconds_bucket[5m])) > 1.0
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High latency detected on {{ $labels.endpoint }}"
+          description: "95th percentile latency is above 1s for the last 5 minutes on endpoint {{ $labels.endpoint }}"
+
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.15
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Low disk space on {{ $labels.mountpoint }}"
+          description: "Disk space is below 15% on {{ $labels.mountpoint }}"
+
+      - alert: MemoryHighUsage
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High memory usage detected"
+          description: "Available memory is below 10% of total"
+
+      - alert: ServiceDown
+        expr: up{job="bedaanwaves-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "BedaanWaves API service is down"
+          description: "The BedaanWaves API service is not responding"
+
+      - alert: DatabaseConnectionFailed
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database connection failed"
+          description: "PostgreSQL database is not accessible"
+
+      - alert: RedisConnectionFailed
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Redis connection failed"
+          description: "Redis cache is not accessible"
+
+      - alert: HighCPUUsage
+        expr: rate(node_cpu_seconds_total{mode="idle"}[5m]) < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 90% for the last 5 minutes"

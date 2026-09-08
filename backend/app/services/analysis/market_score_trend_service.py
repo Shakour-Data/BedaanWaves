@@ -181,7 +181,7 @@ class MarketScoreTrendService(BaseService):
                 )
             query = query.order_by(MarketScoreTrend.date.asc())
             result = await session.execute(query)
-            return list(result.mappings().all())
+            return [dict(row) for row in result.mappings().all()]
 
         if db is not None:
             rows = await _read(db)

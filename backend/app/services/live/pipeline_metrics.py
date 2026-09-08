@@ -227,14 +227,14 @@ class LivePipelineMetrics(BaseService):
         self._reconnects_total += 1
 
     def top_subscriptions(self, n: int = 10) -> list[tuple[str, int, float]]:
-        counts: dict[str, list[float]] = {}
+        counts: dict[str, list[Any]] = {}
         for cid, ts in self._connection_first_ts.items():
             cnt = self._connection_sub_counts.get(cid, 0)
             for stream_key in self._streams:
                 bucket = counts.setdefault(stream_key, [0, ts])
                 bucket[0] = max(bucket[0], cnt)
-        items = sorted(
-            ((k, v[0], v[1]) for k, v in counts.items()),
+        items: list[tuple[str, int, float]] = sorted(
+            ((k, int(v[0]), float(v[1])) for k, v in counts.items()),
             key=lambda x: (-x[1], x[2]),
         )
         return items[:n]

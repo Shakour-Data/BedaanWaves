@@ -1,0 +1,65 @@
+_format_version: "3.0"
+services:
+  - name: bedaanwaves-api
+    url: http://localhost:8000
+    routes:
+      - name: api-v1
+        paths:
+          - /api/v1
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+        preserve_host: true
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://localhost:3005
+            - http://127.0.0.1:3005
+          credentials: true
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - OPTIONS
+          headers:
+            - Authorization
+            - Content-Type
+            - X-Correlation-ID
+      - name: rate-limiting
+        config:
+          minute: 100
+          hour: 5000
+          policy: local
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - "X-Forwarded-By:Kong"
+      - name: prometheus
+      - name: correlation-id
+        config:
+          header_name: X-Correlation-ID
+          generator: uuid
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+            - nbf
+          key_claim_name: kid
+          secret_is_base64: false
+          algorithm: HS256
+      - name: acl
+        config:
+          allow:
+            - user
+            - moderator
+            - admin

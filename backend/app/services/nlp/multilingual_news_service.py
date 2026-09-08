@@ -6,9 +6,11 @@ Fetches, aggregates, and classifies financial news across multiple languages
 language sources with language-aware filtering and ranking.
 """
 
-import asyncio
-from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 from typing import Any
+
+import aiohttp
+import asyncio
 
 from app.core.utils import utc_now_iso
 
@@ -123,13 +125,13 @@ class MultilingualNewsService(CachedService):
     ) -> list[dict[str, Any]]:
         tasks = [self.classify_news(batch) for batch in batches]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        processed = []
+        processed: list[dict[str, Any]] = []
         for batch, result in zip(batches, results):
             if isinstance(result, Exception):
                 self.logger.error(f"Batch classification error: {result}")
                 processed.append({"error": str(result), "total": len(batch)})
             else:
-                processed.append(result)
+                processed.append(result)  # type: ignore[arg-type]
         return processed
 
     def _news_to_dict(self, news: Any) -> dict[str, Any]:
@@ -149,6 +151,7 @@ class MultilingualNewsService(CachedService):
         return base
 
 
+@asynccontextmanager
 async def _get_async_session():
     from app.db.base import async_session_maker
-    return async_session_maker()
+    yield async_session_maker()

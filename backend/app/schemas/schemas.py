@@ -1,12 +1,13 @@
 """Pydantic Schemas for API"""
 
+import re
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # Enums
@@ -304,8 +305,23 @@ class RefreshTokenRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=3)
+    password: str = Field(..., min_length=8, max_length=128)
     full_name: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Password must contain at least one digit")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+            raise ValueError("Password must contain at least one special character")
+        return v
 
 
 # Password Reset Schemas

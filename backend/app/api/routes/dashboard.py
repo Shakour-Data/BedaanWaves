@@ -28,6 +28,48 @@ VALID_LEVELS = ("overall", "dimension", "sub_dimension", "aspect", "sub_aspect")
 CANONICAL_DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
 
 
+@router.get("/dashboard/general", response_model=dict)
+async def get_general_dashboard(
+    latest: bool = Query(False),
+    end_date: str | None = Query(None, alias="end_date"),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """General/overall dashboard endpoint.
+
+    Aggregates per-dimension summaries, canonical coefficients, top/bottom
+    performers, and the latest score date across the active NASDAQ universe.
+    """
+    service = DashboardService()
+    try:
+        result = await service.get_general_dashboard(db, latest=latest)
+        return result
+    except Exception as exc:
+        logger.error(f"General dashboard error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/dashboard/{dimension}", response_model=dict)
+async def get_dimension_dashboard(
+    dimension: str,
+    limit: int = Query(50, ge=1, le=200),
+    latest: bool = Query(False),
+    end_date: str | None = Query(None, alias="end_date"),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Per-dimension dashboard endpoint (technical, fundamental, risk, news, board, ai)."""
+    service = DashboardService()
+    try:
+        result = await service.get_dashboard(
+            db=db, dimension=dimension, latest=latest,
+        )
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"Dimension dashboard error ({dimension}): {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/dashboard/snapshot", response_model=dict)
 async def get_dashboard_snapshot(
     symbol: str | None = Query(None, min_length=1, max_length=16),

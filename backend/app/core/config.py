@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 3600
 
+    DATABASE_URL_CORE: str = ""
+    DATABASE_URL_MARKET: str = ""
+    DATABASE_URL_ML: str = ""
+    DATABASE_POOL_SIZE_CORE: int = 10
+    DATABASE_POOL_SIZE_MARKET: int = 15
+    DATABASE_POOL_SIZE_ML: int = 10
+
     # ============================================================
     # REDIS & CACHE CONFIGURATION
     # ============================================================
@@ -380,6 +387,15 @@ class Settings(BaseSettings):
     METRICS_ENABLED: bool = True
     PROMETHEUS_METRICS_ENABLED: bool = True
     PROMETHEUS_METRICS_PORT: int = 9090
+
+    # Distributed Tracing
+    TRACING_ENABLED: bool = False
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
+
+    # Event Bus
+    EVENT_BUS_BACKEND: str = "memory"  # memory | kafka
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_CLIENT_ID: str = "bedaanwaves"
 
     # ============================================================
     # DATA PERSISTENCE & BACKUP

@@ -1,0 +1,58 @@
+# Filebeat Configuration for BedaanWaves
+# Collects logs from backend services and sends to Elasticsearch
+
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/bedaanwaves/*.log
+      - /opt/bedaanwaves/backend/logs/*.log
+    fields:
+      service: bedaanwaves
+      environment: production
+    fields_under_root: true
+    multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+    multiline.negate: true
+    multiline.match: after
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/bedaanwaves/api/*.log
+    fields:
+      service: bedaanwaves-api
+      environment: production
+    fields_under_root: true
+
+output.elasticsearch:
+  hosts: ["http://localhost:9200"]
+  index: "bedaanwaves-logs-%{+yyyy.MM.dd}"
+  template.name: "bedaanwaves"
+  template.pattern: "bedaanwaves-logs-*"
+  template.overwrite: true
+
+setup.template.name: "bedaanwaves"
+setup.template.pattern: "bedaanwaves-logs-*"
+setup.kibana.host: "http://localhost:5601"
+
+# Processors for log enrichment
+processors:
+  - add_host_metadata:
+      host: ["hostname", "ip"]
+  - add_cloud_metadata:
+      cloud: ["digitalocean", "aws"]
+  - add_docker_metadata:
+      docker: true
+  - add_kubernetes_metadata:
+      kubernetes: true
+  - dissect:
+      tokenizer: "%{timestamp} %{level} %{logger} %{message}"
+      field: "message"
+      target: "parsed"
+  - drop_fields:
+      fields: ["parsed"]
+  - rename:
+      fields:
+        - from: "parsed.level"
+          to: "log_level"
+      ignore_missing: true

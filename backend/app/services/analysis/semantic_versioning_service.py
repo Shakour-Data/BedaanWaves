@@ -16,7 +16,7 @@ class SemanticVersioningService(AnalysisService):
 
     def __init__(self, service_name: str = "SemanticVersioningService"):
         super().__init__(service_name)
-        self.version_history: dict[str, list[dict]] = {
+        self.version_history: dict[str, list[str]] = {
             "regime_classification": [],  # MAJOR.MINOR.PATCH-regime
             "data_pipeline": []  # MAJOR.MINOR.PATCH-type
         }
@@ -111,7 +111,7 @@ class SemanticVersioningService(AnalysisService):
 
     async def get_version_history(self, context: str, limit: int = 10) -> list[dict[str, Any]]:
         """Get historical version records."""
-        return list(reversed(self.version_history[context][-min(limit, len(self.version_history[context])):]))
+        return list(reversed(self.version_history[context][-min(limit, len(self.version_history[context])):]))  # type: ignore[arg-type]
 
     async def check_version_compatibility(self, required: str, current: str) -> bool:
         """Check if current version meets required version."""

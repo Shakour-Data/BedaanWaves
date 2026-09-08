@@ -59,7 +59,7 @@ async def get_current_admin_user(current_user: User = Depends(get_current_active
 
 async def get_current_user_id(current_user: User = Depends(get_current_active_user)) -> uuid.UUID:
     """Return the authenticated user's id."""
-    return current_user.id
+    return uuid.UUID(str(current_user.id))
 
 
 def require_permissions(required: list[str]):

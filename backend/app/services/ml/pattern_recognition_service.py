@@ -25,7 +25,7 @@ class PatternRecognitionService(MLService):
 
     async def train(self, training_data: dict[str, Any]) -> dict[str, Any]:
         patterns = training_data.get("patterns", [])
-        self.model = {"trained": True, "patterns_learned": len(patterns)}
+        self.model = {"trained": True, "patterns_learned": len(patterns)}  # type: ignore[assignment]
         return {"status": "trained", "patterns": len(patterns)}
 
     async def predict(self, data: dict[str, Any]) -> dict[str, Any]:

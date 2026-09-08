@@ -119,7 +119,7 @@ class MulticollinearityMitigationService(AnalysisService):
 
         # Determine components for threshold variance
         cumsum = np.cumsum(self.pca_model.explained_variance_ratio_)
-        n_components = np.argmax(cumsum >= self.pca_threshold) + 1
+        n_components = int(np.argmax(cumsum >= self.pca_threshold) + 1)
         if cumsum[-1] < self.pca_threshold:
             n_components = len(self.pca_model.explained_variance_ratio_)
 
@@ -140,6 +140,9 @@ class MulticollinearityMitigationService(AnalysisService):
             )
             > 0.5,
         }
+
+    def _get_removal_recommendations(self, vif_analysis: dict[str, Any]) -> list[str]:
+        return []
 
     def transform_features(
         self, features: np.ndarray

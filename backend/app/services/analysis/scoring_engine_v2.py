@@ -32,6 +32,10 @@ try:
 except ImportError:  # pragma: no cover
     _HAS_SCIPY = False
 
+from app.core.config import get_settings
+
+DIMENSION_WEIGHTS: dict[str, float] = get_settings().SCORING_WEIGHTS
+
 
 # ---------------------------------------------------------------------------
 # Metric universe — single source of truth for the hierarchy

@@ -85,7 +85,7 @@ class StockService(CachedService):
                 url = "https://query1.finance.yahoo.com/v1/finance/search"
                 params = {"q": query, "quotesCount": 25, "newsCount": 0}
                 headers = {"User-Agent": "Mozilla/5.0"}
-                resp = requests.get(url, params=params, headers=headers, timeout=10)
+                resp = requests.get(url, params=params, headers=headers, timeout=10)  # type: ignore[arg-type]
                 if resp.status_code == 200:
                     return resp.json().get("quotes", [])
             except Exception:

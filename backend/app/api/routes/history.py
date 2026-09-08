@@ -32,7 +32,7 @@ async def get_price_history(
     await service.initialize()
     end = datetime.now(UTC).date().isoformat()
     start = (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
-    history = await service.get_history(asset.symbol, start_date=start, end_date=end, interval="daily")
+    history = await service.get_history(str(asset.symbol), start_date=start, end_date=end, interval="daily")
     await service.shutdown()
 
     return [
@@ -59,7 +59,7 @@ async def get_volume_history(
     await service.initialize()
     end = datetime.now(UTC).date().isoformat()
     start = (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
-    history = await service.get_history(asset.symbol, start_date=start, end_date=end, interval="daily")
+    history = await service.get_history(str(asset.symbol), start_date=start, end_date=end, interval="daily")
     await service.shutdown()
 
     return [{"date": h["timestamp"], "volume": h["volume"]} for h in history]

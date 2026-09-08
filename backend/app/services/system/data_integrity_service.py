@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.core.utils import utc_now_iso
+from app.infrastructure.events.event_bus import Event
 from app.services.core.base_service import BaseService
 from app.services.data.data_validation_service import DataValidationService
 from app.services.data.intl_api_client import IntlApiClient
@@ -36,7 +37,8 @@ class DataIntegrityService(BaseService):
                  intl_client: IntlApiClient | None = None,
                  market_service: MarketService | None = None,
                  stock_service: StockService | None = None,
-                 logger: logging.Logger | None = None):
+                 logger: logging.Logger | None = None,
+                 event_bus: Any = None):
         """
         Initialize data integrity service.
 
@@ -56,6 +58,7 @@ class DataIntegrityService(BaseService):
         self.intl_client = intl_client
         self.market_service = market_service
         self.stock_service = stock_service
+        self.event_bus = event_bus
 
         # Monitoring configuration
         self.monitoring_interval = 3600  # 1 hour
@@ -150,6 +153,22 @@ class DataIntegrityService(BaseService):
         report["duration_seconds"] = (end_time - start_time).total_seconds()
 
         self.logger.info(f"Integrity check completed in {report['duration_seconds']:.2f}s - Status: {report['overall_status']}")
+
+        if self.event_bus is not None:
+            try:
+                await self.event_bus.publish(Event(
+                    event_type="data-integrity-check",
+                    data={
+                        "check_id": report["check_id"],
+                        "overall_status": report["overall_status"],
+                        "duration_seconds": report["duration_seconds"],
+                        "alerts_count": len(report.get("alerts", [])),
+                    },
+                    source="DataIntegrityService",
+                ))
+            except Exception as exc:
+                self.logger.warning("Failed to publish data-integrity-check event: %s", exc)
+
         return report
 
     async def _check_source_availability(self) -> dict[str, Any]:

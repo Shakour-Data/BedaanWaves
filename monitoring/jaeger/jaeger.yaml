@@ -1,0 +1,47 @@
+# Jaeger Configuration for BedaanWaves
+# Distributed tracing backend
+
+memory:
+  max_traces: 100000
+
+storage:
+  type: memory
+  memory:
+    max_traces: 100000
+
+sampling:
+  type: probabilistic
+  probabilistic:
+    sampling_rate: 0.01  # 1% sampling in production
+
+  type: ratelimiting
+  ratelimiting:
+    max_traces_per_second: 10
+
+logging:
+  level: info
+
+query:
+  base_path: /jaeger
+  static_files:
+    dir: /etc/jaeger/ui
+
+collector:
+  queue:
+    max_size: 100000
+    wait: false
+  num_workers: 16
+  collector:
+    join_timeout: 10
+    cache_ttl: 60
+    cache_max_size: 100000
+
+ingester:
+  worker:
+    num_workers: 16
+  max_active_spans: 1000000
+  max_active_batches: 10000
+  batch:
+    max_size: 100000
+    max_wait: 10s
+    max_concurrent_batches: 100

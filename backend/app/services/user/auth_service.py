@@ -17,7 +17,7 @@ settings = get_settings()
 
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -81,7 +81,7 @@ async def authenticate_user(username: str, password: str) -> User | None:
     user = await get_user_by_username(username)
     if not user:
         return None
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, str(user.hashed_password)):
         return None
     return user
 

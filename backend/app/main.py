@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -56,6 +57,11 @@ from app.api.routes import (
 from app.core.config import get_settings
 from app.core.config import get_settings as _live_settings_get
 from app.core.utils import utc_now_iso
+from app.infrastructure.database.multi_db_manager import MultiDatabaseManager
+from app.infrastructure.events.event_bus import InMemoryEventBus, KafkaEventBus
+from app.infrastructure.observability.tracing import TracingManager
+from app.infrastructure.resilience.bulkhead import Bulkhead, BulkheadConfig
+from app.infrastructure.resilience.circuit_breaker import CircuitBreaker
 from app.services.analysis.scoring_service import ScoringService
 from app.services.core.cache_service import CacheService
 from app.services.core.config_service import ConfigService
@@ -67,11 +73,10 @@ from app.services.core.dependency_container import (
 from app.services.core.health_checker import HealthChecker
 from app.services.core.logger_service import LoggerService
 from app.services.data.ingestion_service import IntelligentIngestionService
+from app.services.data.itch_ingestion_service import ITCHOrderBookService
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.nasdaq_ingestion_service import NasdaqIngestionService
-from app.services.data.itch_ingestion_service import ITCHOrderBookService
 from app.services.data.news_service import NewsService
-from app.services.news.continuous_news_ingestion_service import ContinuousNewsIngestionService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
 from app.services.live import (
     FreshnessValidator,
@@ -81,6 +86,7 @@ from app.services.live import (
     SLOMonitor,
 )
 from app.services.ml.coefficient_learning_service import CoefficientLearningService
+from app.services.news.continuous_news_ingestion_service import ContinuousNewsIngestionService
 from app.services.system.backup_service import BackupService
 from app.services.system.data_integrity_service import DataIntegrityService
 from app.services.system.logging_service import LoggingService
@@ -305,6 +311,36 @@ async def lifespan(app: FastAPI):
         container.register_instance("cache_service", cache_svc)
         container.register_instance("health_checker", health_svc)
 
+        # Resilience and observability infrastructure
+        multi_db = MultiDatabaseManager()
+        await multi_db.initialize()
+        container.register_instance("multi_database_manager", multi_db)
+
+        tracing = TracingManager(service_name=settings.APP_NAME, enabled=settings.TRACING_ENABLED)
+        await tracing.initialize()
+        container.register_instance("tracing_manager", tracing)
+
+        event_bus: InMemoryEventBus | KafkaEventBus
+        if settings.EVENT_BUS_BACKEND == "kafka":
+            event_bus = KafkaEventBus(bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS, client_id=settings.KAFKA_CLIENT_ID)
+        else:
+            event_bus = InMemoryEventBus()
+        await event_bus.start()
+        container.register_instance("event_bus", event_bus)
+
+        market_bulkhead = Bulkhead("market", BulkheadConfig(max_concurrent_calls=10, max_waiting=50, timeout=30.0))
+        analysis_bulkhead = Bulkhead("analysis", BulkheadConfig(max_concurrent_calls=5, max_waiting=30, timeout=30.0))
+        ml_bulkhead = Bulkhead("ml", BulkheadConfig(max_concurrent_calls=3, max_waiting=10, timeout=60.0))
+        container.register_instance("market_bulkhead", market_bulkhead)
+        container.register_instance("analysis_bulkhead", analysis_bulkhead)
+        container.register_instance("ml_bulkhead", ml_bulkhead)
+
+        circuit_breaker = CircuitBreaker("external-api", failure_threshold=5, recovery_timeout=30.0)
+        container.register_instance("circuit_breaker", circuit_breaker)
+
+        data_integrity_svc = DataIntegrityService(event_bus=event_bus)
+        container.register_instance("data_integrity_service", data_integrity_svc)
+
         # Analysis services
         coefficient_svc = CoefficientLearningService()
         scoring_svc = ScoringService()
@@ -328,8 +364,6 @@ async def lifespan(app: FastAPI):
         container.register_instance("continuous_news_ingestion_service", ingestion_svc)
         container.register_instance("market_hours_service", market_hours_svc)
         container.register_instance("real_time_market_data_service", realtime_market_svc)
-        container.register_instance("data_integrity_service",
-                                   DataIntegrityService())
 
         # System services
         backup_svc = BackupService()
@@ -419,11 +453,9 @@ async def lifespan(app: FastAPI):
         )
         slo_monitor.bind_orchestrator(live_orchestrator)
         # Wire observe_envelope hook so every emitted envelope flows into the SLO monitor
-        live_orchestrator.slo_monitor_hook = (
-            lambda envelope, age, thresh: slo_monitor.observe_envelope(
-                envelope, data_age_ms=age, threshold_s=thresh
-            )
-        )
+        setattr(live_orchestrator, "slo_monitor_hook", lambda envelope, age, thresh: slo_monitor.observe_envelope(
+            envelope, data_age_ms=age, threshold_s=thresh
+        ))
         container.register_instance("slo_monitor", slo_monitor)
 
         # Initialize live services (must be in dependency order)
@@ -488,6 +520,14 @@ async def lifespan(app: FastAPI):
             await app.state.container.shutdown_all()
         except Exception as e:
             logger.error(f"Error during shutdown: {e}", exc_info=True)
+
+    try:
+        if "event_bus" in app.state.container._instances:
+            await app.state.container.get("event_bus").stop()
+        if "multi_database_manager" in app.state.container._instances:
+            await app.state.container.get("multi_database_manager").shutdown()
+    except Exception as e:
+        logger.error(f"Error during infrastructure shutdown: {e}", exc_info=True)
     logger.info("BedaanWaves application shutdown complete")
 
 
@@ -525,6 +565,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
 app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
@@ -597,7 +638,7 @@ def custom_openapi():
     return app.openapi_schema
 
 
-app.openapi = custom_openapi
+app.openapi = custom_openapi  # type: ignore[method-assign]
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):

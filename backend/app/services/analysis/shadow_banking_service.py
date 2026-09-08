@@ -52,14 +52,14 @@ class ShadowBankingMetricsService(AnalysisService):
             "risk_level": "high" if ratio > 0.15 else "moderate" if ratio > 0.10 else "low",
         }
 
-    async def _money_multiplier_stress(self, data: dict[str, Any]) -> dict[str, float]:
+    async def _money_multiplier_stress(self, data: dict[str, Any]) -> dict[str, Any]:
         """Monitor money multipliers: M0/M1, M1/M2, M2/M3 contractions."""
         m0 = data.get("m0", 100)
         m1 = data.get("m1", 1000)
         m2 = data.get("m2", 5000)
         m3 = data.get("m3", 8000)
 
-        multipliers = {
+        multipliers: dict[str, float] = {
             "m0_m1": m0 / m1 if m1 > 0 else 0.0,
             "m1_m2": m1 / m2 if m2 > 0 else 0.0,
             "m2_m3": m2 / m3 if m3 > 0 else 0.0,

@@ -87,7 +87,7 @@ class DataLineageService(AnalysisService):
         }
 
         # Store in lineage graph
-        self.lineage_graph[origin_record["record_id"]] = {
+        self.lineage_graph[str(origin_record["record_id"])] = {
             "type": "origin",
             "data": origin_record,
             "connections": []  # Will be populated when transformed

@@ -146,7 +146,7 @@ class DocumentExtractionService(BaseService):
         Returns:
             Extracted financial metrics
         """
-        metrics = {
+        metrics: dict[str, str | None] = {
             "revenue": None,
             "profit": None,
             "eps": None,
@@ -157,7 +157,7 @@ class DocumentExtractionService(BaseService):
 
         import re
 
-        patterns = {
+        patterns: dict[str, str] = {
             "revenue": r"revenue[:\s]+[\d,\.]+\s*(billion|million|B|M)?\s*(USD|IRR|toman)?",
             "profit": r"(net profit|net income)[:\s]+[\d,\.]+\s*(billion|million|B|M)?",
             "eps": r"EPS[:\s]+[\d,\.]+",
@@ -190,12 +190,12 @@ class DocumentExtractionService(BaseService):
         tasks = [self.extract(doc) for doc in documents]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        processed = []
+        processed: list[dict[str, Any]] = []
         for doc, result in zip(documents, results):
             if isinstance(result, Exception):
                 self.logger.error(f"Batch extract error: {result}")
                 processed.append({"error": str(result), "title": doc.get("title")})
             else:
-                processed.append(result)
+                processed.append(result if isinstance(result, dict) else {"data": result})
 
         return processed

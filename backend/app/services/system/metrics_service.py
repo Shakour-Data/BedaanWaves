@@ -107,7 +107,7 @@ class MetricsService(BaseService):
         }
 
     def get_health_summary(self) -> dict[str, Any]:
-        health = {"platform": "healthy", "services": {}}
+        health: dict[str, Any] = {"platform": "healthy", "services": {}}
         for name, service in self._registered_services.items():
             try:
                 health["services"][name] = {

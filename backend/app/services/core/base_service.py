@@ -204,13 +204,13 @@ class AnalysisService(BaseService):
         tasks = [self.analyze(item) for item in data_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        processed = []
+        processed: list[dict[str, Any]] = []
         for item, result in zip(data_list, results):
             if isinstance(result, Exception):
                 self.logger.error(f"Batch analysis error for {item}: {result}")
                 processed.append({"error": str(result)})
             else:
-                processed.append(result)
+                processed.append(result if isinstance(result, dict) else {"data": result})
 
         return processed
 

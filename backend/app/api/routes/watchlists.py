@@ -92,7 +92,7 @@ async def add_item(
         user_id=user_id,
         asset_id=data.asset_id,
         note=data.note,
-        alert_threshold_pct=data.alert_threshold_pct,
+        alert_threshold_pct=float(data.alert_threshold_pct) if data.alert_threshold_pct is not None else None,
     )
     if item is None:
         raise HTTPException(status_code=404, detail="Watchlist not found")
@@ -129,7 +129,7 @@ async def update_item(
         item_id=item_id,
         user_id=user_id,
         note=data.note,
-        alert_threshold_pct=data.alert_threshold_pct,
+        alert_threshold_pct=float(data.alert_threshold_pct) if data.alert_threshold_pct is not None else None,
     )
     if item is None:
         raise HTTPException(status_code=404, detail="Watchlist item not found")

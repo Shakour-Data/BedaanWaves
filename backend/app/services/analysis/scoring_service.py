@@ -10,6 +10,7 @@ import asyncio
 from typing import Any
 
 from app.core.utils import utc_now_iso
+from app.core.config import get_settings as _get_settings
 from app.services.core.dependency_container import get_global_container
 
 from ..core import AnalysisService
@@ -36,14 +37,7 @@ class ScoringService(AnalysisService):
     """
 
     # Static fallback weights (used when ML service unavailable or not trained)
-    DIMENSION_WEIGHTS = {
-        "fundamental": 0.25,
-        "technical": 0.20,
-        "sentiment": 0.15,
-        "risk": 0.20,
-        "macro": 0.10,
-        "ai": 0.10,
-    }
+    DIMENSION_WEIGHTS = _get_settings().SCORING_WEIGHTS
 
     DIMENSIONS = ['fundamental', 'technical', 'sentiment', 'risk', 'macro', 'ai']
 
