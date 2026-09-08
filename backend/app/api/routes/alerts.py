@@ -45,7 +45,7 @@ class AlertType(StrEnum):
     VOLUME_SPIKE = "volume_spike"         # Volume spikes above threshold
     SCORE_CHANGE = "score_change"         # Dimension score changes
     RATING_UPGRADE = "rating_upgrade"     # Stock rating upgrades
-    RATING_DOWNGRADE = "rating_downgrade" # Stock rating downgrades
+    RATING_DOWNGRADE = "rating_downgrade"  # Stock rating downgrades
     RSI_OVERBOUGHT = "rsi_overbought"     # RSI indicates overbought
     RSI_OVERSOLD = "rsi_oversold"         # RSI indicates oversold
     MACD_SIGNAL = "macd_signal"           # MACD generates signal

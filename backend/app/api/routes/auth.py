@@ -16,7 +16,7 @@ from sqlalchemy import select, update
 from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import RefreshToken
-from app.schemas.schemas import LoginRequest, RegisterRequest, Token
+from app.schemas.schemas import LoginRequest, RefreshTokenRequest, RegisterRequest, Token
 from app.services.user.auth_service import (
     authenticate_user,
     create_access_token,
@@ -68,7 +68,8 @@ async def login(data: LoginRequest) -> Token:
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(token: str) -> Token:
+async def refresh_token(data: RefreshTokenRequest) -> Token:
+    token = data.refresh_token
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except Exception:

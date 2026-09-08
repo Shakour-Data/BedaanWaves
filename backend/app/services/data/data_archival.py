@@ -20,6 +20,7 @@ class ArchivePolicy(Enum):
     KEEP_RECENT_10_YEARS = "keep_recent_10_years"
     KEEP_RECENT_3_YEARS = "keep_recent_3_years"
 
+
 class DataArchivalService(DataService):
     """
     Data archival service for historical financial data

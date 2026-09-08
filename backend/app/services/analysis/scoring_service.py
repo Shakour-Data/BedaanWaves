@@ -150,7 +150,7 @@ class ScoringService(AnalysisService):
                 level3.append({
                     "id": f"a{aspect_id}",
                     "parent_id": sub["id"],
-                    "name": f"{sub['name']}_aspect_{i+1}",
+                    "name": f"{sub['name']}_aspect_{i + 1}",
                 })
         return level3
 
@@ -171,7 +171,7 @@ class ScoringService(AnalysisService):
                 level4.append({
                     "id": f"sa{sub_id}",
                     "parent_id": aspect["id"],
-                    "name": f"{aspect['name']}_detail_{i+1}",
+                    "name": f"{aspect['name']}_detail_{i + 1}",
                 })
         return level4
 

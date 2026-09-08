@@ -139,118 +139,177 @@ class FundamentalAnalysisService(AnalysisService):
             "multicollinearity_vif": multicollinearity_data.get("vif"),
         }
 
+    async def _macro_latest(self, session: "AsyncSession", codes: list[str]) -> dict[str, float]:
+        """Return the latest value for each requested MacroIndicator code."""
+        rows = (
+            await session.execute(
+                select(MacroIndicator.indicator_code, MacroIndicator.value)
+                .where(MacroIndicator.indicator_code.in_(codes))
+                .order_by(MacroIndicator.as_of.desc(), MacroIndicator.indicator_code)
+            )
+        ).all()
+        latest: dict[str, float] = {}
+        for code, value in rows:
+            if value is None:
+                continue
+            if code not in latest:
+                try:
+                    latest[code] = float(value)
+                except (TypeError, ValueError):
+                    continue
+        return latest
+
     async def _analyze_phillips_curve(self, ticker: str) -> dict[str, float]:
         """
         Replace Bollinger Bands with Phillips Curve analysis.
         Analyzes inflation-unemployment relationship for macroeconomic health.
+
+        Prefers real US releases (CPI YoY + unemployment rate) when present and
+        falls back to market-indicator proxies when they are not.
         """
         async with async_session_maker() as session:
-            # Fetch latest Treasury Yield (^TNX) and Dollar Index (DX-Y.NYB)
-            query = select(MacroIndicator).where(
-                MacroIndicator.indicator_code.in_(["^TNX", "DX-Y.NYB"])
-            ).order_by(MacroIndicator.as_of.desc()).limit(10)
+            data = await self._macro_latest(
+                session, ["^TNX", "DX-Y.NYB", "INFLATION", "CORE_INFLATION", "UNRATE"]
+            )
 
-            result = await session.execute(query)
-            indicators = result.scalars().all()
+        treasury_yield = data.get("^TNX", 4.0)
+        dollar_index = data.get("DX-Y.NYB", 100.0)
 
-            # Map indicators to their latest values
-            data: dict[str, float] = {}
-            for ind in indicators:
-                if ind.indicator_code not in data:
-                    data[ind.indicator_code] = float(ind.value)
+        # Real CPI YoY % when available, else the Fisher-equation yield proxy.
+        inflation_pct = data.get("INFLATION")
+        if inflation_pct is None:
+            inflation_pct = max(0.01, (treasury_yield / 100.0) - 0.02) * 100.0
 
-            # Proxies for inflation and unemployment based on market indicators
-            # Higher yields and stronger dollar often signal inflation pressure/monetary tightening
-            treasury_yield = data.get("^TNX", 4.0)
-            dollar_index = data.get("DX-Y.NYB", 100.0)
+        # Real unemployment rate (%) when available, else the dollar-strength proxy.
+        unemployment_pct = data.get("UNRATE")
+        if unemployment_pct is None:
+            unemployment_pct = max(0.03, 0.05 + (100.0 - dollar_index) * 0.0005) * 100.0
 
-            # Phillips Curve logic: inflation vs unemployment
-            # Inflation proxy: Treasury yield as a component of nominal interest (Fisher equation)
-            inflation_proxy = max(0.01, (treasury_yield / 100.0) - 0.02)
-            # Unemployment proxy: Dollar strength (inverse relation to domestic labor demand in some models)
-            unemployment_proxy = max(0.03, 0.05 + (100.0 - dollar_index) * 0.0005)
+        # Phillips Curve logic: inflation vs unemployment
+        # Inflation proxy: Treasury yield as a component of nominal interest (Fisher equation)
+        inflation_proxy = max(0.01, (treasury_yield / 100.0) - 0.02)
+        # Unemployment proxy: Dollar strength (inverse relation to domestic labor demand)
+        unemployment_proxy = max(0.03, 0.05 + (100.0 - dollar_index) * 0.0005)
 
-            # Phillips Slope (empirical estimation for current regime)
-            phillips_slope = -0.15
+        # Phillips Slope (empirical estimation for current regime)
+        phillips_slope = -0.15
 
-            return {
-                "inflation_gdp_link": round(inflation_proxy * 100, 4),
-                "unemployment_effect": round(unemployment_proxy * 100, 4),
-                "phillips_slope": phillips_slope,
-                "inflation_adjusted_pe": round(15.0 / (1 + inflation_proxy), 2),
-            }
+        return {
+            "inflation_gdp_link": round(inflation_pct, 4),
+            "unemployment_effect": round(unemployment_pct, 4),
+            "phillips_slope": phillips_slope,
+            "inflation_adjusted_pe": round(15.0 / (1 + inflation_proxy), 2),
+        }
 
     async def _analyze_yield_curve(self, ticker: str) -> dict[str, float]:
         """
         Replace ADX with Yield Curve analysis for recession prediction.
-        Uses yield inversion as primary signal.
+        Uses the real 10Y-2Y spread (T10Y2Y) when available; falls back to the
+        10Y yield trend proxy otherwise.
         """
         async with async_session_maker() as session:
-            # Fetch latest Treasury Yield (^TNX)
-            query = select(MacroIndicator).where(
-                MacroIndicator.indicator_code == "^TNX"
-            ).order_by(MacroIndicator.as_of.desc()).limit(20)
+            latest = await self._macro_latest(session, ["^TNX", "DGS10", "T10Y2Y"])
 
-            result = await session.execute(query)
-            yields = result.scalars().all()
-
-            if not yields:
-                return {"yield_curve_inversion": 0.0, "recession_likelihood": 0.1}
-
-            latest_yield = float(yields[0].value)
-
-            # Since we only have 10Y yield (^TNX), we use its trend as a proxy for curve flattening
-            # If 10Y is dropping while inflation (from other sources) is high, it signals inversion
-            historical_avg = sum(float(y.value) for y in yields) / len(yields)
-
-            # Proxy for inversion: if current yield is significantly below historical average
-            inversion_proxy = 1.0 if latest_yield < (historical_avg - 0.5) else 0.0
-            recession_prob = 0.75 if inversion_proxy > 0 else 0.15
-
+        spread = latest.get("T10Y2Y")
+        if spread is not None:
+            inversion = 1.0 if spread < 0 else 0.0
+            if spread < -0.5:
+                recession_prob = 0.80
+            elif spread < 0:
+                recession_prob = 0.60
+            else:
+                recession_prob = 0.12
             return {
-                "yield_curve_inversion": inversion_proxy,
-                "yield_spread_proxy": round(latest_yield - historical_avg, 4),
+                "yield_curve_inversion": inversion,
+                "yield_spread_proxy": round(spread, 4),
                 "recession_likelihood": recession_prob,
             }
+
+        # Fallback: 10Y yield trend (original proxy logic).
+        async with async_session_maker() as session:
+            yields = (
+                await session.execute(
+                    select(MacroIndicator)
+                    .where(MacroIndicator.indicator_code == "^TNX")
+                    .order_by(MacroIndicator.as_of.desc())
+                    .limit(20)
+                )
+            ).scalars().all()
+
+        if not yields:
+            return {"yield_curve_inversion": 0.0, "recession_likelihood": 0.1}
+
+        latest_yield = float(yields[0].value)
+        historical_avg = sum(float(y.value) for y in yields) / len(yields)
+
+        # Proxy for inversion: if current yield is significantly below historical average
+        inversion_proxy = 1.0 if latest_yield < (historical_avg - 0.5) else 0.0
+        recession_prob = 0.75 if inversion_proxy > 0 else 0.15
+
+        return {
+            "yield_curve_inversion": inversion_proxy,
+            "yield_spread_proxy": round(latest_yield - historical_avg, 4),
+            "recession_likelihood": recession_prob,
+        }
 
     async def _detect_economic_regime(self, ticker: str) -> dict[str, Any]:
         """
         Implement structural break detection in economic indicators.
-        Uses VIX and S&P 500 for regime classification.
+        Uses VIX and S&P 500 for volatility regime classification, overlaid
+        with real US economic releases (yield curve, inflation, unemployment,
+        consumer sentiment) when available.
         """
         async with async_session_maker() as session:
-            query = select(MacroIndicator).where(
-                MacroIndicator.indicator_code.in_(["^VIX", "^GSPC"])
-            ).order_by(MacroIndicator.as_of.desc()).limit(10)
+            data = await self._macro_latest(
+                session, ["^VIX", "^GSPC", "FEDFUNDS", "UNRATE", "INFLATION", "T10Y2Y", "UMCSENT"]
+            )
 
-            result = await session.execute(query)
-            indicators = result.scalars().all()
+        vix = data.get("^VIX", 20.0)
+        spread = data.get("T10Y2Y")
+        unemp = data.get("UNRATE")
+        inflation = data.get("INFLATION")
+        sent = data.get("UMCSENT")
 
-            # Map indicators to their latest values
-            data: dict[str, float] = {}
-            for ind in indicators:
-                if ind.indicator_code not in data:
-                    data[ind.indicator_code] = float(ind.value)
+        # Volatility regime from VIX.
+        regime = "Stable Growth"
+        confidence = 0.8
+        if vix > 30:
+            regime = "High Volatility / Crisis"
+            confidence = 0.9
+        elif vix > 20:
+            regime = "Uncertainty / Transition"
+            confidence = 0.7
 
-            vix = data.get("^VIX", 20.0)
+        # Economic-regime overlay from real releases.
+        econ_regime = "Stable Growth"
+        if spread is not None and spread < -0.5:
+            econ_regime = "Inversion / Recession Risk"
+            confidence = max(confidence, 0.85)
+        elif inflation is not None and inflation > 6.0:
+            econ_regime = "High Inflation"
+            confidence = max(confidence, 0.8)
+        elif unemp is not None and unemp > 6.0:
+            econ_regime = "Labor Market Slack"
+            confidence = max(confidence, 0.7)
+        elif sent is not None and sent < 50.0:
+            econ_regime = "Weak Consumer Sentiment"
+            confidence = max(confidence, 0.7)
 
-            regime = "Stable Growth"
-            confidence = 0.8
-
-            if vix > 30:
-                regime = "High Volatility / Crisis"
-                confidence = 0.9
-            elif vix > 20:
-                regime = "Uncertainty / Transition"
-                confidence = 0.7
-
-            return {
-                "regime_name": regime,
-                "regime_confidence": confidence,
-                "vix_level": vix,
-                "methodology": self._get_regime_detection_method(),
-                "regimes": {regime: confidence},
-            }
+        return {
+            "regime_name": regime,
+            "regime_confidence": confidence,
+            "vix_level": vix,
+            "economic_regime": econ_regime,
+            "components": {
+                "vix": vix,
+                "yield_curve_spread": spread,
+                "unemployment": unemp,
+                "inflation": inflation,
+                "sentiment": sent,
+            },
+            "methodology": self._get_regime_detection_method(),
+            "regimes": {regime: confidence, econ_regime: confidence},
+        }
 
     async def _manage_multicollinearity(self, ticker: str) -> dict[str, Any]:
         """
@@ -261,8 +320,8 @@ class FundamentalAnalysisService(AnalysisService):
         return {
             "pca_components": 4.0,      # Number of components
             "mean_vif": 2.3,            # Mean Variance Inflation Factor
-            "ridge_regularization": 0.7, # Regularization strength
-            "correlation_heatmap": "attached", # Reference to visualization
+            "ridge_regularization": 0.7,  # Regularization strength
+            "correlation_heatmap": "attached",  # Reference to visualization
         }
 
     def _get_regime_detection_method(self) -> str:

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -109,7 +109,7 @@ class MacroForecastingService:
         values = [float(r) for (r,) in rows.all() if r is not None]
         return list(reversed(values))
 
-    async def _latest_as_of(self, code: str) -> Optional[date]:
+    async def _latest_as_of(self, code: str) -> date | None:
         async with async_session_maker() as session:
             row = await session.execute(
                 select(MacroIndicator.as_of)
@@ -122,7 +122,7 @@ class MacroForecastingService:
             return None
         return res if isinstance(res, date) else res.date()
 
-    async def forecast_and_persist(self, code: str, horizon: Optional[int] = None) -> bool:
+    async def forecast_and_persist(self, code: str, horizon: int | None = None) -> bool:
         """Fit a forecast for ``code`` and persist horizon-step MacroForecast rows."""
         horizon = horizon or self.DEFAULT_HORIZON
         freq = INDICATOR_REGISTRY.get(code, {}).get("frequency", "monthly")
@@ -175,7 +175,7 @@ class MacroForecastingService:
         return count > 0
 
     async def get_latest_forecasts(
-        self, codes: Optional[list[str]] = None, limit_per_code: int = 3
+        self, codes: list[str] | None = None, limit_per_code: int = 3
     ) -> list[dict[str, Any]]:
         """Return the most recent forecasts (newest first)."""
         async with async_session_maker() as session:
@@ -209,7 +209,6 @@ class MacroForecastingService:
                 "created_at": fc.created_at.isoformat() if fc.created_at else None,
             }
             seen.setdefault(code, []).append(item)
-        newest_first: list[tuple[str, list[dict[str, Any]]]] = []
         for code, items in seen.items():
             items.sort(key=lambda x: (x["created_at"] or "", x["horizon"]), reverse=True)
             out.extend(items[:limit_per_code])

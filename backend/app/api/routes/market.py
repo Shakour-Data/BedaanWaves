@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
-from app.models.models import Asset, IntlOrderBook, candle_model_for_market
+from app.models.models import Asset, candle_model_for_market
 from app.schemas.schemas import (
     AssetClassEnum,
     AssetResponse,

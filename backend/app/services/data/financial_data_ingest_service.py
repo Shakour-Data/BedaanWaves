@@ -146,9 +146,14 @@ class FinancialDataIngestService(DataService):
 
     async def initialize(self) -> None:
         self.logger.info("FinancialDataIngestService initialized")
+        from app.services.data.sec_edgar_client import SEDGARFinancialService
+        self._sec_service = SEDGARFinancialService()
+        await self._sec_service.initialize()
 
     async def shutdown(self) -> None:
         self.logger.info("FinancialDataIngestService shutdown")
+        if hasattr(self, "_sec_service") and self._sec_service:
+            await self._sec_service.shutdown()
 
     _result_cache: dict[str, Any] = {}
 
@@ -157,34 +162,68 @@ class FinancialDataIngestService(DataService):
         symbol: str,
         market: MarketType,
         statement_types: list[FinancialStatementType] | None = None,
-        periods: list[str] | None = None
+        periods: list[str] | None = None,
+        min_quarters: int = 20,
     ) -> list[FinancialStatement]:
         """
         Fetch and store financial statements for a symbol.
 
+        Attempts the registered provider first (yfinance / Alpha Vantage).
+        If the provider returns no data, falls back to the free SEC EDGAR
+        API which provides 20+ quarters of historical statements.
+
         Uses caching to avoid redundant fetches.
         """
-        # Check cache first
         cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}:{','.join(periods or [])}"
         cached = self._result_cache.get(cache_key)
         if cached is not None:
             return cached if cached else []
 
-        # Lazy provider registration
         if not self._providers:
             self._register_providers()
 
         provider = self._providers.get(market)
-        if not provider:
-            raise ValueError(f"No provider registered for market: {market}")
+        statements: list[FinancialStatement] = []
 
-        statements = await provider.fetch_financial_statements(
-            symbol=symbol,
-            statement_types=statement_types,
-            periods=periods
-        )
+        if provider:
+            try:
+                statements = await provider.fetch_financial_statements(
+                    symbol=symbol,
+                    statement_types=statement_types,
+                    periods=periods
+                )
+            except Exception as e:
+                self.logger.debug(f"Provider {provider.__class__.__name__} failed for {symbol}: {e}")
 
-        # Cache the result
+        if not statements:
+            self.logger.info(f"Provider returned no data for {symbol}; falling back to SEC EDGAR")
+            try:
+                from sqlalchemy import func as _func
+                from sqlalchemy import select as _select
+
+                from app.db.base import async_session_maker
+                from app.models.models import Asset as DBAsset
+
+                async with async_session_maker() as session:
+                    asset = (
+                        await session.execute(
+                            _select(DBAsset).where(_func.lower(DBAsset.symbol) == _func.lower(symbol))
+                        )
+                    ).scalars().first()
+                    if asset:
+                        await self._sec_service.ingest_sec_financials(
+                            symbol=symbol,
+                            asset_id=str(asset.id),
+                            min_quarters=min_quarters,
+                            skip_if_sufficient=True,
+                        )
+                        statements = await self.get_financial_statements(
+                            asset_id=str(asset.id),
+                            limit=min_quarters,
+                        )
+            except Exception as e:
+                self.logger.warning(f"SEC EDGAR fallback failed for {symbol}: {e}")
+
         if statements:
             self._result_cache[cache_key] = statements
         return statements or []

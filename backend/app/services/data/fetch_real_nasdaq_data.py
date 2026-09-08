@@ -9,6 +9,7 @@ import yfinance as yf
 # NASDAQ Index constituents - real data test
 NASDAQ_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN', 'META', 'NVDA']
 
+
 def fetch_nasdaq_data():
     """Fetch real Nasdaq stock data from Yahoo Finance."""
     print("=" * 60)
@@ -39,6 +40,7 @@ def fetch_nasdaq_data():
 
     return results
 
+
 def fetch_price_history():
     """Fetch historical price data for test symbols."""
     print("\n" + "=" * 60)
@@ -50,6 +52,7 @@ def fetch_price_history():
 
     for date, row in hist.iterrows():
         print(f"{date.strftime('%Y-%m-%d')}: OHLC ({row['Open']:.2f}, {row['High']:.2f}, {row['Low']:.2f}, {row['Close']:.2f}) Vol: {int(row['Volume']):,}")
+
 
 if __name__ == "__main__":
     data = fetch_nasdaq_data()

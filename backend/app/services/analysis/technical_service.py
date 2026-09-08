@@ -248,7 +248,7 @@ class TechnicalAnalysisService(AnalysisService):
     def _stoch_rsi(self, values: list[float], period: int = 14) -> dict[str, float]:
         if len(values) < period:
             return {"k": 50.0, "d": 50.0}
-        rsi_vals = [self._rsi(values[:i+1], period) for i in range(period - 1, len(values))]
+        rsi_vals = [self._rsi(values[:i + 1], period) for i in range(period - 1, len(values))]
         if not rsi_vals:
             return {"k": 50.0, "d": 50.0}
         rsi_min = min(rsi_vals[-period:])

@@ -545,7 +545,7 @@ export default function StockScoringPage() {
           <span className="text-foreground">{t("app.scoring.title")}</span>
         </div>
         <AsOfStamp
-          timestamp={snapshotTimestamp ?? hierarchy.timestamp ?? null}
+          effectiveAt={snapshotTimestamp ?? hierarchy.timestamp ?? null}
           snapshotId={snapshotId ?? null}
           variant="compact"
         />

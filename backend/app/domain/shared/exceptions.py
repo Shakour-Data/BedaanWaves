@@ -17,6 +17,7 @@ class DomainException(Exception):
     def __str__(self):
         return f"[{self.code}] {self.message} (Context: {self.context})"
 
+
 class EntityNotFoundException(DomainException):
     """Thrown when a domain entity cannot be found."""
     def __init__(self, entity_name: str, identifier: str):
@@ -25,6 +26,7 @@ class EntityNotFoundException(DomainException):
             "ENTITY_NOT_FOUND",
             {"entity": entity_name, "id": identifier}
         )
+
 
 class ValidationException(DomainException):
     """Thrown when domain validation fails."""

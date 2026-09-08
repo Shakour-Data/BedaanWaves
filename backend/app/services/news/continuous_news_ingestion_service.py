@@ -142,7 +142,18 @@ class ContinuousNewsIngestionService(BaseService):
         except Exception as exc:
             logger.warning("Failed to load sources from DB: %s", exc)
 
-        return DEFAULT_NEWS_SOURCES
+        return [
+            {
+                "name": s["name"],
+                "url": s["url"],
+                "type": s["type"],
+                "category": s["category"],
+                "region": s.get("region", "GLOBAL"),
+                "interval": s.get("interval_seconds", s.get("interval", 900)),
+                "max_concurrent": s.get("max_concurrent_requests", 3),
+            }
+            for s in DEFAULT_NEWS_SOURCES
+        ]
 
     async def _record_source_success(self, name: str) -> None:
         state = self._source_states.get(name)

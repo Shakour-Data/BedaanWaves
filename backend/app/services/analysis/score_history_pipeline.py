@@ -252,31 +252,39 @@ class ScoreHistoryPipeline:
         }
 
     async def _fetch_macro_data(self) -> dict[str, Any]:
-        """Fetch latest macro indicators."""
+        """Fetch latest US macro indicators and normalize to 0-100 sub-scores.
+
+        The previous implementation only surfaced market tickers (^VIX/^TNX/
+        Dollar Index/Gold/Oil) with raw, un-normalized values. We now read every
+        tracked ``MacroIndicator`` row, take the latest value per code, and map
+        them to the macro sub-dimension health scores the ScoringService
+        understands: ``gdp``, ``inflation``, ``interest_rates``,
+        ``exchange_rates``, ``commodity_prices`` (all 0-100).
+        """
+        from app.services.analysis.macro_scoring import SUB_DIMENSIONS, compute_macro_scores
+
         async with async_session_maker() as session:
             result = await session.execute(
-                select(MacroIndicator)
-                .order_by(desc(MacroIndicator.as_of))
-                .limit(10)
+                select(MacroIndicator.indicator_code, MacroIndicator.value)
+                .order_by(desc(MacroIndicator.as_of), MacroIndicator.indicator_code)
             )
-            rows = result.scalars().all()
+            rows = result.all()
 
-        data = {}
-        for row in rows:
-            code = row.indicator_code
-            val = float(row.value) if row.value else 0
-            if code == "^VIX":
-                data["vix"] = val
-            elif code == "^TNX":
-                data["treasury_yield"] = val
-            elif code == "DX-Y.NYB":
-                data["dollar_index"] = val
-            elif code == "GC=F":
-                data["gold_price"] = val
-            elif code == "CL=F":
-                data["oil_price"] = val
+        latest: dict[str, float] = {}
+        for code, value in rows:
+            if value is None:
+                continue
+            if code not in latest:
+                try:
+                    latest[code] = float(value)
+                except (TypeError, ValueError):
+                    continue
 
-        return data
+        if not latest:
+            return {}
+
+        scores = compute_macro_scores(latest)
+        return {k: v for k, v in scores.items() if k in SUB_DIMENSIONS}
 
     async def _fetch_ai_data(self, asset_id) -> dict[str, Any]:
         """Fetch latest ML signal for an asset."""
@@ -533,7 +541,10 @@ class ScoreHistoryPipeline:
                     continue
                 code = row.indicator_code
                 val = float(row.value)
+                # Market-based macro tickers (existing behaviour, preserved).
                 if code == "^TNX" and "treasury_yield_10y" not in macro_vals:
+                    macro_vals["treasury_yield_10y"] = val
+                elif code == "DGS10" and "treasury_yield_10y" not in macro_vals:
                     macro_vals["treasury_yield_10y"] = val
                 elif code == "DX-Y.NYB" and "dollar_index" not in macro_vals:
                     macro_vals["dollar_index"] = val
@@ -541,6 +552,26 @@ class ScoreHistoryPipeline:
                     macro_vals["oil_price"] = val
                 elif code == "GC=F" and "gold_price" not in macro_vals:
                     macro_vals["gold_price"] = val
+                # Real US economic releases (free FRED/BLS data) – additive, so
+                # the cross-sectional engine simply ignores keys it does not
+                # have registered in METRIC_UNIVERSE (no score change), while
+                # making the latest readings available to downstream consumers.
+                elif code == "INFLATION" and "inflation_rate" not in macro_vals:
+                    macro_vals["inflation_rate"] = val
+                elif code == "CORE_INFLATION" and "core_inflation_rate" not in macro_vals:
+                    macro_vals["core_inflation_rate"] = val
+                elif code == "UNRATE" and "unemployment" not in macro_vals:
+                    macro_vals["unemployment"] = val
+                elif code in ("FEDFUNDS", "US_FED_RATE") and "fed_funds" not in macro_vals:
+                    macro_vals["fed_funds"] = val
+                elif code == "GDPC1" and "real_gdp" not in macro_vals:
+                    macro_vals["real_gdp"] = val
+                elif code == "GDP_QOQ" and "gdp_growth" not in macro_vals:
+                    macro_vals["gdp_growth"] = val
+                elif code == "UMCSENT" and "consumer_sentiment" not in macro_vals:
+                    macro_vals["consumer_sentiment"] = val
+                elif code == "T10Y2Y" and "yield_curve_spread" not in macro_vals:
+                    macro_vals["yield_curve_spread"] = val
             for m in metrics.values():
                 for k, v in macro_vals.items():
                     m[k] = v

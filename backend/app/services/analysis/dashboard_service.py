@@ -276,37 +276,49 @@ async def _compute_sentiment_score(db: AsyncSession, asset_id: Any) -> float:
 
 
 async def _compute_macro_score(db: AsyncSession, asset_id: Any) -> float:
-    """Compute a real macro score (0-100) from MacroIndicator."""
+    """Compute a real macro score (0-100) from ``MacroIndicator``.
+
+    Uses the centralized ``macro_scoring`` normalizer over the latest value of
+    every tracked indicator: real US releases (CPI, unemployment, GDP, Fed
+    funds, yield curve, sentiment, ...) plus market tickers (VIX, Treasury,
+    Dollar Index, Gold, Oil). Missing indicators are neutral (50), never zero.
+    Elevated volatility (VIX) applies a regime stress so fear still weighs on
+    the score, preserving the signal the previous ticker-only path carried.
+    """
+    from app.services.analysis.macro_scoring import compute_macro_scores
+
     query = (
-        select(MacroIndicator.value, MacroIndicator.indicator_code)
-        .order_by(desc(MacroIndicator.as_of))
-        .limit(10)
+        select(MacroIndicator.indicator_code, MacroIndicator.value)
+        .order_by(MacroIndicator.as_of.desc(), MacroIndicator.indicator_code)
     )
     result = await db.execute(query)
     rows = result.all()
     if not rows:
         return 0.0
 
-    scores: list[float] = []
-    for row in rows:
-        code = row.indicator_code
-        val = float(row.value) if row.value is not None else None
-        if val is None:
+    latest: dict[str, float] = {}
+    for code, value in rows:
+        if value is None:
             continue
-        if code == "^VIX":
-            scores.append(min(100.0, max(0.0, val * 3.0)))
-        elif code == "^TNX":
-            scores.append(min(100.0, max(0.0, 100.0 - (val - 2.0) * 20.0)))
-        elif code == "DX-Y.NYB":
-            scores.append(min(100.0, max(0.0, 50.0 + (val - 100.0) * 2.0)))
-        elif code in ("GC=F", "CL=F"):
-            scores.append(min(100.0, max(0.0, val / 100.0)))
-        else:
-            scores.append(min(100.0, max(0.0, val)))
+        if code not in latest:
+            try:
+                latest[code] = float(value)
+            except (TypeError, ValueError):
+                continue
 
-    if not scores:
+    if not latest:
         return 0.0
-    return round(sum(scores) / len(scores), 2)
+
+    scores = compute_macro_scores(latest)
+    overall = float(scores.get("overall", 50.0))
+
+    # Regime stress from elevated volatility (preserves the prior VIX signal).
+    vix = latest.get("^VIX")
+    if vix is not None:
+        vix_score = min(100.0, max(0.0, 100.0 - (vix - 15.0) * 2.0))
+        overall = overall * 0.8 + vix_score * 0.2
+
+    return round(overall, 2)
 
 
 async def _compute_ai_score(db: AsyncSession, asset_id: Any) -> float:
@@ -694,7 +706,7 @@ class DashboardService:
             idx = min(int(s["score"] / 10), 9)
             bins[idx] += 1
         distribution = [
-            {"range": f"{i*10}-{(i+1)*10}", "count": bins[i]}
+            {"range": f"{i * 10}-{(i + 1) * 10}", "count": bins[i]}
             for i in range(10)
         ]
 
@@ -1357,11 +1369,11 @@ class DashboardService:
         # chart per the dashboard spec.
         coefficients = [
             {"key": "fundamental", "label": "Fundamental", "weight": 0.25},
-            {"key": "technical",   "label": "Technical",   "weight": 0.20},
-            {"key": "sentiment",   "label": "Sentiment",   "weight": 0.15},
-            {"key": "risk",        "label": "Risk",        "weight": 0.20},
-            {"key": "macro",       "label": "Macro",       "weight": 0.10},
-            {"key": "ai",          "label": "AI",          "weight": 0.10},
+            {"key": "technical", "label": "Technical", "weight": 0.20},
+            {"key": "sentiment", "label": "Sentiment", "weight": 0.15},
+            {"key": "risk", "label": "Risk", "weight": 0.20},
+            {"key": "macro", "label": "Macro", "weight": 0.10},
+            {"key": "ai", "label": "AI", "weight": 0.10},
         ]
 
         latest_date = await self._get_latest_score_date(db)

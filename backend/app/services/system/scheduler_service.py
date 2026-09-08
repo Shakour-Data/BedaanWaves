@@ -9,15 +9,15 @@ Enhanced with full automation:
 - Log cleanup (daily)
 - Missed job recovery on startup
 """
-
 import asyncio
 import os
+import re as _re
 import uuid as _uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from datetime import date as _date
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -69,7 +69,8 @@ class SchedulerService(BaseService):
                  ml_training_service=None,
                  backup_service=None,
                  news_service=None,
-                 ingestion_service=None):
+                 ingestion_service=None,
+                 orderbook_service=None):
         super().__init__(service_name)
         self._jobs: dict[str, ScheduledJob] = {}
         self._running: bool = False
@@ -86,6 +87,7 @@ class SchedulerService(BaseService):
         self.backup_service = backup_service
         self.news_service = news_service
         self.ingestion_service = ingestion_service
+        self.orderbook_service = orderbook_service
 
     async def initialize(self) -> None:
         self._running = True
@@ -166,6 +168,41 @@ class SchedulerService(BaseService):
         self.register_job(
             name="SignalUpdate",
             coroutine_func=signal_update_job,
+            interval_seconds=900,
+        )
+
+        # === ORDER BOOK SNAPSHOT JOB ===
+        # Captures top-5 bid/ask snapshots every 15 minutes (900 seconds)
+        # for tracked symbols and persists them to the intl_order_book table.
+
+        async def orderbook_snapshot_job():
+            if self.orderbook_service is None:
+                return {"status": "skipped", "reason": "orderbook_service not available"}
+            try:
+                tracked = await self._get_tracked_symbols()
+                results: dict[str, bool] = {}
+                async with async_session_maker() as session:
+                    for sym in tracked:
+                        snap_dict = await self.orderbook_service.get_latest_orderbook(sym)
+                        snaps = self._dict_to_snapshot(snap_dict)
+                        if snaps:
+                            await self.orderbook_service.persist_snapshots(
+                                snaps, sym, session
+                            )
+                        results[sym] = True
+                    await session.commit()
+                return {
+                    "status": "success",
+                    "symbols_processed": len(results),
+                    "symbols": list(results.keys()),
+                }
+            except Exception as exc:
+                self.logger.error("OrderBookSnapshot job failed: %s", exc)
+                return {"status": "error", "error": str(exc)}
+
+        self.register_job(
+            name="OrderBookSnapshot",
+            coroutine_func=orderbook_snapshot_job,
             interval_seconds=900,
         )
 
@@ -1522,13 +1559,13 @@ asyncio.run(main())
         """Fetch real US macro releases from the free FRED CSV endpoint (no key)."""
         from decimal import Decimal
 
-        from app.services.data.fred_csv_client import fetch_history_map
         from app.services.analysis.macro_scoring import (
-            INDICATOR_REGISTRY,
             BUNDLED_MACRO_SNAPSHOT,
+            INDICATOR_REGISTRY,
             derive_indicators,
             derive_history_map,
         )
+        from app.services.data.fred_csv_client import fetch_history_map
 
         monthly_ids = [
             "CPIAUCSL", "CPILFESL", "UNRATE", "U6RATE", "UMCSENT",
@@ -1642,21 +1679,57 @@ asyncio.run(main())
                         await session.execute(stmt)
                         count += 1
 
+            # Offline fallback (free, no network): seed the bundled snapshot for
+            # any codes the live FRED fetch missed so the macro dimension is
+            # never empty in air-gapped deployments. These rows are overwritten
+            # automatically once network access to FRED returns.
+            covered: set[str] = set(history_map.keys()) | set(derived.keys())
+            for alias, real in aliases.items():
+                if real in covered:
+                    covered.add(alias)
+            for code, snap in BUNDLED_MACRO_SNAPSHOT.items():
+                if code in covered:
+                    continue
+                stmt = pg_insert(MacroIndicator).values(
+                    {
+                        "indicator_code": code,
+                        "name": INDICATOR_REGISTRY.get(code, {}).get("name", code),
+                        "value": Decimal(str(snap["value"])),
+                        "period": snap.get("period", ""),
+                        "unit": snap.get("unit", ""),
+                        "source": snap.get("source", "BUNDLED"),
+                        "as_of": _parse_period_date(snap.get("period")) or today_local(),
+                    }
+                )
+                stmt = stmt.on_conflict_do_update(
+                    constraint="uix_macro_indicator",
+                    set_={
+                        "value": stmt.excluded.value,
+                        "as_of": stmt.excluded.as_of,
+                        "unit": stmt.excluded.unit,
+                        "source": stmt.excluded.source,
+                    },
+                )
+                await session.execute(stmt)
+                count += 1
+
             await session.commit()
         return count
 
     async def _refresh_ticker_indicators(self) -> int:
         """Refresh market-based macro tickers from yfinance (free public data)."""
+        from decimal import Decimal
+
+        import yfinance as yf
+
         from app.services.data.nasdaq_ingestion_service import (
             MACRO_TICKERS,
         )
-        from decimal import Decimal
-        import yfinance as yf
 
         tickers = list(MACRO_TICKERS.keys())
-        today = today_local()
+        today_local()
 
-        def _fetch_one(sym: str) -> Optional[tuple[Any, float]]:
+        def _fetch_one(sym: str) -> tuple[Any, float] | None:
             try:
                 ticker = yf.Ticker(sym)
                 hist = ticker.history(period="5d", interval="1d")
@@ -1715,7 +1788,7 @@ asyncio.run(main())
         latest_map = await asyncio.to_thread(fetch_latest_map, list(fx_series.keys()))
 
         count = 0
-        today = today_local()
+        today_local()
         async with async_session_maker() as session:
             for series_id, quote in fx_series.items():
                 entry = latest_map.get(series_id)
@@ -1764,7 +1837,6 @@ asyncio.run(main())
             results["errors"].append(f"Macro forecasts: {exc!s}")
         self.logger.info(f"Macro forecast refresh complete: {results}")
         return results
-
 
     async def _refresh_master_data(self) -> dict[str, Any]:
         """Refresh market indices."""
@@ -1990,6 +2062,53 @@ asyncio.run(main())
             self.logger.error(f"Job '{job.name}' failed: {exc}", exc_info=True)
             return {"status": "error", "job": job.name, "error": str(exc), "duration_ms": duration_ms}
 
+    async def _get_tracked_symbols(self) -> list[str]:
+        """Return the list of symbols that have been traded/watched."""
+        try:
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(Asset)
+                    .where(Asset.active.is_(True), Asset.asset_class.in_(["EQUITY", "ETF"]))
+                    .limit(500)
+                )
+                symbols = [row.symbol for row in result.scalars().all()]
+                if symbols:
+                    return symbols
+        except Exception:
+            pass
+        return ["AAPL", "MSFT", "GOOG", "TSLA", "NVDA", "SPY", "QQQ", "INTC"]
+
+    def _dict_to_snapshot(self, data: dict[str, Any]) -> list:
+        """Convert a snapshot dict to an OrderBookSnapshot list for persistence."""
+        from app.services.data.itch_ingestion_service import OrderBookLevel, OrderBookSnapshot
+
+        bids = []
+        for b in data.get("bids", []):
+            bids.append(OrderBookLevel(
+                rank=b.get("rank", 1),
+                price=float(b.get("price", 0)),
+                volume=int(b.get("volume", 0)),
+                order_count=int(b.get("order_count", 0)),
+            ))
+        asks = []
+        for a in data.get("asks", []):
+            asks.append(OrderBookLevel(
+                rank=a.get("rank", 1),
+                price=float(a.get("price", 0)),
+                volume=int(a.get("volume", 0)),
+                order_count=int(a.get("order_count", 0)),
+            ))
+        snap = OrderBookSnapshot(
+            symbol=data.get("symbol", ""),
+            ts=datetime.fromisoformat(data.get("snapshot_time", datetime.now(UTC).isoformat())),
+            bids=bids,
+            asks=asks,
+            spread=data.get("spread"),
+            spread_pct=data.get("spread_pct"),
+            source=data.get("source", "BRS"),
+        )
+        return [snap]
+
     async def _scheduler_loop(self) -> None:
         self.logger.info("Scheduler loop started")
         while self._running:
@@ -2031,7 +2150,6 @@ asyncio.run(main())
 # ---------------------------------------------------------------------------
 # Module-level helpers for free, no-API-key macro refresh.
 # ---------------------------------------------------------------------------
-import re as _re
 
 
 def today_local() -> Any:
@@ -2049,7 +2167,7 @@ def _period_for(freq: str, as_of: Any) -> str:
     return as_of.strftime("%Y-%m")
 
 
-def _parse_period_date(period: Optional[str]) -> Optional[Any]:
+def _parse_period_date(period: str | None) -> Any | None:
     """Parse a period string ('2026-07', '2026Q2', '2026-07-30') into a date."""
     if not period:
         return None
@@ -2075,8 +2193,8 @@ def _parse_period_date(period: Optional[str]) -> Optional[Any]:
 
 
 def _latest_value(
-    history: list[tuple[Any, float]], derived_entry: Optional[dict[str, Any]]
-) -> Optional[tuple[Any, float]]:
+    history: list[tuple[Any, float]], derived_entry: dict[str, Any] | None
+) -> tuple[Any, float] | None:
     """Return (as_of, value) for the most recent observation of a series."""
     if history:
         return history[-1]
@@ -2087,4 +2205,3 @@ def _latest_value(
         except (TypeError, ValueError):
             return None
     return None
-

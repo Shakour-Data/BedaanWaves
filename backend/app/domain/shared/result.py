@@ -2,6 +2,7 @@ from typing import Any, Generic, TypeVar
 
 T = TypeVar('T')
 
+
 class Result(Generic[T]):
     """
     Result pattern implementation for handling operation outcomes.

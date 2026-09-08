@@ -116,4 +116,3 @@ def get_health_checker() -> HealthChecker:
     """Get the global health checker instance."""
     container = get_global_container()
     return container.get("health_checker")
-

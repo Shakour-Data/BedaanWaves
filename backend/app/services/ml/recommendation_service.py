@@ -92,9 +92,17 @@ class RecommendationService(MLService):
     def _compute_weights(self, pe_ratio: float, momentum_score: float, sharpe_ratio: float) -> tuple[float, float, float]:
         if pe_ratio <= self.STRONG_PE_MAX and momentum_score >= self.STRONG_MOMENTUM_MIN and sharpe_ratio >= self.STRONG_SHARPE_MIN:
             return self.STRONG_WEIGHT_FUNDAMENTAL, self.STRONG_WEIGHT_RISK, self.STRONG_WEIGHT_MOMENTUM
-        if self.BUY_PE_MIN < pe_ratio <= self.BUY_PE_MAX and momentum_score >= self.BUY_MOMENTUM_MIN and sharpe_ratio >= self.BUY_SHARPE_MIN:
+        if (
+            self.BUY_PE_MIN < pe_ratio <= self.BUY_PE_MAX
+            and momentum_score >= self.BUY_MOMENTUM_MIN
+            and sharpe_ratio >= self.BUY_SHARPE_MIN
+        ):
             return self.BUY_WEIGHT_FUNDAMENTAL, self.BUY_WEIGHT_RISK, self.BUY_WEIGHT_MOMENTUM
-        if self.HOLD_PE_MIN < pe_ratio <= self.HOLD_PE_MAX and momentum_score >= self.HOLD_MOMENTUM_MIN and sharpe_ratio >= self.HOLD_SHARPE_MIN:
+        if (
+            self.HOLD_PE_MIN < pe_ratio <= self.HOLD_PE_MAX
+            and momentum_score >= self.HOLD_MOMENTUM_MIN
+            and sharpe_ratio >= self.HOLD_SHARPE_MIN
+        ):
             return self.HOLD_WEIGHT_FUNDAMENTAL, self.HOLD_WEIGHT_RISK, self.HOLD_WEIGHT_MOMENTUM
         if self.SELL_PE_MIN < pe_ratio <= self.SELL_PE_MAX:
             return self.SELL_WEIGHT_FUNDAMENTAL, self.SELL_WEIGHT_RISK, self.SELL_WEIGHT_MOMENTUM

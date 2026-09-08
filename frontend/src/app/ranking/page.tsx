@@ -373,7 +373,10 @@ export default function RankingPage() {
                       return (
                         <tr
                           key={row.symbol}
-                          className="transition-all duration-300 ease-out hover:bg-neutral/50"
+                          className={cn(
+                            "transition-all duration-200 hover:bg-muted active:bg-muted/80",
+                            idx % 2 === 1 && "bg-muted/20"
+                          )}
                         >
                           <td className="px-3 py-3 text-center">
                             <RankCell rank={row.rank || offset + idx + 1} />

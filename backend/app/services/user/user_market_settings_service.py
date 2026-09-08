@@ -401,6 +401,7 @@ class UserMarketSettingsService(BaseService):
         except Exception as e:
             self.logger.warning(f"Failed to log settings change: {e!s}")
 
+
 # Factory function for dependency injection
 def get_user_market_settings_service(preference_service=None,
                                      logger=None) -> UserMarketSettingsService:

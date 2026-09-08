@@ -528,10 +528,9 @@ class NasdaqIngestionService(DataService):
         Backfill quarterly financial statements for all Nasdaq constituents
         that have fewer than ``min_quarters`` quarters already stored.
         """
-        from sqlalchemy import func
-
         self.logger.info(f"Starting SEC EDGAR backfill (target {min_quarters} quarters)")
 
+        symbols_to_process = []
         async with async_session_maker() as session:
             all_assets = await session.execute(
                 select(Asset.id, Asset.symbol)
@@ -542,14 +541,11 @@ class NasdaqIngestionService(DataService):
             )
             assets = all_assets.fetchall()
 
-        symbols_to_process = []
-        await self._sec_service.initialize()
         for asset_id, symbol in assets:
             count = await self._sec_service.count_quarters_in_db(str(asset_id))
             if count < min_quarters:
                 symbols_to_process.append(symbol)
 
-        await self._sec_service.shutdown()
         self.logger.info(
             f"Backfill: {len(symbols_to_process)}/{len(assets)} symbols need "
             f"more quarters (<{min_quarters})"

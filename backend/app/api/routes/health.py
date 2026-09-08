@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
+
 @router.get("/")
 async def health_check():
     """Root health check endpoint."""
@@ -41,6 +42,7 @@ async def health_check():
         "checks": result.get('checks', {})
     }
 
+
 @router.get("/services")
 async def list_service_health():
     """Get health status for all services."""
@@ -63,6 +65,7 @@ async def list_service_health():
         "timestamp": utc_now_iso(),
         "services": result.get('checks', {})
     }
+
 
 @router.get("/services/{service}")
 async def get_service_health(service: str):
@@ -89,6 +92,7 @@ async def get_service_health(service: str):
         "service": service,
         "health": result
     }
+
 
 @router.get("/ready")
 async def readiness_check():
@@ -117,6 +121,7 @@ async def readiness_check():
         "timestamp": utc_now_iso(),
         "checks": result.get('checks', {})
     }
+
 
 @router.get("/live")
 async def liveness_check():

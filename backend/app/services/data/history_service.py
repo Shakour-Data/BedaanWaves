@@ -6,13 +6,12 @@ Supports storing OHLCV candle data, retrieving historical time series,
 and managing data quality for historical records.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import desc, select
 
-from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, IntlPriceCandle
 
@@ -88,7 +87,7 @@ class HistoryService(CachedService):
                     elif isinstance(ts, datetime):
                         parsed_ts = ts
                     else:
-                        parsed_ts = datetime.now(timezone.utc)
+                        parsed_ts = datetime.now(UTC)
 
                     existing = await session.execute(
                         select(IntlPriceCandle).where(
@@ -111,7 +110,10 @@ class HistoryService(CachedService):
                         volume=int(candle.get("volume", 0)),
                         turnover=Decimal(str(candle.get("turnover", 0))) if candle.get("turnover") else None,
                         transactions=candle.get("transactions"),
-                        adjusted_close=Decimal(str(candle.get("adjusted_close", candle.get("close", 0)))) if candle.get("adjusted_close") else None,
+                        adjusted_close=(
+                            Decimal(str(candle.get("adjusted_close", candle.get("close", 0))))
+                            if candle.get("adjusted_close") else None
+                        ),
                         split_ratio=Decimal(str(candle.get("split_ratio", 1.0))),
                         source=candle.get("source", self.SOURCE_LABEL),
                         data_quality=candle.get("data_quality", "CONFIRMED"),

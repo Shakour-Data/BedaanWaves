@@ -10,6 +10,7 @@ class IScoringStrategy(ABC):
     def score_pe(self, value: float) -> float:
         ...
 
+
 class TseScoringStrategy(IScoringStrategy):
     def score_rsi(self, rsi: float) -> float:
         if rsi > 70:
@@ -26,6 +27,7 @@ class TseScoringStrategy(IScoringStrategy):
         if pe < 15:
             return 75
         return max(0, 100 - pe)
+
 
 class GlobalScoringStrategy(IScoringStrategy):
     def score_rsi(self, rsi: float) -> float:

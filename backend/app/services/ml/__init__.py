@@ -19,6 +19,7 @@ __all__ = [
     "PricePredictionService"
 ]
 
+
 # Lazy imports to avoid circular dependencies
 def __getattr__(name: str):
     if name == "MLService":

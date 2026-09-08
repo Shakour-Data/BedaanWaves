@@ -7,6 +7,7 @@ from ...domain.shared.result import Result
 
 T = TypeVar('T')
 
+
 class DependencyContainer(IDependencyContainer):
     """
     Concrete implementation of IDependencyContainer.

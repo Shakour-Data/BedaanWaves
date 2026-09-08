@@ -184,7 +184,7 @@ class CoefficientLearningService(MLService):
             # Set default uniform coefficients
             if level == "dimensions":
                 self.learned_coefficients[level] = {
-                    name: 1.0/len(self.dimension_names)
+                    name: 1.0 / len(self.dimension_names)
                     for name in self.dimension_names
                 }
             elif level == "sub_dimensions":
@@ -193,7 +193,7 @@ class CoefficientLearningService(MLService):
                     for sub_dim in sub_dims:
                         flat_sub_dims.append(f"{dim}_{sub_dim}")
                 self.learned_coefficients[level] = {
-                    name: 1.0/len(flat_sub_dims)
+                    name: 1.0 / len(flat_sub_dims)
                     for name in flat_sub_dims
                 }
             # For aspects and sub-aspects, we'll populate during first training

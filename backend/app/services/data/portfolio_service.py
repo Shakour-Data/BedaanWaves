@@ -7,15 +7,14 @@ database when a session is available; falls back to in-memory stubs
 when no persistence layer is configured.
 """
 
-import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import delete, select, update
 
 from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
-from app.models.models import Asset, Position, Portfolio
+from app.models.models import Asset, Portfolio, Position
 
 from ..core import DataService
 
@@ -111,7 +110,7 @@ class PortfolioService(DataService):
                         description=data.get("description"),
                         portfolio_type=data.get("type"),
                         base_currency=data.get("base_currency"),
-                        updated_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(UTC),
                     )
                 )
                 await session.commit()
@@ -168,7 +167,7 @@ class PortfolioService(DataService):
                         asset_id=asset_id,
                         quantity=quantity,
                         entry_price=purchase_price,
-                        entry_date=datetime.now(timezone.utc),
+                        entry_date=datetime.now(UTC),
                     )
                     session.add(position)
                     await session.commit()

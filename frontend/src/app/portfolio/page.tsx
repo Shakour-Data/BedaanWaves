@@ -275,10 +275,12 @@ export default function PortfolioPage() {
             {liveHoldings.length > 0 ? (
               <AssetTable rows={liveHoldings} />
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
-                <div className="text-4xl mb-4">📭</div>
-                <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">{t("app.portfolio.empty_title")}</p>
-                <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc")}</p>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
+                  <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+                </div>
+                <p className="text-lg font-bold text-foreground mb-2">{t("app.portfolio.empty_title")}</p>
+                <p className="text-sm mb-6 max-w-xs text-center text-muted-foreground">{t("app.portfolio.empty_desc")}</p>
                 <button onClick={() => router.push("/stocks")} className="rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
                   {t("app.portfolio.view_stocks")}
                 </button>

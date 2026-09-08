@@ -12,6 +12,7 @@ class DimensionType(Enum):
     MACRO = "macro"
     AI = "ai"
 
+
 @dataclass(frozen=True)
 class Dimension:
     """Value Object representing a scoring dimension."""

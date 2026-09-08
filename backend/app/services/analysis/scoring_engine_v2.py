@@ -43,37 +43,37 @@ DIMENSION_WEIGHTS: dict[str, float] = get_settings().SCORING_WEIGHTS
 # Each entry: (dim, sub_dim, aspect, sub_aspect, db_field, lower_is_better)
 METRIC_UNIVERSE: list[tuple[str, str, str, str, str, bool]] = [
     # fundamental
-    ("fundamental", "valuation",       "pe_band",        "pe_ratio",     "pe_ratio",     True),
-    ("fundamental", "valuation",       "pe_band",        "pb_ratio",     "pb_ratio",     True),
-    ("fundamental", "valuation",       "pe_band",        "ev_ebitda",    "ev_ebitda",    True),
-    ("fundamental", "profitability",   "roe_block",      "roe",          "roe",          False),
-    ("fundamental", "profitability",   "roe_block",      "roa",          "roa",          False),
-    ("fundamental", "profitability",   "roe_block",      "profit_margin","profit_margin",False),
-    ("fundamental", "growth",          "growth_block",   "revenue_growth","revenue_growth",False),
-    ("fundamental", "growth",          "growth_block",   "eps_growth",   "eps_growth",   False),
-    ("fundamental", "liquidity",       "liquidity_block","current_ratio","current_ratio",False),
-    ("fundamental", "liquidity",       "liquidity_block","quick_ratio",  "quick_ratio",  False),
+    ("fundamental", "valuation", "pe_band", "pe_ratio", "pe_ratio", True),
+    ("fundamental", "valuation", "pe_band", "pb_ratio", "pb_ratio", True),
+    ("fundamental", "valuation", "pe_band", "ev_ebitda", "ev_ebitda", True),
+    ("fundamental", "profitability", "roe_block", "roe", "roe", False),
+    ("fundamental", "profitability", "roe_block", "roa", "roa", False),
+    ("fundamental", "profitability", "roe_block", "profit_margin", "profit_margin", False),
+    ("fundamental", "growth", "growth_block", "revenue_growth", "revenue_growth", False),
+    ("fundamental", "growth", "growth_block", "eps_growth", "eps_growth", False),
+    ("fundamental", "liquidity", "liquidity_block", "current_ratio", "current_ratio", False),
+    ("fundamental", "liquidity", "liquidity_block", "quick_ratio", "quick_ratio", False),
     # technical
-    ("technical",   "trend",           "trend_block",    "macd_histogram","macd_histogram",False),
-    ("technical",   "trend",           "trend_block",    "bb_width",     "bb_width",     False),
-    ("technical",   "momentum",        "momentum_block", "rsi_14",       "rsi_14",       False),
-    ("technical",   "volatility",      "volatility_block","realized_vol_30d","realized_vol_30d", True),
-    ("technical",   "volatility",      "volatility_block","atr_value",   "atr_value",    True),
-    ("technical",   "volume",          "volume_block",   "volume_ratio", "volume_ratio", False),
+    ("technical", "trend", "trend_block", "macd_histogram", "macd_histogram", False),
+    ("technical", "trend", "trend_block", "bb_width", "bb_width", False),
+    ("technical", "momentum", "momentum_block", "rsi_14", "rsi_14", False),
+    ("technical", "volatility", "volatility_block", "realized_vol_30d", "realized_vol_30d", True),
+    ("technical", "volatility", "volatility_block", "atr_value", "atr_value", True),
+    ("technical", "volume", "volume_block", "volume_ratio", "volume_ratio", False),
     # sentiment
-    ("sentiment",   "news",            "news_block",     "news_sentiment_avg","news_sentiment_avg", False),
-    ("sentiment",   "news",            "news_block",     "news_volume",  "news_volume",  False),
+    ("sentiment", "news", "news_block", "news_sentiment_avg", "news_sentiment_avg", False),
+    ("sentiment", "news", "news_block", "news_volume", "news_volume", False),
     # risk
-    ("risk",        "market_risk",     "risk_block",     "volatility_z", "volatility_z", True),
-    ("risk",        "market_risk",     "risk_block",     "max_drawdown", "max_drawdown", True),
+    ("risk", "market_risk", "risk_block", "volatility_z", "volatility_z", True),
+    ("risk", "market_risk", "risk_block", "max_drawdown", "max_drawdown", True),
     # macro
-    ("macro",       "rates",           "rates_block",    "treasury_yield_10y","treasury_yield_10y", True),
-    ("macro",       "rates",           "rates_block",    "dollar_index", "dollar_index", True),
-    ("macro",       "commodity",       "commodity_block","oil_price",    "oil_price",    True),
-    ("macro",       "commodity",       "commodity_block","gold_price",   "gold_price",   True),
+    ("macro", "rates", "rates_block", "treasury_yield_10y", "treasury_yield_10y", True),
+    ("macro", "rates", "rates_block", "dollar_index", "dollar_index", True),
+    ("macro", "commodity", "commodity_block", "oil_price", "oil_price", True),
+    ("macro", "commodity", "commodity_block", "gold_price", "gold_price", True),
     # ai
-    ("ai",          "ml_signal",       "ml_block",       "expected_return","expected_return", False),
-    ("ai",          "ml_signal",       "ml_block",       "confidence",   "confidence",   False),
+    ("ai", "ml_signal", "ml_block", "expected_return", "expected_return", False),
+    ("ai", "ml_signal", "ml_block", "confidence", "confidence", False),
 ]
 
 

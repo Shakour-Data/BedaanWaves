@@ -27,6 +27,7 @@ def _normalize_recents(values, limit=DEFAULT_RECENT_LIMIT):
             out.append(v.strip())
     return out[:limit]
 
+
 @router.get("/market-preferences", response_model=dict[str, Any])
 async def get_market_preferences(user_id: UUID = Depends(get_route_user_id)):
     """
@@ -47,6 +48,7 @@ async def get_market_preferences(user_id: UUID = Depends(get_route_user_id)):
         }
     }
 
+
 @router.post("/market-preferences", status_code=status.HTTP_200_OK)
 async def save_market_preferences(
     data: dict[str, Any],
@@ -55,6 +57,7 @@ async def save_market_preferences(
     """Save user market preferences."""
     await preference_service.set_preference(user_id, "market_preferences", data)
     return {"status": "success", "message": "Preferences saved"}
+
 
 @router.get("/countries", response_model=list[dict[str, str]])
 async def get_countries():

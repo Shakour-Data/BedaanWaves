@@ -589,6 +589,7 @@ class DataIntegrityService(BaseService):
                 self.logger.error(f"Error in periodic check: {e!s}")
                 await asyncio.sleep(min(interval_seconds, 60))  # Shorter delay on error
 
+
 # Factory function for dependency injection
 def get_data_integrity_service(validation_service=None,
                                intl_client=None,

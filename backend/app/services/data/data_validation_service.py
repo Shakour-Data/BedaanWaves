@@ -572,6 +572,7 @@ class DataValidationService(CachedService):
 
         return report
 
+
 # Service registration function for dependency injection
 def get_data_validation_service(intl_client=None,
                               market_service=None, stock_service=None, logger=None) -> DataValidationService:

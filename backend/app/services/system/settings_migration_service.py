@@ -350,6 +350,7 @@ class SettingsMigrationService(BaseService):
             "cleaned_at": utc_now_iso()
         }
 
+
 # Factory function for dependency injection
 def get_settings_migration_service(preference_service=None,
                                    logger=None) -> SettingsMigrationService:

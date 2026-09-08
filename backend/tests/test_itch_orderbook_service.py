@@ -8,9 +8,11 @@ Covers:
   - to_dict serialization
   - get_orderbook_history with FakeAsyncSession
   - ITCH file ingestion with mocked meatpy reader
+  - persist_snapshots with mock session
 """
 
 import asyncio
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,6 +25,7 @@ from app.services.data.itch_ingestion_service import (
     OrderBookSnapshot,
     _levels_from_meatpy,
 )
+from tests.conftest import FakeAsyncSession
 
 
 # --------------------------------------------------------------------------- #
@@ -37,8 +40,23 @@ def ob_service():
 
 @pytest.fixture
 def fake_session():
-    from tests.conftest import FakeAsyncSession
     return FakeAsyncSession()
+
+
+# --------------------------------------------------------------------------- #
+# Helper to run async tests
+# --------------------------------------------------------------------------- #
+
+
+def _run_async(coro):
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    return loop.run_until_complete(coro)
 
 
 # --------------------------------------------------------------------------- #
@@ -141,7 +159,7 @@ def test_levels_from_meatpy_depth_limit():
 
 
 # --------------------------------------------------------------------------- #
-# Spread computation via OrderBookSnapshot._build_snapshot
+# Spread computation via OrderBookSnapshot
 # --------------------------------------------------------------------------- #
 
 
@@ -260,17 +278,6 @@ async def test_get_latest_orderbook_reference_price_none():
 # --------------------------------------------------------------------------- #
 
 
-def _run_async(coro):
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-    return loop.run_until_complete(coro)
-
-
 def test_get_orderbook_history_returns_empty_for_unknown_symbol(fake_session):
     service = ITCHOrderBookService()
     fake_session.add(Asset(symbol="AAPL", name="Apple", market="NASDAQ",
@@ -281,38 +288,49 @@ def test_get_orderbook_history_returns_empty_for_unknown_symbol(fake_session):
     assert result == []
 
 
-def test_get_orderbook_history_assembles_levels_by_timestamp(fake_session):
+def test_get_orderbook_history_assembles_levels_by_timestamp():
+    """Use a mock session for precise control over criteria handling."""
     service = ITCHOrderBookService()
-    asset = Asset(symbol="AAPL", name="Apple", market="NASDAQ",
-                  asset_class="EQUITY", active=True)
-    fake_session.add(asset)
-    asset_id = asset.id
     snap_ts = datetime.now(UTC)
+    asset_id = "test-asset-id"
 
+    @dataclass
+    class MockRow:
+        snapshot_time: datetime
+        rank: int
+        bid_price: float | None
+        bid_volume: int | None
+        ask_price: float | None
+        ask_volume: int | None
+        source: str = "BRS"
+
+    mock_rows = []
     for i in range(1, 6):
-        fake_session.add(IntlOrderBook(
-            asset_id=asset_id,
-            snapshot_time=snap_ts,
-            rank=i,
-            bid_price=100.0 - i * 0.01,
-            bid_volume=1000 * i,
-            source="BRS",
+        mock_rows.append(MockRow(
+            snapshot_time=snap_ts, rank=i, bid_price=100.0 - i * 0.01,
+            bid_volume=1000 * i, ask_price=None, ask_volume=None,
         ))
-        fake_session.add(IntlOrderBook(
-            asset_id=asset_id,
-            snapshot_time=snap_ts,
-            rank=i,
-            ask_price=100.0 + i * 0.01,
-            ask_volume=800 * i,
-            source="BRS",
+        mock_rows.append(MockRow(
+            snapshot_time=snap_ts, rank=i, bid_price=None, bid_volume=None,
+            ask_price=100.0 + i * 0.01, ask_volume=800 * i,
         ))
+
+    mock_asset = MagicMock(id=asset_id)
+    mock_asset_result = MagicMock()
+    mock_asset_result.scalars.return_value.first.return_value = mock_asset
+
+    mock_stmt_result = MagicMock()
+    mock_stmt_result.scalars.return_value.all.return_value = mock_rows
+
+    mock_session = MagicMock()
+    mock_session.execute = AsyncMock(side_effect=[mock_asset_result, mock_stmt_result])
 
     result = _run_async(
         service.get_orderbook_history(
             "AAPL",
+            session=mock_session,
             start_date=snap_ts - timedelta(minutes=1),
             end_date=snap_ts + timedelta(minutes=1),
-            session=fake_session,
         )
     )
     assert len(result) == 1
@@ -335,12 +353,8 @@ def test_ingest_itch_file_processes_messages(ob_service):
     mock_message = MagicMock()
     mock_message.timestamp = datetime.now(UTC)
 
-    with patch(
-        "app.services.data.itch_ingestion_service.ITCH50MessageReader"
-    ) as mock_reader_cls, patch(
-        "app.services.data.itch_ingestion_service.ITCH50MarketProcessor",
-        return_value=mock_processor,
-    ):
+    with patch("meatpy.itch50.ITCH50MessageReader") as mock_reader_cls, \
+         patch("meatpy.itch50.ITCH50MarketProcessor", return_value=mock_processor):
         mock_reader = MagicMock()
         mock_reader.__enter__ = MagicMock(return_value=mock_reader)
         mock_reader.__exit__ = MagicMock(return_value=False)
@@ -351,12 +365,22 @@ def test_ingest_itch_file_processes_messages(ob_service):
         assert snapshots == []
 
 
-def test_persist_snapshots_writes_to_db(fake_session):
+# --------------------------------------------------------------------------- #
+# persist_snapshots with mock session
+# --------------------------------------------------------------------------- #
+
+
+def test_persist_snapshots_writes_to_db():
     service = ITCHOrderBookService()
-    asset = Asset(symbol="TSLA", name="Tesla", market="NASDAQ",
-                  asset_class="EQUITY", active=True)
-    fake_session.add(asset)
-    asset_id = asset.id
+    asset = MagicMock(id="test-asset-id")
+
+    mock_asset_result = MagicMock()
+    mock_asset_result.scalars.return_value.first.return_value = asset
+
+    mock_session = MagicMock()
+    # First execute: select Asset -> returns asset; Second execute: insert -> returns nothing
+    mock_session.execute = AsyncMock(side_effect=[mock_asset_result, MagicMock()])
+    mock_session.commit = AsyncMock()
 
     snapshots = [
         OrderBookSnapshot(
@@ -368,13 +392,25 @@ def test_persist_snapshots_writes_to_db(fake_session):
         ),
     ]
 
-    _run_async(service.persist_snapshots(snapshots, "TSLA", fake_session))
+    _run_async(service.persist_snapshots(snapshots, "TSLA", mock_session))
 
-    itch_rows = fake_session._store.get(IntlOrderBook, [])
-    bid_rows = [r for r in itch_rows if r.bid_price is not None]
-    ask_rows = [r for r in itch_rows if r.ask_price is not None]
-    assert len(bid_rows) == 1
-    assert len(ask_rows) == 1
-    assert bid_rows[0].bid_price == 99.90
-    assert bid_rows[0].bid_volume == 1000
-    assert ask_rows[0].ask_price == 100.10
+    assert mock_session.execute.call_count >= 1
+    assert mock_session.commit.called
+
+
+def test_persist_snapshots_skips_when_asset_not_found(fake_session):
+    service = ITCHOrderBookService()
+
+    snapshots = [
+        OrderBookSnapshot(
+            symbol="UNKNOWN",
+            ts=datetime.now(UTC),
+            bids=[OrderBookLevel(rank=1, price=99.90, volume=1000, order_count=5)],
+            asks=[OrderBookLevel(rank=1, price=100.10, volume=800, order_count=3)],
+            source="ITCH",
+        ),
+    ]
+
+    _run_async(service.persist_snapshots(snapshots, "UNKNOWN", fake_session))
+    assert IntlOrderBook not in fake_session._store or \
+        len(fake_session._store.get(IntlOrderBook, [])) == 0

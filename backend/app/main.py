@@ -423,6 +423,7 @@ async def lifespan(app: FastAPI):
             backup_service=backup_svc,
             news_service=news_svc,
             ingestion_service=ingestion_svc,
+            orderbook_service=container.get("orderbook_service"),
         )
         container.register_instance("scheduler_service", scheduler_svc)
         container.register_instance("scheduler", scheduler_svc)

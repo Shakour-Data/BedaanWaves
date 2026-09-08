@@ -3,11 +3,13 @@ Unit tests for the bulk SEC EDGAR financial-statement ingestion methods
 added to ``NasdaqIngestionService``.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from app.services.data.nasdaq_ingestion_service import (
-    SEC_EDGAR_MIN_QUARTERS,
     SEC_EDGAR_CHUNK_SIZE,
+    SEC_EDGAR_MIN_QUARTERS,
     NasdaqIngestionService,
 )
 
@@ -122,6 +124,54 @@ class TestBulkIngestSecFinancials:
 
         assert result["errors"] == 1
         assert result["symbols_processed"] == 1
+
+
+class TestBackfillSecFinancials:
+    """Tests for backfill_sec_financials identifying symbols needing quarters."""
+
+    async def test_backfill_identifies_symbols_needing_quarters(self, monkeypatch):
+        """Symbols with < min_quarters are sent to bulk_ingest."""
+        svc = NasdaqIngestionService()
+        fake_sec = FakeSecService()
+        fake_sec.quarter_counts = {
+            "id-AAPL": 5,
+            "id-MSFT": 25,
+        }
+
+        class FakeResult:
+            def fetchall(self_inner):
+                return [("id-AAPL", "AAPL"), ("id-MSFT", "MSFT")]
+
+        class FakeSession:
+            async def execute(self_inner, stmt):
+                return FakeResult()
+
+            async def __aenter__(self_inner):
+                return self_inner
+
+            async def __aexit__(self_inner, *args):
+                return None
+
+        mock_session_factory = MagicMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=FakeSession())
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=None)
+
+        monkeypatch.setattr(svc, "_sec_service", fake_sec)
+
+        captured_bulk_args = {}
+
+        async def _fake_bulk(symbols=None, **kwargs):
+            captured_bulk_args["symbols"] = symbols
+            return {"symbols_processed": len(symbols or []), "statements_stored": 0,
+                    "ratios_stored": 0, "skipped": 0, "errors": 0}
+
+        monkeypatch.setattr(svc, "bulk_ingest_sec_financials", _fake_bulk)
+
+        with patch("app.services.data.nasdaq_ingestion_service.async_session_maker", mock_session_factory):
+            await svc.backfill_sec_financials(min_quarters=20)
+
+        assert "AAPL" in captured_bulk_args["symbols"]
+        assert "MSFT" not in captured_bulk_args["symbols"]
 
 
 class TestConstants:

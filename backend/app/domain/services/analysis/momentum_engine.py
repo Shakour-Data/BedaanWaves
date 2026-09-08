@@ -4,6 +4,7 @@ from app.services.data.adjusted_price_validator import AdjustedPriceValidator
 
 logger = logging.getLogger(__name__)
 
+
 class MomentumEngine:
     """Domain service for calculating momentum indicators on ADJUSTED prices."""
 
@@ -12,7 +13,7 @@ class MomentumEngine:
         if len(prices) < period + 1:
             return 50.0
 
-        deltas = [prices[i+1] - prices[i] for i in range(len(prices)-1)]
+        deltas = [prices[i + 1] - prices[i] for i in range(len(prices) - 1)]
         gains = [d for d in deltas if d > 0]
         losses = [-d for d in deltas if d < 0]
 

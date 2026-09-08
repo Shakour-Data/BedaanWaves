@@ -575,5 +575,3 @@ class DataProviderHealthResponse(BaseModel):
     last_error: str | None = None
     latency_ms: float | None = None
     details: dict[str, Any] | None = None
-
-

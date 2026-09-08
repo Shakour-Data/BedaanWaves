@@ -4,6 +4,7 @@ from typing import Any, Generic, TypeVar
 T = TypeVar('T')
 U = TypeVar('U')
 
+
 class Optional(Generic[T]):
     """
     Optional pattern implementation for null safety.

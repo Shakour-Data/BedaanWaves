@@ -264,7 +264,7 @@ class SLOMonitor(BaseService):
         if threshold_s is not None:
             body_parts.append(f"Configured SLO threshold: {threshold_s:.0f}s.")
         if data_age_ms is not None:
-            body_parts.append(f"Current observed data age: {data_age_ms/1000.0:.1f}s.")
+            body_parts.append(f"Current observed data age: {data_age_ms / 1000.0:.1f}s.")
         if duration_s > 0:
             body_parts.append(f"Condition sustained for {duration_s:.0f}s.")
         body_parts.append("Please investigate upstream provider health and circuit state.")

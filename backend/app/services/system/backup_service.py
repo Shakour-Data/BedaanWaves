@@ -513,6 +513,7 @@ class BackupService(BaseService):
             raise ValueError(f"Invalid backup type: {backup_data['metadata']['type']}")
 
         config_service = self.config_service or {}
+
         def _restore_backup() -> dict:
             import psycopg2
 

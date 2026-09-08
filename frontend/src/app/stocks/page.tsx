@@ -51,7 +51,7 @@ function StockRow({ stock, index }: { stock: Stock; index: number }) {
   return (
     <Link
       href={`/stocks/${stock.symbol}`}
-      className="group flex items-center gap-4 rounded-lg border border-transparent p-4 transition-all duration-200 hover:border-[var(--color-border)] hover:bg-[var(--color-surface)]/50"
+      className="group flex items-center gap-4 rounded-lg border border-transparent p-4 transition-all duration-200 hover:border-[var(--color-border)] hover:bg-muted active:bg-muted/80"
     >
       <div className={cn(
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold",
@@ -98,7 +98,7 @@ function StockCard({ stock }: { stock: Stock }) {
   return (
     <Link
       href={`/stocks/${stock.symbol}`}
-      className="group flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-300 hover:border-[var(--color-primary)]/30 hover:shadow-md"
+      className="group flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-300 hover:border-[var(--color-primary)]/30 hover:shadow-md active:scale-[0.99]"
     >
       <div className="mb-4 flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ export default function StocksPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[#00d4ff]" />
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[var(--color-primary)]" />
           <p className="text-[var(--color-text-secondary)]">Loading stocks...</p>
         </div>
       </div>
@@ -275,11 +275,13 @@ export default function StocksPage() {
           {filteredStocks.map((stock, index) => viewMode === "list" ? <StockRow key={stock.symbol} stock={stock} index={index} /> : <StockCard key={stock.symbol} stock={stock} />)}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-16">
-          <span className="text-4xl text-[#334155]">🔍</span>
-          <h3 className="mt-4 text-lg font-medium text-[var(--color-text-primary)]">No stocks found</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Try adjusting your search or filters</p>
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-muted/30 py-16">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
+          <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </div>
+        <h3 className="mt-4 text-lg font-medium text-[var(--color-text-primary)]">No stocks found</h3>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Try adjusting your search or filters</p>
+      </div>
       )}
     </div>
   );

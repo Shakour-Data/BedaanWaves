@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
+
 class DataService(ABC):
     """Base service for all data based services"""
 

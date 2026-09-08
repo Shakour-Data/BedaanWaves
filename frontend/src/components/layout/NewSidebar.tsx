@@ -60,6 +60,8 @@ const bottomItems: NavItem[] = [
 ];
 
 export function NewSidebar() {
+  NewSidebar.categories = categories;
+  NewSidebar.bottomItems = bottomItems;
   const pathname = usePathname();
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);

@@ -156,8 +156,10 @@ class TestCreatePasswordResetToken:
 class _NoRows:
     def scalars(self):
         return self
+
     def all(self):
         return []
+
     def first(self):
         return None
 

@@ -382,6 +382,7 @@ class SectorFilterService(BaseService):
 
         return performance
 
+
 # Factory function for dependency injection
 def get_sector_filter_service(logger=None) -> SectorFilterService:
     """Factory function to create SectorFilterService instance."""

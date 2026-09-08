@@ -7,7 +7,6 @@ and language-aware query processing.
 """
 
 import asyncio
-from datetime import datetime, timezone
 from typing import Any
 
 from app.core.utils import utc_now_iso
@@ -107,8 +106,9 @@ class SearchService(CachedService):
             except Exception as exc:
                 self.logger.warning(f"News search failed: {exc}")
         async with _get_async_session() as session:
-            from app.models.models import News
             from sqlalchemy import desc, select
+
+            from app.models.models import News
 
             stmt = select(News).where(News.title.ilike(f"%{query}%")).order_by(desc(News.published_at)).limit(limit)
             result = await session.execute(stmt)
@@ -131,8 +131,9 @@ class SearchService(CachedService):
             except Exception:
                 pass
         async with _get_async_session() as session:
-            from app.models.models import Asset
             from sqlalchemy import select
+
+            from app.models.models import Asset
 
             stmt = select(Asset).where(Asset.symbol.ilike(f"%{query}%")).limit(limit)
             result = await session.execute(stmt)
@@ -149,8 +150,9 @@ class SearchService(CachedService):
 
     async def _search_portfolios(self, query: str, limit: int) -> list[dict[str, Any]]:
         async with _get_async_session() as session:
-            from app.models.models import Portfolio
             from sqlalchemy import select
+
+            from app.models.models import Portfolio
 
             stmt = select(Portfolio).where(Portfolio.name.ilike(f"%{query}%")).limit(limit)
             result = await session.execute(stmt)

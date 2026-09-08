@@ -4,6 +4,7 @@ from app.services.data.adjusted_price_validator import AdjustedPriceValidator
 
 logger = logging.getLogger(__name__)
 
+
 class MovingAverageEngine:
     """Domain service for calculating moving averages on ADJUSTED prices."""
 
@@ -30,5 +31,5 @@ class MovingAverageEngine:
             return 0.0
 
         weight_sum = period * (period + 1) / 2
-        weighted_sum = sum(prices[-(period-i)] * (i+1) for i in range(period))
+        weighted_sum = sum(prices[-(period - i)] * (i + 1) for i in range(period))
         return round(weighted_sum / weight_sum, 2)

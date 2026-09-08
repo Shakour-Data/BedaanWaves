@@ -228,7 +228,7 @@ class TestScoringJobsRegistration:
         svc = _TestScheduler(service_name="ScoringJobsCheck")
         await svc.initialize()
         try:
-            jobs = {j.name for j in svc.list_jobs()}
+            jobs = {j["name"] for j in svc.list_jobs()}
             EXPECTED: set = {
                 "FastIndicators5m",
                 "HourlyScoreRecompute",
@@ -237,19 +237,22 @@ class TestScoringJobsRegistration:
             }
             missing = EXPECTED - jobs
             assert not missing, f"Missing scoring jobs: {sorted(missing)}"
+            # Macro refresh jobs (free, no-API sources) must also be registered.
+            assert "MacroDataRefresh" in jobs
+            assert "MacroForecastRefresh" in jobs
             # Interval parity check: 300s / 3600s / 86400s
             fi = svc.get_job_status("FastIndicators5m")
             assert fi is not None
-            assert fi.interval_seconds == 300
+            assert fi["interval_seconds"] == 300
             hr = svc.get_job_status("HourlyScoreRecompute")
             assert hr is not None
-            assert hr.interval_seconds == 3600
+            assert hr["interval_seconds"] == 3600
             ds = svc.get_job_status("DailyScoreRecalculation")
             assert ds is not None
-            assert ds.interval_seconds == 86400
+            assert ds["interval_seconds"] == 86400
             cs = svc.get_job_status("CoefficientSnapshotDaily")
             assert cs is not None
-            assert cs.interval_seconds == 86400
+            assert cs["interval_seconds"] == 86400
         finally:
             await svc.shutdown()
 

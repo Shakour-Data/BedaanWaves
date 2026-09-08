@@ -416,12 +416,8 @@ export default function AnalysisPage() {
     };
   }, [setLiveLatestFromStream, loadSnapshot, chartTimeRange]);
 
-  const lastMarketEventTs =
-    liveMarket.data === liveMarket.latest
-      ? null
-      : null;
-  const lastScoresEventTs =
-    liveScores.data === liveScores.latest ? null : null;
+  const lastMarketEventTs = liveMarket.lastEventTimestamp;
+  const lastScoresEventTs = liveScores.lastEventTimestamp;
 
   if (loading) {
     return (
@@ -443,7 +439,7 @@ export default function AnalysisPage() {
             </h1>
             <div className="mt-2">
               <AsOfStamp
-                timestamp={snapshotTs ?? null}
+                effectiveAt={snapshotTs ?? null}
                 snapshotId={snapshotId ?? null}
                 loading={snapLoading}
                 error={snapError ?? null}

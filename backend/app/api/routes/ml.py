@@ -62,7 +62,7 @@ async def anomaly(symbol: str, db: AsyncSession = Depends(get_async_session)):
     if len(candles) < 5:
         raise HTTPException(status_code=400, detail="Insufficient candle data")
     prices = [float(c.close) for c in candles]
-    returns = [(prices[i] - prices[i-1]) / prices[i-1] for i in range(1, len(prices))]
+    returns = [(prices[i] - prices[i - 1]) / prices[i - 1] for i in range(1, len(prices))]
     service = _load_service(AnomalyDetectionService)
     await service.initialize()
     await service.train({"values": returns})

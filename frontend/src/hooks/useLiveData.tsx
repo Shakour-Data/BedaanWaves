@@ -33,6 +33,7 @@ export interface UseLiveDataReturn<T> {
   connectionHealth: ConnectionHealth;
   lastDataAgeMs: number | null;
   lastSequence: number | null;
+  lastEventTimestamp: number | null;
   isStale: boolean;
   manualResync: () => Promise<void>;
 }
@@ -267,6 +268,7 @@ export function useLiveData<T = unknown>(
     connectionHealth,
     lastDataAgeMs,
     lastSequence,
+    lastEventTimestamp,
     isStale,
     manualResync,
   };

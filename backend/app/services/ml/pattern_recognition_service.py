@@ -62,7 +62,7 @@ class PatternRecognitionService(MLService):
         patterns = []
         n = len(prices)
         for i in range(20, n):
-            window = prices[i-20:i]
+            window = prices[i - 20:i]
             local_max = max(window)
             local_min = min(window)
             current = window[-1]

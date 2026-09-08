@@ -914,7 +914,6 @@ class RawMarketData(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     ingestion_id = Column(String(100))  # idempotency key
 
-
     # Quality
     data_quality = Column(String(10), default="RAW")  # RAW, VALIDATED
 

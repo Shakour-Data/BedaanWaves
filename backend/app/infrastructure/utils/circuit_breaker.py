@@ -25,7 +25,7 @@ class CircuitBreaker:
 
         self._failure_count = 0
         self._last_failure_time: float | None = None
-        self._state = "CLOSED" # CLOSED, OPEN, HALF_OPEN
+        self._state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
 
     async def call(self, func: Callable, *args, **kwargs) -> Any:
         self._check_state()

@@ -3,9 +3,12 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy import select
 
 from app.api.dependencies import get_current_admin_user
 from app.core.utils import utc_now_iso
+from app.db.base import async_session_maker
+from app.models.models import NewsSource
 from app.services.core.dependency_container import get_global_container
 from app.services.system.metrics_service import MetricsService
 from app.services.system.queue_service import QueueService
@@ -33,6 +36,7 @@ def _get_metrics() -> MetricsService:
 
 def _get_queue() -> QueueService:
     return get_global_container().get("queue")
+
 
 @router.get("/scheduler/jobs")
 async def list_scheduler_jobs() -> dict:

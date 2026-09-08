@@ -298,7 +298,9 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-4">
-                  <div className="text-4xl">📭</div>
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                    <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+                  </div>
                   <p>{t("app.settings.no_config")}</p>
                 </div>
               )}

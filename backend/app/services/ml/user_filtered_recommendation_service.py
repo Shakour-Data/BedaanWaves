@@ -275,6 +275,7 @@ class UserFilteredRecommendationService(BaseService):
             "generated_at": utc_now_iso()
         }
 
+
 # Factory function for dependency injection
 def get_user_filtered_recommendation_service(recommendation_service=None,
                                               scoring_service=None,

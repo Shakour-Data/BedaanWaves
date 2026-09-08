@@ -5,7 +5,7 @@ Market data aggregation and analysis with real database integration.
 Provides market status, aggregated market data, and market-level analytics.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import desc, func, select
@@ -67,7 +67,7 @@ class MarketService(CachedService):
                 )
                 active_count = result.scalar() or 0
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 return {
                     "status": "regular",
                     "is_trading": True,

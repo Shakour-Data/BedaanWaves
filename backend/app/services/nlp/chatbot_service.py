@@ -106,7 +106,12 @@ class ChatbotService(AnalysisService):
         lang = self._detect_language(message)
 
         if msg_lower in self.GREETING_KEYWORDS:
-            text = "سلام! در خدمتم. سؤالات مرا سؤال بازارهای مالی یا سهام بپرسید." if lang == "fa" else "Hello! I'm here to help with financial market questions. Ask me about stocks, scores, or news."
+            text = (
+                "سلام! در خدمتم. سؤالات مرا سؤال بازارهای مالی یا سهام بپرسید."
+                if lang == "fa"
+                else "Hello! I'm here to help with financial market questions. "
+                "Ask me about stocks, scores, or news."
+            )
         elif msg_lower in self.FAREWELL_KEYWORDS:
             text = "خداحافظ! امیدوارم کمک‌کننده بوده باشم." if lang == "fa" else "Goodbye! Hope I was helpful."
         elif symbol and self.scoring_service:
