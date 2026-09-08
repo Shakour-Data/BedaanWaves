@@ -114,7 +114,7 @@ def upgrade() -> None:
                 base_url,
                 api_key_required,
                 CASE
-                    WHEN auth_token_encrypted IS NOT NULL THEN pgp_sym_decrypt(auth_token_encrypted, 'bedaanwaves_master_key'::text)
+                    WHEN auth_token_encrypted IS NOT NULL THEN pgp_sym_decrypt(auth_token_encrypted::bytea, 'bedaanwaves_master_key')
                     ELSE NULL::text
                 END AS auth_token,
                 data_format,
