@@ -379,6 +379,18 @@
   animation: border-glow 2s ease-in-out infinite;
 }
 
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+}
+
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+}
+
 .glass {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(12px) saturate(180%);
