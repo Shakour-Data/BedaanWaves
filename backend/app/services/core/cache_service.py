@@ -204,7 +204,7 @@ class CacheService(BaseService):
             ttl: Time to live in seconds
         """
         full_key = self._get_key(namespace, key)
-        ttl = ttl or self.default_ttl
+        ttl = self.default_ttl if ttl is None else ttl
         await self.backend.set(full_key, value, ttl)
         self.logger.debug(f"Cached {full_key} (TTL: {ttl}s)")
 
@@ -254,7 +254,7 @@ class CacheService(BaseService):
         if cached is not None:
             return cached
 
-        value = factory() if callable(factory) else factory
+        value = await factory() if callable(factory) else factory
         await self.set(key, value, namespace, ttl)
         return value
 

@@ -83,6 +83,8 @@ class NasdaqIngestionService(DataService):
         self._symbols: list[str] = []
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT)
         self._sec_service = SEDGARFinancialService()
+        self._asset_cache: dict[str, Asset] = {}
+        self._asset_lock = asyncio.Lock()
 
     @staticmethod
     def _clean_nan(obj):
@@ -142,7 +144,12 @@ class NasdaqIngestionService(DataService):
 
     async def _ensure_asset(self, symbol: str, name: str, asset_class: str = "EQUITY",
                             market: str = "NASDAQ", sector: str = "", industry: str = "") -> Asset:
-        """Get or create asset record."""
+        """Get or create asset record with in-memory caching."""
+        async with self._asset_lock:
+            cached = self._asset_cache.get(symbol)
+            if cached is not None:
+                return cached
+
         async with async_session_maker() as session:
             result = await session.execute(select(Asset).where(Asset.symbol == symbol))
             asset = result.scalar_one_or_none()
@@ -177,6 +184,9 @@ class NasdaqIngestionService(DataService):
                 if updated:
                     await session.commit()
                     await session.refresh(asset)
+
+            async with self._asset_lock:
+                self._asset_cache[symbol] = asset
             return asset
 
     async def _bulk_upsert_candles(self, candles: list[IntlPriceCandle]) -> int:

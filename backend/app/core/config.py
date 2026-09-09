@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # ============================================================
     # DATABASE CONFIGURATION
     # ============================================================
-    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/bedaanwaves_db"
+    DATABASE_URL: str = "postgresql+asyncpg://user@localhost:5432/bedaanwaves_db"
     DB_DRIVER: str = "postgresql"
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
@@ -401,6 +401,10 @@ class Settings(BaseSettings):
     # Distributed Tracing
     TRACING_ENABLED: bool = False
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
+
+    # Disaster Recovery
+    PRIMARY_REGION: str = "us-east-1"
+    REPLICA_REGION: str = "us-west-2"
 
     # Event Bus
     EVENT_BUS_BACKEND: str = "memory"  # memory | kafka

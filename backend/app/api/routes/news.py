@@ -7,6 +7,15 @@ from sqlalchemy import desc, func, select
 
 from app.db.base import async_session_maker
 from app.models.models import Asset, News
+from app.schemas.schemas import (
+    NewsCategoryResponse,
+    NewsCategoriesResponse,
+    NewsMarketMovingResponse,
+    NewsMarketResponse,
+    NewsRegionsResponse,
+    NewsSearchResponse,
+    NewsTickerResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["news"])
@@ -31,7 +40,7 @@ def _news_to_dict(news: News) -> dict:
     }
 
 
-@router.get("/market", response_model=dict)
+@router.get("/market", response_model=NewsMarketResponse)
 async def get_market_news(
     limit: int = Query(20, ge=1, le=100),
 ) -> dict:
@@ -47,7 +56,7 @@ async def get_market_news(
     }
 
 
-@router.get("/{ticker}", response_model=dict)
+@router.get("/{ticker}", response_model=NewsTickerResponse)
 async def get_stock_news(
     ticker: str,
     limit: int = Query(10, ge=1, le=100),
@@ -65,11 +74,11 @@ async def get_stock_news(
     }
 
 
-@router.get("/search", response_model=dict)
+@router.get("/search", response_model=NewsSearchResponse)
 async def search_news(
     q: str = Query(..., min_length=1),
     limit: int = Query(10, ge=1, le=100),
-) -> dict:
+) -> NewsSearchResponse:
     """Search news articles."""
     from app.services.data.news_service import NewsService
     service = NewsService()
@@ -83,7 +92,7 @@ async def search_news(
     }
 
 
-@router.get("/category/{category}", response_model=dict)
+@router.get("/category/{category}", response_model=NewsCategoryResponse)
 async def get_news_by_category(
     category: str,
     limit: int = Query(50, ge=1, le=200),
@@ -121,7 +130,7 @@ async def get_news_by_category(
         }
 
 
-@router.get("/categories", response_model=dict)
+@router.get("/categories", response_model=NewsCategoriesResponse)
 async def get_news_categories():
     """Get available categories with counts."""
     async with async_session_maker() as session:
@@ -129,10 +138,10 @@ async def get_news_categories():
             select(News.category, func.count(News.id)).group_by(News.category)
         )
         counts = {row[0]: row[1] for row in result.all()}
-        return {"status": "success", "data": counts}
+        return {"status": "success", "categories": list(counts.keys()), "count": len(counts)}
 
 
-@router.get("/regions", response_model=dict)
+@router.get("/regions", response_model=NewsRegionsResponse)
 async def get_news_regions():
     """Get available regions with counts."""
     async with async_session_maker() as session:
@@ -140,10 +149,10 @@ async def get_news_regions():
             select(News.region, func.count(News.id)).group_by(News.region)
         )
         counts = {row[0] or "GLOBAL": row[1] for row in result.all()}
-        return {"status": "success", "data": counts}
+        return {"status": "success", "regions": list(counts.keys()), "count": len(counts)}
 
 
-@router.get("/market-moving", response_model=dict)
+@router.get("/market-moving", response_model=NewsMarketMovingResponse)
 async def get_market_moving_news(
     limit: int = Query(20, ge=1, le=100),
 ):

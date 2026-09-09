@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -24,9 +24,10 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 import { fetchDashboardData, fetchGeneralDashboard, type GeneralDashboardResponse } from "@/lib/api/dashboard";
 import { useUXStore } from "@/store/useUXStore";
-import { UnifiedSearchBar } from "@/components/search/UnifiedSearchBar";
-import { GeneralDashboardTab } from "@/components/dashboard/GeneralDashboardTab";
-import { DashboardTabNav } from "@/components/dashboard/DashboardTabNav";
+
+const UnifiedSearchBar = lazy(() => import("@/components/search/UnifiedSearchBar").then(mod => ({ default: mod.UnifiedSearchBar })));
+const GeneralDashboardTab = lazy(() => import("@/components/dashboard/GeneralDashboardTab").then(mod => ({ default: mod.GeneralDashboardTab })));
+const DashboardTabNav = lazy(() => import("@/components/dashboard/DashboardTabNav").then(mod => ({ default: mod.DashboardTabNav })));
 
 interface DimensionSummary {
   avg_score: number;
@@ -123,7 +124,9 @@ function DashboardOverview({ data, load, maxDimAvg }: {
         <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
           Search any stock, news headline, or page in the sidebar. Or use the quick search below.
         </p>
-        <UnifiedSearchBar variant="topbar" placeholder="Search stocks, news, or pages…" />
+        <Suspense fallback={<div className="h-10 w-full" />}>
+          <UnifiedSearchBar variant="topbar" placeholder="Search stocks, news, or pages…" />
+        </Suspense>
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -423,12 +426,10 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "general">("overview");
 
   const load = useCallback(async (mode: "initial" | "refresh") => {
     if (mode === "initial") setLoading(true);
-    else setRefreshing(true);
     setError(null);
     try {
       const [general, legacy] = await Promise.allSettled([
@@ -515,7 +516,6 @@ export default function DashboardPage() {
       setError(msg);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [addToast]);
 
@@ -573,17 +573,21 @@ export default function DashboardPage() {
   return (
     <NewDashboardShell title="Dashboard">
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        <DashboardTabNav
-          tabs={[
-            { id: "overview", label: "Overview", href: "/dashboard" },
-            { id: "general", label: "Analytical", href: "/dashboard?tab=general" },
-          ]}
-        />
+        <Suspense fallback={<div className="h-10 w-full" />}>
+          <DashboardTabNav
+            tabs={[
+              { id: "overview", label: "Overview", href: "/dashboard" },
+              { id: "general", label: "Analytical", href: "/dashboard?tab=general" },
+            ]}
+          />
+        </Suspense>
         <Suspense fallback={<div className="h-10 w-full" />}>
           <DashboardTabState onTabChange={setActiveTab} />
         </Suspense>
         {activeTab === "general" ? (
-          <GeneralDashboardTab />
+          <Suspense fallback={<div className="h-64 w-full" />}>
+            <GeneralDashboardTab />
+          </Suspense>
         ) : (
           <DashboardOverview data={data} load={load} maxDimAvg={maxDimAvg} />
         )}

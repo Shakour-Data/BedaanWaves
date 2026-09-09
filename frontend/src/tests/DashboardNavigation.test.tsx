@@ -36,8 +36,6 @@ vi.mock('@/lib/api/dashboard', () => ({
   fetchGeneralDashboard: mockFetchGeneralDashboard,
 }));
 
-// fetchDashboardData and fetchGeneralDashboard are mocked above
-
 const generalResponse = {
   status: 'success',
   summary: { total_symbols: 1234, total_signals: 12, total_news: 50 },
@@ -69,8 +67,7 @@ describe('Dashboard navigation', () => {
 
   describe('Sidebar Navigation', () => {
     it('exposes the Dashboard item in the Analytics category of the sidebar', async () => {
-      const { NewSidebar } = await import('@/components/layout/NewSidebar');
-      const sidebarCategories = (NewSidebar as unknown as { categories: { label: string; items: { href: string; label: string }[] }[] }).categories;
+      const { sidebarCategories } = await import('@/lib/sidebar-config');
       const analyticsItems = sidebarCategories.find((cat) => cat.label === 'Analytics')?.items || [];
       const dashboardItem = analyticsItems.find((item) => item.href === '/dashboard');
       expect(dashboardItem).toBeDefined();

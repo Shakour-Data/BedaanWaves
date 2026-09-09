@@ -8,6 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
+from app.schemas.dashboard import (
+    SnapshotIndexEntry,
+    SnapshotIndexResponse,
+    SnapshotResponse,
+)
 from app.services.analysis.dashboard_service import DashboardService
 from app.services.analysis.coefficient_history_service import DIMENSION_KEYS
 from app.services.analysis.hierarchical_score_trend_service import (
@@ -70,14 +75,14 @@ async def get_dimension_dashboard(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/dashboard/snapshot", response_model=dict)
+@router.get("/dashboard/snapshot", response_model=SnapshotResponse)
 async def get_dashboard_snapshot(
     symbol: str | None = Query(None, min_length=1, max_length=16),
     snapshotId: str | None = Query(None),
     window_daily: int = Query(30, ge=1, le=365),
     window_intraday: str = Query("24h", pattern="^(6h|24h|7d)$"),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> SnapshotResponse:
     """Unified 3-tier snapshot endpoint (FR1).
 
     Returns daily / hourly / current scores, deltas, weights, weight trends/deltas,
@@ -107,12 +112,12 @@ async def get_dashboard_snapshot(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/dashboard/snapshots", response_model=dict)
+@router.get("/dashboard/snapshots", response_model=SnapshotIndexResponse)
 async def get_dashboard_snapshots_index(
     hourly_limit: int = Query(168, ge=24, le=720),
     daily_limit: int = Query(365, ge=30, le=1095),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> SnapshotIndexResponse:
     """Enumerate recent hourly + daily snapshots for time-slider (FR1, FR8).
 
     Frontend TypeScript contract expects shape:

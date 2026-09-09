@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { snapshotToChartsModel, assertParity, type LevelModel, type ChartsModel } from "@/lib/charts-model";
+import { describe, it, expect, vi } from "vitest";
+import { assertParity, type LevelModel, type ChartsModel } from "@/lib/charts-model";
 
 function levelModel(overrides: Partial<LevelModel> & Pick<LevelModel, "key">): LevelModel {
   return {

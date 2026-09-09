@@ -100,7 +100,6 @@ class DatabaseService(BaseService):
                     )
 
                 # Test connection
-                await self.health_check()
                 health = await self.health_check()
                 if health["status"] == "healthy":
                     self.logger.info(f"DatabaseService initialized with {self.database_url}")

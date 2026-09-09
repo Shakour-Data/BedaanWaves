@@ -6,6 +6,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.config import get_settings
 from app.core.utils import utc_now_iso
+from app.schemas.schemas import (
+    ExchangeCountResponse,
+    ExchangesResponse,
+    MarketTypesResponse,
+    MarketTypeCountResponse,
+    StatsResponse,
+    SymbolDetailResponse,
+    SymbolSearchResponse,
+)
 from app.services.core.dependency_container import get_global_container
 from app.services.data.stock_service import StockService
 from app.services.data.symbol_service import SymbolService
@@ -31,7 +40,7 @@ def get_stock_service() -> StockService:
     return StockService()
 
 
-@router.get("/search", response_model=dict)
+@router.get("/search", response_model=SymbolSearchResponse)
 async def search_symbols(
     q: str = Query(..., min_length=1, description="Search query (symbol or company name)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
@@ -39,7 +48,7 @@ async def search_symbols(
     market_type: str | None = Query(None, description="Filter by market type"),
     active_only: bool = Query(True, description="Only active symbols"),
     service: SymbolService = Depends(get_symbol_service),
-) -> dict:
+) -> SymbolSearchResponse:
     """Search symbols by query string."""
     results = await service.search(
         query=q,
@@ -58,7 +67,7 @@ async def search_symbols(
     }
 
 
-@router.get("/exchanges", response_model=dict)
+@router.get("/exchanges", response_model=ExchangesResponse)
 async def get_exchanges(
     service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
@@ -73,10 +82,10 @@ async def get_exchanges(
     }
 
 
-@router.get("/market-types", response_model=dict)
+@router.get("/market-types", response_model=MarketTypesResponse)
 async def get_market_types(
     service: SymbolService = Depends(get_symbol_service),
-) -> dict:
+) -> MarketTypesResponse:
     """Get list of all available market types."""
     market_types = await service.get_market_types()
 
@@ -103,7 +112,7 @@ async def get_countries(
     }
 
 
-@router.get("/stats", response_model=dict)
+@router.get("/stats", response_model=StatsResponse)
 async def get_symbol_stats(
     service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
@@ -117,7 +126,7 @@ async def get_symbol_stats(
     }
 
 
-@router.get("/exchanges/{exchange}/count", response_model=dict)
+@router.get("/exchanges/{exchange}/count", response_model=ExchangeCountResponse)
 async def get_symbols_by_exchange(
     exchange: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -144,7 +153,7 @@ async def get_symbols_by_exchange(
     }
 
 
-@router.get("/market-types/{market_type}/count", response_model=dict)
+@router.get("/market-types/{market_type}/count", response_model=MarketTypeCountResponse)
 async def get_symbols_by_market_type(
     market_type: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -171,7 +180,7 @@ async def get_symbols_by_market_type(
     }
 
 
-@router.get("/{symbol}", response_model=dict)
+@router.get("/{symbol}", response_model=SymbolDetailResponse)
 async def get_symbol(
     symbol: str,
     service: SymbolService = Depends(get_symbol_service),

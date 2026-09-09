@@ -62,7 +62,8 @@ class IntelligentIngestionService(ExternalAPIService):
         self.logger.info("IntelligentIngestionService shutdown")
 
     async def _execute(
-        self, method: str, path: str, params: dict[str, Any] | None = None
+        self, method: str, path: str, params: dict[str, Any] | None = None,
+        _retry_count: int = 0,
     ) -> Any:
         if not self._session:
             raise RuntimeError("IntelligentIngestionService not initialized")
@@ -76,8 +77,10 @@ class IntelligentIngestionService(ExternalAPIService):
                 timeout=type(self)._session_timeout(self.timeout),
             ) as response:
                 if response.status == 429:
-                    await asyncio.sleep(2 ** 2)
-                    return await self._execute(method, path, params)
+                    if _retry_count >= self.max_retries:
+                        raise RuntimeError(f"Rate limit exceeded after {_retry_count} retries")
+                    await asyncio.sleep(2 ** min(_retry_count + 2, 4))
+                    return await self._execute(method, path, params, _retry_count + 1)
                 if response.status >= 500:
                     raise RuntimeError(f"API Error: {response.status}")
                 return await response.json()

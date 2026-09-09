@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/cn";
 import { UnifiedSearchBar } from "@/components/search/UnifiedSearchBar";
+import { sidebarCategories, sidebarBottomItems } from "@/lib/sidebar-config";
 
-interface NavItem {
+export interface NavItem {
   label: string;
   href: string;
   marker: string;
 }
 
-interface NavCategory {
+export interface NavCategory {
   label: string;
   items: NavItem[];
 }
@@ -21,9 +22,7 @@ interface NavCategory {
 const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boolean) =>
   items.some((item) => checkActive(item.href));
 
-import { sidebarCategories, sidebarBottomItems } from "@/lib/sidebar-config";
-
-export function NewSidebar() {
+const NewSidebarComponent = () => {
   const pathname = usePathname();
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
@@ -46,20 +45,16 @@ export function NewSidebar() {
     return auto;
   }, [isActive]);
 
-  const expandedCategories = new Set([...autoExpanded, ...userExpanded]);
+  const expandedCategories = useMemo(() => new Set([...autoExpanded, ...userExpanded]), [autoExpanded, userExpanded]);
 
   useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [sidebarOpen]);
 
-  const toggleCategory = (label: string) => {
+  const toggleCategory = useCallback((label: string) => {
     setUserExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(label)) {
@@ -69,7 +64,7 @@ export function NewSidebar() {
       }
       return next;
     });
-  };
+  }, []);
 
   return (
     <>
@@ -77,6 +72,7 @@ export function NewSidebar() {
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
@@ -86,6 +82,7 @@ export function NewSidebar() {
           "lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
+        aria-label="Main navigation"
       >
         <div className="flex h-screen flex-col">
           <div className="flex h-16 items-center border-b border-[var(--color-border)] px-5 shrink-0">
@@ -113,6 +110,8 @@ export function NewSidebar() {
                   <div key={cat.label} className="mb-1">
                     <button
                       onClick={() => toggleCategory(cat.label)}
+                      aria-expanded={isExpanded}
+                      aria-controls={`nav-category-${cat.label.replace(/\s+/g, "-").toLowerCase()}`}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 min-h-[44px]",
                         hasActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)]"
@@ -123,6 +122,7 @@ export function NewSidebar() {
                           "h-2.5 w-2.5 rounded-full transition-colors flex-shrink-0",
                           hasActive ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]"
                         )}
+                        aria-hidden="true"
                       />
                       <span className="flex-1 text-left">{cat.label}</span>
                       <span
@@ -130,38 +130,43 @@ export function NewSidebar() {
                           "text-xs text-[var(--color-text-muted)] transition-transform duration-200 font-mono flex-shrink-0",
                           isExpanded && "rotate-180"
                         )}
+                        aria-hidden="true"
                       >
                         {isExpanded ? "\u25B2" : "\u25BC"}
                       </span>
                     </button>
 
                     {isExpanded && (
-                      <div className="ml-2 mt-1 flex flex-col gap-0.5 border-l border-[var(--color-border)] pl-3">
+                      <div
+                        id={`nav-category-${cat.label.replace(/\s+/g, "-").toLowerCase()}`}
+                        className="ml-2 mt-1 flex flex-col gap-0.5 border-l border-[var(--color-border)] pl-3"
+                      >
                         {cat.items.map((item) => {
                           const active = isActive(item.href);
                           return (
-                               <Link
-                                 key={item.href}
-                                 href={item.href}
-                                 onClick={() => setSidebarOpen(false)}
-                                 className={cn(
-                                   "group flex items-center gap-3 rounded-r-lg px-3 py-3 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent min-h-[44px]",
-                                 active
-                                   ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
-                                   : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
-                                 )}
-                               >
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={() => setSidebarOpen(false)}
+                              className={cn(
+                                "group flex items-center gap-3 rounded-r-lg px-3 py-3 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent min-h-[44px]",
+                                active
+                                  ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
+                                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
+                              )}
+                            >
                               <span
                                 className={cn(
                                   "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
                                   active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
                                 )}
+                                aria-hidden="true"
                               >
                                 {item.marker}
                               </span>
                               <span className="flex-1">{item.label}</span>
                               {active && (
-                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" aria-hidden="true" />
                               )}
                             </Link>
                           );
@@ -184,28 +189,29 @@ export function NewSidebar() {
               {sidebarBottomItems.map((item) => {
                 const active = isActive(item.href);
                 return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setSidebarOpen(false)}
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "group flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent min-h-[44px]",
+                      active
+                        ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
+                        : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
+                    )}
+                  >
+                    <span
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 border-l-2 border-l-transparent min-h-[44px]",
-                        active
-                          ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-l-[var(--color-primary)] shadow-[0_0_8px_rgba(0,90,156,0.15)]"
-                          : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
+                        "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
+                        active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
                       )}
+                      aria-hidden="true"
                     >
-                     <span
-                       className={cn(
-                         "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
-                         active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
-                       )}
-                     >
-                       {item.marker}
-                     </span>
+                      {item.marker}
+                    </span>
                     <span className="flex-1">{item.label}</span>
                     {active && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" aria-hidden="true" />
                     )}
                   </Link>
                 );
@@ -216,4 +222,6 @@ export function NewSidebar() {
       </aside>
     </>
   );
-}
+};
+
+export const NewSidebar = memo(NewSidebarComponent);

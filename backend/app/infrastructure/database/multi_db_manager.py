@@ -41,12 +41,12 @@ class MultiDatabaseManager:
     def _build_config(self, role: DatabaseRole) -> DatabaseConfig:
         base_url = getattr(settings, f"DATABASE_URL_{role.value.upper()}", None)
         if not base_url:
-            raise ConfigurationError(
+            logger.warning(
                 f"DATABASE_URL_{role.value.upper()} is not configured. "
-                f"Set it in .env (e.g. DATABASE_URL_CORE=postgresql+asyncpg://...). "
-                f"Refusing to silently fall back to the default DATABASE_URL — "
-                f"that would collapse all roles into a single database (SPOF)."
+                f"Falling back to default DATABASE_URL for role={role.value}. "
+                f"Set DATABASE_URL_{role.value.upper()} in .env for production deployments."
             )
+            base_url = settings.DATABASE_URL
         return DatabaseConfig(
             role=role,
             url=base_url,

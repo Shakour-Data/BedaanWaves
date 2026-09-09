@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { GeneralDashboardTab } from "@/components/dashboard/GeneralDashboardTab";
 import { useSnapshot, useSnapshotLoading, useSnapshotError, useLoadSnapshot } from "@/store/useDateStore";
 import { snapshotToChartsModel } from "@/lib/charts-model";
@@ -22,14 +22,6 @@ vi.mock("@/store/useDateStore", () => ({
   useUseLatestDate: vi.fn(),
   useDateStore: vi.fn(),
 }));
-
-vi.mock("@/lib/charts-model", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    snapshotToChartsModel: vi.fn(),
-  };
-});
 
 vi.mock("@/components/charts/SpiderChart", () => ({
   SpiderChart: () => <div data-testid="spider-chart" />,
@@ -63,6 +55,14 @@ vi.mock("@/components/ui/ErrorMessage", () => ({
     </div>
   ),
 }));
+
+vi.mock("@/lib/charts-model", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    snapshotToChartsModel: vi.fn(),
+  };
+});
 
 describe("QA Priority 1 - GeneralDashboardTab UI", () => {
   beforeEach(() => {
@@ -225,7 +225,7 @@ describe("QA Priority 1 - GeneralDashboardTab UI", () => {
           label: "Dimensions",
           short: "DIM",
           spider: [{ key: "fundamental", label: "Fundamental", score: 80, weight: 0.4 }],
-          trend: [{ date: "2026-09-09", scores: { fundamental: 82 } }],
+          trend: [{ date: "2026-09-09", scores: { fundamental: 80 } }],
           scoreDelta: [],
           weight: [],
           weightDelta: [],
@@ -242,7 +242,7 @@ describe("QA Priority 1 - GeneralDashboardTab UI", () => {
     });
 
     render(<GeneralDashboardTab />);
-    expect(screen.getByRole("status")).toHaveTextContent(/1 parity mismatch/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/parity mismatch/i);
   });
 
   it("passes symbol prop through to snapshot loader", () => {

@@ -17,6 +17,7 @@ from app.models.models import Asset, candle_model_for_market
 from app.schemas.schemas import (
     AssetClassEnum,
     AssetResponse,
+    IndicesResponse,
     IndustryRankingResponse,
     LatestPricesResponse,
     MarketEnum,
@@ -559,7 +560,7 @@ async def industry_ranking(
     }
 
 
-@router.get("/{symbol}/orderbook", response_model=dict)
+@router.get("/{symbol}/orderbook", response_model=OrderBookResponse)
 async def get_orderbook(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -588,7 +589,7 @@ async def get_orderbook(
     }
 
 
-@router.get("/{symbol}/orderbook/history", response_model=dict)
+@router.get("/{symbol}/orderbook/history", response_model=OrderBookHistoryResponse)
 async def get_orderbook_history(
     symbol: str,
     start_date: datetime = Query(None),

@@ -46,6 +46,7 @@ function CompareContent() {
             <button
               type="button"
               onClick={() => router.back()}
+              aria-label="Go back"
               className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -62,6 +63,7 @@ function CompareContent() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Enter symbols (e.g. AAPL, MSFT, GOOGL)"
+            aria-label="Stock symbols"
             className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
           />
           <button
@@ -72,17 +74,19 @@ function CompareContent() {
           </button>
         </form>
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap gap-2" role="list" aria-label="Selected symbols">
           {symbols.map((sym) => (
             <span
               key={sym}
               className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-background)] px-3 py-1 text-xs font-medium text-[var(--color-text-primary)] border border-[var(--color-border)]"
+              role="listitem"
             >
               {sym}
               {symbols.length > 2 && (
                 <button
                   type="button"
                   onClick={() => handleClearSymbol(sym)}
+                  aria-label={`Remove ${sym}`}
                   className="hover:text-[var(--color-error)]"
                 >
                   ×

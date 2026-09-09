@@ -128,6 +128,7 @@ def _ensure_directories():
 
 def _ensure_database():
     """Create database if it doesn't exist."""
+    engine = None
     try:
         import re
 
@@ -155,13 +156,17 @@ def _ensure_database():
             )
             if not result.fetchone():
                 conn.execute(text("COMMIT"))
+                from sqlalchemy.schema import CreateDatabase
                 from sqlalchemy.dialects.postgresql import base as pg_base
                 identifier = pg_base.Identifier(db_name)
-                conn.execute(text(f'CREATE DATABASE {identifier}'))
+                conn.execute(CreateDatabase(identifier))
                 logger.info(f"Database '{db_name}' created automatically")
         engine.dispose()
     except Exception as e:
         logger.warning(f"Could not auto-create database: {e}")
+    finally:
+        if engine is not None:
+            engine.dispose()
 
 
 def _run_migrations():
@@ -269,6 +274,10 @@ async def lifespan(app: FastAPI):
     # DB/lifecycle bypass flag used by the SSE-lag performance benchmark to
     # keep startup fast and independent of Postgres provisioning.
     skip_db = os.environ.get("LIVE_BENCH_SKIP_DB_LIFESPAN", "").lower() in ("1", "true", "yes")
+    if skip_db and settings.ENVIRONMENT == "production":
+        raise RuntimeError(
+            "LIVE_BENCH_SKIP_DB_LIFESPAN cannot be enabled in production"
+        )
 
     # Step 1: Ensure directories exist
     _ensure_directories()
@@ -400,7 +409,7 @@ async def lifespan(app: FastAPI):
         self_healing_svc.register_service(
             "DatabaseService",
             database_svc.health_check,
-            restart_cmd="systemctl --user restart bedaanwaves-backend.service",
+            restart_cmd=os.environ.get("SELF_HEALING_RESTART_CMD", ""),
             critical=True,
         )
         self_healing_svc.register_service(
@@ -453,7 +462,8 @@ async def lifespan(app: FastAPI):
                 except Exception as exc:
                     logger.error("Self-healing check failed: %s", exc)
 
-        asyncio.create_task(_periodic_self_heal())
+        _periodic_self_heal_task = asyncio.create_task(_periodic_self_heal())
+        container.register_instance("_periodic_self_heal_task", _periodic_self_heal_task)
         logger.info("SelfHealingService periodic checks scheduled (interval=30s)")
 
         # Notification dispatcher (shared, used by SLOMonitor)
@@ -485,7 +495,7 @@ async def lifespan(app: FastAPI):
                 _metrics_service.register_service(live_pipeline_metrics.service_name, live_pipeline_metrics)
                 live_pipeline_metrics.register_with_metrics_service(_metrics_service)
         except Exception as _e:
-            logger.warning(f"Could not register live metrics with MetricsService: {_e}")
+            logger.warning("Could not register live metrics with MetricsService: %s", _e)
 
         # Task 3: Orchestrator with per-key polling + reference counting + derived producers
         orderbook_svc = ITCHOrderBookService()
@@ -536,11 +546,8 @@ async def lifespan(app: FastAPI):
         logger.info("Registered core services in dependency container")
 
     except Exception as e:
-        logger.error(f"Failed to initialize application: {e}", exc_info=True)
-        logger.warning("Continuing in degraded mode - some features may be unavailable")
-        if _container is None:
-            _container = DependencyContainer()
-            set_global_container(_container)
+        logger.error("Failed to initialize application: %s", e, exc_info=True)
+        raise
 
     # Register all routers (outside try/except so routes are always available)
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
@@ -735,7 +742,7 @@ app.openapi = custom_openapi  # type: ignore[method-assign]
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    logger.error(f"Database error on {request.method} {request.url.path}: {exc}")
+    logger.error("Database error on %s %s: %s", request.method, request.url.path, exc)
     return JSONResponse(
         status_code=503,
         content={

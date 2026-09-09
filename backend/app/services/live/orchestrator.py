@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 import uuid
 from collections import deque
@@ -74,7 +75,7 @@ def _jitter(center: float, pct: float = 0.15) -> float:
     if center <= 0:
         return 0.0
     spread = center * pct
-    return center + (spread * (1.0 if (hash(uuid.uuid4().hex) & 1) else -1.0) * 0.3)
+    return center + (spread * (1.0 if random.random() < 0.5 else -1.0) * 0.3)
 
 
 @dataclass
@@ -136,6 +137,7 @@ class LiveDataOrchestrator(BaseService):
         self._shutdown_event: asyncio.Event | None = None
         self._supervisor_task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
+        self._background_tasks: list[asyncio.Task] = []
 
         self._pulse_producer: LiveMarketPulseProducer | None = None
         self._score_producer: LiveScoreDeltaProducer | None = None
@@ -151,16 +153,19 @@ class LiveDataOrchestrator(BaseService):
             return
         self._shutdown_event = asyncio.Event()
         self._supervisor_task = asyncio.create_task(self._supervisor_loop())
+        self._background_tasks.append(self._supervisor_task)
         self._initialized = True
 
         if self._scoring is not None:
             self._pulse_producer = LiveMarketPulseProducer(self)
             self._score_producer = LiveScoreDeltaProducer(self, self._scoring)
-            asyncio.create_task(self._pulse_producer.start())
-            asyncio.create_task(self._score_producer.start())
+            pulse_task = asyncio.create_task(self._pulse_producer.start())
+            score_task = asyncio.create_task(self._score_producer.start())
+            self._background_tasks.extend([pulse_task, score_task])
         if self._news is not None:
             self._news_producer = LiveNewsProducer(self, self._news)
-            asyncio.create_task(self._news_producer.start())
+            news_task = asyncio.create_task(self._news_producer.start())
+            self._background_tasks.append(news_task)
 
         self.logger.info("LiveDataOrchestrator initialized")
 
@@ -177,12 +182,16 @@ class LiveDataOrchestrator(BaseService):
                 task.cancel()
         if self._supervisor_task is not None and not self._supervisor_task.done():
             self._supervisor_task.cancel()
+        for task in self._background_tasks:
+            if not task.done():
+                task.cancel()
         try:
-            await asyncio.gather(*self._poll_tasks.values(), return_exceptions=True)
+            await asyncio.gather(*self._poll_tasks.values(), *self._idle_tasks.values(), *self._background_tasks, return_exceptions=True)
         except Exception:
             pass
         self._poll_tasks.clear()
         self._idle_tasks.clear()
+        self._background_tasks.clear()
         for subs in self._subscribers.values():
             for sub in subs.values():
                 try:
@@ -249,6 +258,11 @@ class LiveDataOrchestrator(BaseService):
                 self._idle_tasks[stream_key] = asyncio.create_task(
                     self._idle_teardown(stream_key, idle_s)
                 )
+                self._cleanup_idle_state(stream_key)
+
+    def _cleanup_idle_state(self, stream_key: str) -> None:
+        self._last_emitted.pop(stream_key, None)
+        self._sequence_counters.pop(stream_key, None)
 
     # ------------------------------------------------------------------
     # Internal: idle teardown
@@ -901,12 +915,14 @@ class LiveNewsProducer:
         orchestrator: LiveDataOrchestrator,
         news_service: Any,
         ingestion_service: Any | None = None,
+        max_seen_ids: int = 10000,
     ) -> None:
         self._orch = orchestrator
         self._news = news_service
         self._ingestion = ingestion_service
         self._logger = logging.getLogger("LiveNewsProducer")
         self._seen_ids: set[str] = set()
+        self._max_seen_ids = max_seen_ids
         self._queue: asyncio.Queue | None = None
 
     async def start(self) -> None:
@@ -958,6 +974,9 @@ class LiveNewsProducer:
         nid = str(it.get("news_id") or it.get("id") or uuid.uuid4().hex)
         if nid in self._seen_ids:
             return
+        if len(self._seen_ids) >= self._max_seen_ids:
+            self._seen_ids.clear()
+        self._seen_ids.add(nid)
         self._seen_ids.add(nid)
         payload: dict[str, Any] = {
             "news_id": nid,

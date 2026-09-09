@@ -24,7 +24,6 @@ import type {
   SnapshotResponse,
   HierarchyScores,
   TrendPoint,
-  WeightSnapshot,
   WeightTrendPoint,
 } from "@/lib/api/dashboard";
 import { num } from "@/lib/utils";

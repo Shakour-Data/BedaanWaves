@@ -12,6 +12,11 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Respon
 
 from app.core.config import get_settings
 from app.core.utils import utc_now_iso
+from app.schemas.schemas import (
+    BatchStocksResponse,
+    StockDetailResponse,
+    StockSearchResponse,
+)
 from app.services.core.dependency_container import get_global_container
 from app.services.data.stock_service import StockService
 
@@ -39,13 +44,13 @@ def get_stock_service() -> StockService:
 DEFAULT_POPULAR_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "BRK-B"]
 
 
-@router.get("/search", response_model=dict)
+@router.get("/search", response_model=StockSearchResponse)
 async def search_stocks(
     q: str = Query("", min_length=0),
     limit: int = Query(20, ge=1, le=100),
     service: StockService = Depends(get_stock_service),
     response: Response = None
-) -> dict:
+) -> StockSearchResponse:
     """Search stocks by query using live yfinance data.
 
     An empty query returns a default set of popular tickers so the browse
@@ -95,7 +100,7 @@ async def search_stocks(
     }
 
 
-@router.get("/{ticker}", response_model=dict)
+@router.get("/{ticker}", response_model=StockDetailResponse)
 async def get_stock(
     ticker: str,
     version: str = Query("v1", alias="api_version"),
@@ -123,7 +128,7 @@ async def get_stock(
     return result
 
 
-@router.post("/batch", response_model=dict)
+@router.post("/batch", response_model=BatchStocksResponse)
 async def get_multiple_stocks(
     tickers: list[str] = Body(..., description="List of ticker symbols"),
     service: StockService = Depends(get_stock_service),
@@ -151,7 +156,7 @@ async def get_multiple_stocks(
 # V2 Endpoints with Enhanced Features
 # ============================================================================
 
-@router.post("/v2/batch", response_model=dict)
+@router.post("/v2/batch", response_model=BatchStocksResponse)
 async def get_multiple_stocks_v2(
     tickers: list[str] = Body(..., description="List of ticker symbols"),
     include_history: bool = Query(False, description="Include historical data"),

@@ -1,4 +1,13 @@
-import { NavCategory, NavItem } from "@/components/layout/NewSidebar";
+export interface NavItem {
+  label: string;
+  href: string;
+  marker: string;
+}
+
+export interface NavCategory {
+  label: string;
+  items: NavItem[];
+}
 
 export const sidebarCategories: NavCategory[] = [
   {

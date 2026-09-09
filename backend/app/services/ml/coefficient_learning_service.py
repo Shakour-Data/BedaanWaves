@@ -547,8 +547,9 @@ class CoefficientLearningService(MLService):
                 )
                 self.models[level] = model
 
-            # Fit model
-            model.fit(X_train_scaled, y_train)
+            # Fit model (off the event loop to avoid blocking)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, model.fit, X_train_scaled, y_train)
 
             # Validate
             train_score = model.score(X_train_scaled, y_train)

@@ -72,16 +72,13 @@ async def login(data: LoginRequest) -> Token:
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-    data: RefreshTokenRequest | None = None,
-    token: str | None = None,
+    data: RefreshTokenRequest,
 ) -> Token:
     """Exchange a valid refresh token for new tokens.
 
-    Accepts the refresh token either in the JSON request body
-    (``{"refresh_token": "..."}``) or as a query parameter (``?token=...``).
+    Accepts the refresh token in the JSON request body only.
     """
-    if data is not None:
-        token = data.refresh_token
+    token = data.refresh_token
     if token is None:
         raise HTTPException(
             status_code=401,
@@ -116,7 +113,7 @@ async def refresh_token(
         )
 
     async with async_session_maker() as session:
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now()
         result = await session.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user.id,

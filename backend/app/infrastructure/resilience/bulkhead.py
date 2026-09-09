@@ -20,23 +20,26 @@ class Bulkhead:
         self.config = config or BulkheadConfig()
         self.semaphore = asyncio.Semaphore(self.config.max_concurrent_calls)
         self.waiting = 0
+        self._lock = asyncio.Lock()
         self._logger = logging.getLogger(f"bulkhead.{name}")
 
     async def execute(self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any) -> T:
-        if self.waiting >= self.config.max_waiting:
-            raise RuntimeError(f"Bulkhead {self.name} saturated: {self.waiting} waiting")
-
-        self.waiting += 1
+        async with self._lock:
+            if self.waiting >= self.config.max_waiting:
+                raise RuntimeError(f"Bulkhead {self.name} saturated: {self.waiting} waiting")
+            self.waiting += 1
         try:
             async with asyncio.timeout(self.config.timeout):
                 async with self.semaphore:
-                    self.waiting -= 1
+                    async with self._lock:
+                        self.waiting = max(0, self.waiting - 1)
                     return await func(*args, **kwargs)
         except TimeoutError:
             self._logger.error("Bulkhead %s call timed out after %s seconds", self.name, self.config.timeout)
             raise
         finally:
-            self.waiting = max(0, self.waiting - 1)
+            async with self._lock:
+                self.waiting = max(0, self.waiting - 1)
 
     def get_state(self) -> dict[str, Any]:
         return {

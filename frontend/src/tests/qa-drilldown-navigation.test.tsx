@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { LevelSelector } from "@/components/leaderboard/LevelSelector";
 
 describe("QA Priority 1 - Drill-down Navigation & Back Button", () => {
@@ -7,7 +7,7 @@ describe("QA Priority 1 - Drill-down Navigation & Back Button", () => {
     const onLevelChange = vi.fn();
     const onDimensionChange = vi.fn();
 
-    const { rerender } = render(
+    render(
       <LevelSelector
         level="overall"
         dimension="fundamental"

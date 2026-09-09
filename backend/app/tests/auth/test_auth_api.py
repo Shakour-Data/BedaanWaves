@@ -217,7 +217,7 @@ class TestRefreshToken:
              patch("app.api.routes.auth.async_session_maker", return_value=mock_sm), \
              patch("app.api.routes.auth.create_access_token", return_value="new.access"), \
              patch("app.api.routes.auth.create_refresh_token", return_value="new.refresh"):
-            resp = client.post("/api/v1/auth/refresh?token=valid-refresh-token")
+            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "valid-refresh-token"})
 
         assert resp.status_code == 200
         body = resp.json()
@@ -227,14 +227,14 @@ class TestRefreshToken:
     def test_refresh_invalid_token(self, client):
         """An invalid (undecodable) refresh token should return 401."""
         with patch("app.api.routes.auth.jwt.decode", side_effect=Exception("Invalid token")):
-            resp = client.post("/api/v1/auth/refresh?token=garbage")
+            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "garbage"})
         assert resp.status_code == 401
         assert "refresh token" in resp.json()["detail"].lower()
 
     def test_refresh_wrong_token_type(self, client):
         """A token with type != 'refresh' should be rejected."""
         with patch("app.api.routes.auth.jwt.decode", return_value={"sub": "testuser", "type": "access"}):
-            resp = client.post("/api/v1/auth/refresh?token=some-token")
+            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "some-token"})
         assert resp.status_code == 401
         assert "refresh token" in resp.json()["detail"].lower()
 
@@ -242,6 +242,6 @@ class TestRefreshToken:
         """Username in token doesn't exist."""
         with patch("app.api.routes.auth.jwt.decode", return_value={"sub": "ghost", "type": "refresh"}), \
              patch("app.api.routes.auth.get_user_by_username", new_callable=AsyncMock, return_value=None):
-            resp = client.post("/api/v1/auth/refresh?token=valid-but-ghost")
+            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "valid-but-ghost"})
         assert resp.status_code == 401
         assert "User not found" in resp.json()["detail"]

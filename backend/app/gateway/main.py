@@ -24,6 +24,7 @@ from .middleware import (
     GatewayAuthMiddleware,
     GatewayLoggingMiddleware,
     GatewayRateLimitMiddleware,
+    GatewaySecurityHeadersMiddleware,
 )
 from .proxy import ProxyClient, ProxyConnectionError, ProxyError, ProxyTimeoutError
 
@@ -93,6 +94,9 @@ def create_gateway_app(config: Optional[GatewayConfig] = None) -> FastAPI:
         lifespan=gateway_lifespan,
     )
 
+    # Middleware order matters: the last middleware added is the outermost.
+    # Desired stack (outermost -> innermost):
+    #   SecurityHeaders -> Logging -> RateLimit -> Auth -> CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -100,9 +104,10 @@ def create_gateway_app(config: Optional[GatewayConfig] = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(GatewayLoggingMiddleware, enabled=True)
     app.add_middleware(GatewayAuthMiddleware, enabled=config.auth_enabled)
     app.add_middleware(GatewayRateLimitMiddleware, enabled=config.rate_limit_enabled)
+    app.add_middleware(GatewayLoggingMiddleware, enabled=True)
+    app.add_middleware(GatewaySecurityHeadersMiddleware)
 
     # ------------------------------------------------------------------
     # Health endpoints

@@ -76,13 +76,10 @@ def _safe_log(level: int, fmt: str, *args: object) -> None:
 
 
 def _extract_token(request: Request) -> str | None:
-    """Extract token from Authorization header or query parameter."""
+    """Extract token from Authorization header only."""
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         return auth_header.split(" ", 1)[1].strip()
-    qp = request.query_params.get("token")
-    if qp:
-        return str(qp).strip()
     return None
 
 

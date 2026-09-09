@@ -35,7 +35,15 @@ from app.services.data.market_hours_service import MarketHoursService
 logger = logging.getLogger(__name__)
 
 # yfinance calls are blocking; use a bounded thread pool.
-_EXECUTOR = ThreadPoolExecutor(max_workers=8)
+_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="yfinance")
+
+
+def _shutdown_executor():
+    _EXECUTOR.shutdown(wait=False)
+
+
+import atexit
+atexit.register(_shutdown_executor)
 
 
 class RealTimeMarketDataService(BaseService):
