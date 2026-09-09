@@ -63,9 +63,90 @@ DatabaseConfigs.txt
 # Trae AI internal state
 .trae/
 
+# Kilo AI internal state
+.kilo/
+
 # Static analysis reports (generated)
 backend/static_analysis_report.md
 
 # Test artifacts
-backend/app/tests/regression/__pycache__/
+backend/app/tests/regression/
 .trae/specs/realtime-data-streaming/spec.md
+
+# Backend logs
+backend/logs/
+logs/
+
+# Backend temporary/debug files
+backend/debug_*.py
+backend/debug_*.txt
+backend/*_raw.csv
+backend/mypy.ini
+backend/run*.txt
+backend/test_*.txt
+backend/pytest_*.txt
+backend/nerk_constituents.csv
+backend/fred_raw.csv
+backend/sec_cik_cache.json
+backend/inspect_db.py
+backend/check_*.py
+backend/deep_inspect.py
+backend/forensic.py
+backend/get_assets.py
+backend/verify_refresh.py
+backend/count_mypy.py
+backend/db_quality_audit.py
+backend/fix_*.py
+
+# Backend scripts (development)
+backend/scripts/
+
+# Machine learning artifacts
+*.joblib
+
+# Backup files
+backend/*.backup
+backups/
+
+# Database backups
+database/pginst*.exe
+pginst_extracted/
+
+# Postgres installer
+pginst*.exe
+pginst_extracted/
+
+# Purification
+purification/
+
+# Scripts
+scripts/
+
+# Deployment scripts
+deployment/scripts/
+
+# Docs generated
+docs/openapi.yaml
+
+# Temporary files
+*.tmp
+*.temp
+*.out
+*.log
+
+# ESLint/TypeScript temp
+eslint_*.txt
+scripts/check_*.py
+scripts/find_parse2.js
+scripts/fix_imports.py
+scripts/verify_no_mock_data.py
+
+# PostgreSQL installer
+pginst*.exe
+pginst_extracted/
+
+# Debug/test files
+test_*.py
+test_*.txt
+verify_*.py
+check_*.py

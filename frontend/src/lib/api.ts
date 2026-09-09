@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_BASE_URL } from './utils';
 
@@ -16,11 +16,30 @@ export function getApiErrorMessage(error: unknown): string {
   return String(error);
 }
 
+interface RetryConfig extends AxiosRequestConfig {
+  _retryCount?: number;
+}
+
+const MAX_RETRY = 3;
+const RETRY_BASE_DELAY = 1000;
+
+function isRetryableError(error: AxiosError): boolean {
+  if (!error.response) return true; // network errors
+  const status = error.response.status;
+  return status >= 500 || status === 429 || status === 408;
+}
+
+function getRetryDelay(attempt: number): number {
+  return RETRY_BASE_DELAY * Math.pow(2, attempt) + Math.random() * 500;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json' } });
+    'Content-Type': 'application/json',
+  },
+});
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
@@ -39,7 +58,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Add response interceptor to handle token refresh
+// Add response interceptor to handle token refresh and retry logic
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 let failedQueue: Array<{
@@ -61,7 +80,21 @@ const processQueue = (error: unknown, token: string | null = null) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as RetryConfig & { _retry?: boolean };
+
+    // Retry logic for retryable errors
+    if (isRetryableError(error) && !originalRequest._retry) {
+      const retryCount = originalRequest._retryCount || 0;
+      if (retryCount < MAX_RETRY) {
+        originalRequest._retry = true;
+        originalRequest._retryCount = retryCount + 1;
+
+        const delay = getRetryDelay(retryCount);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        return apiClient(originalRequest);
+      }
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing && refreshPromise) {
