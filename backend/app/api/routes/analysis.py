@@ -18,7 +18,26 @@ from app.models.models import (
     MLSignal,
     candle_model_for_market,
 )
-from app.schemas.schemas import MLSignalResponse
+from app.schemas.schemas import (
+    BatchFundamentalResponse,
+    FundamentalAnalysisResponse,
+    FundamentalHealthResponse,
+    MLSignalResponse,
+    MacroForecastResponse,
+    MacroIndicatorsResponse,
+    MomentumAnalysisResponse,
+    RiskAnalysisResponse,
+    ScoringCoefficientsResponse,
+    ScoringHierarchyResponse,
+    ScoringRankResponse,
+    ScoringResponse,
+    ScoreHistoryResponse,
+    SentimentAnalysisResponse,
+    TechnicalAnalysisResponse,
+    TopPerformerResponse,
+    TopPerformersResponse,
+    VolatilityAnalysisResponse,
+)
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
 from app.services.analysis.momentum_service import MomentumService
 from app.services.analysis.ranking_service import RankingService
@@ -128,12 +147,12 @@ async def get_signals_list(
     }
 
 
-@router.get("/top-performers", response_model=dict)
+@router.get("/top-performers", response_model=TopPerformersResponse)
 async def get_top_performers(
     limit: int = Query(10, ge=1, le=100),
     timeframe: str = Query("1d"),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> TopPerformersResponse:
     """
     Get top performing Nasdaq-listed equities and ETFs by return percentage.
 
@@ -204,7 +223,7 @@ async def get_top_performers(
     }
 
 
-@router.get("/risk-analysis/{symbol}", response_model=dict)
+@router.get("/risk-analysis/{symbol}", response_model=RiskAnalysisResponse)
 async def get_risk_analysis(
     symbol: str,
     period_days: int = Query(252, ge=1, le=1000),

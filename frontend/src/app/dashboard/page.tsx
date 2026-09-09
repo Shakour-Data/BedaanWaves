@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   TrendingUp,
   TrendingDown,
@@ -21,13 +22,11 @@ import { PageLoading } from "@/components/ui/PageLoading";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
-import {
-  fetchDashboardData,
-  fetchGeneralDashboard,
-  type GeneralDashboardResponse,
-} from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchGeneralDashboard, type GeneralDashboardResponse } from "@/lib/api/dashboard";
 import { useUXStore } from "@/store/useUXStore";
 import { UnifiedSearchBar } from "@/components/search/UnifiedSearchBar";
+import { GeneralDashboardTab } from "@/components/dashboard/GeneralDashboardTab";
+import { DashboardTabNav } from "@/components/dashboard/DashboardTabNav";
 
 interface DimensionSummary {
   avg_score: number;
@@ -74,6 +73,10 @@ function fmtDate(iso: string | null): string {
 
 export default function DashboardPage() {
   const addToast = useUXStore((s) => s.addToast);
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: "overview" | "general" =
+    tabParam === "general" ? "general" : "overview";
   const [data, setData] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +229,17 @@ export default function DashboardPage() {
   return (
     <NewDashboardShell title="Dashboard">
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        <header className="flex flex-wrap items-start justify-between gap-4">
+        <DashboardTabNav
+          tabs={[
+            { id: "overview", label: "Overview", href: "/dashboard" },
+            { id: "general", label: "Analytical", href: "/dashboard?tab=general" },
+          ]}
+        />
+        {activeTab === "general" ? (
+          <GeneralDashboardTab />
+        ) : (
+          <>
+          <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
@@ -550,6 +563,8 @@ export default function DashboardPage() {
             How scores are calculated →
           </Link>
         </footer>
+          </>
+        )}
       </div>
     </NewDashboardShell>
   );

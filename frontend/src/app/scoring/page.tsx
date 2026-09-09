@@ -253,7 +253,7 @@ export default function ScoringPage() {
           ))
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-16">
-            <span className="text-4xl text-[#334155]" role="img" aria-label="No results">
+            <span className="text-4xl text-[var(--color-text-muted)]" role="img" aria-label="No results">
               Search
             </span>
             <h3 className="mt-4 text-lg font-medium text-[var(--color-text-primary)]">No stocks found</h3>
@@ -267,10 +267,10 @@ export default function ScoringPage() {
 
 function ScoreRing({ score }: { score: number }) {
   const getColor = (s: number) => {
-    if (s >= 90) return "#10b981";
-    if (s >= 75) return "#00d4ff";
-    if (s >= 60) return "#f59e0b";
-    return "#ef4444";
+    if (s >= 90) return "var(--color-success)";
+    if (s >= 75) return "var(--color-primary)";
+    if (s >= 60) return "var(--color-warning)";
+    return "var(--color-error)";
   };
 
   return (
@@ -279,7 +279,7 @@ function ScoreRing({ score }: { score: number }) {
         <path
           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
           fill="none"
-          stroke="#1e293b"
+          stroke="var(--color-border)"
           strokeWidth="3"
         />
         <path
@@ -335,7 +335,7 @@ function ScoredStockCard({ stock, index }: { stock: ScoredStock; index: number }
           )}>
             {index + 1}
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#00d4ff]/20 to-[#0ea5e9]/20 text-lg font-bold text-[var(--color-primary)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 text-lg font-bold text-[var(--color-primary)]">
             {stock.symbol.slice(0, 2)}
           </div>
         </div>
@@ -400,7 +400,7 @@ function ScoredStockCard({ stock, index }: { stock: ScoredStock; index: number }
           <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">AI Analysis</h4>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#00d4ff]/20 to-[#0ea5e9]/20">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20">
                 <span className="text-[var(--color-primary)]">[AI]</span>
               </div>
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{stock.aiAnalysis}</p>

@@ -9,10 +9,15 @@ This configuration consolidates settings from:
 from functools import lru_cache
 
 from pydantic import field_validator, model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
     """Application Settings - Consolidated from 5 OldFils projects"""
 
     # ============================================================
@@ -157,6 +162,7 @@ class Settings(BaseSettings):
         "/api/v1/market",
         "/api/v1/analysis",
         "/api/v1/news",
+        "/api/v1/health",
     ]
     # Permissions granted to a normal (non-admin) authenticated user.
     DEFAULT_USER_PERMISSIONS: list[str] = [

@@ -193,3 +193,9 @@ backend/nerk_constituents.csv
 
 # Backup files
 backend/*.backup
+.trae/specs/realtime-data-streaming/spec.md
+.trae/specs/realtime-data-streaming/spec.md
+.trae/specs/realtime-data-streaming/spec.md
+.trae/specs/realtime-data-streaming/tasks.md
+.trae/specs/temporal-scoring-snapshot-dashboard/spec.md
+.trae/specs/realtime-data-streaming/spec.md

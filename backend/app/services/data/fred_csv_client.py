@@ -27,11 +27,12 @@ from typing import Optional, Union
 
 import requests
 
+from app.infrastructure.resilience.retry_decorator import retry_with_backoff
+
 logger = logging.getLogger(__name__)
 
 FRED_CSV_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 HTTP_TIMEOUT = 25
-_HTTP_RETRIES = 2
 USER_AGENT = (
     "BedaanWaves/2.0 (+https://bedaanwaves.com; free macro data fetcher; "
     "contact@bedaanwaves.com) "
@@ -44,35 +45,26 @@ def _build_url(series_id: str) -> str:
     return f"{FRED_CSV_BASE}?{params}"
 
 
+@retry_with_backoff(max_retries=3, base_delay=1.0, retry_on=(Exception,))
 def _http_get(url: str) -> Optional[Union[str, bytes]]:
-    """GET a URL and return decoded response text or raw bytes (for ZIP), or None on failure.
-
-    Uses requests (not urllib.request) for reliable HTTPS transport.
-    Retries once on transient DNS/connection errors.
-    Returns raw bytes when the server sends a ZIP archive (Content-Type: application/zip).
-    """
+    """GET a URL and return decoded response text or raw bytes (for ZIP), or None on failure."""
     headers = {"User-Agent": USER_AGENT, "Accept": "text/csv, application/zip, */*;q=0.8"}
-    for attempt in range(_HTTP_RETRIES):
-        try:
-            resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)  # noqa: S310
-            resp.raise_for_status()
-            ct = resp.headers.get("Content-Type", "")
-            if "zip" in ct or resp.content[:4] == b"PK\x03\x04":
-                return resp.content
-            return resp.text
-        except requests.exceptions.ConnectionError as exc:
-            if attempt < _HTTP_RETRIES - 1:
-                logger.debug("Transient connection error for %s, retrying: %s", url, exc)
-                continue
-            logger.warning("HTTP GET failed for %s: %s", url, exc)
-            return None
-        except requests.exceptions.RequestException as exc:
-            logger.warning("HTTP request error for %s: %s", url, exc)
-            return None
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Unexpected HTTP error for %s: %s", url, exc)
-            return None
-    return None
+    try:
+        resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        ct = resp.headers.get("Content-Type", "")
+        if "zip" in ct or resp.content[:4] == b"PK\x03\x04":
+            return resp.content
+        return resp.text
+    except requests.exceptions.ConnectionError as exc:
+        logger.warning("HTTP GET failed for %s: %s", url, exc)
+        return None
+    except requests.exceptions.RequestException as exc:
+        logger.warning("HTTP request error for %s: %s", url, exc)
+        return None
+    except Exception as exc:
+        logger.warning("Unexpected HTTP error for %s: %s", url, exc)
+        return None
 
 
 def _fetch_csv(series_id: str) -> Optional[str]:

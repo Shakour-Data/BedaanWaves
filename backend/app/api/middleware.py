@@ -276,6 +276,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Referrer-Policy
     - Permissions-Policy
     - X-XSS-Protection
+    - Cache-Control
     """
 
     async def dispatch(self, request: Request, call_next):
@@ -315,6 +316,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # XSS protection (legacy)
         response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Cache control - prevent caching of sensitive API responses
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
 
         # Remove server identity disclosure safely
         for header_name in ("Server", "X-Powered-By"):

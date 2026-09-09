@@ -7,7 +7,6 @@ from . import (
     dashboard,
     data_health,
     filter,
-    forecast,
     health,
     history,
     live,
@@ -25,49 +24,54 @@ from . import (
     stocks,
     symbols,
     system,
-    nerk,
     users,
     watchlists,
 )
 
 # Export routers with explicit names for main.py compatibility
-auth_router = auth.router
-stocks_router = stocks.router
-market_router = market.router
 analysis_router = analysis.router
-portfolio_router = portfolios.router
+auth_router = auth.router
+compare_router = compare.router
+dashboard_router = dashboard.router
+data_health_router = data_health.router
+filter_router = filter.router
+health_router = health.router
 history_router = history.router
-news_router = news.router
-ml_router = ml.router
-users_router = users.router
-watchlists_router = watchlists.router
-notifications_router = notifications.router
-specialized_router = specialized.router
-system_router = system.router
-symbols_router = symbols.router
-nerk_router = nerk.router
 live_router = live.router
 live_sse_router = live_sse.router
-health_router = health.router
-settings_router = settings.router
-ranking_router = ranking.router
-password_reset_router = password_reset.router
 market_data_router = market_data.router
-data_health_router = data_health.router
-dashboard_router = dashboard.router
-filter_router = filter.router
+market_router = market.router
+ml_router = ml.router
+news_router = news.router
+notifications_router = notifications.router
+password_reset_router = password_reset.router
+portfolio_router = portfolios.router
+ranking_router = ranking.router
+settings_router = settings.router
+specialized_router = specialized.router
+stocks_router = stocks.router
+symbols_router = symbols.router
+system_router = system.router
+users_router = users.router
+watchlists_router = watchlists.router
 
 __all__ = [
+    "alerts",
+    "alerts_router",
     "analysis",
     "analysis_router",
     "auth",
     "auth_router",
+    "compare",
+    "compare_router",
     "dashboard",
     "dashboard_router",
     "data_health",
     "data_health_router",
     "filter",
     "filter_router",
+    "forecast",
+    "forecast_router",
     "health",
     "health_router",
     "history",
@@ -82,8 +86,6 @@ __all__ = [
     "market_router",
     "ml",
     "ml_router",
-    "nerk",
-    "nerk_router",
     "news",
     "news_router",
     "notifications",

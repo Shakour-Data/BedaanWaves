@@ -2,8 +2,18 @@ import { vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import DashboardPage from '@/app/dashboard/page';
 
+const { setSearchParams, getSearchParams } = vi.hoisted(() => {
+  let params = new URLSearchParams();
+  return {
+    getSearchParams: () => params,
+    setSearchParams: (p: URLSearchParams) => {
+      params = p;
+    },
+  };
+});
+
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => getSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/dashboard',
 }));
@@ -38,7 +48,9 @@ vi.mock('@/components/search/UnifiedSearchBar', () => ({
   UnifiedSearchBar: () => <div data-testid="unified-search" />,
 }));
 
-// fetchDashboardData and fetchGeneralDashboard are mocked above
+vi.mock('@/components/dashboard/GeneralDashboardTab', () => ({
+  GeneralDashboardTab: () => <section data-testid="general-dashboard-tab">Analytical view</section>,
+}));
 
 const generalResponse = {
   status: 'success',
@@ -80,6 +92,7 @@ const legacyResponse = {
 describe('DashboardPage (new)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setSearchParams(new URLSearchParams());
     mockFetchGeneralDashboard.mockResolvedValue(generalResponse);
     mockFetchDashboardData.mockResolvedValue(legacyResponse);
   });
@@ -133,5 +146,25 @@ describe('DashboardPage (new)', () => {
     mockFetchDashboardData.mockRejectedValue(new Error('boom'));
     render(<DashboardPage />);
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
+  });
+
+  it('renders the overview by default and shows KPI cards', async () => {
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByText('Market Dashboard')).toBeInTheDocument());
+    expect(screen.getByText('Universe')).toBeInTheDocument();
+  });
+
+  it('renders the analytical tab view when ?tab=general', async () => {
+    setSearchParams(new URLSearchParams('tab=general'));
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByTestId('general-dashboard-tab')).toBeInTheDocument());
+    expect(screen.queryByText('Market Dashboard')).not.toBeInTheDocument();
+  });
+
+  it('renders a tab switcher with Overview and Analytical tabs', async () => {
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByRole('tablist', { name: /dashboard views/i })).toBeInTheDocument());
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Analytical' })).toBeInTheDocument();
   });
 });

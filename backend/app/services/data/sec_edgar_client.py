@@ -16,6 +16,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
+from app.infrastructure.resilience.retry_decorator import retry_with_backoff
 from app.models.models import FinancialStatement, FundamentalRatio
 from app.services.core.base_service import DataService
 
@@ -108,6 +109,7 @@ class SEDGARFinancialService(DataService):
                 logger.debug(f"CIK lookup failed for {symbol} with query {query}: {exc}")
         return None
 
+    @retry_with_backoff(max_retries=3, base_delay=1.0, retry_on=(Exception,))
     async def fetch_company_facts(self, cik: str) -> dict[str, Any] | None:
         if not self._session:
             await self.initialize()

@@ -617,3 +617,600 @@ class NearkPriceHistoryResponse(BaseModel):
     count: int
     data: list[dict[str, Any]]
 
+
+class TopPerformerResponse(BaseModel):
+    symbol: str
+    name: str
+    change_percent: float
+    current_price: float
+    volume: int
+
+
+class TopPerformersResponse(BaseModel):
+    status: str = "success"
+    timestamp: str
+    data: list[TopPerformerResponse]
+
+
+class RiskMetricsResponse(BaseModel):
+    volatility: float
+    sharpe_ratio: float
+    var_95: float
+    max_drawdown: float
+    avg_return: float
+
+
+class RiskAnalysisResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    period_days: int
+    metrics: RiskMetricsResponse
+    timestamp: str
+
+
+class TechnicalIndicatorsResponse(BaseModel):
+    rsi: float | None = None
+    macd: float | None = None
+    macd_histogram: float | None = None
+    bb_percent_b: float | None = None
+    volume_ratio: float | None = None
+    volatility: float | None = None
+    momentum: float | None = None
+    stoch_k: float | None = None
+    atr: float | None = None
+    price_vs_sma20: float | None = None
+    price_vs_sma50: float | None = None
+
+
+class TechnicalAnalysisResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    name: str
+    market: str
+    data_points: int
+    indicators: TechnicalIndicatorsResponse
+    timestamp: str
+
+
+class MomentumResponse(BaseModel):
+    momentum: float | None = None
+    rsi: float | None = None
+    macd: float | None = None
+    trend: str | None = None
+
+
+class MomentumAnalysisResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    name: str
+    market: str
+    data_points: int
+    momentum: MomentumResponse
+    timestamp: str
+
+
+class VolatilityMetricsResponse(BaseModel):
+    volatility: float | None = None
+    atr: float | None = None
+    beta: float | None = None
+    std_dev: float | None = None
+
+
+class VolatilityAnalysisResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    name: str
+    market: str
+    data_points: int
+    volatility: VolatilityMetricsResponse
+    timestamp: str
+
+
+class SentimentAnalysisResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    sentiment: dict[str, Any]
+    timestamp: str
+
+
+class MacroIndicatorsResponse(BaseModel):
+    indicators: dict[str, Any]
+    count: int
+
+
+class MacroForecastResponse(BaseModel):
+    forecasts: dict[str, list[dict[str, Any]]]
+    count: int
+
+
+class ScoreHistoryResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    history: list[dict[str, Any]]
+
+
+class ScoringHierarchyResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    hierarchy: dict[str, Any]
+
+
+class ScoringCoefficientsResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    coefficients: dict[str, Any]
+
+
+class FundamentalAnalysisResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    fundamental: dict[str, Any]
+    timestamp: str
+
+
+class BatchFundamentalResponse(BaseModel):
+    status: str = "success"
+    total_requested: int
+    successful: int
+    failed: int
+    results: dict[str, Any]
+    errors: dict[str, str]
+    timestamp: str
+
+
+class FundamentalHealthResponse(BaseModel):
+    status: str = "healthy"
+    services: dict[str, bool]
+    timestamp: str
+
+
+class ScoringRankResponse(BaseModel):
+    status: str = "success"
+    count: int
+    dimension: str
+    limit: int
+    stocks: list[dict[str, Any]]
+    hierarchy: dict[str, Any]
+    timestamp: str
+
+
+class ScoringResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    scoring: dict[str, Any]
+    hierarchy: dict[str, Any]
+    timestamp: str
+
+
+class StockSearchResponse(BaseModel):
+    status: str = "success"
+    query: str
+    count: int
+    data: list[dict[str, Any]]
+    api_version: str
+    timestamp: str
+
+
+class StockDetailResponse(BaseModel):
+    status: str = "success"
+    ticker: str
+    data: dict[str, Any]
+    api_version: str
+    timestamp: str
+    deprecated: bool = False
+    migrated_to: str | None = None
+
+
+class BatchStocksResponse(BaseModel):
+    status: str = "success"
+    total: int
+    successful: int
+    failed: int
+    data: dict[str, Any]
+    api_version: str
+    timestamp: str
+
+
+class MarketSymbolsResponse(BaseModel):
+    status: str = "success"
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class LatestPricesResponse(BaseModel):
+    status: str = "success"
+    data: dict[str, Any]
+    timestamp: str
+
+
+class MarketOverviewResponse(BaseModel):
+    status: str = "success"
+    market: str
+    data: dict[str, Any]
+    timestamp: str
+
+
+class NasdaqDashboardResponse(BaseModel):
+    status: str = "success"
+    data: dict[str, Any]
+    timestamp: str
+
+
+class IndicesResponse(BaseModel):
+    status: str = "success"
+    data: dict[str, Any]
+    timestamp: str
+
+
+class IndustryRankingResponse(BaseModel):
+    status: str = "success"
+    data: dict[str, Any]
+    timestamp: str
+
+
+class OrderBookResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    data: dict[str, Any]
+    timestamp: str
+
+
+class OrderBookHistoryResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class PriceHistoryResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class MLPredictResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    prediction: dict[str, Any]
+    timestamp: str
+
+
+class MLPatternsResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    patterns: list[dict[str, Any]]
+    timestamp: str
+
+
+class MLAnomalyResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    anomaly: dict[str, Any]
+    timestamp: str
+
+
+class MLOptimizeResponse(BaseModel):
+    status: str = "success"
+    result: dict[str, Any]
+    timestamp: str
+
+
+class MLForecastResponse(BaseModel):
+    status: str = "success"
+    forecast: dict[str, Any]
+    timestamp: str
+
+
+class NewsMarketResponse(BaseModel):
+    status: str = "success"
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class NewsTickerResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class NewsSearchResponse(BaseModel):
+    status: str = "success"
+    query: str
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class NewsCategoryResponse(BaseModel):
+    status: str = "success"
+    category: str
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class NewsCategoriesResponse(BaseModel):
+    status: str = "success"
+    categories: list[str]
+    count: int
+
+
+class NewsRegionsResponse(BaseModel):
+    status: str = "success"
+    regions: list[str]
+    count: int
+
+
+class NewsMarketMovingResponse(BaseModel):
+    status: str = "success"
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class SectorSummaryResponse(BaseModel):
+    status: str = "success"
+    data: list[dict[str, Any]]
+    timestamp: str
+
+
+class ScreenResponse(BaseModel):
+    status: str = "success"
+    results: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class CompareStocksResponse(BaseModel):
+    status: str = "success"
+    data: dict[str, Any]
+    timestamp: str
+
+
+class CorrelationResponse(BaseModel):
+    status: str = "success"
+    correlation_matrix: dict[str, Any]
+    timestamp: str
+
+
+class CalendarMonthResponse(BaseModel):
+    status: str = "success"
+    year: int
+    month: int
+    events: list[dict[str, Any]]
+    count: int
+
+
+class CalendarEventResponse(BaseModel):
+    status: str = "success"
+    event: dict[str, Any]
+    timestamp: str
+
+
+class CalendarEventsResponse(BaseModel):
+    status: str = "success"
+    events: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class SymbolSearchResponse(BaseModel):
+    status: str = "success"
+    query: str
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class ExchangesResponse(BaseModel):
+    status: str = "success"
+    exchanges: list[str]
+    count: int
+
+
+class MarketTypesResponse(BaseModel):
+    status: str = "success"
+    market_types: list[str]
+    count: int
+
+
+class SymbolDetailResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    data: dict[str, Any]
+    timestamp: str
+
+
+class ExchangeCountResponse(BaseModel):
+    status: str = "success"
+    exchange: str
+    count: int
+    data: list[dict[str, Any]]
+    timestamp: str
+
+
+class MarketTypeCountResponse(BaseModel):
+    status: str = "success"
+    market_type: str
+    count: int
+    data: list[dict[str, Any]]
+    timestamp: str
+
+
+class StatsResponse(BaseModel):
+    status: str = "success"
+    stats: dict[str, Any]
+    timestamp: str
+
+
+class MarketPreferencesResponse(BaseModel):
+    status: str = "success"
+    preferences: dict[str, Any]
+    timestamp: str
+
+
+class RecentSearchesResponse(BaseModel):
+    status: str = "success"
+    searches: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class RankingResponse(BaseModel):
+    status: str = "success"
+    data: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class AdvancedFilterResponse(BaseModel):
+    status: str = "success"
+    total: int
+    limit: int
+    offset: int
+    results: list[dict[str, Any]]
+    applied_filters: list[dict[str, Any]]
+    execution_time_ms: float
+
+
+class FilterFieldsResponse(BaseModel):
+    status: str = "success"
+    fields: list[dict[str, Any]]
+    count: int
+
+
+class LiveQuoteResponse(BaseModel):
+    stream_key: str | None = None
+    event: str | None = None
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    timestamp: str | None = None
+
+
+class LiveScoresResponse(BaseModel):
+    stream_key: str | None = None
+    event: str | None = None
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    timestamp: str | None = None
+
+
+class LiveNewsResponse(BaseModel):
+    stream_key: str | None = None
+    event: str | None = None
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    timestamp: str | None = None
+
+
+class LiveOrderbookResponse(BaseModel):
+    stream_key: str | None = None
+    event: str | None = None
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    timestamp: str | None = None
+
+
+class LiveMarketResponse(BaseModel):
+    stream_key: str | None = None
+    event: str | None = None
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    timestamp: str | None = None
+
+
+class AlertHistoryEntryResponse(BaseModel):
+    id: str
+    alert_id: str
+    event_type: str
+    timestamp: str
+    details: dict[str, Any]
+
+
+class AlertHistoryResponse(BaseModel):
+    status: str = "success"
+    history: list[AlertHistoryEntryResponse]
+    count: int
+
+
+class AlertStatsResponse(BaseModel):
+    total: int
+    active: int
+    triggered: int
+    by_type: dict[str, int]
+
+
+class BulkCreateAlertsResponse(BaseModel):
+    status: str = "success"
+    created: list[dict[str, Any]]
+    count: int
+    errors: list[str] | None = None
+
+
+class ForecastModelResponse(BaseModel):
+    id: str
+    name: str
+    type: str
+    accuracy: float
+    last_trained: str
+    status: str
+
+
+class ForecastPerformanceResponse(BaseModel):
+    model_id: str
+    metrics: dict[str, Any]
+    timestamp: str
+
+
+class PriceForecastPoint(BaseModel):
+    date: str
+    predicted: float
+    lower_ci: float
+    upper_ci: float
+    confidence: float
+
+
+class PriceForecastResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    horizon: int
+    model: str
+    points: list[PriceForecastPoint]
+    timestamp: str
+
+
+class TrendForecastResponse(BaseModel):
+    status: str = "success"
+    symbol: str
+    trend: str
+    confidence: float
+    supporting_factors: list[str]
+    timestamp: str
+
+
+class BatchForecastResponse(BaseModel):
+    status: str = "success"
+    results: list[dict[str, Any]]
+    count: int
+    timestamp: str
+
+
+class ModelPerformanceResponse(BaseModel):
+    model_id: str
+    metrics: dict[str, Any]
+    timestamp: str
+
+
+class BacktestResponse(BaseModel):
+    status: str = "success"
+    model_id: str
+    results: dict[str, Any]
+    timestamp: str
+

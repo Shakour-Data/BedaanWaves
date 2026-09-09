@@ -33,6 +33,7 @@ from app.api.middleware import SecurityHeadersMiddleware
 from app.api.routes import (
     analysis_router,
     auth_router,
+    compare_router,
     dashboard_router,
     data_health_router,
     filter_router,
@@ -43,7 +44,6 @@ from app.api.routes import (
     market_data_router,
     market_router,
     ml_router,
-    nerk_router,
     news_router,
     notifications_router,
     password_reset_router,
@@ -547,6 +547,7 @@ async def lifespan(app: FastAPI):
     app.include_router(password_reset_router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
     app.include_router(market_router, prefix="/api/v1/market", tags=["market"])
+    app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
     app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["analysis"])
     app.include_router(portfolio_router, prefix="/api/v1/portfolio", tags=["portfolio"])
     app.include_router(history_router, prefix="/api/v1/history", tags=["history"])
@@ -557,17 +558,16 @@ async def lifespan(app: FastAPI):
     app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
     app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
     app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
-    app.include_router(nerk_router, prefix="/api/v1/nerk", tags=["nerk"])
     app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
     app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
     app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
-    app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
     app.include_router(data_health_router, tags=["data-health"])
     app.include_router(dashboard_router, prefix="/api/v1/analysis", tags=["dashboard"])
     app.include_router(filter_router, prefix="/api/v1/filter", tags=["filter"])
     app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
     app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
     app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
+    app.include_router(compare_router, prefix="/api/v1/compare", tags=["compare"])
 
     logger.info("Registered all API routes")
     logger.info("BedaanWaves application ready")
@@ -679,6 +679,7 @@ def custom_openapi():
 
     openapi_schema.setdefault("components", {})
     openapi_schema["components"].setdefault("securitySchemes", {})
+    openapi_schema["components"].setdefault("schemas", {})
 
     openapi_schema["components"]["securitySchemes"] = {
         "BearerAuth": {
@@ -693,6 +694,37 @@ def custom_openapi():
             "name": "refresh_token",
             "description": "Optional refresh token cookie for session renewal",
         },
+    }
+
+    openapi_schema["components"]["schemas"]["ErrorResponse"] = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "example": "error"},
+            "error_code": {"type": "string", "example": "NOT_FOUND"},
+            "message": {"type": "string", "example": "Resource not found"},
+            "details": {"type": "object", "example": {"field": "validation error"}},
+        },
+        "required": ["status", "error_code", "message"],
+    }
+
+    openapi_schema["components"]["schemas"]["SuccessResponse"] = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "example": "success"},
+            "data": {"type": "object"},
+            "message": {"type": "string", "example": "Operation completed successfully"},
+        },
+        "required": ["status"],
+    }
+
+    openapi_schema["components"]["schemas"]["PaginationMetadata"] = {
+        "type": "object",
+        "properties": {
+            "total": {"type": "integer", "example": 100},
+            "skip": {"type": "integer", "example": 0},
+            "limit": {"type": "integer", "example": 50},
+        },
+        "required": ["total", "skip", "limit"],
     }
 
     app.openapi_schema = openapi_schema

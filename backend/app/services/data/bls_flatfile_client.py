@@ -24,10 +24,11 @@ from typing import Optional
 
 import requests
 
+from app.infrastructure.resilience.retry_decorator import retry_with_backoff
+
 logger = logging.getLogger(__name__)
 
 HTTP_TIMEOUT = 25
-_HTTP_RETRIES = 2
 USER_AGENT = (
     "BedaanWaves/2.0 (+https://bedaanwaves.com; free BLS data fetcher; "
     "contact@bedaanwaves.com) "
@@ -38,36 +39,28 @@ CPI_URL = "https://download.bls.gov/pub/time.series/cu/cu.data.1.AllData"
 EMPLOYMENT_URL = "https://download.bls.gov/pub/time.series/ln/ln.data.1.AllData"
 
 # Series ids of interest (BLS public series codes).
-CPI_SERIES = "CUSR0000SA0"        # CPI-U All items (All Urban Consumers)
-CORE_CPI_SERIES = "CUSR0000SA0"  # Core CPI uses CUXR0SAD in BLS; we fall back to FRED CPILFESL
-UNEMPLOYMENT_RATE_SERIES = "LNS14000000"  # Civilian Unemployment Rate
+CPI_SERIES = "CUSR0000SA0"
+CORE_CPI_SERIES = "CUSR0000SA0"
+UNEMPLOYMENT_RATE_SERIES = "LNS14000000"
 
 
+@retry_with_backoff(max_retries=3, base_delay=1.0, retry_on=(Exception,))
 def _http_get(url: str) -> Optional[str]:
-    """GET a URL and return decoded response text, or None on failure.
-
-    Uses requests (not urllib.request) for reliable HTTPS transport.
-    Retries once on transient DNS/connection errors.
-    """
+    """GET a URL and return decoded response text, or None on failure."""
     headers = {"User-Agent": USER_AGENT, "Accept": "text/csv, */*;q=0.8"}
-    for attempt in range(_HTTP_RETRIES):
-        try:
-            resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)  # noqa: S310
-            resp.raise_for_status()
-            return resp.text
-        except requests.exceptions.ConnectionError as exc:
-            if attempt < _HTTP_RETRIES - 1:
-                logger.debug("Transient connection error for %s, retrying: %s", url, exc)
-                continue
-            logger.warning("HTTP GET failed for %s: %s", url, exc)
-            return None
-        except requests.exceptions.RequestException as exc:
-            logger.warning("HTTP request error for %s: %s", url, exc)
-            return None
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Unexpected HTTP error for %s: %s", url, exc)
-            return None
-    return None
+    try:
+        resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        return resp.text
+    except requests.exceptions.ConnectionError as exc:
+        logger.warning("HTTP GET failed for %s: %s", url, exc)
+        return None
+    except requests.exceptions.RequestException as exc:
+        logger.warning("HTTP request error for %s: %s", url, exc)
+        return None
+    except Exception as exc:
+        logger.warning("Unexpected HTTP error for %s: %s", url, exc)
+        return None
 
 
 def _download(url: str) -> Optional[str]:

@@ -134,7 +134,7 @@ function snapshotHierarchyToLegacy(snap: SnapshotResponse, tab: ScoringTab): Hie
   );
   const resolvedGrade = overallObj?.grade ?? scores.grade ?? null;
 
-  const toArray = (dict: Record<string, number> | undefined | null): ScoreItemShape[] => {
+  const toArray = (dict: object | undefined | null): ScoreItemShape[] => {
     if (!dict) return [];
     return Object.entries(dict).map(([key, value]) => ({
       key,

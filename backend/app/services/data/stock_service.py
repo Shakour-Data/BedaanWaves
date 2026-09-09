@@ -13,6 +13,7 @@ from typing import Any
 from app.core.config import get_settings
 from app.core.exceptions import DataProviderException
 from app.core.utils import utc_now_iso
+from app.infrastructure.resilience.retry_decorator import retry_with_backoff
 
 from ..core import CachedService
 
@@ -79,13 +80,14 @@ class StockService(CachedService):
             "NYBOT",
         }
 
+        @retry_with_backoff(max_retries=3, base_delay=1.0, retry_on=(Exception,))
         def _search_yahoo() -> list:
             import requests
             try:
                 url = "https://query1.finance.yahoo.com/v1/finance/search"
                 params = {"q": query, "quotesCount": 25, "newsCount": 0}
                 headers = {"User-Agent": "Mozilla/5.0"}
-                resp = requests.get(url, params=params, headers=headers, timeout=10)  # type: ignore[arg-type]
+                resp = requests.get(url, params=params, headers=headers, timeout=10)
                 if resp.status_code == 200:
                     return resp.json().get("quotes", [])
             except Exception:
