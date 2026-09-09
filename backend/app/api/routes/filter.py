@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_async_session
 from app.schemas.filter_schemas import AdvancedFilterRequest
+from app.schemas.schemas import AdvancedFilterResponse, FilterFieldsResponse
 from app.services.filter.field_registry import FieldRegistry
 from app.services.filter.filter_parser import FilterParseError, parse_filter_tree
 from app.services.filter.filter_service import FilterService
@@ -15,11 +16,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["filter"])
 
 
-@router.post("/advanced", response_model=dict)
+@router.post("/advanced", response_model=AdvancedFilterResponse)
 async def advanced_filter(
     payload: AdvancedFilterRequest,
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> AdvancedFilterResponse:
     """
     Apply an advanced hierarchical filter across scoring levels.
 
@@ -42,17 +43,19 @@ async def advanced_filter(
             sort_by=payload.sort_by or "overall_score",
             sort_dir=payload.sort_dir or "desc",
         )
-        return result
+        return AdvancedFilterResponse(**result)
     except Exception as exc:
         logger.error(f"Advanced filter error: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal filter engine error")
 
 
-@router.get("/fields", response_model=dict)
-async def list_filterable_fields() -> dict:
+@router.get("/fields", response_model=FilterFieldsResponse)
+async def list_filterable_fields() -> FilterFieldsResponse:
     """Return the full registry of filterable fields for the UI."""
     registry = FieldRegistry()
-    return {
-        "status": "success",
-        "fields": registry.list_all_fields(),
-    }
+    fields = registry.list_all_fields()
+    return FilterFieldsResponse(
+        status="success",
+        fields=fields,
+        count=len(fields),
+    )

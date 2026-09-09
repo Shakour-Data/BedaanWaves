@@ -8,6 +8,15 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.schemas.schemas import (
+    CalendarEventResponse,
+    CalendarEventsResponse,
+    CalendarMonthResponse,
+    CompareStocksResponse,
+    CorrelationResponse,
+    ScreenResponse,
+    SectorSummaryResponse,
+)
 from app.core.utils import utc_now_iso
 from app.db.base import get_async_session
 from app.models.models import Asset, MLSignal, candle_model_for_market
@@ -115,25 +124,28 @@ async def _build_universe(
     return universe
 
 
-@router.get("/sectors/summary")
+@router.get("/sectors/summary", response_model=SectorSummaryResponse)
 async def sectors_summary(
     market: str = Query(None),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> SectorSummaryResponse:
     """Aggregate the stock universe into sector-level intelligence."""
     universe = await _build_universe(db, market)
     svc = _load(SectorAnalysisService)
     await svc.initialize()
     result = await svc.analyze_all(universe)
-    result["timestamp"] = utc_now_iso()
-    return {"status": "success", **result}
+    return {
+        "status": "success",
+        "data": result.get("sectors", []),
+        "timestamp": utc_now_iso(),
+    }
 
 
-@router.post("/screen")
+@router.post("/screen", response_model=ScreenResponse)
 async def screen(
     data: dict = Body(...),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> ScreenResponse:
     """
     Screen stocks against criteria.
 
@@ -147,11 +159,17 @@ async def screen(
 
     svc = _load(ScreeningService)
     await svc.initialize()
-    return await svc.screen(universe, criteria)
+    result = await svc.screen(universe, criteria)
+    return {
+        "status": "success",
+        "results": result.get("results", []),
+        "count": result.get("matched", 0),
+        "timestamp": utc_now_iso(),
+    }
 
 
-@router.post("/compare")
-async def compare(data: dict = Body(...)) -> dict:
+@router.post("/compare", response_model=CompareStocksResponse)
+async def compare(data: dict = Body(...)) -> CompareStocksResponse:
     """
     Compare symbols across metrics.
 
@@ -161,12 +179,15 @@ async def compare(data: dict = Body(...)) -> dict:
     svc = _load(ComparisonService)
     await svc.initialize()
     result = await svc.compare(symbols_data)
-    result["timestamp"] = utc_now_iso()
-    return result
+    return {
+        "status": "success",
+        "data": result,
+        "timestamp": utc_now_iso(),
+    }
 
 
-@router.post("/correlation")
-async def correlation(data: dict = Body(...)) -> dict:
+@router.post("/correlation", response_model=CorrelationResponse)
+async def correlation(data: dict = Body(...)) -> CorrelationResponse:
     """
     Compute a correlation matrix from return series.
 
@@ -187,27 +208,36 @@ async def correlation(data: dict = Body(...)) -> dict:
         high_threshold=float(data.get("high_threshold", 0.7)),
         low_threshold=float(data.get("low_threshold", -0.7)),
     )
-    result["timestamp"] = utc_now_iso()
-    return result
+    return {
+        "status": "success",
+        "correlation_matrix": result,
+        "timestamp": utc_now_iso(),
+    }
 
 
-@router.get("/calendar/month")
+@router.get("/calendar/month", response_model=CalendarMonthResponse)
 async def calendar_month(
     year: int = Query(..., ge=1300, le=2100),
     month: int = Query(..., ge=1, le=12),
-) -> dict:
+) -> CalendarMonthResponse:
     """Return trading days and weekend days for a month."""
     svc = _load(CalendarService)
     await svc.initialize()
     result = svc.get_month_calendar(year, month)
-    return {"status": "success", **result}
+    return {
+        "status": "success",
+        "year": result["year"],
+        "month": result["month"],
+        "events": result["trading_days"],
+        "count": result["trading_day_count"],
+    }
 
 
-@router.get("/calendar/events")
+@router.get("/calendar/events", response_model=CalendarEventsResponse)
 async def calendar_events(
     day: str = Query(None, description="ISO date (YYYY-MM-DD)"),
     symbol: str = Query(None),
-) -> dict:
+) -> CalendarEventsResponse:
     """List corporate/calendar events, optionally filtered by day and symbol."""
     svc = _load(CalendarService)
     await svc.initialize()
@@ -216,13 +246,22 @@ async def calendar_events(
         events = svc.get_events(day=parsed, symbol=symbol)
     else:
         events = svc.get_events(symbol=symbol)
-    return {"status": "success", "count": len(events), "events": events}
+    return {
+        "status": "success",
+        "events": events,
+        "count": len(events),
+        "timestamp": utc_now_iso(),
+    }
 
 
-@router.post("/calendar/events")
-async def add_calendar_event(data: dict = Body(...)) -> dict:
+@router.post("/calendar/events", response_model=CalendarEventResponse, status_code=201)
+async def add_calendar_event(data: dict = Body(...)) -> CalendarEventResponse:
     """Add a corporate/calendar event. Required: date, type, title."""
     svc = _load(CalendarService)
     await svc.initialize()
     record = svc.add_event(data)
-    return {"status": "success", "event": record}
+    return {
+        "status": "success",
+        "event": record,
+        "timestamp": utc_now_iso(),
+    }

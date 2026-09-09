@@ -1,17 +1,11 @@
 """Global API Middleware
 
-Provides four FastAPI/Starlette middlewares:
-
-* ``CorrelationIdMiddleware``  - attaches a request id (X-Correlation-ID) used for
-  tracing and request logging.
-* ``AuthGuardMiddleware``      - the global authentication guard. When
-  ``REQUIRE_AUTH`` is enabled it rejects unauthenticated requests to every
-  protected API path (with a configurable public allow-list).
-* ``RateLimitMiddleware``     - Redis-backed distributed sliding-window rate
-  limiting keyed by client IP, honoring the ``RATE_LIMIT_*`` configuration.
-  Falls back to in-memory limiting when Redis is unavailable.
-* ``RequestLoggingMiddleware`` - logs incoming requests and responses with timing.
-* ``SecurityHeadersMiddleware`` - adds OWASP-recommended security headers.
+Provides FastAPI/Starlette middlewares for the BedaanWaves backend:
+- CorrelationIdMiddleware: attaches/propagates X-Correlation-ID
+- AuthGuardMiddleware: enforces Bearer token on protected paths
+- RateLimitMiddleware: Redis-backed rate limiting with in-memory fallback
+- RequestLoggingMiddleware: logs requests/responses with timing
+- SecurityHeadersMiddleware: adds OWASP security headers
 """
 
 from __future__ import annotations
@@ -52,8 +46,6 @@ def _client_ip(request: Request) -> str:
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
-    """Generate/propagate a correlation id for every request."""
-
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         correlation_id = request.headers.get("x-correlation-id") or uuid.uuid4().hex
         request.state.correlation_id = correlation_id
@@ -63,8 +55,6 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
 
 
 class AuthGuardMiddleware(BaseHTTPMiddleware):
-    """Enforce a valid Bearer access token on protected API paths."""
-
     def __init__(self, app, *, enabled: bool = True) -> None:
         super().__init__(app)
         self.enabled = enabled
@@ -124,11 +114,6 @@ class AuthGuardMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Redis-backed distributed sliding-window rate limiter keyed by client IP.
-
-    Falls back to in-memory limiting when Redis is unavailable.
-    """
-
     def __init__(self, app, *, enabled: bool = True) -> None:
         super().__init__(app)
         self.enabled = enabled
@@ -180,7 +165,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
 
     def _fallback_rate_limit(self, key: str, now: float) -> bool:
-        """In-memory fallback when Redis is unavailable. Returns True if blocked."""
         with self._lock:
             self._last_activity[key] = now
             if len(self._windows) > 1000:
@@ -216,8 +200,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Log incoming requests and responses."""
-
     def __init__(self, app, *, enabled: bool = True) -> None:
         super().__init__(app)
         self.enabled = enabled
@@ -265,29 +247,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """
-    Adds security headers to every response per OWASP guidelines.
-
-    Headers:
-    - Strict-Transport-Security (HSTS)
-    - Content-Security-Policy
-    - X-Frame-Options
-    - X-Content-Type-Options
-    - Referrer-Policy
-    - Permissions-Policy
-    - X-XSS-Protection
-    - Cache-Control
-    """
-
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
 
-        # HSTS - Force HTTPS for 1 year, include subdomains
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains; preload"
-        )
-
-        # CSP - Restrict resource sources
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.bedaanwaves.com; "
@@ -299,31 +262,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'; "
             "form-action 'self'"
         )
-
-        # Prevent clickjacking
         response.headers["X-Frame-Options"] = "DENY"
-
-        # Prevent MIME type sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
-
-        # Referrer policy
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-
-        # Permissions policy - restrict browser features
-        response.headers["Permissions-Policy"] = (
-            "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-        )
-
-        # XSS protection (legacy)
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
         response.headers["X-XSS-Protection"] = "1; mode=block"
 
-        # Cache control - prevent caching of sensitive API responses
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
 
-        # Remove server identity disclosure safely
         for header_name in ("Server", "X-Powered-By"):
             try:
                 del response.headers[header_name]

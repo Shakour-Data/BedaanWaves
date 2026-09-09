@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_async_session
+from app.schemas.schemas import RankingResponse
 from app.services.analysis.ranking_service import RankingService
 
 logger = logging.getLogger(__name__)
@@ -67,14 +68,14 @@ def _risk_score(closes: list[float]) -> float:
         return max(0.0, 100.0 - (volatility * 100))
 
 
-@router.get("/nasdaq", response_model=dict)
+@router.get("/nasdaq", response_model=RankingResponse)
 async def get_nasdaq_rankings(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     sort_by: str = Query("overall_score"),
     order: str = Query("desc"),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> RankingResponse:
     """
     Get ranked list of Nasdaq stocks with their 6D scores.
 
@@ -94,6 +95,6 @@ async def get_nasdaq_rankings(
             order=order,
             db=db,
         )
-        return result
+        return RankingResponse(**result)
     finally:
         await service.shutdown()

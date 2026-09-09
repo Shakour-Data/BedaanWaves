@@ -305,7 +305,7 @@ async def get_risk_analysis(
     }
 
 
-@router.get("/technical/{symbol}", response_model=dict)
+@router.get("/technical/{symbol}", response_model=TechnicalAnalysisResponse)
 async def technical_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -364,7 +364,7 @@ async def technical_analysis(
     }
 
 
-@router.get("/risk/{symbol}", response_model=dict)
+@router.get("/risk/{symbol}", response_model=RiskAnalysisResponse)
 async def risk_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -427,7 +427,7 @@ async def risk_analysis(
     }
 
 
-@router.get("/fundamental/{symbol}", response_model=dict)
+@router.get("/fundamental/{symbol}", response_model=FundamentalAnalysisResponse)
 @rate_limit(limit=10, window=60)  # 10 requests per minute
 async def fundamental_analysis(
     symbol: str,
@@ -487,7 +487,7 @@ async def fundamental_analysis(
         await financial_ingest_service.shutdown()
 
 
-@router.get("/momentum/{symbol}", response_model=dict)
+@router.get("/momentum/{symbol}", response_model=MomentumAnalysisResponse)
 async def momentum_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -534,7 +534,7 @@ async def momentum_analysis(
     }
 
 
-@router.get("/volatility/{symbol}", response_model=dict)
+@router.get("/volatility/{symbol}", response_model=VolatilityAnalysisResponse)
 async def volatility_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -581,10 +581,10 @@ async def volatility_analysis(
     }
 
 
-@router.post("/scoring", response_model=dict)
+@router.post("/scoring", response_model=ScoringResponse)
 async def scoring_analysis(
     data: dict = Body(...),
-) -> dict:
+) -> ScoringResponse:
     """
     Comprehensive 6D scoring for a ticker.
 
@@ -630,7 +630,7 @@ async def scoring_analysis(
     }
 
 
-@router.get("/scoring/{symbol}", response_model=dict)
+@router.get("/scoring/{symbol}", response_model=ScoringResponse)
 async def get_symbol_scoring(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -754,7 +754,7 @@ async def get_symbol_scoring(
     }
 
 
-@router.get("/sentiment/{symbol}", response_model=dict)
+@router.get("/sentiment/{symbol}", response_model=SentimentAnalysisResponse)
 async def get_sentiment_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -786,7 +786,7 @@ async def get_sentiment_analysis(
     }
 
 
-@router.post("/scoring/rank", response_model=dict)
+@router.post("/scoring/rank", response_model=ScoringRankResponse)
 async def score_and_rank_stocks(
     data: dict = Body(...),
 ) -> dict:
@@ -848,7 +848,7 @@ async def score_and_rank_stocks(
     }
 
 
-@router.get("/fundamental/batch", response_model=dict)
+@router.get("/fundamental/batch", response_model=BatchFundamentalResponse)
 @rate_limit(limit=5, window=60)  # 5 batch requests per minute
 async def batch_fundamental_analysis(
     symbols: str = Query(..., description="Comma-separated list of symbols"),
@@ -920,7 +920,7 @@ async def batch_fundamental_analysis(
     }
 
 
-@router.get("/fundamentals/health", response_model=dict)
+@router.get("/fundamentals/health", response_model=FundamentalHealthResponse)
 async def fundamental_analysis_health() -> dict:
     """Health check for fundamental analysis services."""
     return {
@@ -933,7 +933,7 @@ async def fundamental_analysis_health() -> dict:
     }
 
 
-@router.get("/scoring/history/{symbol}", response_model=dict)
+@router.get("/scoring/history/{symbol}", response_model=ScoreHistoryResponse)
 async def get_scoring_history(
     symbol: str,
     days: int = Query(30, ge=1, le=365),
@@ -981,7 +981,7 @@ async def get_scoring_hierarchy(
         await service.shutdown()
 
 
-@router.get("/scoring/coefficients/{symbol}", response_model=dict)
+@router.get("/scoring/coefficients/{symbol}", response_model=ScoringCoefficientsResponse)
 async def get_scoring_coefficients(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -1004,7 +1004,7 @@ async def get_scoring_coefficients(
         await service.shutdown()
 
 
-@router.get("/macro/indicators", response_model=dict)
+@router.get("/macro/indicators", response_model=MacroIndicatorsResponse)
 async def get_macro_indicators(
     db: AsyncSession = Depends(get_async_session),
     limit: int = Query(50, ge=1, le=200),
@@ -1030,7 +1030,7 @@ async def get_macro_indicators(
     return {"indicators": out, "count": len(indicators)}
 
 
-@router.get("/macro/forecast", response_model=dict)
+@router.get("/macro/forecast", response_model=MacroForecastResponse)
 async def get_macro_forecast(
     db: AsyncSession = Depends(get_async_session),
     codes: Optional[str] = Query(None, description="Comma-separated indicator codes"),

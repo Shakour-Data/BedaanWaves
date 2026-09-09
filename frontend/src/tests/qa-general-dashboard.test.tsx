@@ -1,31 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { GeneralDashboardTab } from "@/components/dashboard/GeneralDashboardTab";
+import { useSnapshot, useSnapshotLoading, useSnapshotError, useLoadSnapshot } from "@/store/useDateStore";
+import { snapshotToChartsModel } from "@/lib/charts-model";
 
 vi.mock("@/store/useDateStore", () => ({
-  useSnapshot: () => null,
-  useSnapshotLoading: () => false,
-  useSnapshotError: () => null,
-  useLoadSnapshot: () => vi.fn(),
-  useSnapshotId: () => null,
-  useSnapshotTimestamp: () => null,
-  useSnapshotSymbol: () => null,
-  useSetSnapshot: () => vi.fn(),
-  useClearSnapshot: () => vi.fn(),
-  useLoadSnapshotIndex: () => vi.fn(),
-  useSelectSnapshotById: () => vi.fn(),
-  useSelectedDate: () => null,
-  useLatestAvailableDate: () => null,
-  useEffectiveDate: () => null,
-  useUseLatestDate: () => false,
-  useDateStore: () => ({}),
+  useSnapshot: vi.fn(),
+  useSnapshotLoading: vi.fn(),
+  useSnapshotError: vi.fn(),
+  useLoadSnapshot: vi.fn(),
+  useSnapshotId: vi.fn(),
+  useSnapshotTimestamp: vi.fn(),
+  useSnapshotSymbol: vi.fn(),
+  useSetSnapshot: vi.fn(),
+  useClearSnapshot: vi.fn(),
+  useLoadSnapshotIndex: vi.fn(),
+  useSelectSnapshotById: vi.fn(),
+  useSelectedDate: vi.fn(),
+  useLatestAvailableDate: vi.fn(),
+  useEffectiveDate: vi.fn(),
+  useUseLatestDate: vi.fn(),
+  useDateStore: vi.fn(),
 }));
 
 vi.mock("@/lib/charts-model", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    snapshotToChartsModel: vi.fn(() => null),
+    snapshotToChartsModel: vi.fn(),
   };
 });
 
@@ -52,34 +54,42 @@ vi.mock("@/components/ui/Skeleton", () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }));
 vi.mock("@/components/ui/ErrorMessage", () => ({
-  ErrorMessage: ({ message }: { message: string }) => (
-    <div data-testid="error-message">{message}</div>
+  ErrorMessage: ({ message, actions }: { message: string; actions?: { label: string }[] }) => (
+    <div data-testid="error-message">
+      {message}
+      {actions?.map((a) => (
+        <button key={a.label}>{a.label}</button>
+      ))}
+    </div>
   ),
 }));
 
 describe("QA Priority 1 - GeneralDashboardTab UI", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useSnapshot).mockReturnValue(null);
+    vi.mocked(useSnapshotLoading).mockReturnValue(false);
+    vi.mocked(useSnapshotError).mockReturnValue(null);
+    vi.mocked(useLoadSnapshot).mockReturnValue(() => Promise.resolve({}));
+    vi.mocked(snapshotToChartsModel).mockReturnValue(null);
   });
 
   it("renders skeleton grid while loading with no model", () => {
+    vi.mocked(useSnapshotLoading).mockReturnValue(true);
     render(<GeneralDashboardTab />);
     const skeletons = screen.getAllByTestId("skeleton");
     expect(skeletons.length).toBeGreaterThanOrEqual(16);
   });
 
   it("renders error message when model is null and error is present", () => {
-    const { useSnapshotError } = require("@/store/useDateStore");
     vi.mocked(useSnapshotError).mockReturnValue("Failed to load snapshot");
-
     render(<GeneralDashboardTab />);
     expect(screen.getByTestId("error-message")).toHaveTextContent("Failed to load snapshot");
   });
 
   it("renders retry button in error state", () => {
-    const { useSnapshotError, useLoadSnapshot } = require("@/store/useDateStore");
     vi.mocked(useSnapshotError).mockReturnValue("Network error");
-    const mockRetry = vi.fn();
+    const mockRetry = vi.fn().mockResolvedValue({});
     vi.mocked(useLoadSnapshot).mockReturnValue(mockRetry);
 
     render(<GeneralDashboardTab />);
@@ -88,9 +98,6 @@ describe("QA Priority 1 - GeneralDashboardTab UI", () => {
   });
 
   it("shows parity verified badge when model is valid", () => {
-    const { useSnapshot, useSnapshotLoading } = require("@/store/useDateStore");
-    const { snapshotToChartsModel } = require("@/lib/charts-model");
-
     const mockSnapshot = {
       snapshotId: "snap_001",
       timestamp: "2026-09-09T00:00:00Z",
@@ -175,9 +182,6 @@ describe("QA Priority 1 - GeneralDashboardTab UI", () => {
   });
 
   it("renders parity mismatch banner when model reports mismatches", () => {
-    const { useSnapshot, useSnapshotLoading } = require("@/store/useDateStore");
-    const { snapshotToChartsModel } = require("@/lib/charts-model");
-
     const mockSnapshot = {
       snapshotId: "snap_001",
       timestamp: "2026-09-09T00:00:00Z",
@@ -242,7 +246,6 @@ describe("QA Priority 1 - GeneralDashboardTab UI", () => {
   });
 
   it("passes symbol prop through to snapshot loader", () => {
-    const { useLoadSnapshot } = require("@/store/useDateStore");
     const mockLoad = vi.fn().mockResolvedValue({});
     vi.mocked(useLoadSnapshot).mockReturnValue(mockLoad);
 

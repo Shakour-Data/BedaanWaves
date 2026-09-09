@@ -335,7 +335,13 @@ async def live_intraday_stream(
 async def live_market_stream(
     request: Request,
 ) -> StreamingResponse:
-    """Stream aggregate market-pulse composite events."""
+    """
+    Stream aggregate market-pulse composite events for the NASDAQ market.
+
+    Dispatches periodic composites including breadth, volatility, and
+    momentum aggregates. Requires authentication unless the server is
+    running in development mode.
+    """
     _authenticate(request)
     stream_key = "market"
     orch, metrics = _get_orchestrator_and_metrics()
@@ -387,7 +393,13 @@ async def live_scores_stream(
 async def live_news_stream(
     request: Request,
 ) -> StreamingResponse:
-    """Stream news items as they are detected by the periodic news poller."""
+    """
+    Stream news items as they are detected by the periodic news poller.
+
+    Each event carries the headline, source, timestamp, and relevance
+    score. Requires authentication unless the server is running in
+    development mode.
+    """
     _authenticate(request)
     stream_key = "news"
     orch, metrics = _get_orchestrator_and_metrics()

@@ -1058,7 +1058,7 @@ class MarketPreferencesResponse(BaseModel):
 
 class RecentSearchesResponse(BaseModel):
     status: str = "success"
-    searches: list[dict[str, Any]]
+    searches: list[str]
     count: int
     timestamp: str
 

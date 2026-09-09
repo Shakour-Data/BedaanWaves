@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        case_sensitive=True,
+        str_strip_whitespace=True,
         extra="ignore",
     )
     """Application Settings - Consolidated from 5 OldFils projects"""
@@ -464,12 +466,6 @@ class Settings(BaseSettings):
                     "Refusing to start with a weak JWT secret."
                 )
         return self
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        str_strip_whitespace = True
-        extra = "ignore"
 
 
 @lru_cache

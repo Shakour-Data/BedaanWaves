@@ -27,6 +27,7 @@ from enum import StrEnum
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 
+from app.schemas.schemas import AlertHistoryResponse, AlertStatsResponse, BulkCreateAlertsResponse
 from ...services.notifications.alert_service import AlertService
 from ...services.user.auth_service import get_current_user
 
@@ -191,7 +192,7 @@ class AlertHistoryEntry(BaseModel):
     delivery_status: str  # success, failed, pending
 
 
-class AlertHistoryResponse(BaseModel):
+class AlertHistoryResponseLocal(BaseModel):
     """Alert history response"""
     status: str
     count: int
@@ -206,7 +207,7 @@ class BulkCreateAlertsRequest(BaseModel):
     alerts: list[CreateAlertRequest] = Field(..., min_items=1, max_items=10)
 
 
-class BulkCreateAlertsResponse(BaseModel):
+class BulkCreateAlertsResponseLocal(BaseModel):
     """Response for bulk alert creation"""
     status: str
     created_count: int
@@ -386,8 +387,8 @@ async def get_alert_history(
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: dict = Depends(get_current_user),
     alert_service: AlertService = Depends(),
-):
-    """Get history of triggered alerts"""
+) -> AlertHistoryResponse:
+    """Get history of triggered alerts for the current user."""
     try:
         history = await alert_service.get_alert_history(
             user_id=current_user["id"],
@@ -410,7 +411,7 @@ async def create_alerts_bulk(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     alert_service: AlertService = Depends(),
-):
+) -> BulkCreateAlertsResponse:
     """
     Create multiple alerts in bulk.
 
@@ -482,21 +483,17 @@ async def get_alert_types():
     ]
 
 
-@router.get("/stats", response_model=dict)
+@router.get("/stats", response_model=AlertStatsResponse)
 async def get_alert_stats(
     current_user: dict = Depends(get_current_user),
     alert_service: AlertService = Depends(),
-):
-    """Get alert statistics for the current user"""
+) -> AlertStatsResponse:
+    """Get alert statistics for the current user."""
+    from app.core.utils import utc_now_iso
     try:
         stats = await alert_service.get_user_alert_stats(
             user_id=current_user["id"]
         )
-        return {
-            "status": "success",
-            "user_id": current_user["id"],
-            "stats": stats,
-            "timestamp": utc_now_iso(),
-        }
+        return AlertStatsResponse(**stats)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -71,16 +71,360 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-export default function DashboardPage() {
-  const addToast = useUXStore((s) => s.addToast);
+function DashboardOverview({ data, load, maxDimAvg }: {
+  data: DashboardSnapshot;
+  load: (mode: "initial" | "refresh") => void;
+  maxDimAvg: number;
+}) {
+  return (
+    <>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
+                Market Dashboard
+              </h1>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Live NASDAQ overview · last update {fmtDate(data.latestDate)}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => load("refresh")}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text-primary)]"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+          <Link
+            href="/leaderboard"
+            className="inline-flex items-center gap-2 rounded-xl border border-transparent bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
+          >
+            View leaderboard
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </header>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <Zap className="h-4 w-4 text-[var(--color-primary)]" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+            Quick search
+          </h2>
+        </div>
+        <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
+          Search any stock, news headline, or page in the sidebar. Or use the quick search below.
+        </p>
+        <UnifiedSearchBar variant="topbar" placeholder="Search stocks, news, or pages…" />
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {data.stats.map((s) => (
+          <Card key={s.label} className="flex flex-col gap-1 p-4">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+              {s.label}
+            </span>
+            <span className="text-xl font-bold text-[var(--color-text-primary)]">{s.value}</span>
+          </Card>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-[var(--color-primary)]" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Dimension scores
+              </h2>
+            </div>
+            <Link
+              href="/scoring"
+              className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              View details →
+            </Link>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {data.dimensions.map((d) => {
+              const avg = d.data?.avg_score ?? 0;
+              const pct = Math.max(0, Math.min(100, (avg / maxDimAvg) * 100));
+              const { grade, tone } = gradeLabel(avg);
+              return (
+                <li key={d.key} className="flex items-center gap-3">
+                  <span className="w-28 text-sm font-medium text-[var(--color-text-primary)]">{d.label}</span>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--color-muted)]">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        tone === "success" && "bg-[var(--color-success)]",
+                        tone === "primary" && "bg-[var(--color-primary)]",
+                        tone === "warning" && "bg-[var(--color-warning)]",
+                        tone === "error" && "bg-[var(--color-error)]"
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-16 text-right text-sm font-semibold text-[var(--color-text-primary)]">
+                    {fmtScore(avg)}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
+                      tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+                      tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+                      tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+                      tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
+                    )}
+                  >
+                    {grade}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+
+        <Card className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Newspaper className="h-4 w-4 text-[var(--color-primary)]" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              Latest news
+            </h2>
+          </div>
+          {data.news.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No news available right now.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {data.news.slice(0, 6).map((n, i) => (
+                <li key={i} className="border-b border-[var(--color-border)] pb-3 last:border-b-0 last:pb-0">
+                  <p className="line-clamp-2 text-sm font-medium text-[var(--color-text-primary)]">{n.title}</p>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    {n.source}
+                    {n.time ? ` · ${n.time}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            href="/news"
+            className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary)] hover:underline"
+          >
+            See all news <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </Card>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-[var(--color-warning)]" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Top performers
+              </h2>
+            </div>
+            <Link
+              href="/leaderboard"
+              className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              See all →
+            </Link>
+          </div>
+          {data.topPerformers.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No data available.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {data.topPerformers.map((p) => {
+                const { grade, tone } = gradeLabel(p.score);
+                return (
+                  <li key={p.symbol}>
+                    <Link
+                      href={`/stocks/${p.symbol}`}
+                      className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--color-muted)]"
+                    >
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold",
+                          tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+                          tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+                          tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+                          tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
+                        )}
+                      >
+                        {grade}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{p.symbol}</p>
+                        <p className="truncate text-xs text-[var(--color-text-secondary)]">{p.name}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm font-semibold text-[var(--color-success)]">
+                        <TrendingUp className="h-3.5 w-3.5" />
+                        {fmtScore(p.score)}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-[var(--color-error)]" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Underperformers
+              </h2>
+            </div>
+            <Link
+              href="/movers"
+              className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              See all →
+            </Link>
+          </div>
+          {data.bottomPerformers.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No data available.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {data.bottomPerformers.map((p) => {
+                const { grade, tone } = gradeLabel(p.score);
+                return (
+                  <li key={p.symbol}>
+                    <Link
+                      href={`/stocks/${p.symbol}`}
+                      className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--color-muted)]"
+                    >
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold",
+                          tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+                          tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+                          tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+                          tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
+                        )}
+                      >
+                        {grade}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{p.symbol}</p>
+                        <p className="truncate text-xs text-[var(--color-text-secondary)]">{p.name}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm font-semibold text-[var(--color-error)]">
+                        <TrendingDown className="h-3.5 w-3.5" />
+                        {fmtScore(p.score)}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      </section>
+
+      {data.watchlist.length > 0 && (
+        <section>
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-[var(--color-primary)]" />
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                  Your watchlist
+                </h2>
+              </div>
+              <Link
+                href="/watchlist"
+                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+              >
+                Open watchlist →
+              </Link>
+            </div>
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {data.watchlist.slice(0, 6).map((w) => {
+                const positive = w.changePct >= 0;
+                return (
+                  <li key={w.symbol}>
+                    <Link
+                      href={`/stocks/${w.symbol}`}
+                      className="flex items-center justify-between rounded-lg border border-[var(--color-border)] p-3 transition-colors hover:border-[var(--color-primary)]/30"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">{w.symbol}</p>
+                        <p className="text-xs text-[var(--color-text-secondary)]">{w.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                          ${w.price.toFixed(2)}
+                        </p>
+                        <p
+                          className={cn(
+                            "text-xs font-medium",
+                            positive ? "text-[var(--color-success)]" : "text-[var(--color-error)]"
+                          )}
+                        >
+                          {positive ? "+" : ""}
+                          {w.changePct.toFixed(2)}%
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </section>
+      )}
+
+      <footer className="flex items-center justify-between rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 text-xs text-[var(--color-text-muted)]">
+        <div className="flex items-center gap-2">
+          <NewspaperIcon className="h-3.5 w-3.5" />
+          <span>
+            Use the search in the sidebar to jump to any stock, news headline, or page.
+          </span>
+        </div>
+        <Link
+          href="/methodology"
+          className="font-medium text-[var(--color-primary)] hover:underline"
+        >
+          How scores are calculated →
+        </Link>
+      </footer>
+    </>
+  );
+}
+
+function DashboardTabState({ onTabChange }: { onTabChange: (tab: "overview" | "general") => void }) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab: "overview" | "general" =
     tabParam === "general" ? "general" : "overview";
+
+  useEffect(() => {
+    onTabChange(activeTab);
+  }, [activeTab, onTabChange]);
+
+  return null;
+}
+
+export default function DashboardPage() {
+  const addToast = useUXStore((s) => s.addToast);
   const [data, setData] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "general">("overview");
 
   const load = useCallback(async (mode: "initial" | "refresh") => {
     if (mode === "initial") setLoading(true);
@@ -235,335 +579,13 @@ export default function DashboardPage() {
             { id: "general", label: "Analytical", href: "/dashboard?tab=general" },
           ]}
         />
+        <Suspense fallback={<div className="h-10 w-full" />}>
+          <DashboardTabState onTabChange={setActiveTab} />
+        </Suspense>
         {activeTab === "general" ? (
           <GeneralDashboardTab />
         ) : (
-          <>
-          <header className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
-                  Market Dashboard
-                </h1>
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  Live NASDAQ overview · last update {fmtDate(data.latestDate)}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => load("refresh")}
-              disabled={refreshing}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
-            >
-              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-              Refresh
-            </button>
-            <Link
-              href="/leaderboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-transparent bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
-            >
-              View leaderboard
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </header>
-
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-[var(--color-primary)]" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-              Quick search
-            </h2>
-          </div>
-          <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
-            Search any stock, news headline, or page in the sidebar. Or use the quick search below.
-          </p>
-          <UnifiedSearchBar variant="topbar" placeholder="Search stocks, news, or pages…" />
-        </section>
-
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {data.stats.map((s) => (
-            <Card key={s.label} className="flex flex-col gap-1 p-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                {s.label}
-              </span>
-              <span className="text-xl font-bold text-[var(--color-text-primary)]">{s.value}</span>
-            </Card>
-          ))}
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2 p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-[var(--color-primary)]" />
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                  Dimension scores
-                </h2>
-              </div>
-              <Link
-                href="/scoring"
-                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
-              >
-                View details →
-              </Link>
-            </div>
-            <ul className="flex flex-col gap-3">
-              {data.dimensions.map((d) => {
-                const avg = d.data?.avg_score ?? 0;
-                const pct = Math.max(0, Math.min(100, (avg / maxDimAvg) * 100));
-                const { grade, tone } = gradeLabel(avg);
-                return (
-                  <li key={d.key} className="flex items-center gap-3">
-                    <span className="w-28 text-sm font-medium text-[var(--color-text-primary)]">{d.label}</span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--color-muted)]">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all",
-                          tone === "success" && "bg-[var(--color-success)]",
-                          tone === "primary" && "bg-[var(--color-primary)]",
-                          tone === "warning" && "bg-[var(--color-warning)]",
-                          tone === "error" && "bg-[var(--color-error)]"
-                        )}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="w-16 text-right text-sm font-semibold text-[var(--color-text-primary)]">
-                      {fmtScore(avg)}
-                    </span>
-                    <span
-                      className={cn(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
-                        tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
-                        tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
-                        tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
-                        tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
-                      )}
-                    >
-                      {grade}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-
-          <Card className="p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Newspaper className="h-4 w-4 text-[var(--color-primary)]" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                Latest news
-              </h2>
-            </div>
-            {data.news.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)]">No news available right now.</p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {data.news.slice(0, 6).map((n, i) => (
-                  <li key={i} className="border-b border-[var(--color-border)] pb-3 last:border-b-0 last:pb-0">
-                    <p className="line-clamp-2 text-sm font-medium text-[var(--color-text-primary)]">{n.title}</p>
-                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      {n.source}
-                      {n.time ? ` · ${n.time}` : ""}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link
-              href="/news"
-              className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary)] hover:underline"
-            >
-              See all news <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </Card>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-[var(--color-warning)]" />
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                  Top performers
-                </h2>
-              </div>
-              <Link
-                href="/leaderboard"
-                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
-              >
-                See all →
-              </Link>
-            </div>
-            {data.topPerformers.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)]">No data available.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {data.topPerformers.map((p) => {
-                  const { grade, tone } = gradeLabel(p.score);
-                  return (
-                    <li key={p.symbol}>
-                      <Link
-                        href={`/stocks/${p.symbol}`}
-                        className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--color-muted)]"
-                      >
-                        <span
-                          className={cn(
-                            "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold",
-                            tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
-                            tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
-                            tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
-                            tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
-                          )}
-                        >
-                          {grade}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{p.symbol}</p>
-                          <p className="truncate text-xs text-[var(--color-text-secondary)]">{p.name}</p>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm font-semibold text-[var(--color-success)]">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          {fmtScore(p.score)}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
-
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-[var(--color-error)]" />
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                  Underperformers
-                </h2>
-              </div>
-              <Link
-                href="/movers"
-                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
-              >
-                See all →
-              </Link>
-            </div>
-            {data.bottomPerformers.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)]">No data available.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {data.bottomPerformers.map((p) => {
-                  const { grade, tone } = gradeLabel(p.score);
-                  return (
-                    <li key={p.symbol}>
-                      <Link
-                        href={`/stocks/${p.symbol}`}
-                        className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--color-muted)]"
-                      >
-                        <span
-                          className={cn(
-                            "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold",
-                            tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
-                            tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
-                            tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
-                            tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
-                          )}
-                        >
-                          {grade}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{p.symbol}</p>
-                          <p className="truncate text-xs text-[var(--color-text-secondary)]">{p.name}</p>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm font-semibold text-[var(--color-error)]">
-                          <TrendingDown className="h-3.5 w-3.5" />
-                          {fmtScore(p.score)}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
-        </section>
-
-        {data.watchlist.length > 0 && (
-          <section>
-            <Card className="p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-[var(--color-primary)]" />
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                    Your watchlist
-                  </h2>
-                </div>
-                <Link
-                  href="/watchlist"
-                  className="text-xs font-medium text-[var(--color-primary)] hover:underline"
-                >
-                  Open watchlist →
-                </Link>
-              </div>
-              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {data.watchlist.slice(0, 6).map((w) => {
-                  const positive = w.changePct >= 0;
-                  return (
-                    <li key={w.symbol}>
-                      <Link
-                        href={`/stocks/${w.symbol}`}
-                        className="flex items-center justify-between rounded-lg border border-[var(--color-border)] p-3 transition-colors hover:border-[var(--color-primary)]/30"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">{w.symbol}</p>
-                          <p className="text-xs text-[var(--color-text-secondary)]">{w.name}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                            ${w.price.toFixed(2)}
-                          </p>
-                          <p
-                            className={cn(
-                              "text-xs font-medium",
-                              positive ? "text-[var(--color-success)]" : "text-[var(--color-error)]"
-                            )}
-                          >
-                            {positive ? "+" : ""}
-                            {w.changePct.toFixed(2)}%
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
-          </section>
-        )}
-
-        <footer className="flex items-center justify-between rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-4 text-xs text-[var(--color-text-muted)]">
-          <div className="flex items-center gap-2">
-            <NewspaperIcon className="h-3.5 w-3.5" />
-            <span>
-              Use the search in the sidebar to jump to any stock, news headline, or page.
-            </span>
-          </div>
-          <Link
-            href="/methodology"
-            className="font-medium text-[var(--color-primary)] hover:underline"
-          >
-            How scores are calculated →
-          </Link>
-        </footer>
-          </>
+          <DashboardOverview data={data} load={load} maxDimAvg={maxDimAvg} />
         )}
       </div>
     </NewDashboardShell>

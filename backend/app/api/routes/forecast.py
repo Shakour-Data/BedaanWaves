@@ -26,9 +26,16 @@ from enum import Enum, StrEnum
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 
-from app.services.core.cache_service import CacheService
-
 from app.api.dependencies import get_current_user
+from app.schemas.schemas import (
+    BacktestResponse,
+    BatchForecastResponse,
+    ForecastModelResponse,
+    ForecastPerformanceResponse,
+    PriceForecastResponse,
+    TrendForecastResponse,
+)
+from app.services.core.cache_service import CacheService
 from ...services.ml.prediction_service import PredictionService
 
 router = APIRouter(prefix="/forecast", tags=["Forecast"])
@@ -132,36 +139,6 @@ class FeatureImportance(BaseModel):
     category: str  # technical, fundamental, sentiment, etc.
 
 
-class PriceForecastResponse(BaseModel):
-    """Response for price forecast"""
-    status: str
-    symbol: str
-    model: str
-    horizon: str
-    generated_at: datetime
-    last_price: float
-    last_updated: datetime
-
-    # Forecast data
-    forecast: list[PriceForecastPoint]
-    historical: list[HistoricalPoint] | None
-
-    # Model performance
-    model_accuracy: float | None
-    rmse: float | None
-    mape: float | None
-
-    # Ensemble details (if applicable)
-    model_contributions: list[ModelContribution] | None
-
-    # Feature analysis
-    feature_importance: list[FeatureImportance] | None
-
-    # Metadata
-    data_points_used: int
-    confidence_level: float
-
-
 class TrendForecastRequest(BaseModel):
     """Request for trend direction forecasting"""
     symbol: str = Field(..., description="Stock symbol")
@@ -170,38 +147,12 @@ class TrendForecastRequest(BaseModel):
     confidence_threshold: float = Field(0.75, ge=0.5, le=0.99)
 
 
-class TrendForecastResponse(BaseModel):
-    """Response for trend forecast"""
-    status: str
-    symbol: str
-    predicted_direction: TrendDirection
-    confidence: float
-    probability_up: float
-    probability_down: float
-    probability_sideways: float
-    horizon: str
-    key_drivers: list[str]
-    generated_at: datetime
-
-
 class BatchForecastRequest(BaseModel):
     """Request for batch forecasting multiple symbols"""
     symbols: list[str] = Field(..., min_items=1, max_items=20)
     model: ForecastModel = Field(ForecastModel.ENSEMBLE)
     horizon: ForecastHorizon = Field(ForecastHorizon.ONE_WEEK)
     include_history: bool = Field(False)
-
-
-class BatchForecastResponse(BaseModel):
-    """Response for batch forecast"""
-    status: str
-    total: int
-    successful: int
-    failed: int
-    results: list[PriceForecastResponse]
-    errors: list[dict]
-    generated_at: datetime
-    processing_time_ms: int
 
 
 # =============================================================================
@@ -215,7 +166,7 @@ async def forecast_price(
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
     cache_service: CacheService = Depends(),
-):
+) -> PriceForecastResponse:
     """
     Generate price forecast for a stock.
 
@@ -248,7 +199,7 @@ async def forecast_price(
         # Cache the result
         await cache_service.set(
             cache_key,
-            forecast.dict(),
+            forecast.model_dump() if hasattr(forecast, 'model_dump') else forecast.dict(),
             ttl=1800  # 30 minutes
         )
 
@@ -263,7 +214,7 @@ async def forecast_trend(
     request: TrendForecastRequest,
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
-):
+) -> TrendForecastResponse:
     """
     Predict trend direction for a stock.
 
@@ -294,7 +245,7 @@ async def batch_forecast(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
-):
+) -> BatchForecastResponse:
     """
     Generate forecasts for multiple stocks in batch.
 
@@ -313,26 +264,24 @@ async def batch_forecast(
         )
 
         processing_time = int((time.time() - start_time) * 1000)
+        successful = len([r for r in results if r.status == "success"])
+        failed = len([r for r in results if r.status == "error"])
 
         return BatchForecastResponse(
             status="success",
-            total=len(request.symbols),
-            successful=len([r for r in results if r.status == "success"]),
-            failed=len([r for r in results if r.status == "error"]),
-            results=[r for r in results if r.status == "success"],
-            errors=[{"symbol": r.symbol, "error": r.error} for r in results if r.status == "error"],
-            generated_at=utc_now_iso(),
-            processing_time_ms=processing_time,
+            results=[{"symbol": r.symbol, "status": r.status, "error": getattr(r, 'error', None)} for r in results],
+            count=len(request.symbols),
+            timestamp=utc_now_iso(),
         )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/models", response_model=list[dict])
+@router.get("/models", response_model=list[ForecastModelResponse])
 async def list_models(
     current_user: dict = Depends(get_current_user),
-):
+) -> list[ForecastModelResponse]:
     """
     List available forecasting models with descriptions.
 
@@ -341,7 +290,7 @@ async def list_models(
     - Performance characteristics
     - Recommended scenarios
     """
-    return [
+    models = [
         {
             "id": "arima",
             "name": "ARIMA",
@@ -394,13 +343,14 @@ async def list_models(
             "models_included": ["arima", "lstm", "prophet", "xgboost"],
         },
     ]
+    return [ForecastModelResponse(**m) for m in models]
 
 
-@router.get("/models/{model_id}", response_model=dict)
+@router.get("/models/{model_id}", response_model=ForecastModelResponse)
 async def get_model_details(
     model_id: str,
     current_user: dict = Depends(get_current_user),
-):
+) -> ForecastModelResponse:
     """
     Get detailed information about a specific forecasting model.
 
@@ -409,17 +359,18 @@ async def get_model_details(
     models = await list_models(current_user)
 
     for model in models:
-        if model["id"] == model_id:
+        if model.id == model_id:
             # Add additional details
-            model["hyperparameters"] = get_model_hyperparameters(model_id)
-            model["training_requirements"] = get_model_training_requirements(model_id)
-            model["inference_time_ms"] = get_model_inference_time(model_id)
-            return model
+            model_dict = model.model_dump()
+            model_dict["hyperparameters"] = get_model_hyperparameters(model_id)
+            model_dict["training_requirements"] = get_model_training_requirements(model_id)
+            model_dict["inference_time_ms"] = get_model_inference_time(model_id)
+            return ForecastModelResponse(**model_dict)
 
     raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
 
 
-@router.get("/performance/{model_id}", response_model=dict)
+@router.get("/performance/{model_id}", response_model=ForecastPerformanceResponse)
 async def get_model_performance(
     model_id: str,
     symbol: str | None = Query(None, description="Filter by symbol"),
@@ -427,7 +378,7 @@ async def get_model_performance(
     end_date: datetime | None = Query(None),
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
-):
+) -> ForecastPerformanceResponse:
     """
     Get performance metrics for a forecasting model.
 
@@ -446,23 +397,17 @@ async def get_model_performance(
             end_date=end_date,
         )
 
-        return {
-            "status": "success",
-            "model_id": model_id,
-            "symbol": symbol,
-            "period": {
-                "start": start_date,
-                "end": end_date,
-            },
-            "metrics": performance,
-            "generated_at": utc_now_iso(),
-        }
+        return ForecastPerformanceResponse(
+            model_id=model_id,
+            metrics=performance,
+            timestamp=utc_now_iso(),
+        )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/backtest", response_model=dict)
+@router.post("/backtest", response_model=BacktestResponse)
 async def backtest_model(
     model_id: ForecastModel = Field(..., description="Model to backtest"),
     symbol: str = Field(..., description="Symbol to backtest on"),
@@ -474,7 +419,7 @@ async def backtest_model(
     stop_loss_pct: float | None = Field(None, description="Stop loss percentage"),
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
-):
+) -> BacktestResponse:
     """
     Backtest a forecasting model with trading simulation.
 
@@ -499,23 +444,12 @@ async def backtest_model(
             stop_loss_pct=stop_loss_pct,
         )
 
-        return {
-            "status": "success",
-            "model_id": model_id,
-            "symbol": symbol,
-            "backtest_period": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat(),
-            },
-            "trading_parameters": {
-                "initial_capital": initial_capital,
-                "position_size_pct": position_size_pct,
-                "take_profit_pct": take_profit_pct,
-                "stop_loss_pct": stop_loss_pct,
-            },
-            "results": backtest_result,
-            "generated_at": utc_now_iso(),
-        }
+        return BacktestResponse(
+            status="success",
+            model_id=model_id,
+            results=backtest_result,
+            timestamp=utc_now_iso(),
+        )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

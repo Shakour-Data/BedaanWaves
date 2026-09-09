@@ -49,18 +49,18 @@ class TestRecentSearches:
         assert resp.status_code == 200
         body = resp.json()
         assert body["status"] == "success"
-        assert body["recent_searches"] == []
+        assert body["searches"] == []
 
     def test_get_returns_stored_searches(self, client, mock_prefs):
         mock_prefs["get"].return_value = SimpleNamespace(value=["AAPL", "TSLA", "NVDA"])
         resp = client.get("/api/v1/settings/recent-searches")
         assert resp.status_code == 200
-        assert resp.json()["recent_searches"] == ["AAPL", "TSLA", "NVDA"]
+        assert resp.json()["searches"] == ["AAPL", "TSLA", "NVDA"]
 
     def test_get_ignores_non_string_values(self, client, mock_prefs):
         mock_prefs["get"].return_value = SimpleNamespace(value=["AAPL", 123, None, "MSFT"])
         resp = client.get("/api/v1/settings/recent-searches")
-        assert resp.json()["recent_searches"] == ["AAPL", "MSFT"]
+        assert resp.json()["searches"] == ["AAPL", "MSFT"]
 
     def test_post_adds_new_search(self, client, mock_prefs):
         mock_prefs["get"].return_value = None

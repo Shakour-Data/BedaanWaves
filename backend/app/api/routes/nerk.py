@@ -18,6 +18,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, IntlPriceCandle
+from app.schemas.schemas import (
+    NearkConstituentResponse,
+    NearkMarketOverviewResponse,
+    NearkOverviewResponse,
+    NearkPriceHistoryResponse,
+)
 from app.services.core.dependency_container import get_global_container
 from app.services.data.nerk_ingestion_service import NerkIngestionService
 
@@ -34,19 +40,13 @@ def get_nerk_service() -> NerkIngestionService:
     return NerkIngestionService()
 
 
-@router.get("/constituents")
-async def get_nerk_constituents() -> dict[str, Any]:
+@router.get("/constituents", response_model=list[NearkConstituentResponse])
+async def get_nerk_constituents() -> list[NearkConstituentResponse]:
     """Get all Neark (نزدک) index constituent symbols."""
     service = get_nerk_service()
     try:
         constituents = await service.get_constituents()
-        return {
-            "status": "success",
-            "index": "Nerek (نزدک)",
-            "count": len(constituents),
-            "data": constituents,
-            "timestamp": utc_now_iso(),
-        }
+        return [NearkConstituentResponse(**c) for c in constituents]
     except SQLAlchemyError as e:
         logger.error(f"Database error fetching Neark constituents: {e}")
         raise HTTPException(status_code=500, detail="Database error")
@@ -55,8 +55,8 @@ async def get_nerk_constituents() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/overview")
-async def get_nerk_overview() -> dict[str, Any]:
+@router.get("/overview", response_model=NearkOverviewResponse)
+async def get_nerk_overview() -> NearkOverviewResponse:
     """Get Neark index overview with top gainers and losers."""
     service = get_nerk_service()
     try:
@@ -87,17 +87,15 @@ async def get_nerk_overview() -> dict[str, Any]:
 
         market_overview = await service.get_market_overview()
 
-        return {
-            "status": "success",
-            "index": "Nerek (نزدک)",
-            "exchange": "Tehran Stock Exchange",
-            "market_overview": market_overview,
-            "constituents_count": len(constituents),
-            "top_gainers": gainers[:10],
-            "top_losers": losers[:10],
-            "avg_change_pct": round(total_return / count, 2) if count > 0 else 0,
-            "timestamp": utc_now_iso(),
-        }
+        return NearkOverviewResponse(
+            index="Nerek (نزدک)",
+            exchange="Tehran Stock Exchange",
+            market_overview=market_overview,
+            constituents_count=len(constituents),
+            top_gainers=gainers[:10],
+            top_losers=losers[:10],
+            avg_change_pct=round(total_return / count, 2) if count > 0 else 0,
+        )
     except SQLAlchemyError as e:
         logger.error(f"Database error fetching Neark overview: {e}")
         raise HTTPException(status_code=500, detail="Database error")
@@ -106,11 +104,11 @@ async def get_nerk_overview() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/price-history/{symbol}")
+@router.get("/price-history/{symbol}", response_model=NearkPriceHistoryResponse)
 async def get_nerk_price_history(
     symbol: str,
     period: str = Query("1y", description="Period: 1m, 3m, 6m, 1y, 2y, 5y"),
-) -> dict[str, Any]:
+) -> NearkPriceHistoryResponse:
     """Get price history for a Neark constituent symbol."""
     service = get_nerk_service()
     try:
@@ -151,16 +149,14 @@ async def get_nerk_price_history(
                     "adjusted_close": float(c.adjusted_close) if c.adjusted_close else None,
                 })
 
-            return {
-                "status": "success",
-                "symbol": symbol,
-                "name": asset.name,
-                "market": "NASDAQ",
-                "period": period,
-                "count": len(candle_data),
-                "data": candle_data,
-                "timestamp": utc_now_iso(),
-            }
+            return NearkPriceHistoryResponse(
+                symbol=symbol,
+                name=asset.name,
+                market="NASDAQ",
+                period=period,
+                count=len(candle_data),
+                data=candle_data,
+            )
     except HTTPException:
         raise
     except SQLAlchemyError as e:
@@ -171,17 +167,13 @@ async def get_nerk_price_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/market-overview")
-async def get_nerk_market_overview() -> dict[str, Any]:
+@router.get("/market-overview", response_model=NearkMarketOverviewResponse)
+async def get_nerk_market_overview() -> NearkMarketOverviewResponse:
     """Get Neark index market overview."""
     service = get_nerk_service()
     try:
         overview = await service.get_market_overview()
-        return {
-            "status": "success",
-            "data": overview,
-            "timestamp": utc_now_iso(),
-        }
+        return NearkMarketOverviewResponse(**overview)
     except SQLAlchemyError as e:
         logger.error(f"Database error fetching Neark market overview: {e}")
         raise HTTPException(status_code=500, detail="Database error")

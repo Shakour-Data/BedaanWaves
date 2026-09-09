@@ -244,11 +244,7 @@ def fake_session() -> FakeAsyncSession:
 
 
 class TestAppSettings(Settings):
-    class Config:
-        env_file = None
-        case_sensitive = True
-        extra = "ignore"
-
+    model_config = Settings.model_config
     LIVE_POLL_INTERVAL_OPEN_S: int = 1
     LIVE_POLL_INTERVAL_CLOSED_S: int = 1
     LIVE_INTRADAY_POLL_INTERVAL_OPEN_S: int = 1

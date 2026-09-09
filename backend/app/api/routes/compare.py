@@ -17,12 +17,16 @@ USAGE:
 """
 
 
+from typing import Any
+
 from fastapi import APIRouter, Body, Depends, Query
 from pydantic import BaseModel, Field
 
-from ...services.analysis.scoring_service import ScoringService
-from ...services.core.cache_service import CacheService
-from ...services.data.stock_service import StockService
+from app.core.utils import utc_now_iso
+from app.schemas.schemas import CompareStocksResponse
+from app.services.analysis.scoring_service import ScoringService
+from app.services.core.cache_service import CacheService
+from app.services.data.stock_service import StockService
 
 router = APIRouter(prefix="/compare", tags=["Compare"])
 
@@ -39,72 +43,6 @@ class CompareStocksRequest(BaseModel):
     include_technical: bool = Field(True, description="Include technical indicators")
     include_historical: bool = Field(False, description="Include historical performance")
     days: int = Field(30, ge=1, le=365, description="Number of days for historical data")
-
-
-class DimensionComparison(BaseModel):
-    """Dimension scores comparison"""
-    fundamental: float | None = None
-    technical: float | None = None
-    sentiment: float | None = None
-    risk: float | None = None
-    macro: float | None = None
-    ai: float | None = None
-
-
-class MetricsComparison(BaseModel):
-    """Financial metrics comparison"""
-    market_cap: float | None = None
-    pe_ratio: float | None = None
-    pb_ratio: float | None = None
-    eps: float | None = None
-    dividend_yield: float | None = None
-    roe: float | None = None
-    debt_to_equity: float | None = None
-    current_ratio: float | None = None
-
-
-class TechnicalComparison(BaseModel):
-    """Technical indicators comparison"""
-    rsi_14: float | None = None
-    macd: float | None = None
-    bollinger_upper: float | None = None
-    bollinger_lower: float | None = None
-    ema_50: float | None = None
-    ema_200: float | None = None
-    volume_sma_20: float | None = None
-
-
-class HistoricalPoint(BaseModel):
-    """Single point in historical comparison"""
-    date: str
-    symbol: str
-    price: float
-    change_pct: float
-    volume: int | None = None
-
-
-class StockComparison(BaseModel):
-    """Complete comparison for a single stock"""
-    symbol: str
-    name: str | None = None
-    sector: str | None = None
-    current_price: float | None = None
-    change_pct: float | None = None
-    overall_score: float | None = None
-    grade: str | None = None
-    dimensions: DimensionComparison | None = None
-    metrics: MetricsComparison | None = None
-    technical: TechnicalComparison | None = None
-
-
-class CompareStocksResponse(BaseModel):
-    """Response model for compare stocks endpoint"""
-    status: str
-    count: int
-    symbols: list[str]
-    comparisons: list[StockComparison]
-    historical_data: list[HistoricalPoint] | None = None
-    timestamp: str
 
 
 class CompareDimensionsResponse(BaseModel):
@@ -155,12 +93,12 @@ async def compare_dimensions(
     # Implementation here
 
 
-@router.get("/metrics/{symbol1}/{symbol2}")
+@router.get("/metrics/{symbol1}/{symbol2}", response_model=dict)
 async def compare_metrics(
     symbol1: str,
     symbol2: str,
     stock_service: StockService = Depends(),
-):
+) -> dict:
     """
     Compare financial metrics between two stocks.
 
@@ -174,20 +112,22 @@ async def compare_metrics(
     - Debt ratios
     """
     # Implementation here
+    return {}
 
 
-@router.post("/historical")
+@router.post("/historical", response_model=dict)
 async def compare_historical(
     symbols: list[str] = Body(..., min_items=2, max_items=5),
     days: int = Body(30, ge=1, le=365),
     stock_service: StockService = Depends(),
-):
+) -> dict:
     """
     Compare historical performance of multiple stocks.
 
     Returns price data, change percentages, and volume for the specified period.
     """
     # Implementation here
+    return {}
 
 
 # =============================================================================
@@ -215,14 +155,12 @@ def calculate_winner_by_dimension(
 
 
 def format_comparison_response(
-    comparisons: list[StockComparison],
+    comparisons: list[dict[str, Any]],
     historical_data: list | None = None
 ) -> CompareStocksResponse:
     """
     Format the comparison response.
     """
-    from datetime import datetime
-
     return CompareStocksResponse(
         status="success",
         count=len(comparisons),

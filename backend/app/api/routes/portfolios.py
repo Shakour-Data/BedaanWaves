@@ -112,13 +112,13 @@ async def update_portfolio(
     return portfolio
 
 
-@router.delete("/{portfolio_id}")
+@router.delete("/{portfolio_id}", status_code=204)
 async def delete_portfolio(
     portfolio_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """Delete portfolio."""
+) -> None:
+    """Delete a portfolio."""
     user_id = await get_route_user_id(request)
     query = select(Portfolio).where(
         Portfolio.id == portfolio_id,
@@ -131,7 +131,7 @@ async def delete_portfolio(
 
     await db.delete(portfolio)
     await db.commit()
-    return {"status": "success", "message": "Portfolio deleted"}
+    return None
 
 
 @router.post("/{portfolio_id}/holdings", response_model=PositionResponse)
@@ -212,14 +212,14 @@ async def get_holdings(
     return result.scalars().all()
 
 
-@router.delete("/{portfolio_id}/holdings/{holding_id}")
+@router.delete("/{portfolio_id}/holdings/{holding_id}", status_code=204)
 async def remove_holding(
     portfolio_id: str,
     holding_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """Remove holding from portfolio."""
+) -> None:
+    """Remove a holding from portfolio."""
     user_id = await get_route_user_id(request)
     # Verify portfolio ownership before allowing position removal
     portfolio_query = select(Portfolio).where(
@@ -243,4 +243,4 @@ async def remove_holding(
 
     await db.delete(position)
     await db.commit()
-    return {"status": "success", "message": "Holding removed"}
+    return None

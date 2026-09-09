@@ -34,6 +34,7 @@ router = APIRouter(tags=["auth"])
 
 @router.post("/register", response_model=Token)
 async def register(data: RegisterRequest) -> Token:
+    """Register a new user account and return access/refresh tokens."""
     existing = await get_user_by_username(data.username)
     if existing:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -55,6 +56,7 @@ async def register(data: RegisterRequest) -> Token:
 
 @router.post("/login", response_model=Token)
 async def login(data: LoginRequest) -> Token:
+    """Authenticate user and return access/refresh tokens."""
     user = await authenticate_user(data.username, data.password)
     if not user:
         raise HTTPException(

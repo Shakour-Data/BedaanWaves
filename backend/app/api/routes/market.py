@@ -17,7 +17,13 @@ from app.models.models import Asset, candle_model_for_market
 from app.schemas.schemas import (
     AssetClassEnum,
     AssetResponse,
+    IndustryRankingResponse,
+    LatestPricesResponse,
     MarketEnum,
+    MarketOverviewResponse,
+    NasdaqDashboardResponse,
+    OrderBookHistoryResponse,
+    OrderBookResponse,
     PriceCandleResponse,
     TimeframeEnum,
 )
@@ -146,12 +152,12 @@ async def get_price_history(
     return candles
 
 
-@router.get("/latest-prices", response_model=dict)
+@router.get("/latest-prices", response_model=LatestPricesResponse)
 async def get_latest_prices(
     symbols: list[str] = Query(...),
     include_change: bool = Query(True),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> LatestPricesResponse:
     """
     Get latest prices for multiple symbols with single query optimization
 
@@ -234,11 +240,11 @@ async def get_latest_prices(
     }
 
 
-@router.get("/market-overview", response_model=dict)
+@router.get("/market-overview", response_model=MarketOverviewResponse)
 async def get_market_overview(
     market: MarketEnum = Query("NASDAQ"),
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> MarketOverviewResponse:
     """
     Get market overview for a specific market
 
@@ -275,10 +281,10 @@ async def get_market_overview(
     }
 
 
-@router.get("/nasdaq-dashboard", response_model=dict)
+@router.get("/nasdaq-dashboard", response_model=NasdaqDashboardResponse)
 async def nasdaq_dashboard(
     db: AsyncSession = Depends(get_async_session),
-) -> dict:
+) -> NasdaqDashboardResponse:
     """
     NASDAQ market dashboard summary.
 
@@ -388,7 +394,7 @@ _indices_cache_expiry: float = 0.0
 _INDICES_CACHE_TTL = 60.0
 
 
-@router.get("/indices", response_model=dict)
+@router.get("/indices", response_model=IndicesResponse)
 async def get_market_indices(response: Response = None) -> dict:
     """
     Live prices for major market indices (NASDAQ Composite, S&P 500, Dow, Russell 2000).
@@ -443,7 +449,7 @@ async def get_market_indices(response: Response = None) -> dict:
     return result
 
 
-@router.get("/industry-ranking", response_model=dict)
+@router.get("/industry-ranking", response_model=IndustryRankingResponse)
 async def industry_ranking(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:

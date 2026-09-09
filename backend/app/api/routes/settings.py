@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_route_user_id
+from app.schemas.schemas import MarketPreferencesResponse, RecentSearchesResponse
 from app.services.user.preference_service import preference_service
 
 router = APIRouter(tags=["settings"])
@@ -28,25 +29,34 @@ def _normalize_recents(values, limit=DEFAULT_RECENT_LIMIT):
     return out[:limit]
 
 
-@router.get("/market-preferences", response_model=dict[str, Any])
+@router.get("/market-preferences", response_model=MarketPreferencesResponse)
 async def get_market_preferences(user_id: UUID = Depends(get_route_user_id)):
     """
     Get market configuration preferences for the user.
     If not set, returns default platform-wide configuration.
     """
+    from app.core.utils import utc_now_iso
     pref = await preference_service.get_preference(user_id, "market_preferences")
 
     if pref:
-        return pref.value
-    return {
-        "us": {
-            "indices": [
-                {"id": "spx", "name": "S&P 500", "desc": "Standard & Poor's 500"},
-                {"id": "nas", "name": "NASDAQ", "desc": "NASDAQ Composite"}
-            ],
-            "note": "Live data is fetched from external APIs. No static prices."
-        }
-    }
+        return MarketPreferencesResponse(
+            status="success",
+            preferences=pref.value,
+            timestamp=utc_now_iso(),
+        )
+    return MarketPreferencesResponse(
+        status="success",
+        preferences={
+            "us": {
+                "indices": [
+                    {"id": "spx", "name": "S&P 500", "desc": "Standard & Poor's 500"},
+                    {"id": "nas", "name": "NASDAQ", "desc": "NASDAQ Composite"}
+                ],
+                "note": "Live data is fetched from external APIs. No static prices."
+            }
+        },
+        timestamp=utc_now_iso(),
+    )
 
 
 @router.post("/market-preferences", status_code=status.HTTP_200_OK)
@@ -74,12 +84,18 @@ class RecentSearchAdd(BaseModel):
     limit: int = Field(DEFAULT_RECENT_LIMIT, ge=0, le=50)
 
 
-@router.get("/recent-searches", response_model=dict[str, Any])
+@router.get("/recent-searches", response_model=RecentSearchesResponse)
 async def get_recent_searches(user_id: UUID = Depends(get_route_user_id)):
     """Return the current user's most-recently-used search terms (most recent first)."""
+    from app.core.utils import utc_now_iso
     pref = await preference_service.get_preference(user_id, RECENT_SEARCHES_KEY)
     recents = _normalize_recents(pref.value if pref else None)
-    return {"status": "success", "recent_searches": recents}
+    return RecentSearchesResponse(
+        status="success",
+        searches=recents,
+        count=len(recents),
+        timestamp=utc_now_iso(),
+    )
 
 
 @router.post("/recent-searches", response_model=dict[str, Any])

@@ -17,9 +17,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
 
-@router.get("/")
+@router.get("/", response_model=dict)
 async def health_check():
-    """Root health check endpoint."""
+    """Root health check endpoint.
+
+    Returns overall service health status including database, cache,
+    memory, and disk checks.
+    """
     checks = {}
     try:
         health_checker = HealthChecker()
@@ -46,9 +50,9 @@ async def health_check():
     }
 
 
-@router.get("/services")
+@router.get("/services", response_model=dict)
 async def list_service_health():
-    """Get health status for all services."""
+    """Get health status for all registered services."""
     checks = {}
     try:
         health_checker = HealthChecker()
@@ -72,9 +76,9 @@ async def list_service_health():
     }
 
 
-@router.get("/services/{service}")
+@router.get("/services/{service}", response_model=dict)
 async def get_service_health(service: str):
-    """Get health status for specific service."""
+    """Get health status for a specific registered service."""
     checks = {}
     try:
         health_checker = HealthChecker()
@@ -104,9 +108,12 @@ async def get_service_health(service: str):
     }
 
 
-@router.get("/ready")
+@router.get("/ready", response_model=dict)
 async def readiness_check():
-    """Readiness probe for load balancers and monitoring systems."""
+    """Readiness probe for load balancers and monitoring systems.
+
+    Returns ready only when both database and cache are healthy.
+    """
     checks = {}
     try:
         health_checker = HealthChecker()
@@ -132,7 +139,7 @@ async def readiness_check():
     }
 
 
-@router.get("/live")
+@router.get("/live", response_model=dict)
 async def liveness_check():
     """Liveness probe for load balancers."""
     return {

@@ -41,13 +41,13 @@ def _overall_status_from_parts(
     return "stale"
 
 
-@router.get("/data-health")
+@router.get("/data-health", response_model=dict)
 async def data_health_check() -> dict[str, Any]:
     """
     Health check for the live data pipeline.
 
     Verifies connectivity to the data provider, confirms last successful fetch,
-    and returns current data source status.
+    and returns current data source status with SLO metrics.
     """
     timestamp = utc_now_iso()
     container = get_global_container()

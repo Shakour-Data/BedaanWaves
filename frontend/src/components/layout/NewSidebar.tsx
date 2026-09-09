@@ -21,54 +21,9 @@ interface NavCategory {
 const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boolean) =>
   items.some((item) => checkActive(item.href));
 
-const categories: NavCategory[] = [
-   {
-     label: "Analytics",
-     items: [
-       { label: "Dashboard", href: "/dashboard", marker: "DB" },
-       { label: "Leaderboard", href: "/leaderboard", marker: "LB" },
-       { label: "Biggest Movers", href: "/movers", marker: "MV" },
-       { label: "Stocks", href: "/stocks", marker: "S" },
-       { label: "Analysis", href: "/analysis", marker: "A" },
-       { label: "Scoring", href: "/scoring", marker: "SC" },
-       { label: "Scoring Filter", href: "/scoring-filter", marker: "SF" },
-       { label: "Portfolio", href: "/portfolio", marker: "P" },
-       { label: "Rankings", href: "/ranking", marker: "RN" },
-     ],
-   },
-{
-      label: "Markets",
-      items: [
-        { label: "NASDAQ", href: "/dashboard", marker: "NQ" },
-        { label: "Neark", href: "/nerk", marker: "NK" },
-      ],
-    },
-   {
-     label: "Intelligence",
-     items: [
-       { label: "News", href: "/news", marker: "NW" },
-       { label: "Alerts", href: "/alerts", marker: "AL" },
-       { label: "Search", href: "/search-demo", marker: "SR" },
-       { label: "Watchlist", href: "/watchlist", marker: "WL" },
-     ],
-   },
-   {
-     label: "Resources",
-     items: [
-       { label: "Methodology", href: "/methodology", marker: "M" },
-       { label: "Help", href: "/help", marker: "H" },
-     ],
-   },
- ];
-
-const bottomItems: NavItem[] = [
-  { label: "Settings", href: "/settings", marker: "ST" },
-  { label: "Profile", href: "/settings/profile", marker: "PR" },
-];
+import { sidebarCategories, sidebarBottomItems } from "@/lib/sidebar-config";
 
 export function NewSidebar() {
-  NewSidebar.categories = categories;
-  NewSidebar.bottomItems = bottomItems;
   const pathname = usePathname();
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
@@ -83,7 +38,7 @@ export function NewSidebar() {
 
   const autoExpanded = useMemo(() => {
     const auto = new Set<string>();
-    categories.forEach((cat) => {
+    sidebarCategories.forEach((cat) => {
       if (isCategoryActive(cat.items, isActive)) {
         auto.add(cat.label);
       }
@@ -150,7 +105,7 @@ export function NewSidebar() {
               <UnifiedSearchBar variant="sidebar" placeholder="Search stocks, news, pages…" />
             </div>
             <nav className="flex flex-col gap-1 px-3">
-              {categories.map((cat) => {
+              {sidebarCategories.map((cat) => {
                 const isExpanded = expandedCategories.has(cat.label);
                 const hasActive = isCategoryActive(cat.items, isActive);
 
@@ -196,19 +151,19 @@ export function NewSidebar() {
                                    : "text-[var(--color-text-muted)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)] hover:border-l-[var(--color-border)]"
                                  )}
                                >
-                                <span
-                                  className={cn(
-                                    "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
-                                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
-                                  )}
-                               >
-                                 {item.marker}
-                               </span>
-                               <span className="flex-1">{item.label}</span>
-                               {active && (
-                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" />
-                               )}
-                             </Link>
+                              <span
+                                className={cn(
+                                  "flex h-7 w-7 items-center justify-center rounded transition-colors text-xs font-bold flex-shrink-0",
+                                  active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]"
+                                )}
+                              >
+                                {item.marker}
+                              </span>
+                              <span className="flex-1">{item.label}</span>
+                              {active && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] flex-shrink-0" />
+                              )}
+                            </Link>
                           );
                         })}
                       </div>
@@ -226,7 +181,7 @@ export function NewSidebar() {
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              {bottomItems.map((item) => {
+              {sidebarBottomItems.map((item) => {
                 const active = isActive(item.href);
                 return (
                     <Link
@@ -262,6 +217,3 @@ export function NewSidebar() {
     </>
   );
 }
-
-NewSidebar.categories = categories;
-NewSidebar.bottomItems = bottomItems;
