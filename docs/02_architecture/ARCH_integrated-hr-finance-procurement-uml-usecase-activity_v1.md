@@ -228,16 +228,16 @@ title L3: Purchase Request with Swimlane, Pin, and Signal
 
 swimlane "Procurement Officer" as PROC {
   start
-  :Create PurchaseRequest; <<outputPin: PurchaseRequest>>
+  :Create PurchaseRequest;
   :Submit Request;
   :Send signal SubmitPurchaseRequest;
 }
 
 swimlane "Validation Service" as VAL {
   :Receive signal SubmitPurchaseRequest;
-  :Validate Lines; <<inputPin: PurchaseRequest>>
+  :Validate Lines;
   if (Lines valid?) then (yes)
-    :Publish ValidatedRequest; <<outputPin: ValidatedRequest>>
+    :Publish ValidatedRequest;
   else (no)
     :Publish ValidationFailed;
     stop
@@ -246,7 +246,7 @@ swimlane "Validation Service" as VAL {
 
 swimlane "Finance Manager" as FIN {
   :Receive signal ValidatedRequest;
-  :Check BudgetAllocation; <<inputPin: ValidatedRequest>>
+  :Check BudgetAllocation;
   if (Budget available?) then (yes)
     :Reserve Budget;
     :Approve Request;
@@ -259,7 +259,7 @@ swimlane "Finance Manager" as FIN {
 
 swimlane "Procurement Service" as SVC {
   :Receive signal ApprovedRequest;
-  :Issue PurchaseOrder; <<inputPin: ApprovedRequest>>
+  :Issue PurchaseOrder;
   :Send signal PurchaseOrderIssued;
   stop
   :Receive signal BudgetUnavailable;
@@ -270,7 +270,7 @@ swimlane "Procurement Service" as SVC {
 
 swimlane "Supplier" as SUP {
   :Receive signal PurchaseOrderIssued;
-  :Acknowledge Order; <<inputPin: PurchaseOrder>>
+  :Acknowledge Order;
   :Send signal OrderAcknowledged;
   stop
 }
@@ -278,14 +278,36 @@ swimlane "Supplier" as SUP {
 @enduml
 ```
 
-**Explanation:** Swimlanes separate the requester, validator, financier, procurement service, and supplier roles. `SubmitPurchaseRequest`, `ValidatedRequest`, `ApprovedRequest`, and `PurchaseOrderIssued` are asynchronous signals crossing role boundaries. The insufficient-budget path releases the reservation and rejects the request; the success path issues `PurchaseOrder`. Pins are rendered as `<<inputPin>>` / `<<outputPin>>` stereotypes on the affected actions and are detailed in the structured contract table below.
+**Explanation:** Swimlanes separate the requester, validator, financier, procurement service, and supplier roles. `SubmitPurchaseRequest`, `ValidatedRequest`, `ApprovedRequest`, and `PurchaseOrderIssued` are asynchronous signals crossing role boundaries. The insufficient-budget path releases the reservation and rejects the request; the success path issues `PurchaseOrder`.
 
-**Pin contract table (input/output contracts):**
+**Pin documentation (structured input/output contracts):**
 
-| Action | Input Pin | Output Pin | Signal |
+PlantUML does not currently render UML 2.5 `Pin` notation (inputPin/outputPin) as a first-class activity-diagram element. Pins are therefore documented here as structured data contracts — the input and output object types carried by each action and signal — rather than as graphical pin nodes in the diagram.
+
+| Action | Input Pin (contract) | Output Pin (contract) | Signal |
 |---|---|---|---|
 | Submit Request | `RequestCommand` | `PurchaseRequest` | `SubmitPurchaseRequest` |
 | Validate Lines | `PurchaseRequest` | `ValidatedRequest` | `ValidationFailed` (on error) |
 | Check Budget | `ValidatedRequest` | `BudgetDecision` | `ApprovedRequest` or `BudgetUnavailable` |
 | Issue PurchaseOrder | `ApprovedRequest` | `PurchaseOrder` | `PurchaseOrderIssued` |
 | Acknowledge Order | `PurchaseOrder` | `Acknowledgement` | `OrderAcknowledged` |
+
+---
+
+## 4. Traceability and behavioral rules
+
+| UML ID | DFD | BPMN | Entity / Method |
+|---|---|---|---|
+| UC-PROC-01 | DFD-L2.4 / DFD-L3.2 | BPMN-L3 Budget Check PR | `PurchaseRequest.submit()` |
+| UC-PAY-01 | DFD-L2.2 / DFD-L3.1 | BPMN-L3 Payroll Approval | `PayrollRun.calculateSalary()` |
+| UC-BUD-01 | DFD-L2.3 | BPMN-L2 Budget | `BudgetAllocation.checkBudget()` |
+| UC-INV-01 | DFD-L2.5 / DFD-L3.3 | BPMN-L3 Stock Allocation | `StockLot.allocateStock()` |
+| UC-REP-01 | DFD-L2.6 | BPMN-L2 Reporting | `ReportEngine.generateReport()` |
+
+1. Every use case must have at least one happy path, one alternative path, and one exception path.
+2. Every Level 3 activity must specify roles, input/output data, and boundary signals.
+3. Budget and stock decisions must never be made without writing an `AuditLog` entry.
+4. Parallel activities are only permitted where no data dependency exists between them.
+5. All method names must remain consistent across Class Diagram, Sequence Diagram, and BPMN.
+
+*End of Use Case and Activity document*
