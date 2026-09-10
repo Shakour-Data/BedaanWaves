@@ -399,8 +399,12 @@ class Settings(BaseSettings):
     PROMETHEUS_METRICS_PORT: int = 9090
 
     # Distributed Tracing
-    TRACING_ENABLED: bool = False
+    TRACING_ENABLED: bool = True
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = "http://localhost:14268/api/traces"
+    JAEGER_ENDPOINT: str = "http://localhost:14268/api/traces"
+    JAEGER_AGENT_HOST: str = "localhost"
+    JAEGER_AGENT_PORT: int = 6831
 
     # Disaster Recovery
     PRIMARY_REGION: str = "us-east-1"
