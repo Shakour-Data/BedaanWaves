@@ -157,6 +157,7 @@ quality_audit.py
 schema_audit.py
 find_port.py
 kill*.py
+audit_*.py
 pytest_full_output.txt
 file_inventory.csv
 *.log
