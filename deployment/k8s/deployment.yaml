@@ -81,6 +81,87 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
+        env:
+        - name: DATABASE_URL_CORE
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: database-url-core
+        - name: DATABASE_URL_MARKET
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: database-url-market
+        - name: DATABASE_URL_ML
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: database-url-ml
+        - name: DATABASE_POOL_SIZE_CORE
+          value: "30"
+        - name: DATABASE_MAX_OVERFLOW_CORE
+          value: "20"
+        - name: DATABASE_POOL_SIZE_MARKET
+          value: "50"
+        - name: DATABASE_MAX_OVERFLOW_MARKET
+          value: "30"
+        - name: DATABASE_POOL_SIZE_ML
+          value: "15"
+        - name: DATABASE_MAX_OVERFLOW_ML
+          value: "10"
+        - name: DATABASE_POOL_TIMEOUT
+          value: "10"
+        - name: DATABASE_POOL_RECYCLE
+          value: "1800"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: redis-url
+        - name: CACHE_BACKEND
+          value: "redis"
+        - name: CACHE_TTL
+          value: "3600"
+        - name: CACHE_API_RESPONSE_TTL_MINUTES
+          value: "5"
+        - name: REALTIME_QUOTE_CACHE_TTL_SECONDS
+          value: "10"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: bedaanwaves-secrets
+              key: jwt-secret
+        - name: EVENT_BUS_BACKEND
+          value: "kafka"
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: TRACING_ENABLED
+          value: "true"
+        - name: ENABLE_DOCS
+          value: "false"
+        - name: REQUIRE_AUTH
+          value: "true"
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: RATE_LIMIT_REQUESTS_PER_MINUTE
+          value: "500"
+        - name: RATE_LIMIT_REQUESTS_PER_HOUR
+          value: "50000"
+        - name: CORS_ORIGINS
+          value: "https://bedaanwaves.com,https://app.bedaanwaves.com"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector:4317"
+        - name: OTEL_SERVICE_NAME
+          value: "bedaanwaves-backend"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
         livenessProbe:
           httpGet:
             path: /health
@@ -139,19 +220,56 @@ spec:
     name: bedaanwaves-backend
   minReplicas: 3
   maxReplicas: 20
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 60
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: 80
+        averageUtilization: 75
+  - type: Object
+    object:
+      describedObject:
+        apiVersion: monitoring.coreos.com/v1
+        kind: Prometheus
+        name: bedaanwaves-latency
+      target:
+        type: Value
+        value: "200000"
+  - type: Object
+    object:
+      metric:
+        name: http_request_duration_p95_seconds
+      target:
+        type: AverageValue
+        averageValue: "0.2s"
 ---
 apiVersion: v1
 kind: ConfigMap

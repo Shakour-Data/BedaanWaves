@@ -20,11 +20,6 @@ venv/
 ENV/
 .venv/
 env/
-.env
-**/.env
-*.env
-.env.local
-.env.*.local
 
 # Node.js
 node_modules/
@@ -41,7 +36,7 @@ out/
 .vercel/
 tsconfig.tsbuildinfo
 
-# OS
+# OS & editors
 .DS_Store
 Thumbs.db
 *.swp
@@ -50,32 +45,25 @@ Thumbs.db
 *.tmp
 *.temp
 *.out
-*.log
-
-# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Trae AI
-.trae/
-
-# Kilo AI
-.kilo/
-
-# Caches
+# Python caches
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
 .coverage
 htmlcov/
 
-# Test artifacts
-backend/app/tests/regression/
-.trae/specs/
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.template
+!.env.example
+*.env.local
+*.env.*.local
 
-# ML artifacts
+# ML artifacts (binary, large, regenerable)
 *.joblib
 *.pkl
 *.h5
@@ -84,25 +72,61 @@ backend/app/tests/regression/
 
 # Database
 *.sql.backup
-database/pginst*.exe
-pginst_extracted/
 pginst*.exe
+pginst_extracted/
 
-# Backup files
-backups/
-archive/
-
-# Generated docs
+# Generated docs (regenerable)
 docs/openapi.yaml
 docs/openapi_report.md
 docs/INVENTORY.md
 docs/OBSOLETE_FILES_REPORT.md
 docs/DUPLICATES_REMOVAL_REPORT.md
-
-# Static analysis reports
+docs/architecture_improvement_report.md
+docs/architecture_improvement_report_v2.md
+docs/CODE_DOCS_MISMATCH_REPORT.md
+docs/data-flow-analysis-report.md
+docs/VALIDATION_REPORT_FINAL.md
+docs/INTEGRATION_AUDIT_REPORT.md
+docs/AUDIT_REPORT.md
+docs/security-privacy-report.md
+docs/UX-AUDIT-analytical.md
+docs/spec.yaml
 backend/static_analysis_report.md
 
-# Backend temp/debug
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+playwright-report/
+playwright-browsers/
+
+# Logs
+*.log
+backend/logs/*.log
+!backend/logs/.gitkeep
+
+# Temp / debug scripts
+*.pyc
+fix_*.py
+check_*.py
+verify_*.py
+count_*.py
+inspect_*.py
+db_quality_audit.py
+deep_inspect.py
+forensic.py
+get_assets.py
+file_inventory.csv
+eslint_*.txt
+*.txt
+!README.md
+!STRUCTURE.md
+!MIGRATION.md
+!AGENTS.md
+!SECURITY.md
+!backups/MIGRATION_SUMMARY.txt
+
+# Backend temp
 backend/debug_*.py
 backend/debug_*.txt
 backend/*_raw.csv
@@ -122,56 +146,12 @@ backend/verify_refresh.py
 backend/count_mypy.py
 backend/db_quality_audit.py
 backend/fix_*.py
-backend/scripts/
-
-# Root temp scripts
-*.pyc
-__pycache__/
-fix_*.py
-check_*.py
-verify_*.py
-count_*.py
-inspect_*.py
-db_quality_audit.py
-deep_inspect.py
-forensic.py
-get_assets.py
-file_inventory.csv
-eslint_*.txt
-*.txt
-!README.md
-!STRUCTURE.md
-!MIGRATION.md
-!AGENTS.md
-
-# Additional debug/test files (root and backend)
-*.pyc
-fix_*.py
-inspect_*.py
-forensic.py
-get_assets.py
-count_mypy.py
-deep_inspect.py
-db_quality_audit.py
-quality_audit.py
-schema_audit.py
-find_port.py
-kill*.py
-audit_*.py
-pytest_full_output.txt
-file_inventory.csv
-*.log
-*.out
-*.tmp
-*.temp
-backend/logs/
-scripts/
-deployment/scripts/
-.env.template
 backend/test_*.py
 backend/find_port.py
 backend/kill*.py
 backend/quality_audit.py
 backend/schema_audit.py
-backend/test_*.py
-backend/test_*.txt
+
+# Kilo / Trae AI
+.trae/
+.kilo/

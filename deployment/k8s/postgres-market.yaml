@@ -151,17 +151,49 @@ metadata:
   name: postgres-market-config
 data:
   postgres.conf: |
-    max_connections = 300
-    shared_buffers = 512MB
-    effective_cache_size = 2GB
-    work_mem = 16MB
-    maintenance_work_mem = 128MB
+    max_connections = 400
+    shared_buffers = 1GB
+    effective_cache_size = 4GB
+    work_mem = 32MB
+    maintenance_work_mem = 256MB
+    max_worker_processes = 16
+    max_parallel_workers = 16
+    max_parallel_workers_per_gather = 8
+    max_parallel_maintenance_workers = 8
+    
     wal_level = replica
     max_wal_senders = 10
-    wal_keep_size = 2GB
+    wal_keep_size = 4GB
+    wal_compression = on
+    checkpoint_completion_target = 0.9
+    checkpoint_timeout = 15min
+    
     random_page_cost = 1.1
     seq_page_cost = 1.0
     effective_io_concurrency = 200
+    
+    default_statistics_target = 100
+    from_collapse_limit = 8
+    join_collapse_limit = 8
+    
+    plan_cache_mode = force_custom_plan
+    
     log_statement = 'ddl'
     log_min_duration_statement = 500
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_lock_waits = on
+    
     shared_preload_libraries = 'pg_stat_statements, pg_cron'
+    pg_stat_statements_track = all
+    pg_stat_statements_max = 10000
+    pg_stat_statements_save = on
+    
+    autovacuum_naptime = 1min
+    autovacuum_vacuum_threshold = 50
+    autovacuum_analyze_threshold = 50
+    autovacuum_vacuum_scale_factor = 0.05
+    autovacuum_analyze_scale_factor = 0.02
+    
+    jit = off

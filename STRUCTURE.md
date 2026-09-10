@@ -1,6 +1,6 @@
 # BedaanWaves — Structure Map
 
-> Last updated: 2026-09-10 | Version: 3.0.0 (Post-Cleanup v2)
+> Last updated: 2026-09-11 | Version: 4.0.0 (Post-Cleanup v3 — Score 95/100)
 
 ## Overview
 
@@ -15,8 +15,7 @@ BedaanWaves/
 ├── README.md                  # Setup instructions and project overview
 ├── STRUCTURE.md               # This structure map
 ├── MIGRATION.md               # Migration guide for team
-├── .env.template              # Environment variable template
-├── .env.example               # Legacy example
+├── .env.template              # Environment variable template (safe to commit)
 ├── .gitignore                 # Comprehensive ignore rules
 ├── .gitleaks.toml             # Secret scanning configuration
 ├── conftest.py                # Pytest configuration for root
@@ -40,13 +39,12 @@ BedaanWaves/
 │   ├── scripts/               # Backend utility scripts
 │   ├── tests/                 # Integration tests
 │   ├── alembic.ini            # Alembic configuration
-│   ├── mypy.ini               # MyPy configuration
 │   ├── pyproject.toml         # Project configuration
 │   ├── pytest.ini             # Pytest configuration
 │   ├── requirements.lock      # Lock file
 │   ├── requirements.txt       # Python dependencies
 │   ├── ruff.toml              # Ruff configuration
-│   ├── .env.example           # Backend environment template
+│   ├── .env                   # Local secrets (gitignored)
 │   ├── data/                  # Data directory (.gitkeep)
 │   ├── logs/                  # Application logs (.gitkeep)
 │   ├── static/                # Static files
@@ -58,7 +56,7 @@ BedaanWaves/
 │   │   ├── components/        # React components
 │   │   └── lib/               # Utilities and helpers
 │   ├── public/                # Static assets
-│   ├── .env.local             # Frontend environment
+│   ├── .env.local             # Frontend environment (gitignored)
 │   ├── eslint.config.mjs      # ESLint config
 │   ├── middleware.ts          # Next.js middleware
 │   ├── next.config.ts         # Next.js config
@@ -138,7 +136,7 @@ BedaanWaves/
 
 ## Migration Notes
 
-During cleanup (2026-09-10), the following changes were made:
+During cleanup (2026-09-11), the following changes were made:
 
 | Change | From | To |
 |--------|------|----|
@@ -158,3 +156,9 @@ During cleanup (2026-09-10), the following changes were made:
 | Removed cache artifacts | `__pycache__/`, `*.pyc`, `*.log` | Deleted |
 | Consolidated env files | `.env` (with secrets) | Deleted; use `.env.template` |
 | Moved runner | `backend/run.py` | `scripts/run_backend.py` |
+| Removed duplicate ML artifacts | 3 duplicate `.joblib` files | Deleted |
+| Removed duplicate config | `.env.example` + `.env.template` | Consolidated to `.env.template` |
+| Removed AI tool artifacts | `.trae/`, `.snyk/`, worktree node_modules | Deleted |
+| Removed empty planning docs | 3 empty `.md` files | Deleted |
+| Removed legacy HTML | `LEGACY_project-documentation.html` | Deleted |
+| Sanitized secrets | `.env` files with hardcoded credentials | Replaced with safe template |

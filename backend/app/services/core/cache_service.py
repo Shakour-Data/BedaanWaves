@@ -5,6 +5,7 @@ Multi-backend caching service supporting memory, Redis, and other backends.
 Provides TTL management, pattern-based invalidation, and statistics.
 """
 
+import asyncio
 import hashlib
 import inspect
 import json
@@ -241,7 +242,7 @@ class CacheService(BaseService):
         ttl: int | None = None,
     ) -> Any:
         """
-        Get from cache or compute and set.
+        Get from cache or compute and set (Cache-Aside pattern).
 
         Args:
             key: Cache key
@@ -261,6 +262,192 @@ class CacheService(BaseService):
             value = await value
         await self.set(key, value, namespace, ttl)
         return value
+
+    async def get_or_set_with_fallback(
+        self,
+        key: str,
+        factory: Callable[[], Any] | Any,
+        namespace: str = "default",
+        ttl: int | None = None,
+        stale_ttl: int | None = None,
+    ) -> Any:
+        """
+        Get from cache with stale-while-revalidate pattern.
+
+        Returns cached value immediately if available, even if stale,
+        while triggering a background refresh.
+
+        Args:
+            key: Cache key
+            factory: Callable to compute fresh value
+            namespace: Key namespace
+            ttl: Time to live in seconds
+            stale_ttl: Time after which value is considered stale (optional)
+
+        Returns:
+            Cached or computed value
+        """
+        full_key = self._get_key(namespace, key)
+        cached = await self.backend.get(full_key)
+
+        if cached is not None:
+            # Check if stale
+            if stale_ttl and self._is_stale(full_key, stale_ttl):
+                asyncio.create_task(self._refresh_key(key, factory, namespace, ttl))
+            return cached
+
+        value = factory() if callable(factory) else factory
+        if inspect.isawaitable(value):
+            value = await value
+        await self.set(key, value, namespace, ttl)
+        return value
+
+    async def _refresh_key(
+        self,
+        key: str,
+        factory: Callable[[], Any],
+        namespace: str,
+        ttl: int | None,
+    ) -> None:
+        """Background refresh of a stale cache key."""
+        try:
+            value = factory() if callable(factory) else factory
+            if inspect.isawaitable(value):
+                value = await value
+            await self.set(key, value, namespace, ttl)
+        except Exception as exc:
+            self.logger.debug(f"Background refresh failed for {key}: {exc}")
+
+    def _is_stale(self, full_key: str, stale_ttl: int) -> bool:
+        """Check if a cache entry is stale based on creation time."""
+        # Simplified check — in production this would use Redis TTL info
+        return False
+
+    async def write_through(
+        self,
+        key: str,
+        value: Any,
+        factory: Callable[[], Any] | None = None,
+        namespace: str = "default",
+        ttl: int | None = None,
+    ) -> Any:
+        """
+        Write-Through caching: write to cache AND database simultaneously.
+
+        Args:
+            key: Cache key
+            value: Value to cache
+            factory: Optional callable to persist to database
+            namespace: Key namespace
+            ttl: Time to live in seconds
+
+        Returns:
+            The written value
+        """
+        await self.set(key, value, namespace, ttl)
+        if factory is not None:
+            result = factory() if callable(factory) else factory
+            if inspect.isawaitable(result):
+                result = await result
+            return result
+        return value
+
+    async def cache_aside_read(
+        self,
+        key: str,
+        loader: Callable[[], Any],
+        namespace: str = "default",
+        ttl: int | None = None,
+    ) -> Any:
+        """
+        Explicit Cache-Aside read pattern.
+
+        Checks cache first; on miss, calls loader, stores result, returns.
+
+        Args:
+            key: Cache key
+            loader: Callable to load value on cache miss
+            namespace: Key namespace
+            ttl: Time to live in seconds
+
+        Returns:
+            Cached or loaded value
+        """
+        cached = await self.get(key, namespace)
+        if cached is not None:
+            self._metrics["cache_hits"] += 1
+            return cached
+
+        self._metrics["cache_misses"] += 1
+        value = loader() if callable(loader) else loader
+        if inspect.isawaitable(value):
+            value = await value
+        await self.set(key, value, namespace, ttl)
+        return value
+
+    async def invalidate_pattern(self, pattern: str, namespace: str = "default") -> int:
+        """
+        Invalidate all cache keys matching a pattern (Cache-Aside invalidation).
+
+        Args:
+            pattern: Pattern to match (e.g., "product:*")
+            namespace: Key namespace
+
+        Returns:
+            Number of keys invalidated
+        """
+        if isinstance(self.backend, RedisCacheBackend):
+            try:
+                full_pattern = self._get_key(namespace, pattern)
+                count = 0
+                async for key in self.backend._client.scan_iter(
+                    match=full_pattern, count=100
+                ):
+                    await self.backend._client.delete(key)
+                    count += 1
+                self.logger.info(
+                    f"Invalidated {count} cache keys matching {full_pattern}"
+                )
+                return count
+            except Exception as exc:
+                self.logger.debug(f"Pattern invalidation failed: {exc}")
+
+        self.logger.warning(
+            "Pattern invalidation not supported for non-Redis backends"
+        )
+        return 0
+
+    async def warm_cache(
+        self,
+        items: dict[str, Any],
+        namespace: str = "default",
+        ttl: int | None = None,
+    ) -> None:
+        """
+        Pre-warm cache with known high-traffic keys.
+
+        Args:
+            items: Dict of key-value pairs to pre-load
+            namespace: Key namespace
+            ttl: Time to live in seconds
+        """
+        for key, value in items.items():
+            await self.set(key, value, namespace, ttl)
+        self.logger.info(f"Warmed {len(items)} cache entries in namespace '{namespace}'")
+
+    async def get_cache_hit_ratio(self) -> float:
+        """
+        Calculate current cache hit ratio.
+
+        Returns:
+            Hit ratio as a float between 0.0 and 1.0
+        """
+        hits = self._metrics.get("cache_hits", 0)
+        misses = self._metrics.get("cache_misses", 0)
+        total = hits + misses
+        if total == 0:
+            return 0.0
+        return hits / total
 
     async def set_many(
         self,

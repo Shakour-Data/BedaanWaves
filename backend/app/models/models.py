@@ -747,6 +747,9 @@ class FundamentalRatio(Base):
 
     __table_args__ = (
         UniqueConstraint('asset_id', 'period', 'market', name='uix_fund_ratio'),
+        Index('idx_fund_ratio_asset_as_of', 'asset_id', 'as_of'),
+        Index('idx_fund_ratio_pe', 'pe'),
+        Index('idx_fund_ratio_market_as_of', 'market', 'as_of'),
     )
 
 
@@ -845,6 +848,11 @@ class NewsSentiment(Base):
     sentiment_score = Column(Numeric(5, 2))
     model_version = Column(String(50))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
+
+    __table_args__ = (
+        Index('idx_news_sentiment_asset_created', 'asset_id', 'created_at'),
+        Index('idx_news_sentiment_label_score', 'sentiment_label', 'sentiment_score'),
+    )
 
 
 class NewsSummary(Base):
@@ -1038,11 +1046,18 @@ class MarketDataSnapshot(Base):
 
     asset = relationship("Asset")
 
-    __table_args__ = (
+__table_args__ = (
         UniqueConstraint('asset_id', 'snapshot_time', 'interval', name='uix_snapshot'),
         Index('idx_snapshot_fresh', 'asset_id', 'is_fresh', 'snapshot_time'),
         Index('idx_snapshot_interval', 'asset_id', 'interval', 'snapshot_time'),
         Index('idx_snapshot_ml_features_gin', 'features', postgresql_using='gin'),
+        Index('idx_snapshot_asset_interval_time', 'asset_id', 'interval', 'snapshot_time DESC'),
+        Index(
+            'idx_snapshot_covering',
+            'asset_id', 'snapshot_time', 'interval',
+            postgresql_using='btree',
+            postgresql_include=('open', 'high', 'low', 'close', 'volume', 'rsi', 'macd', 'volatility'),
+        ),
         CheckConstraint('freshness_score >= 0 AND freshness_score <= 100', name='chk_freshness_score_range'),
         CheckConstraint('high >= low', name='chk_snapshot_high_low'),
         CheckConstraint('volume >= 0', name='chk_snapshot_volume_non_negative'),
@@ -1118,6 +1133,7 @@ class RawPerformanceScore(Base):
         Index('idx_raw_perf_sub_dims_gin', 'sub_dimension_scores', postgresql_using='gin'),
         Index('idx_raw_perf_aspects_gin', 'aspect_scores', postgresql_using='gin'),
         Index('idx_raw_perf_sub_aspects_gin', 'sub_aspect_scores', postgresql_using='gin'),
+        Index('idx_raw_perf_asset_market_captured', 'asset_id', 'market', 'captured_at'),
     )
 
 

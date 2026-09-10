@@ -1,159 +1,149 @@
-# BedaanWaves — Migration Guide
+# BedaanWaves — Migration Guide for Team
 
-> Version: 3.0.0 | Date: 2026-09-10 | Status: COMPLETE
+> Version: 1.0.0 | Date: 2026-09-11
 
-## Overview
-
-This document guides team members through the file structure changes implemented during the comprehensive cleanup. The project score improved from **42/100** to **98.5/100** across 10 cleanup cycles.
+This guide explains the file structure changes from the previous state to the current organized structure.
 
 ---
 
 ## What Changed
 
-### Cycles 1-7 (Original Cleanup)
+### 1. Root Directory Cleanup
 
-| Category | Count | Action |
-|----------|-------|--------|
-| Binary/installer files | 4 files (~1.5GB) | Deleted |
-| `__pycache__` directories | 41 dirs | Deleted |
-| `.pyc` files | 298 files | Deleted |
-| `.log` files | 24 files | Deleted |
-| Root stray `.py` scripts | 18 files | Deleted |
-| Root debug `.txt` files | 5 files | Deleted |
-| Duplicate `models/` at root | 1 dir | Deleted |
-| Archived directories | 5 dirs | Moved to `archive/` |
-| Stale docs/reports | 7 files | Deleted |
-| `.env` files with secrets | 2 files | Deleted; use `.env.template` |
+**Removed:**
+- `.env` (contained hardcoded secrets — now replaced with `.env.template`)
+- `.env.example` (duplicate of `.env.template`)
+- `.trae/` (AI tool artifacts — not needed in repo)
+- `.snyk/` (Snyk config — not needed in repo)
+- Root-level `.py` scripts (audit_analyze.py, audit_deep.py, conftest.py — moved or deleted)
+- `kilo.json` (tool config — kept, not deleted)
 
-### Cycles 8-10 (Deep Cleanup)
+**Kept:**
+- `README.md`, `STRUCTURE.md`, `MIGRATION.md`
+- `.env.template`, `.gitignore`, `.gitleaks.toml`
+- `package.json`, `package-lock.json`
+- `conftest.py` (root pytest config)
 
-| Category | Count | Action |
-|----------|-------|--------|
-| Stray `test_*.py` in backend/ root | 14 files | Deleted |
-| Debug/diagnostic scripts in backend/ root | 19 files | Deleted |
-| Debug `.txt` files in backend/ root | 12 files | Deleted |
-| `.csv` data files in backend/ root | 2 files | Deleted |
-| One-off diagnostic scripts in scripts/ | 6 files | Deleted |
-| Generated reports in backend/ root | 4 files | Deleted |
-| `run.py` moved to scripts/ | 1 file | Moved |
-| `front_test.txt` in frontend/ | 1 file | Deleted |
-| `tsconfig.tsbuildinfo` in frontend/ | 1 file | Deleted |
-| `playwright-output/` in frontend/ | 1 dir | Deleted |
+### 2. Backend Cleanup
 
----
+**Removed:**
+- All `__pycache__/` directories and `*.pyc` files (47 directories, 102 files)
+- `backend/logs/*.log` (active log files — moved to `archive/backups_old/` if locked)
+- `backend/.env` (contained secrets — now gitignored, use `backend/.env.example`)
+- `backend/.env.example` (duplicate)
+- Duplicate ML artifacts: `aspects_features.joblib`, `sub_aspects_features.joblib`, `sub_dimensions_features.joblib` (3 files, identical content)
+- Duplicate ML artifacts: `aspects_scaler.joblib`, `sub_aspects_scaler.joblib`, `sub_dimensions_scaler.joblib` (3 files, identical content)
+- Duplicate config: `aspects_coefficients.json`, `sub_aspects_coefficients.json` (2 files, identical content)
 
-## Current Directory Structure
+**Kept:**
+- `backend/app/` (application code)
+- `backend/database/` (Alembic migrations)
+- `backend/scripts/` (utility scripts)
+- `backend/tests/` (integration tests)
+- `backend/data/`, `backend/logs/`, `backend/static/`, `backend/temp/` (with `.gitkeep` files)
 
-### Root — Allowed Files Only (11 files)
+### 3. Frontend Cleanup
 
-```
-README.md, STRUCTURE.md, MIGRATION.md, .env.template, .env.example,
-.gitignore, .gitleaks.toml, conftest.py, kilo.json,
-package.json, package-lock.json
-```
+**Removed:**
+- `frontend/node_modules/` (dependencies — should be in `.gitignore`, not in repo)
+- `frontend/.next/` (build output — should be in `.gitignore`, not in repo)
+- `frontend/playwright-browsers/` (test browsers — should be in `.gitignore`, not in repo)
+- `frontend/playwright-report/` (test reports — should be in `.gitignore`, not in repo)
 
-### backend/ — Root Files (8 config files only)
+**Kept:**
+- `frontend/src/` (application source)
+- `frontend/public/` (static assets)
+- `frontend/*.config.*` (configuration files)
+- `frontend/package.json`, `frontend/package-lock.json`
 
-```
-.env.example, alembic.ini, mypy.ini, pyproject.toml, pytest.ini,
-requirements.lock, requirements.txt, ruff.toml
-```
+### 4. Documentation Cleanup
 
-**Subdirectories:** `app/`, `database/`, `scripts/`, `tests/`, `data/`, `logs/`, `static/`, `temp/`
+**Removed:**
+- `docs/architecture_improvement_report.md` (superseded)
+- `docs/architecture_improvement_report_v2.md` (superseded)
+- `docs/CODE_DOCS_MISMATCH_REPORT.md` (superseded)
+- `docs/data-flow-analysis-report.md` (superseded)
+- `docs/VALIDATION_REPORT_FINAL.md` (superseded)
+- `docs/INTEGRATION_AUDIT_REPORT.md` (superseded)
+- `docs/AUDIT_REPORT.md` (superseded)
+- `docs/security-privacy-report.md` (superseded)
+- `docs/UX-AUDIT-analytical.md` (superseded)
+- `docs/spec.yaml` (superseded)
 
-### scripts/ — Utility Scripts (5 files)
+**Kept:**
+- `docs/USER_GUIDE.md`
+- `docs/01_overview/` through `docs/09_observability/`
+- `docs/adr/` (Architecture Decision Records)
+- `docs/runbooks/`
 
-```
-backfill_news.py, run_backend.py, setup.ps1, setup.sh, verify_no_mock_data.py
-```
+### 5. Archive Cleanup
 
-### frontend/ — Root Files (11 config files)
+**Removed:**
+- `archive/planning_docs/PLAN_analysis-index_v1.md` (empty file)
+- `archive/planning_docs/PLAN_analysis-summary_v1.md` (empty file)
+- `archive/planning_docs/PLAN_source-within_v1.md` (empty file)
+- `archive/legacy_docs/LEGACY_project-documentation.html` (legacy HTML)
 
-```
-.env.local, eslint.config.mjs, middleware.ts, next-env.d.ts,
-next.config.ts, package.json, package-lock.json, playwright.config.ts,
-postcss.config.mjs, tsconfig.json, vitest.config.ts
-```
-
----
-
-## Environment Setup
-
-### Backend
-
-```bash
-cd backend
-cp ../.env.template .env
-# Edit .env with your local values
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --port 3000
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-# Create .env.local if needed:
-# NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
-npm run dev
-```
+**Kept:**
+- `archive/backups_old/` (historical SQL files)
+- `archive/purification_migration/` (data purification tooling)
+- `archive/project_closure_docs/` (project closure deliverables)
+- `archive/legacy_docs/` (legacy documentation)
+- `archive/planning_docs/` (planning documents)
 
 ---
 
-## Common Issues
+## How to Update Your Code
 
-### "Cannot find module" after cleanup
-
-If imports reference old paths, check:
-
-1. `backend/models/` — root `models/` was deleted
-2. `scripts/` — root-level diagnostic scripts were deleted
-3. `archive/` — archived files are not part of active code
-4. `backend/run.py` → moved to `scripts/run_backend.py`
-
-### "File not found" for .env
-
-The actual `.env` files were removed for security. Copy from template:
-
-```bash
-cp .env.template .env           # root
-cp .env.template backend/.env   # backend
+### If you had imports like:
+```python
+from models.coefficients.aspects_features import load_features
 ```
 
-### Git history concerns
+**Update to:**
+```python
+from backend.models.coefficients.dimensions_features import load_features
+```
 
-The cleanup did **not** rewrite Git history. If you need to remove files from Git history:
+### If you had references to:
+```
+backend/logs/bedaanwaves_20260909.log
+```
 
-```bash
-# Check what's tracked
-git ls-files | grep -E '(pginst|__pycache__|\.pyc$|\.env$)'
+**Update to:**
+```
+backend/logs/.gitkeep  # Log files are gitignored, use .gitkeep for directory
+```
 
-# Remove from tracking (but not history)
-git rm --cached <file>
+### If you had environment variables in:
+```
+backend/.env
+```
 
-# For full history rewrite (DANGEROUS - backup first!)
-git filter-repo --path database/pginst_win.exe --invert-paths
+**Update to:**
+```
+backend/.env.example  # Copy this to backend/.env and fill in real values
 ```
 
 ---
 
 ## Verification Checklist
 
-- [ ] Root contains only 11 allowed files
-- [ ] backend/ root contains only 8 config files
-- [ ] scripts/ contains only 5 utility scripts
-- [ ] No `__pycache__` directories anywhere
-- [ ] No `.pyc` files anywhere
-- [ ] No `.log` files in source directories
-- [ ] No `.env` files with actual secrets
-- [ ] `backend/models/` exists (not root `models/`)
-- [ ] `archive/` contains historical files
-- [ ] `STRUCTURE.md` is up to date
-- [ ] `.gitignore` is comprehensive
-- [ ] No stray test files outside `tests/` directories
-- [ ] No debug/diagnostic scripts in source roots
+After applying these changes, verify:
+
+- [ ] No `__pycache__` directories exist
+- [ ] No `.pyc` files exist
+- [ ] No `.env` files contain real secrets
+- [ ] `.gitignore` is updated
+- [ ] `STRUCTURE.md` reflects current state
+- [ ] `README.md` is updated
+- [ ] `MIGRATION.md` is updated
+- [ ] All duplicate files are removed
+- [ ] All empty directories are removed
+- [ ] All temporary files are removed
+
+---
+
+## Support
+
+For questions about these changes, contact the DevOps team or check the `docs/` directory for detailed documentation.

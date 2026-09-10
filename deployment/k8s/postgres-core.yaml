@@ -152,25 +152,57 @@ metadata:
 data:
   postgres.conf: |
     # Connection settings
-    max_connections = 200
-    shared_buffers = 256MB
-    effective_cache_size = 1GB
-    work_mem = 8MB
-    maintenance_work_mem = 64MB
+    max_connections = 300
+    shared_buffers = 512MB
+    effective_cache_size = 2GB
+    work_mem = 16MB
+    maintenance_work_mem = 128MB
+    max_worker_processes = 8
+    max_parallel_workers = 8
+    max_parallel_workers_per_gather = 4
+    max_parallel_maintenance_workers = 4
     
     # WAL settings
     wal_level = replica
     max_wal_senders = 10
-    wal_keep_size = 1GB
+    wal_keep_size = 2GB
+    wal_compression = on
+    checkpoint_completion_target = 0.9
+    checkpoint_timeout = 15min
     
     # Query optimization
     random_page_cost = 1.1
     seq_page_cost = 1.0
     effective_io_concurrency = 200
     
+    # Query planning
+    default_statistics_target = 100
+    from_collapse_limit = 8
+    join_collapse_limit = 8
+    
+    # Caching
+    plan_cache_mode = force_custom_plan
+    
     # Logging
     log_statement = 'ddl'
-    log_min_duration_statement = 1000
+    log_min_duration_statement = 500
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_lock_waits = on
     
     # Extensions
     shared_preload_libraries = 'pg_stat_statements, pg_cron'
+    pg_stat_statements_track = all
+    pg_stat_statements_max = 10000
+    pg_stat_statements_save = on
+    
+    # Autovacuum
+    autovacuum_naptime = 1min
+    autovacuum_vacuum_threshold = 50
+    autovacuum_analyze_threshold = 50
+    autovacuum_vacuum_scale_factor = 0.05
+    autovacuum_analyze_scale_factor = 0.02
+    
+    # JIT (disabled for predictable latency)
+    jit = off
