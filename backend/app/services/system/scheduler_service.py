@@ -2021,7 +2021,7 @@ asyncio.run(main())
             name=name,
             coroutine_func=coroutine_func,
             interval_seconds=interval_seconds,
-            next_run=datetime.now(UTC),
+            next_run=datetime.now(UTC) + timedelta(seconds=interval_seconds),
         )
         self._jobs[name] = job
         self.logger.info(f"Registered job: {name} (interval={interval_seconds}s)")

@@ -35,8 +35,8 @@ This document models three UML 2.5 structural diagram types for the Package, Com
 
 ### 1.2 Fixed Scope
 
-| English Name | Persian Description |
-|-------------|-------------------|
+| English Name | Description |
+|-------------|-------------|
 | `Employee` | Employee |
 | `HRManager` | HR Manager |
 | `PayrollRun` | Payroll run |
