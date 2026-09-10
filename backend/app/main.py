@@ -608,7 +608,7 @@ async def lifespan(app: FastAPI):
     app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
     app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
     app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
-    app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
+    app.include_router(live_sse_router, prefix="/api/v1/live-sse", tags=["live-sse"])
     app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
     app.include_router(data_health_router, tags=["data-health"])
     app.include_router(dashboard_router, prefix="/api/v1/analysis", tags=["dashboard"])

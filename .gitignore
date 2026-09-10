@@ -150,3 +150,21 @@ test_*.py
 test_*.txt
 verify_*.py
 check_*.py
+
+# Root-level debug/temp files
+*.txt
+*.csv
+*.pyc
+fix_*.py
+inspect_*.py
+forensic.py
+get_assets.py
+count_mypy.py
+deep_inspect.py
+db_quality_audit.py
+quality_audit.py
+schema_audit.py
+find_port.py
+kill*.py
+pytest_full_output.txt
+file_inventory.csv
