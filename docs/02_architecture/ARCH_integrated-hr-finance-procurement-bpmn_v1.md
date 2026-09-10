@@ -1,27 +1,27 @@
-# BPMN 2.0 — سیستم یکپارچه مدیریت منابع انسانی، مالی و تدارکات
+# BPMN 2.0 — Integrated HR, Finance & Procurement Management System
 
-**عنوان:** Integrated HR, Finance & Procurement Management System  
-**نسخه:** v1.0  
-**تاریخ:** 2026-09-09  
-**قالب:** PlantUML Activity Notation با برچسب‌گذاری BPMN-style
+**Title:** Integrated HR, Finance & Procurement Management System
+**Version:** v1.0
+**Date:** 2026-09-09
+**Format:** PlantUML Activity Notation with BPMN-style labels
 
 ---
 
-## ۱. مقدمه و مقیاس مدل‌سازی
+## 1. Introduction and Modeling Scale
 
-این سند فرایندهای کسب‌وکار سامانه را در سه سطح مدل‌سازی می‌کند. PlantUML Activity Notation برای نمایش استخرها،_LANE_ها، فعالیت‌ها، گیت‌ها و رویدادها به‌کار رفته است؛ برای اجرای مستقیم در Camunda یا Flowable باید مدل به BPMN 2.0 XML تبدیل و Data Object، Signal، Timer و Error Event آن اضافه شود.
+This document models the system's business processes at three abstraction levels. PlantUML Activity Notation is used to represent pools, lanes, activities, gateways, and events. For direct execution in Camunda or Flowable, the model must be converted to BPMN 2.0 XML and extended with Data Objects, Signals, Timers, and Error Events.
 
-| سطح | هدف | خروجی |
+| Level | Purpose | Output |
 |---|---|---|
-| ۱ | نمای کلان و ارتباط بازیگران | Process Overview با Pool/Lane |
-| ۲ | فرایندهای قابل اجرا در هر حوزه | شش Process Diagram مستقل |
-| ۳ | تسک‌های عملیاتی و استثناهای بحرانی | Payroll Approval، Budget Check PR، Stock Allocation |
+| 1 | High-level process view and actor relationships | Process overview with pools and lanes |
+| 2 | Executable process for each domain | Six independent process diagrams |
+| 3 | Operational tasks and critical exceptions | Payroll approval, purchase-request budget check, and stock allocation |
 
-نام‌های مشترک با DFD و UML: `Employee`، `PayrollRun`، `PayrollLine`، `Budget`، `BudgetAllocation`، `PurchaseRequest`، `PurchaseOrder`، `Product`، `StockLot`، `GoodsReceipt`، `Payment`، `Report` و `AuditLog`.
+Shared names across DFD and UML are `Employee`, `PayrollRun`, `PayrollLine`, `Budget`, `BudgetAllocation`, `PurchaseRequest`, `PurchaseOrder`, `Product`, `StockLot`, `GoodsReceipt`, `Payment`, `Report`, and `AuditLog`.
 
 ---
 
-## ۲. سطح ۱ — نمای کلان فرایندها
+## 2. Level 1 — Process Overview
 
 ```plantuml
 @startuml BPMN-L1-Overview
@@ -40,15 +40,15 @@ stop
 |HR Manager|
 :Receive HR request;
 if (Request type?) then (Employment)
-  :Review recruitment or transfer;
+:Review recruitment or transfer;
 else (Leave)
-  :Check leave balance;
+:Check leave balance;
 endif
 if (Approved?) then (Yes)
-  :Approve HR request;
-  :Publish attendance/eligibility event;
+:Approve HR request;
+:Publish attendance/eligibility event;
 else (No)
-  :Reject HR request;
+:Reject HR request;
 endif
 :Write AuditLog;
 stop
@@ -64,10 +64,10 @@ stop
 :Receive payroll or expense summary;
 :Invoke checkBudget();
 if (Budget available?) then (Yes)
-  :Approve payment;
-  :Create Payment;
+:Approve payment;
+:Create Payment;
 else (No)
-  :Defer or reject payment;
+:Defer or reject payment;
 endif
 stop
 
@@ -75,9 +75,9 @@ stop
 :Receive funding request;
 :Read BudgetAllocation;
 if (Credit sufficient?) then (Yes)
-  :Reserve credit;
+:Reserve credit;
 else (No)
-  :Return insufficient-budget result;
+:Return insufficient-budget result;
 endif
 stop
 
@@ -85,9 +85,9 @@ stop
 :Create PurchaseRequest;
 :Receive budget decision;
 if (Approved?) then (Yes)
-  :Issue PurchaseOrder;
+:Issue PurchaseOrder;
 else (No)
-  :Revise or cancel request;
+:Revise or cancel request;
 endif
 stop
 
@@ -107,9 +107,9 @@ stop
 |Bank/Payment Gateway|
 :Receive Payment request;
 if (Transaction success?) then (Yes)
-  :Return payment confirmation;
+:Return payment confirmation;
 else (No)
-  :Return payment failure;
+:Return payment failure;
 endif
 stop
 
@@ -132,36 +132,36 @@ Executive/Analyst ..> Finance Manager : budget reallocation decision
 @enduml
 ```
 
-### جدول Happy Path سطح ۱
+### Level-1 Happy Path Table
 
-| مرحله | Actor / Lane | فعالیت | خروجی |
+| Step | Actor / Lane | Activity | Output |
 |---|---|---|---|
-| ۱ | Employee | ثبت داده پرسنلی، مرخصی یا حضور | رویداد ورودی |
-| ۲ | HR Manager | بررسی و تأیید درخواست | داده پرسنلی تأییدشده |
-| ۳ | PayrollRun | اجرای `calculateSalary()` | `PayrollRun` و `PayrollLine` |
-| ۴ | Finance Manager | اجرای `checkBudget()` و تأیید پرداخت | `Payment` |
-| ۵ | Bank/Payment Gateway | اجرای پرداخت | تأییدیه تراکنش |
-| ۶ | Procurement Officer | ایجاد PR و صدور PO | `PurchaseOrder` |
-| ۷ | Supplier / Warehouse Officer | ارسال کالا و ثبت رسید | `GoodsReceipt` و `StockLot` |
-| ۸ | Executive/Analyst | اجرای `generateReport()` | `Report` |
+| 1 | Employee | Submit personal data, leave, or attendance | Input event |
+| 2 | HR Manager | Review and approve request | Approved personnel data |
+| 3 | PayrollRun | Execute `calculateSalary()` | `PayrollRun` and `PayrollLine` |
+| 4 | Finance Manager | Execute `BudgetAllocation.checkBudget()` and approve payment | `Payment` |
+| 5 | Bank/Payment Gateway | Execute payment | Transaction confirmation |
+| 6 | Procurement Officer | Create PR and issue PO | `PurchaseOrder` |
+| 7 | Supplier / Warehouse Officer | Ship goods and record receipt | `GoodsReceipt` and `StockLot` |
+| 8 | Executive/Analyst | Execute `ReportEngine.generateReport()` | `Report` |
 
-### جدول Exception Flow سطح ۱
+### Level-1 Exception Flow Table
 
-| کد | Actor / Lane | رویداد استثنا | پاسخ فرایند |
+| Code | Actor / Lane | Exception Event | Process Response |
 |---|---|---|---|
-| EX-L1-01 | Employee | داده ناقص یا نامعتبر | بازگشت برای اصلاح و ثبت `AuditLog` |
-| EX-L1-02 | HR Manager | عدم تأیید درخواست | رد درخواست و اعلان به Employee |
-| EX-L1-03 | PayrollRun | خطای `calculateSalary()` | توقف اجرا، ثبت خطا و اعلان به HR |
-| EX-L1-04 | Finance Manager | ناکافی بودن `BudgetAllocation` | defer/reject و درخواست تخصیص مجدد |
-| EX-L1-05 | Bank/Payment Gateway | خطای تراکنش | Intermediate Error و retry محدود |
-| EX-L1-06 | Warehouse Officer | مغایرت کالا با PO | ایجاد `DiscrepancyReport` و توقف تخصیص |
-| EX-L1-07 | Executive/Analyst | داده گزارش ناقص | درخواست تکمیل داده و ثبت رویداد کیفیت |
+| EX-L1-01 | Employee | Incomplete or invalid data | Return for correction and record `AuditLog` |
+| EX-L1-02 | HR Manager | Request not approved | Reject request and notify Employee |
+| EX-L1-03 | PayrollRun | `calculateSalary()` error | Stop execution, record error, and notify HR |
+| EX-L1-04 | Finance Manager | Insufficient `BudgetAllocation` | Defer/reject and request reallocation |
+| EX-L1-05 | Bank/Payment Gateway | Transaction error | Intermediate Error and bounded retry |
+| EX-L1-06 | Warehouse Officer | Goods discrepancy against PO | Create `DiscrepancyReport` and stop allocation |
+| EX-L1-07 | Executive/Analyst | Incomplete report data | Request data completion and record quality event |
 
 ---
 
-## ۳. سطح ۲ — فرایندهای حوزه‌ای
+## 3. Level 2 — Domain Processes
 
-### ۳.۱ HR — Recruitment، Transfer و Leave
+### 3.1 HR — Recruitment, Transfer, and Leave
 
 ```plantuml
 @startuml BPMN-L2-HR
@@ -174,9 +174,9 @@ title BPMN Level 2 — HR Process
 start
 :Submit request;
 if (Request type?) then (Recruitment/Transfer)
-  :Submit profile and documents;
+:Submit profile and documents;
 else (Leave)
-  :Submit leave form;
+:Submit leave form;
 endif
 :Send request to HR Manager;
 stop
@@ -184,36 +184,36 @@ stop
 |HR Manager|
 :Receive request;
 if (Recruitment/Transfer?) then (Yes)
-  :Review documents;
-  if (Complete?) then (Yes)
-    :Schedule interview or transfer review;
-  else (No)
-    :Return for correction;
-    stop
-  endif
+:Review documents;
+if (Complete?) then (Yes)
+:Schedule interview or transfer review;
+else (No)
+:Return for correction;
+stop
+endif
 else (Leave)
-  :Check leave balance;
+:Check leave balance;
 endif
 if (Approved?) then (Yes)
-  :Approve request;
-  :Update Employee record;
-  :Write AuditLog;
-  :Notify Employee;
+:Approve request;
+:Update Employee record;
+:Write AuditLog;
+:Notify Employee;
 else (No)
-  :Reject request;
-  :Write AuditLog;
-  :Notify Employee;
-  stop
+:Reject request;
+:Write AuditLog;
+:Notify Employee;
+stop
 endif
 stop
 
 @enduml
 ```
 
-**Happy Path:** Employee درخواست را ثبت می‌کند → HR Manager مدارک یا مانده مرخصی را بررسی می‌کند → درخواست تأیید، رکورد `Employee` به‌روز و `AuditLog` ثبت می‌شود.  
-**Exception Flow:** مدارک ناقص است، مانده مرخصی کافی نیست یا مدیر درخواست را رد می‌کند؛ سیستم درخواست را برای اصلاح برمی‌گرداند یا رد نهایی ثبت می‌کند.
+**Happy Path:** Employee submits the request, HR Manager reviews the documents or leave balance, the request is approved, the `Employee` record is updated, and `AuditLog` is recorded.
+**Exception Flow:** Documents are incomplete, leave balance is insufficient, or the manager rejects the request; the system returns it for correction or records a final rejection.
 
-### ۳.۲ Payroll — محاسبه، تأیید و پرداخت
+### 3.2 Payroll — Calculation, Approval, and Payment
 
 ```plantuml
 @startuml BPMN-L2-Payroll
@@ -232,16 +232,16 @@ stop
 :Receive approved data;
 :Invoke calculateSalary();
 loop for each Employee
-  :Calculate allowances and deductions;
-  :Create PayrollLine;
+:Calculate allowances and deductions;
+:Create PayrollLine;
 end
 if (Calculation valid?) then (Yes)
-  :Generate Salary Slip;
-  :Send summary to Finance Manager;
+:Generate Salary Slip;
+:Send summary to Finance Manager;
 else (No)
-  :Raise calculation error;
-  :Write AuditLog;
-  stop
+:Raise calculation error;
+:Write AuditLog;
+stop
 endif
 stop
 
@@ -249,34 +249,34 @@ stop
 :Receive payroll summary;
 :Invoke checkBudget();
 if (Budget available?) then (Yes)
-  :Approve payroll payment;
-  :Create Payment;
-  :Send payment instruction to Bank Gateway;
+:Approve payroll payment;
+:Create Payment;
+:Send payment instruction to Bank Gateway;
 else (No)
-  :Request budget extension;
-  :Write AuditLog;
-  stop
+:Request budget extension;
+:Write AuditLog;
+stop
 endif
 stop
 
 |Bank/Payment Gateway|
 :Receive payment instruction;
 if (Transaction success?) then (Yes)
-  :Return confirmation;
-  :Update Payment status;
+:Return confirmation;
+:Update Payment status;
 else (No)
-  :Return failure;
-  :Schedule retry;
+:Return failure;
+:Schedule retry;
 endif
 stop
 
 @enduml
 ```
 
-**Happy Path:** لیست تأیید می‌شود → `calculateSalary()` خطوط حقوق را می‌سازد → Finance Manager بودجه را تأیید می‌کند → بانک پرداخت را ثبت می‌کند.  
-**Exception Flow:** خطای محاسبه، بودجه ناکافی یا failure درگاه باعث توقف، ثبت `AuditLog` و retry محدود می‌شود.
+**Happy Path:** The list is approved, `calculateSalary()` creates payroll lines, Finance Manager approves the budget, and the bank records the payment.
+**Exception Flow:** A calculation error, insufficient budget, or gateway failure stops the process, records `AuditLog`, and invokes a bounded retry where applicable.
 
-### ۳.۳ Budget — تدوین، تخصیص و اعتبارسنجی
+### 3.3 Budget — Planning, Allocation, and Validation
 
 ```plantuml
 @startuml BPMN-L2-Budget
@@ -295,18 +295,18 @@ stop
 :Receive budget plan;
 :Create Budget;
 fork
-  :Allocate credit to organization units;
+:Allocate credit to organization units;
 fork again
-  :Publish BudgetAllocation;
+:Publish BudgetAllocation;
 end fork
 :Receive expense or payroll request;
 :Invoke checkBudget();
 if (Credit sufficient?) then (Yes)
-  :Reserve BudgetAllocation;
-  :Approve request;
+:Reserve BudgetAllocation;
+:Approve request;
 else (No)
-  :Request reallocation;
-  stop
+:Request reallocation;
+stop
 endif
 :Write AuditLog;
 stop
@@ -314,10 +314,10 @@ stop
 @enduml
 ```
 
-**Happy Path:** بودجه سالانه تعریف می‌شود → اعتبار به واحدها تخصیص می‌یابد → `checkBudget()` مقدار درخواست را بررسی و رزرو می‌کند.  
-**Exception Flow:** مانده اعتبار کمتر از درخواست است؛ Finance Manager درخواست reallocates را به Executive/Analyst می‌فرستد و تا تصمیم جدید، عملیات متوقف می‌ماند.
+**Happy Path:** The annual budget is defined, credit is allocated to units, and `BudgetAllocation.checkBudget()` checks and reserves the requested amount.
+**Exception Flow:** The remaining credit is lower than the request; Finance Manager sends a reallocation request to Executive/Analyst and pauses dependent operations until a decision is made.
 
-### ۳.۴ Procurement — درخواست خرید تا سفارش
+### 3.4 Procurement — Purchase Request to Order
 
 ```plantuml
 @startuml BPMN-L2-Procurement
@@ -337,14 +337,14 @@ stop
 :Receive PurchaseRequest;
 :Invoke checkBudget();
 if (Budget available?) then (Yes)
-  :Reserve BudgetAllocation;
-  :Approve PurchaseRequest;
-  :Issue PurchaseOrder;
-  :Send PO to Supplier;
+:Reserve BudgetAllocation;
+:Approve PurchaseRequest;
+:Issue PurchaseOrder;
+:Send PO to Supplier;
 else (No)
-  :Reject or request reallocation;
-  :Notify Procurement Officer;
-  stop
+:Reject or request reallocation;
+:Notify Procurement Officer;
+stop
 endif
 stop
 
@@ -364,10 +364,10 @@ stop
 @enduml
 ```
 
-**Happy Path:** PR ایجاد و اعتبارسنجی می‌شود → بودجه رزرو و PR تأیید می‌شود → PO صادر و به Supplier ارسال می‌شود → کالا دریافت و `GoodsReceipt` ثبت می‌گردد.  
-**Exception Flow:** سطر نامعتبر، بودجه ناکافی، رد تامین‌کننده یا مغایرت حمل باعث اصلاح، رد یا ایجاد `DiscrepancyReport` می‌شود.
+**Happy Path:** The PR is created and validated, budget is reserved, the PR is approved, the PO is issued to Supplier, and goods are received with a `GoodsReceipt`.
+**Exception Flow:** An invalid line, insufficient budget, supplier rejection, or shipment discrepancy causes correction, rejection, or a `DiscrepancyReport`.
 
-### ۳.۵ Inventory/Warehouse — رسید، موجودی و تخصیص
+### 3.5 Inventory/Warehouse — Receipt, Stock, and Allocation
 
 ```plantuml
 @startuml BPMN-L2-Inventory
@@ -381,19 +381,19 @@ start
 :Receive GoodsReceipt;
 :Inspect physical goods;
 if (Matches PurchaseOrder?) then (Yes)
-  :Create or update StockLot;
-  :Invoke allocateStock();
-  :Update available and reserved quantity;
-  :Check reorder level;
-  if (Reorder needed?) then (Yes)
-    :Create automatic PurchaseRequest;
-  else (No)
-    :Notify Procurement Officer;
-  endif
+:Create or update StockLot;
+:Invoke allocateStock();
+:Update available and reserved quantity;
+:Check reorder level;
+if (Reorder needed?) then (Yes)
+:Create automatic PurchaseRequest;
 else (No)
-  :Create DiscrepancyReport;
-  :Notify Procurement Officer;
-  stop
+:Notify Procurement Officer;
+endif
+else (No)
+:Create DiscrepancyReport;
+:Notify Procurement Officer;
+stop
 endif
 :Write AuditLog;
 stop
@@ -406,10 +406,10 @@ stop
 @enduml
 ```
 
-**Happy Path:** کالا با PO تطبیق دارد → `StockLot` ساخته یا به‌روز می‌شود → `allocateStock()` مقدار رزرو را ثبت می‌کند → گزارش موجودی منتشر می‌شود.  
-**Exception Flow:** مغایرت تعداد یا کیفیت، موجودی ناکافی یا ظرفیت انبار باعث گزارش تفاوت، توقف تخصیص یا درخواست توسعه انبار می‌شود.
+**Happy Path:** Goods match the PO, `StockLot` is created or updated, `StockLot.allocate()` / `allocateStock()` records the reservation, and the inventory report is published.
+**Exception Flow:** Quantity or quality discrepancies, insufficient stock, or warehouse capacity issues create a discrepancy report, stop allocation, or trigger a warehouse-expansion request.
 
-### ۳.۶ Reporting & Analytics — گزارش مدیریتی
+### 3.6 Reporting & Analytics — Management Reporting
 
 ```plantuml
 @startuml BPMN-L2-Reporting
@@ -427,63 +427,63 @@ stop
 |System / Report Engine|
 :Extract Employee, Payroll, Budget, Procurement and Inventory data;
 fork
-  :Validate and transform data;
+:Validate and transform data;
 fork again
-  :Calculate metrics;
+:Calculate metrics;
 end fork
 :Invoke generateReport();
 if (Data quality valid?) then (Yes)
-  :Publish Report;
-  :Write AuditLog;
+:Publish Report;
+:Write AuditLog;
 else (No)
-  :Raise DataQualityException;
-  :Request data correction;
-  stop
+:Raise DataQualityException;
+:Request data correction;
+stop
 endif
 stop
 
 |Executive/Analyst|
 :Receive Report;
 if (Revision needed?) then (Yes)
-  :Request revision;
+:Request revision;
 else (No)
-  :Approve and publish dashboard;
+:Approve and publish dashboard;
 endif
 stop
 
 @enduml
 ```
 
-**Happy Path:** معیارها تعریف می‌شوند → داده‌های حوزه‌ای استخراج و اعتبارسنجی می‌شوند → `generateReport()` گزارش را منتشر می‌کند.  
-**Exception Flow:** داده ناقص یا ناسازگار است؛ Report Engine خطای کیفیت داده ثبت می‌کند و درخواست تکمیل داده ارسال می‌شود.
+**Happy Path:** Criteria are defined, domain data is extracted and validated, and `ReportEngine.generateReport()` publishes the report.
+**Exception Flow:** Data is incomplete or inconsistent; Report Engine records a data-quality error and requests data completion.
 
-### جدول Happy Path سطح ۲
+### Level-2 Happy Path Table
 
-| حوزه | مسیر خوشحال | موجودیت/متد |
+| Domain | Happy Path | Entity / Method |
 |---|---|---|
-| HR | تأیید درخواست و به‌روزرسانی Employee | `Employee`، `approveRequest()` |
-| Payroll | محاسبه، تأیید بودجه و پرداخت | `PayrollRun`، `calculateSalary()`، `checkBudget()` |
-| Budget | تخصیص و رزرو اعتبار | `BudgetAllocation`، `reserve()` |
-| Procurement | PR → PO → ارسال به Supplier | `PurchaseRequest`، `PurchaseOrder` |
-| Inventory | رسید → StockLot → تخصیص | `GoodsReceipt`، `StockLot`، `allocateStock()` |
-| Reporting | استخراج → اعتبارسنجی → Report | `Report`، `generateReport()` |
+| HR | Approve request and update Employee | `Employee`, `approveRequest()` |
+| Payroll | Calculate, approve budget, and pay | `PayrollRun`, `calculateSalary()`, `BudgetAllocation.checkBudget()` |
+| Budget | Allocate and reserve credit | `BudgetAllocation`, `reserve()` |
+| Procurement | PR to PO to Supplier | `PurchaseRequest`, `PurchaseOrder` |
+| Inventory | Receipt to StockLot to allocation | `GoodsReceipt`, `StockLot`, `allocateStock()` |
+| Reporting | Extract, validate, and report | `Report`, `ReportEngine.generateReport()` |
 
-### جدول Exception Flow سطح ۲
+### Level-2 Exception Flow Table
 
-| حوزه | استثنا | واکنش |
+| Domain | Exception | Response |
 |---|---|---|
-| HR | مدارک ناقص یا مانده مرخصی ناکافی | اصلاح یا رد و اعلان |
-| Payroll | خطای محاسبه یا پرداخت | `AuditLog`، توقف و retry محدود |
-| Budget | مانده اعتبار ناکافی | درخواست تخصیص مجدد |
-| Procurement | PR نامعتبر یا PO ردشده | بازگشت برای اصلاح یا لغو |
-| Inventory | مغایرت رسید یا کسری موجودی | `DiscrepancyReport` و توقف تخصیص |
-| Reporting | داده کیفیت‌پایین | `DataQualityException` و درخواست تکمیل |
+| HR | Incomplete documents or insufficient leave balance | Correct or reject and notify |
+| Payroll | Calculation or payment error | `AuditLog`, stop, and bounded retry |
+| Budget | Insufficient remaining credit | Request reallocation |
+| Procurement | Invalid PR or rejected PO | Return for correction or cancel |
+| Inventory | Receipt discrepancy or stock shortage | `DiscrepancyReport` and stop allocation |
+| Reporting | Low-quality data | `DataQualityException` and request completion |
 
 ---
 
-## ۴. سطح ۳ — زیرفرایندهای حیاتی
+## 4. Level 3 — Critical Sub-processes
 
-### ۴.۱ تایید پرداخت حقوق
+### 4.1 Payroll Payment Approval
 
 ```plantuml
 @startuml BPMN-L3-PayrollApproval
@@ -503,14 +503,14 @@ stop
 :Receive approved list;
 :Invoke calculateSalary();
 if (Calculation valid?) then (Yes)
-  :Create PayrollLine;
-  :Generate Salary Slip;
-  :Send summary to Finance Manager;
+:Create PayrollLine;
+:Generate Salary Slip;
+:Send summary to Finance Manager;
 else (No)
-  :Raise CalculationException;
-  :Write AuditLog;
-  :Notify HR Manager;
-  stop
+:Raise CalculationException;
+:Write AuditLog;
+:Notify HR Manager;
+stop
 endif
 stop
 
@@ -518,53 +518,53 @@ stop
 :Receive payroll summary;
 :Invoke checkBudget();
 if (Budget available?) then (Yes)
-  :Approve payment;
-  :Create Payment;
-  :Send payment instruction;
+:Approve payment;
+:Create Payment;
+:Send payment instruction;
 else (No)
-  :Reject or defer payment;
-  :Write AuditLog;
-  :Notify HR Manager;
-  stop
+:Reject or defer payment;
+:Write AuditLog;
+:Notify HR Manager;
+stop
 endif
 stop
 
 |Bank/Payment Gateway|
 :Receive payment instruction;
 if (Transaction success?) then (Yes)
-  :Return confirmation;
-  :Mark Payment as Paid;
+:Return confirmation;
+:Mark Payment as Paid;
 else (No)
-  :Return failure;
-  :Schedule retry after 5 minutes;
-  :Write AuditLog;
-  stop
+:Return failure;
+:Schedule retry after 5 minutes;
+:Write AuditLog;
+stop
 endif
 stop
 
 @enduml
 ```
 
-#### جدول Happy Path — L3 Payroll
+#### L3 Payroll Happy Path Table
 
-| مرحله | نقش | فعالیت | Entity / Method |
+| Step | Role | Activity | Entity / Method |
 |---|---|---|---|
-| ۱ | HR Manager | تأیید و امضای لیست | `Employee` |
-| ۲ | PayrollRun | محاسبه حقوق | `calculateSalary()` |
-| ۳ | PayrollRun | تولید Salary Slip | `PayrollLine` |
-| ۴ | Finance Manager | بررسی بودجه | `checkBudget()` |
-| ۵ | Finance Manager | ایجاد پرداخت | `Payment` |
-| ۶ | Bank Gateway | تأیید تراکنش | `Payment.status = Paid` |
+| 1 | HR Manager | Review and digitally sign list | `Employee` |
+| 2 | PayrollRun | Calculate salary | `calculateSalary()` |
+| 3 | PayrollRun | Generate salary slip | `PayrollLine` |
+| 4 | Finance Manager | Check budget | `BudgetAllocation.checkBudget()` |
+| 5 | Finance Manager | Create payment | `Payment` |
+| 6 | Bank Gateway | Confirm transaction | `Payment.status = Paid` |
 
-#### جدول Exception Flow — L3 Payroll
+#### L3 Payroll Exception Flow Table
 
-| کد | موقعیت | خطا | پاسخ |
+| Code | Location | Error | Response |
 |---|---|---|---|
-| EX-P01 | PayrollRun | `CalculationException` | توقف، `AuditLog` و اعلان به HR |
-| EX-P02 | Finance Manager | بودجه ناکافی | رد/تعویق و درخواست reallocates |
-| EX-P03 | Bank Gateway | `PaymentFailedException` | retry پس از ۵ دقیقه، حداکثر ۳ بار |
+| EX-P01 | PayrollRun | `CalculationException` | Stop, record `AuditLog`, and notify HR |
+| EX-P02 | Finance Manager | Insufficient budget | Reject/defer and request reallocation |
+| EX-P03 | Bank Gateway | `PaymentFailedException` | Retry after 5 minutes, maximum 3 attempts |
 
-### ۴.۲ بررسی بودجه درخواست خرید
+### 4.2 Purchase-Request Budget Check
 
 ```plantuml
 @startuml BPMN-L3-BudgetCheckPR
@@ -584,66 +584,66 @@ stop
 :Invoke checkBudget();
 :Read BudgetAllocation;
 if (Budget available?) then (Yes)
-  :Reserve BudgetAllocation;
-  :Approve PurchaseRequest;
-  :Issue PurchaseOrder;
-  :Send PO to Supplier;
+:Reserve BudgetAllocation;
+:Approve PurchaseRequest;
+:Issue PurchaseOrder;
+:Send PO to Supplier;
 else (No)
-  if (Reallocation requested?) then (Yes)
-    :Send reallocation request to Executive/Analyst;
-  else (No)
-    :Reject PurchaseRequest;
-    :Notify Procurement Officer;
-    stop
-  endif
+if (Reallocation requested?) then (Yes)
+:Send reallocation request to Executive/Analyst;
+else (No)
+:Reject PurchaseRequest;
+:Notify Procurement Officer;
+stop
+endif
 endif
 stop
 
 |Executive/Analyst|
 :Receive reallocation request;
 if (Approved?) then (Yes)
-  :Update BudgetAllocation;
-  :Notify Finance Manager;
+:Update BudgetAllocation;
+:Notify Finance Manager;
 else (No)
-  :Reject reallocation;
-  :Write AuditLog;
-  stop
+:Reject reallocation;
+:Write AuditLog;
+stop
 endif
 stop
 
 |Finance Manager|
 :Receive reallocation response;
 if (Budget now available?) then (Yes)
-  :Approve PurchaseRequest;
-  :Issue PurchaseOrder;
+:Approve PurchaseRequest;
+:Issue PurchaseOrder;
 else (No)
-  :Reject PurchaseRequest finally;
-  :Write AuditLog;
+:Reject PurchaseRequest finally;
+:Write AuditLog;
 endif
 stop
 
 @enduml
 ```
 
-#### جدول Happy Path — L3 Budget Check
+#### L3 Budget Check Happy Path Table
 
-| مرحله | نقش | فعالیت | Entity / Method |
+| Step | Role | Activity | Entity / Method |
 |---|---|---|---|
-| ۱ | Procurement Officer | ایجاد PR | `PurchaseRequest` |
-| ۲ | Finance Manager | بررسی بودجه | `checkBudget()` |
-| ۳ | Finance Manager | رزرو اعتبار | `BudgetAllocation.reserve()` |
-| ۴ | Finance Manager | تأیید و صدور PO | `PurchaseOrder` |
-| ۵ | Supplier | تأیید سفارش | `PurchaseOrder.acknowledge()` |
+| 1 | Procurement Officer | Create PR | `PurchaseRequest` |
+| 2 | Finance Manager | Check budget | `BudgetAllocation.checkBudget()` |
+| 3 | Finance Manager | Reserve credit | `BudgetAllocation.reserve()` |
+| 4 | Finance Manager | Approve and issue PO | `PurchaseOrder` |
+| 5 | Supplier | Acknowledge order | `PurchaseOrder.acknowledge()` |
 
-#### جدول Exception Flow — L3 Budget Check
+#### L3 Budget Check Exception Flow Table
 
-| کد | موقعیت | خطا | پاسخ |
+| Code | Location | Error | Response |
 |---|---|---|---|
-| EX-B01 | Finance Manager | بودجه ناکافی بدون reallocation | رد PR و اعلان |
-| EX-B02 | Executive/Analyst | رد reallocation | توقف و `AuditLog` |
-| EX-B03 | Finance Manager | پس از reallocation هنوز بودجه ناکافی | رد نهایی PR |
+| EX-B01 | Finance Manager | Insufficient budget without reallocation | Reject PR and notify |
+| EX-B02 | Executive/Analyst | Reallocation rejected | Stop and record `AuditLog` |
+| EX-B03 | Finance Manager | Budget still insufficient after reallocation | Reject PR finally |
 
-### ۴.۳ تخصیص موجودی به درخواست‌کننده
+### 4.3 Stock Allocation to Requester
 
 ```plantuml
 @startuml BPMN-L3-StockAllocation
@@ -660,20 +660,20 @@ start
 :Record GoodsReceipt;
 :Invoke allocateStock();
 if (Eligible lot and quantity available?) then (Yes)
-  :Select FEFO lot;
-  :Reserve quantity;
-  :Update StockLot;
-  :Confirm issue;
-  :Notify Procurement Officer;
+:Select FEFO lot;
+:Reserve quantity;
+:Update StockLot;
+:Confirm issue;
+:Notify Procurement Officer;
 else (No)
-  if (Warehouse overflow?) then (Yes)
-    :Raise OverflowAlert;
-    :Notify Executive/Analyst;
-  else (No)
-    :Raise StockShortageException;
-    :Notify Procurement Officer;
-  endif
-  stop
+if (Warehouse overflow?) then (Yes)
+:Raise OverflowAlert;
+:Notify Executive/Analyst;
+else (No)
+:Raise StockShortageException;
+:Notify Procurement Officer;
+endif
+stop
 endif
 :Write AuditLog;
 stop
@@ -681,9 +681,9 @@ stop
 |Executive/Analyst|
 :Receive OverflowAlert;
 if (Expansion approved?) then (Yes)
-  :Approve warehouse expansion;
+:Approve warehouse expansion;
 else (No)
-  :Approve overflow management or reject;
+:Approve overflow management or reject;
 endif
 :Notify Warehouse Officer;
 stop
@@ -691,55 +691,55 @@ stop
 |Procurement Officer|
 :Receive allocation notice;
 if (Reorder needed?) then (Yes)
-  :Create automatic PurchaseRequest;
+:Create automatic PurchaseRequest;
 else (No)
-  :Close allocation task;
+:Close allocation task;
 endif
 stop
 
 @enduml
 ```
 
-#### جدول Happy Path — L3 Stock Allocation
+#### L3 Stock Allocation Happy Path Table
 
-| مرحله | نقش | فعالیت | Entity / Method |
+| Step | Role | Activity | Entity / Method |
 |---|---|---|---|
-| ۱ | Warehouse Officer | دریافت و بازرسی کالا | `GoodsReceipt` |
-| ۲ | Warehouse Officer | انتخاب لات واجد شرایط | `StockLot` |
-| ۳ | Warehouse Officer | رزرو مقدار | `allocateStock()` |
-| ۴ | Warehouse Officer | به‌روزرسانی موجودی | `StockLot.availableQuantity` |
-| ۵ | Procurement Officer | دریافت اعلان | `PurchaseRequest` در صورت نیاز |
+| 1 | Warehouse Officer | Receive and inspect goods | `GoodsReceipt` |
+| 2 | Warehouse Officer | Select eligible lot | `StockLot` |
+| 3 | Warehouse Officer | Reserve quantity | `StockLot.allocate()` / `allocateStock()` |
+| 4 | Warehouse Officer | Update inventory | `StockLot.availableQuantity` |
+| 5 | Procurement Officer | Receive notice | `PurchaseRequest` if required |
 
-#### جدول Exception Flow — L3 Stock Allocation
+#### L3 Stock Allocation Exception Flow Table
 
-| کد | موقعیت | خطا | پاسخ |
+| Code | Location | Error | Response |
 |---|---|---|---|
-| EX-S01 | Warehouse Officer | مقدار ناکافی | `StockShortageException` و اعلان خرید |
-| EX-S02 | Warehouse Officer | ظرفیت انبار تکمیل است | `OverflowAlert` به Executive/Analyst |
-| EX-S03 | Warehouse Officer | مغایرت فیزیکی با رسید | `DiscrepancyReport` و توقف تخصیص |
+| EX-S01 | Warehouse Officer | Insufficient quantity | `StockShortageException` and purchase notice |
+| EX-S02 | Warehouse Officer | Warehouse capacity reached | `OverflowAlert` to Executive/Analyst |
+| EX-S03 | Warehouse Officer | Physical receipt discrepancy | `DiscrepancyReport` and stop allocation |
 
 ---
 
-## ۵. ردپا به DFD و UML
+## 5. Traceability to DFD and UML
 
-| شناسه BPMN | فعالیت | DFD | UML |
+| BPMN ID | Activity | DFD | UML |
 |---|---|---|---|
-| BPMN-HR-01 | Approve HR request | DFD-L2.1 | `Employee`، `approveRequest()` |
-| BPMN-PAY-01 | Calculate Salary | DFD-L2.2 / DFD-L3.1 | `PayrollRun.calculateSalary()` |
-| BPMN-PAY-02 | Post Payment | DFD-L2.2 | `Payment.postPayment()` |
-| BPMN-BUD-01 | Check Budget | DFD-L2.3 / DFD-L3.2 | `BudgetAllocation.checkBudget()` |
+| BPMN-HR-01 | Approve HR request | DFD-L2.1 | `Employee`, `approveRequest()` |
+| BPMN-PAY-01 | Calculate salary | DFD-L2.2 / DFD-L3.1 | `PayrollRun.calculateSalary()` |
+| BPMN-PAY-02 | Post payment | DFD-L2.2 | `Payment.postPayment()` |
+| BPMN-BUD-01 | Check budget | DFD-L2.3 / DFD-L3.2 | `BudgetAllocation.checkBudget()` |
 | BPMN-PROC-01 | Create and approve PR | DFD-L2.4 / DFD-L3.2 | `PurchaseRequest.submit()` / `approve()` |
 | BPMN-PROC-02 | Issue PurchaseOrder | DFD-L2.4 | `PurchaseOrder.issue()` |
-| BPMN-INV-01 | Allocate Stock | DFD-L2.5 / DFD-L3.3 | `StockLot.allocate()` / `allocateStock()` |
+| BPMN-INV-01 | Allocate stock | DFD-L2.5 / DFD-L3.3 | `StockLot.allocate()` / `allocateStock()` |
 | BPMN-INV-02 | Record GoodsReceipt | DFD-L2.5 | `GoodsReceipt` |
-| BPMN-REP-01 | Generate Report | DFD-L2.6 | `ReportEngine.generateReport()` |
+| BPMN-REP-01 | Generate report | DFD-L2.6 | `ReportEngine.generateReport()` |
 
-## ۶. قوانین فرایندی
+## 6. Process Rules
 
-1. هیچ `Payment` بدون `PayrollRun` تأییدشده و نتیجه موفق `checkBudget()` ایجاد نمی‌شود.
-2. هیچ `PurchaseOrder` بدون `PurchaseRequest` تأییدشده و رزرو بودجه صادر نمی‌شود.
-3. هیچ `StockLot` بدون `GoodsReceipt` معتبر و تطبیق با `PurchaseOrder` ایجاد نمی‌شود.
-4. تمام تصمیم‌های تأیید، رد، رزرو، پرداخت و تخصیص باید `AuditLog` ایجاد کنند.
-5. خطاهای قابل تکرار فقط با سقف مشخص و ثبت رویداد خطا اجرا می‌شوند.
+1. No `Payment` is created without an approved `PayrollRun` and a successful `BudgetAllocation.checkBudget()` result.
+2. No `PurchaseOrder` is issued without an approved `PurchaseRequest` and a budget reservation.
+3. No `StockLot` is created without a valid `GoodsReceipt` that matches a `PurchaseOrder`.
+4. Every approval, rejection, reservation, payment, and allocation decision must create an `AuditLog` event.
+5. Retryable errors run only within a defined attempt limit and record an error event.
 
-*پایان سند BPMN*
+*End of BPMN document*

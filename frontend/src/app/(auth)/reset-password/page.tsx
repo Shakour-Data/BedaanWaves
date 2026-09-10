@@ -50,8 +50,8 @@ function ResetPasswordForm() {
         return;
       }
 
-      const isValid = await verifyResetToken(token);
-      if (isValid) {
+      const result = await verifyResetToken(token);
+      if (result.valid) {
         setPhase("enter_password");
       } else {
         setPhase("error");

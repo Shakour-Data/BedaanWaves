@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './utils';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export interface SSEEvent<T = unknown> {
   type: string;
@@ -34,7 +35,7 @@ const activeConnections: Map<string, SSEConnection> = new Map();
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
+  return useAuthStore.getState().token;
 }
 
 export function createSSEConnection<T = unknown>(

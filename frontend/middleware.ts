@@ -20,10 +20,9 @@ function getCspHeader(nonce: string): string {
   ].join('; ');
 }
 
-const SUPPORTED_LOCALES = ['en'];
 const DEFAULT_LOCALE = 'en';
 
-function getLocaleFromRequest(request: NextRequest): string {
+function getLocaleFromRequest(): string {
   return DEFAULT_LOCALE;
 }
 
@@ -41,7 +40,7 @@ export default function middleware(request: NextRequest) {
   }
 
   const nonce = generateNonce();
-  const locale = getLocaleFromRequest(request);
+  const locale = getLocaleFromRequest();
 
   const response = NextResponse.next();
 

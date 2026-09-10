@@ -117,6 +117,19 @@ class TestCacheServiceOperations:
         assert second == "computed"
         assert calls["n"] == 1  # factory only invoked once
 
+    async def test_get_or_set_with_async_factory(self, cache_service):
+        calls = {"n": 0}
+
+        async def factory():
+            calls["n"] += 1
+            return "computed-async"
+
+        first = await cache_service.get_or_set("async-key", factory)
+        second = await cache_service.get_or_set("async-key", factory)
+        assert first == "computed-async"
+        assert second == "computed-async"
+        assert calls["n"] == 1
+
     async def test_get_or_set_with_non_callable(self, cache_service):
         value = await cache_service.get_or_set("k", "static")
         assert value == "static"

@@ -93,7 +93,7 @@ describe('hooks/useLiveData.tsx', () => {
         await flushAll(8, 200)
 
         const initCalls = apiGetSpy.mock.calls.filter((c) =>
-          String(c[0]).includes('/live/quote/TR71/snapshot')
+          String(c[0]).includes('/live/quote/TR71')
         )
         expect(initCalls.length).toBeGreaterThanOrEqual(1)
         apiGetSpy.mockClear()
@@ -120,7 +120,7 @@ describe('hooks/useLiveData.tsx', () => {
         await flushAll(12, 500)
 
         expect(apiGetSpy).toHaveBeenCalledTimes(1)
-        expect(String(apiGetSpy.mock.calls[0][0])).toContain('/live/quote/TR71/snapshot')
+        expect(String(apiGetSpy.mock.calls[0][0])).toContain('/live/quote/TR71')
 
         const storeState = useLiveStore.getState().streams[key]
         expect(storeState?.lastSequence).toBe(100)

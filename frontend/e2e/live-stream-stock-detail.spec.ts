@@ -16,7 +16,7 @@ test.describe('TR8.2 — Stock detail page quote updates via injected SSE tick W
 
     try {
       await page.waitForSelector('body', { timeout: 30_000, state: 'visible' });
-    } catch (_e) {
+    } catch {
       console.log('[TR8.2] body wait timed out, continuing');
     }
 
@@ -30,7 +30,7 @@ test.describe('TR8.2 — Stock detail page quote updates via injected SSE tick W
     let firstPriceText = '';
     try {
       firstPriceText = await firstPriceLocator.textContent({ timeout: 15_000 }) || '';
-    } catch (_e) {
+    } catch {
       firstPriceText = '';
     }
     console.log(`[TR8.2] first rendered quote price element text: "${firstPriceText}"`);
@@ -95,7 +95,7 @@ test.describe('TR8.2 — Stock detail page quote updates via injected SSE tick W
           store.setState({ streams });
           return { ok: true, method: 'zustand setState useLiveStore', message: 'directly patched zustand store' };
         }
-      } catch (_e) {
+      } catch {
         /* ignore */
       }
 
@@ -127,7 +127,7 @@ test.describe('TR8.2 — Stock detail page quote updates via injected SSE tick W
       const priceEl = page.locator('text=/999\\s*\\.\\s*99/').first();
       try {
         await expect(priceEl).toBeVisible({ timeout: 5_000 });
-      } catch (_e) {
+      } catch {
         console.log('[TR8.2] 999.99 element not isolated, relying on body text');
       }
     }
@@ -135,7 +135,7 @@ test.describe('TR8.2 — Stock detail page quote updates via injected SSE tick W
       const changeEl = page.locator('text=/12\\s*\\.\\s*34\\s*%/').first();
       try {
         await expect(changeEl).toBeVisible({ timeout: 5_000 });
-      } catch (_e) {
+      } catch {
         console.log('[TR8.2] 12.34% element not isolated, relying on body text');
       }
     }

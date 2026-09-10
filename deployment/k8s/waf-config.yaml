@@ -1,0 +1,23 @@
+apiVersion: v1
+kind="ConfigMap"
+metadata:
+  name: bedaanwaves-waf-rules
+  namespace: default
+data:
+  waf-rules.conf: |
+    # ModSecurity Core Rule Set (CRS) baseline rules
+    # Placeholder for WAF configuration
+    # In production, deploy with a proper WAF like:
+    # - AWS WAF + API Gateway
+    # - Cloudflare WAF
+    # - NGINX ModSecurity
+    # - Kong with OWASP CRS plugin
+    
+    # Recommended ruleset:
+    # 1. OWASP Core Rule Set (CRS) v4.x
+    # 2. SQL Injection detection
+    # 3. XSS detection
+    # 4. Path traversal protection
+    # 5. Rate limiting rules
+    # 6. Bot detection
+    # 7. Geo-blocking for known bad IPs

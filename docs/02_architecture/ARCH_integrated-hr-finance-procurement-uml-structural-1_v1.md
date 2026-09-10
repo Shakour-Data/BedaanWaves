@@ -173,7 +173,7 @@ class PayrollRun {
   -period: DateRange
   -status: PayrollStatus
   -approvedBy: UUID
-  +calculateSalary(employee: Employee): PayrollLine
+  +calculateSalary(employee: Employee, period: DateRange): PayrollLine
   +approve(approver: FinanceManager): void
   +postPayment(gateway: PaymentGateway): Payment
 }
@@ -186,6 +186,29 @@ class PayrollLine {
   -netAmount: Money
   +validate(): boolean
   +calculateNet(): Money
+}
+
+class SalaryCalculator {
+  +calculatePayrollLine(employee: Employee, period: DateRange): PayrollLine
+  +calcDeductions(employee: Employee, period: DateRange): Money
+  +calcBenefits(employee: Employee, period: DateRange): Money
+}
+
+class Payment {
+  -id: UUID
+  -payrollRunId: UUID
+  -amount: Money
+  -status: PaymentStatus
+  -transactionId: String
+  +markPaid(transactionId: String): void
+}
+
+class PaymentGateway {
+  +executePayment(payment: Payment): String
+}
+
+class StockManager {
+  +allocateStock(lotId: UUID, quantity: decimal): AllocationResult
 }
 
 class BudgetAllocation {
@@ -263,16 +286,16 @@ Report --> AuditLog : publication event
 note right of PayrollLine
   invariant: netAmount >= 0
   invariant: netAmount = grossAmount - deductionAmount
-endnote
+end note
 
 note right of BudgetAllocation
   invariant: reservedAmount + spentAmount <= allocatedAmount
-endnote
+end note
 
 note right of StockLot
   invariant: availableQuantity >= 0
   invariant: reservedQuantity >= 0
-endnote
+end note
 
 @enduml
 ```

@@ -19,7 +19,7 @@ const LIGHT = {
 const DARK = {
   grid: "#334155",
   axis: "#64748B",
-  text: "#CBD5E1",
+  text: "#E2E8F0",
   bg: "#1E293B" };
 
 const DIMENSION_COLORS = [
@@ -158,7 +158,7 @@ export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick 
     }
 
     ctx.fillStyle = colors.text;
-    ctx.font = "12px inherit";
+    ctx.font = "14px inherit";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -189,7 +189,13 @@ export function SpiderChart({ data, size = 360, color = "#2563EB", onLabelClick 
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      <canvas ref={canvasRef} className="block" style={{ cursor: onLabelClick ? "pointer" : "default" }} />
+      <canvas
+        ref={canvasRef}
+        className="block"
+        style={{ cursor: onLabelClick ? "pointer" : "default" }}
+        aria-label="Spider chart"
+        role="img"
+      />
     </div>
   );
 }

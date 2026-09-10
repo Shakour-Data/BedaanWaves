@@ -12,7 +12,7 @@ test.describe('TR8.1 — Dashboard live stream receives ≥8 updates in 2 min', 
 
     try {
       await page.waitForSelector('body', { timeout: 30_000, state: 'visible' });
-    } catch (_e) {
+    } catch {
       console.log('[TR8.1] initial body wait failed, continuing anyway');
     }
 
@@ -21,7 +21,7 @@ test.describe('TR8.1 — Dashboard live stream receives ≥8 updates in 2 min', 
     if (pillVisible) {
       try {
         await expect(connectionPill).toBeVisible({ timeout: 15_000 });
-      } catch (_e) {
+      } catch {
         console.log('[TR8.1] connection pill not visible in time, skipping assertion');
       }
     } else {
@@ -37,7 +37,7 @@ test.describe('TR8.1 — Dashboard live stream receives ≥8 updates in 2 min', 
           try {
             const w = window as unknown as Record<string, unknown>;
             w.__liveUpdateCount = ((w.__liveUpdateCount as number) || 0) + 1;
-          } catch (_e) { /* noop */ }
+          } catch { /* noop */ }
         }
         return origSetAttr.call(this, name, value);
       };
@@ -50,7 +50,7 @@ test.describe('TR8.1 — Dashboard live stream receives ≥8 updates in 2 min', 
               try {
                 const w = window as unknown as Record<string, unknown>;
                 w.__liveUpdateCount = ((w.__liveUpdateCount as number) || 0) + 1;
-              } catch (_e) { /* noop */ }
+              } catch { /* noop */ }
             }
           }
           if (m.type === 'childList' && m.addedNodes.length) {
@@ -64,7 +64,7 @@ test.describe('TR8.1 — Dashboard live stream receives ≥8 updates in 2 min', 
                     try {
                       const w = window as unknown as Record<string, unknown>;
                       w.__liveUpdateCount = ((w.__liveUpdateCount as number) || 0) + matches.length;
-                    } catch (_e) { /* noop */ }
+                    } catch { /* noop */ }
                   }
                 }
               }

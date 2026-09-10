@@ -9,10 +9,11 @@ POST /auth/refresh    Exchange a valid refresh token for new tokens
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import jwt
 from sqlalchemy import select, update
 
+from app.api.dependencies import require_auth_rate_limit
 from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import RefreshToken
@@ -33,7 +34,7 @@ router = APIRouter(tags=["auth"])
 
 
 @router.post("/register", response_model=Token)
-async def register(data: RegisterRequest) -> Token:
+async def register(data: RegisterRequest, request: Request = Depends(require_auth_rate_limit)) -> Token:
     """Register a new user account and return access/refresh tokens."""
     existing = await get_user_by_username(data.username)
     if existing:
@@ -55,7 +56,7 @@ async def register(data: RegisterRequest) -> Token:
 
 
 @router.post("/login", response_model=Token)
-async def login(data: LoginRequest) -> Token:
+async def login(data: LoginRequest, request: Request = Depends(require_auth_rate_limit)) -> Token:
     """Authenticate user and return access/refresh tokens."""
     user = await authenticate_user(data.username, data.password)
     if not user:

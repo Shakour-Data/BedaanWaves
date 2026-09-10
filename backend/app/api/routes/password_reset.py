@@ -14,8 +14,9 @@ Error philosophy (spec.yaml): "Never blame user; always suggest next action".
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from app.api.dependencies import require_auth_rate_limit
 from app.schemas.schemas import (
     PasswordResetConfirm,
     PasswordResetRequest,
@@ -34,7 +35,7 @@ router = APIRouter(tags=["password-reset"])
 
 
 @router.post("/password-reset/request", response_model=PasswordResetResponse)
-async def request_password_reset(data: PasswordResetRequest):
+async def request_password_reset(data: PasswordResetRequest, request: Request = Depends(require_auth_rate_limit)):
     """Request a password-reset link.
 
     Always returns a generic ``status: success`` message to prevent account

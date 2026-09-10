@@ -115,8 +115,8 @@ apiClient.interceptors.response.use(
       const refreshToken = useAuthStore.getState ? useAuthStore.getState().refreshToken : null;
 
       if (!refreshToken) {
-        try {
-          useAuthStore.getState?.().logout?.();
+         try {
+          useAuthStore.getState?.()?.logout?.();
         } catch {
           // ignore logout failures in tests
         }

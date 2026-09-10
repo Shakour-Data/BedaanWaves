@@ -443,6 +443,31 @@ class AuditLog(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)
 
 
+class DataLineageEvent(Base):
+    """OpenLineage-compatible data lineage event storage."""
+    __tablename__ = "data_lineage_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id = Column(String(64), nullable=False, unique=True, index=True)
+    event_time = Column(DateTime(timezone=True), nullable=False, index=True)
+    event_type = Column(String(20), nullable=False)  # START, COMPLETE, FAIL, RUNNING
+    run_id = Column(String(64), nullable=False, index=True)
+    parent_run_id = Column(String(64), nullable=True, index=True)
+    job_namespace = Column(String(100), nullable=False, index=True)
+    job_name = Column(String(200), nullable=False, index=True)
+    inputs = Column(JSONB, default=list)
+    outputs = Column(JSONB, default=list)
+    facets = Column(JSONB, default=dict)
+
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    __table_args__ = (
+        Index('idx_lineage_job_run', 'job_namespace', 'job_name', 'run_id'),
+        Index('idx_lineage_event_time', 'event_time'),
+        Index('idx_lineage_run', 'run_id'),
+    )
+
+
 class Alert(Base):
     """User Alert Configuration"""
     __tablename__ = "alerts"

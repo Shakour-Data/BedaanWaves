@@ -213,7 +213,7 @@ export function getSnapshotEndpoint(key: LiveStreamKey): string {
   }
   if (key.startsWith('quote:')) {
     const symbol = key.slice('quote:'.length);
-    return `/live/quote/${encodeURIComponent(symbol)}/snapshot`;
+    return `/live/quote/${encodeURIComponent(symbol)}`;
   }
   if (key.startsWith('intraday:')) {
     const rest = key.slice('intraday:'.length);

@@ -27,10 +27,10 @@ const LIGHT = {
 }
 
 const DARK = {
-  background: "#1e1e1e",
-  text: "#a8a8a8",
-  grid: "#2a2a2a",
-  border: "#333333",
+  background: "#0F172A",
+  text: "#E2E8F0",
+  grid: "#334155",
+  border: "#475569",
 }
 
 const DEFAULT_GREEN = "#10b981";

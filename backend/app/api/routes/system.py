@@ -2,10 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 
-from app.api.dependencies import get_current_admin_user
+from app.api.dependencies import get_current_admin_user, require_mfa
 from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import NewsSource
@@ -17,7 +17,7 @@ from app.services.system.scheduler_service import SchedulerService
 logger = logging.getLogger(__name__)
 router = APIRouter(
     tags=["system"],
-    dependencies=[Depends(get_current_admin_user)],
+    dependencies=[Depends(get_current_admin_user), Depends(require_mfa)],
 )
 
 health_router = APIRouter(
@@ -204,3 +204,46 @@ async def toggle_news_source(source_id: str):
         source.enabled = not source.enabled
         await session.commit()
         return {"status": "success", "enabled": source.enabled}
+
+
+# ---- Alertmanager Webhook Endpoint ----
+
+@router.post("/incidents", include_in_schema=False)
+async def alertmanager_webhook(request: Request):
+    """Receive Alertmanager webhook and create an incident."""
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    container = get_global_container()
+    incident_svc = container.get("incident_response_service") if container.has("incident_response_service") else None
+    if incident_svc is None:
+        raise HTTPException(status_code=503, detail="Incident response service not available")
+
+    alerts = payload.get("alerts", [])
+    created_incidents = []
+    for alert in alerts:
+        status = alert.get("status", "firing")
+        labels = alert.get("labels", {})
+        annotations = alert.get("annotations", {})
+        runbook = annotations.get("runbook", labels.get("runbook", ""))
+
+        incident = await incident_svc.report_incident(
+            title=labels.get("alertname", "Unknown Alert"),
+            description=annotations.get("description", ""),
+            severity=labels.get("severity", "warning"),
+            source="alertmanager",
+            metadata={
+                "status": status,
+                "runbook": runbook,
+                "labels": labels,
+                "annotations": annotations,
+                "starts_at": alert.get("startsAt"),
+                "ends_at": alert.get("endsAt"),
+                "generator_url": alert.get("generatorURL"),
+            },
+        )
+        created_incidents.append(incident)
+
+    return {"status": "success", "incidents_created": len(created_incidents), "incidents": created_incidents}

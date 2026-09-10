@@ -109,10 +109,17 @@ def _envelope_to_response(envelope: LiveEventEnvelope | None) -> dict[str, Any]:
             "timestamp": None,
         }
     model = envelope.model_dump(mode="json")
+    data = model.get("data")
     return {
         "stream_key": model.get("stream_key"),
         "event": model.get("event"),
-        "data": model.get("data"),
+        "data": data,
+        "sequence": model.get("sequence"),
+        "data_age_ms": (
+            data.get("data_age_ms")
+            if isinstance(data, dict)
+            else None
+        ),
         "error": model.get("error"),
         "timestamp": model.get("timestamp"),
     }

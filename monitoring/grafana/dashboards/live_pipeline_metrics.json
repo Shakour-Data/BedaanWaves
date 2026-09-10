@@ -1,0 +1,154 @@
+{
+  "dashboard": {
+    "title": "BedaanWaves - Live Pipeline Metrics",
+    "description": "Real-time data pipeline health, SLO attainment, and stream metrics",
+    "tags": ["bedaanwaves", "live-pipeline", "slo", "streaming"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "time": {
+      "from": "now-30m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "SLO Attainment",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"options": {"0": {"text": "Breached", "color": "red"}}, "type": "value"},
+              {"options": {"1": {"text": "Warning", "color": "yellow"}}, "type": "value"},
+              {"options": {"2": {"text": "Healthy", "color": "green"}}, "type": "value"}
+            ],
+            "thresholds": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 1},
+              {"color": "green", "value": 2}
+            ]
+          }
+        },
+        "targets": [
+          {
+            "expr": "avg(bedaanwaves_pipeline_slo_attainment)",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Data Freshness Lag (s)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 30},
+              {"color": "red", "value": 120}
+            ]
+          }
+        },
+        "targets": [
+          {
+            "expr": "bedaanwaves_data_freshness_lag_seconds",
+            "legendFormat": "{{source}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "SSE Connections",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 200}
+              ]
+            }
+          }
+        },
+        "targets": [
+          {
+            "expr": "bedaanwaves_active_connections",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Poll Latency p95 (ms)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 200},
+              {"color": "red", "value": 500}
+            ]
+          }
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(bedaanwaves_poll_latency_ms_bucket[5m])) * 1000",
+            "legendFormat": "p95",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Reconnects (1m rate)",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "targets": [
+          {
+            "expr": "rate(bedaanwaves_reconnect_total[1m])",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rate",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 0.7},
+              {"color": "green", "value": 0.9}
+            ]
+          }
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(bedaanwaves_cache_operations_total{result=\"hit\"}[5m])) / sum(rate(bedaanwaves_cache_operations_total[5m]))",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+}

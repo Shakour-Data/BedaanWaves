@@ -9,7 +9,11 @@ vi.mock('@/lib/api/ranking', () => ({
 }));
 
 vi.mock('@/store/useAuthStore', () => ({
-  useAuthStore: vi.fn(),
+  useAuthStore: Object.assign(vi.fn(), {
+    getState: () => ({ token: null, currentLang: 'en', isAuthenticated: false, loading: false }),
+    setState: vi.fn(),
+    subscribe: vi.fn(),
+  }),
 }));
 
 vi.mock('@/components/layout/NewDashboardShell', () => ({

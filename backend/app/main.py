@@ -20,8 +20,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, RedirectResponse
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.api.middleware import (
     AuthGuardMiddleware,
@@ -30,6 +31,7 @@ from app.api.middleware import (
     RequestLoggingMiddleware,
 )
 from app.api.middleware import SecurityHeadersMiddleware
+from app.infrastructure.observability.prometheus_middleware import PrometheusMetricsMiddleware
 from app.api.routes import (
     analysis_router,
     auth_router,
@@ -48,6 +50,7 @@ from app.api.routes import (
     notifications_router,
     password_reset_router,
     portfolio_router,
+    privacy_router,
     ranking_router,
     settings_router,
     specialized_router,
@@ -71,6 +74,7 @@ from app.services.core.config_service import ConfigService
 from app.services.core.database_service import DatabaseService
 from app.services.core.dependency_container import (
     DependencyContainer,
+    get_global_container,
     set_global_container,
 )
 from app.services.core.health_checker import HealthChecker
@@ -340,6 +344,14 @@ async def lifespan(app: FastAPI):
         await tracing.initialize()
         container.register_instance("tracing_manager", tracing)
         tracing.instrument_app(app)
+
+        # Wire database tracing after engine is available
+        try:
+            db_engine = database_svc.engine
+            if db_engine is not None:
+                tracing.instrument_database(db_engine)
+        except Exception as exc:
+            logger.warning("Database tracing instrumentation failed: %s", exc)
 
         event_bus: InMemoryEventBus | KafkaEventBus
         if settings.EVENT_BUS_BACKEND == "kafka":
@@ -617,6 +629,7 @@ async def lifespan(app: FastAPI):
     app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
     app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
     app.include_router(compare_router, prefix="/api/v1/compare", tags=["compare"])
+    app.include_router(privacy_router, prefix="/api/v1/privacy", tags=["privacy"])
 
     logger.info("Registered all API routes")
     logger.info("BedaanWaves application ready")
@@ -682,6 +695,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+class HTTPSRedirectMiddleware:
+    def __init__(self, app: ASGIApp, *, enabled: bool = True) -> None:
+        self.app = app
+        self.enabled = enabled
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not self.enabled:
+            await self.app(scope, receive, send)
+            return
+
+        if scope.get("scheme") == "http":
+            headers = dict(scope.get("headers", []))
+            host = headers.get(b"host", b"").decode("latin-1", "replace")
+            if host:
+                url = f"https://{host}{scope.get('path', '/')}"
+                if scope.get("query_string"):
+                    url += f"?{scope['query_string'].decode('utf-8', 'replace')}"
+                response = RedirectResponse(url=url, status_code=307)
+                await response(scope, receive, send)
+                return
+
+        await self.app(scope, receive, send)
+
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH, settings=settings)
 app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED, settings=settings)
@@ -695,6 +732,11 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 app.add_middleware(SecurityHeadersMiddleware, settings=settings)
+app.add_middleware(HTTPSRedirectMiddleware, enabled=settings.ENABLE_HTTPS)
+app.add_middleware(
+    PrometheusMetricsMiddleware,
+    metrics_getter=lambda: get_global_container().get("metrics_service") if get_global_container().has("metrics_service") else None,
+)
 
 
 def custom_openapi():

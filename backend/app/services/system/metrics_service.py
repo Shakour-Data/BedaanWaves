@@ -170,6 +170,11 @@ class MetricsService(BaseService):
         """Increment the signal counter."""
         SIGNAL_COUNT.labels(signal_type=signal_type).inc(count)
 
+    def record_request(self, method: str, endpoint: str, status_code: int, duration: float) -> None:
+        """Record a single HTTP request metric."""
+        REQUESTS_TOTAL.labels(method=method, endpoint=endpoint, status=str(status_code)).inc()
+        REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(duration)
+
     async def health_check(self) -> dict[str, Any]:
         return {
             "service": self.service_name,

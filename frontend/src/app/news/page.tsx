@@ -21,6 +21,7 @@ import {
   getNewsByCategory,
   getMarketMovingNews,
 } from "@/lib/api/news";
+import { normalizeNewsPayload } from "@/lib/news-types";
 import type {
   NewsItem,
   NewsCategory,
@@ -190,11 +191,7 @@ export default function NewsPage() {
 
   const handleNewsData = useCallback(
     (payload: NewsStreamPayload) => {
-      const incoming: LiveNewsItem[] = [];
-      if (payload?.item) incoming.push(payload.item);
-      if (payload?.items && Array.isArray(payload.items)) {
-        for (const it of payload.items) incoming.push(it);
-      }
+      const incoming = normalizeNewsPayload(payload);
       if (incoming.length === 0) return;
 
       const now = Date.now();
@@ -205,25 +202,25 @@ export default function NewsPage() {
         const next: LiveNewsItem[] = [];
         const seenTitles = new Set<string>();
 
-        for (const inc of incoming) {
-          itemIdCounter.current += 1;
+        for (const inc of incoming) {          itemIdCounter.current += 1;
+          const publishedAt = inc.published_at ?? new Date().toISOString();
           const enriched: LiveNewsItem = {
-            title: inc.title,
-            body: inc.body,
-            source: inc.source || "Unknown",
-            url: inc.url || "",
-            published_at: inc.published_at || new Date().toISOString(),
-            language: inc.language || "en",
-            asset_id: inc.asset_id,
-            time: inc.time || "just now",
+            title: inc.title ?? "",
+            body: inc.body ?? inc.summary ?? null,
+            source: inc.source ?? "Unknown",
+            url: inc.url ?? "",
+            published_at: publishedAt,
+            language: inc.language ?? "en",
+            asset_id: inc.asset_id ?? inc.symbols_affected?.[0] ?? null,
+            time: inc.time ?? formatTimeAgo(publishedAt),
             isNewLive: true,
             liveAddedAt: now,
-            id: inc.id || `live-${itemIdCounter.current}-${now}`,
-            category: inc.category,
-            sub_category: inc.sub_category,
-            region: inc.region,
-            priority: inc.priority,
-            is_market_moving: inc.is_market_moving,
+            id: inc.id ?? inc.news_id ?? `live-${itemIdCounter.current}-${now}`,
+            category: inc.category ?? "STOCK_MARKET",
+            sub_category: inc.sub_category ?? inc.sentiment ?? null,
+            region: inc.region ?? null,
+            priority: inc.priority ?? "NORMAL",
+            is_market_moving: inc.is_market_moving ?? false,
           };
           next.push(enriched);
           seenTitles.add(enriched.title);

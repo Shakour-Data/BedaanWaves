@@ -301,7 +301,7 @@ PlantUML does not currently render UML 2.5 `Pin` notation (inputPin/outputPin) a
 | UC-PROC-01 | DFD-L2.4 / DFD-L3.2 | BPMN-L3 Budget Check PR | `PurchaseRequest.submit()` |
 | UC-PAY-01 | DFD-L2.2 / DFD-L3.1 | BPMN-L3 Payroll Approval | `PayrollRun.calculateSalary()` |
 | UC-BUD-01 | DFD-L2.3 | BPMN-L2 Budget | `BudgetAllocation.checkBudget()` |
-| UC-INV-01 | DFD-L2.5 / DFD-L3.3 | BPMN-L3 Stock Allocation | `StockLot.allocateStock()` |
+| UC-INV-01 | DFD-L2.5 / DFD-L3.3 | BPMN-L3 Stock Allocation | `StockLot.allocate()` / `allocateStock()` |
 | UC-REP-01 | DFD-L2.6 | BPMN-L2 Reporting | `ReportEngine.generateReport()` |
 
 1. Every use case must have at least one happy path, one alternative path, and one exception path.

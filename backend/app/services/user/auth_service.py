@@ -41,6 +41,11 @@ def _get_jwt_keys():
         private_key = settings.JWT_PRIVATE_KEY
         public_key = settings.JWT_PUBLIC_KEY
         if not private_key or not public_key:
+            if settings.ENVIRONMENT == "production":
+                raise RuntimeError(
+                    "JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set when "
+                    "JWT_ALGORITHM=RS256 in production."
+                )
             private_key, public_key = _generate_rsa_keys()
         return private_key, public_key
     return settings.JWT_SECRET, settings.JWT_SECRET
@@ -115,9 +120,41 @@ async def authenticate_user(username: str, password: str) -> User | None:
     user = await get_user_by_username(username)
     if not user:
         return None
-    if not verify_password(password, str(user.hashed_password)):
+
+    if getattr(user, "locked_until", None) and user.locked_until > datetime.now(UTC):
         return None
+
+    if not verify_password(password, str(user.hashed_password)):
+        if user.id is not None:
+            await _increment_failed_login(user.id)
+        return None
+
+    if getattr(user, "failed_login_attempts", 0) > 0:
+        await _reset_failed_login(user.id)
     return user
+
+
+async def _increment_failed_login(user_id: int) -> None:
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+        if not user:
+            return
+        user.failed_login_attempts = int(getattr(user, "failed_login_attempts", 0) + 1)
+        if user.failed_login_attempts >= 5:
+            user.locked_until = datetime.now(UTC) + timedelta(minutes=15)
+        await session.commit()
+
+
+async def _reset_failed_login(user_id: int) -> None:
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+        if not user:
+            return
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        await session.commit()
 
 
 async def ensure_admin_user() -> None:

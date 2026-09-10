@@ -48,6 +48,46 @@ export interface NewsFilterState {
 }
 
 export interface NewsStreamPayload {
-  items?: LiveNewsItem[];
-  item?: LiveNewsItem;
+  item?: Partial<LiveNewsItem>;
+  items?: Array<Partial<LiveNewsItem>>;
+  news_id?: string;
+  title?: string;
+  summary?: string | null;
+  source?: string;
+  url?: string | null;
+  symbols_affected?: string[];
+  sentiment?: string | null;
+  published_at?: string;
+  freshness_ts?: string;
+  received_ts?: string;
+  data_age_ms?: number;
+  stale?: boolean;
 }
+
+/**
+ * Normalized item shape produced by `normalizeNewsPayload`.
+ * It is an intersection of every field that may appear on an incoming
+ * news payload (LiveNewsItem | NewsStreamPayload), so consumers can
+ * safely read any of the merged properties.
+ */
+export type NormalizedNewsItem = Partial<LiveNewsItem> & {
+  summary?: string | null;
+  symbols_affected?: string[];
+  news_id?: string;
+  sentiment?: string | null;
+  url?: string | null;
+  freshness_ts?: string;
+  received_ts?: string;
+  data_age_ms?: number | null;
+  stale?: boolean;
+};
+
+export function normalizeNewsPayload(payload: NewsStreamPayload | null | undefined): Array<NormalizedNewsItem> {
+  if (!payload) return [];
+  const incoming: Array<NormalizedNewsItem> = [];
+  if (payload.item) incoming.push(payload.item);
+  if (payload.items && Array.isArray(payload.items)) incoming.push(...payload.items);
+  if (!incoming.length && (payload.title || payload.news_id)) incoming.push(payload as unknown as NormalizedNewsItem);
+  return incoming;
+}
+

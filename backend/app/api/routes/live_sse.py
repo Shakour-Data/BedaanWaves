@@ -173,13 +173,18 @@ async def _stream_generator(
             if not isinstance(envelope, LiveEventEnvelope):
                 continue
             event_type = envelope.event
-            raw_data = envelope.data or {}
+            raw_data = dict(envelope.data or {})
+            wire_data = {
+                **raw_data,
+                "sequence": envelope.sequence,
+                "data_age_ms": raw_data.get("data_age_ms"),
+            }
             # Sanitize any provider errors before sending over the wire.
             if event_type == "health":
                 reason = raw_data.get("reason_message")
                 code = raw_data.get("reason_code")
                 if code in ("provider_error", "circuit_open"):
-                    sanitized = dict(raw_data)
+                    sanitized = dict(wire_data)
                     sanitized["error_code"] = "provider_error"
                     if reason and any(needle in str(reason) for needle in (
                         "ValueError", "KeyError", "Traceback", "yfinance",
@@ -191,9 +196,9 @@ async def _stream_generator(
                         )
                     frame = _format_sse(event_type, sanitized)
                 else:
-                    frame = _format_sse(event_type, raw_data)
+                    frame = _format_sse(event_type, wire_data)
             else:
-                frame = _format_sse(event_type, raw_data)
+                frame = _format_sse(event_type, wire_data)
             if first_event:
                 first_event = False
                 # FastAPI StreamingResponse will already have sent the

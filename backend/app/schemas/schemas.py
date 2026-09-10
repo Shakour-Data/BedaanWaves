@@ -1090,6 +1090,8 @@ class LiveQuoteResponse(BaseModel):
     stream_key: str | None = None
     event: str | None = None
     data: dict[str, Any] | None = None
+    sequence: int | None = None
+    data_age_ms: float | None = None
     error: str | None = None
     timestamp: str | None = None
 
@@ -1098,6 +1100,8 @@ class LiveScoresResponse(BaseModel):
     stream_key: str | None = None
     event: str | None = None
     data: dict[str, Any] | None = None
+    sequence: int | None = None
+    data_age_ms: float | None = None
     error: str | None = None
     timestamp: str | None = None
 
@@ -1106,6 +1110,8 @@ class LiveNewsResponse(BaseModel):
     stream_key: str | None = None
     event: str | None = None
     data: dict[str, Any] | None = None
+    sequence: int | None = None
+    data_age_ms: float | None = None
     error: str | None = None
     timestamp: str | None = None
 
@@ -1114,6 +1120,8 @@ class LiveOrderbookResponse(BaseModel):
     stream_key: str | None = None
     event: str | None = None
     data: dict[str, Any] | None = None
+    sequence: int | None = None
+    data_age_ms: float | None = None
     error: str | None = None
     timestamp: str | None = None
 
@@ -1122,6 +1130,8 @@ class LiveMarketResponse(BaseModel):
     stream_key: str | None = None
     event: str | None = None
     data: dict[str, Any] | None = None
+    sequence: int | None = None
+    data_age_ms: float | None = None
     error: str | None = None
     timestamp: str | None = None
 
@@ -1213,4 +1223,20 @@ class BacktestResponse(BaseModel):
     model_id: str
     results: dict[str, Any]
     timestamp: str
+
+
+class PrivacyExportResponse(BaseModel):
+    exported_at: str
+    user: dict[str, Any]
+    watchlists: list[dict[str, Any]]
+    portfolios: list[dict[str, Any]]
+    preferences: list[dict[str, Any]]
+    notifications: list[dict[str, Any]]
+    alerts: list[dict[str, Any]]
+    market_settings: list[dict[str, Any]]
+    audit_logs: list[dict[str, Any]]
+
+
+class ConsentUpdate(BaseModel):
+    consents: dict[str, bool]
 

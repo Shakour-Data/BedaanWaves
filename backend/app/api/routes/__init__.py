@@ -18,7 +18,9 @@ from . import (
     notifications,
     password_reset,
     portfolios,
+    privacy,
     ranking,
+    security_audit,
     settings,
     specialized,
     stocks,
@@ -46,6 +48,7 @@ news_router = news.router
 notifications_router = notifications.router
 password_reset_router = password_reset.router
 portfolio_router = portfolios.router
+privacy_router = privacy.router
 ranking_router = ranking.router
 settings_router = settings.router
 specialized_router = specialized.router
@@ -94,6 +97,8 @@ __all__ = [
     "password_reset_router",
     "portfolio_router",
     "portfolios",
+    "privacy_router",
+    "privacy",
     "ranking",
     "ranking_router",
     "settings",

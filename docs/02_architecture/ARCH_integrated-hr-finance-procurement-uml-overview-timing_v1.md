@@ -1,9 +1,9 @@
 # UML Interaction Overview & Timing Diagrams — Integrated HR/Finance/Procurement v1
 
-**Title:** UML Interaction Overview & Timing Diagrams — Integrated HR/Finance/Procurement System  
-**Version:** v1.0  
-**Date:** 2026-09-09  
-**Status:** Draft for documentation  
+**Title:** UML Interaction Overview & Timing Diagrams — Integrated HR/Finance/Procurement System
+**Version:** v1.0
+**Date:** 2026-09-09
+**Status:** Draft for documentation
 **Author:** Kilo
 
 ---
@@ -691,7 +691,7 @@ EA is "Idle"
 | IO-L2-PAY | Payroll Interaction L2 | BPMN-L2-Payroll | DFD-04 | IO-PAY-01 to IO-PAY-04 | TIMING-L2-Payroll | PayrollRun, FinanceManager | `calculateSalary()` | Payroll interactions |
 | IO-L2-BUD | Budget Interaction L2 | BPMN-L2-Budget | DFD-07 | IO-BUD-01 to IO-BUD-04 | TIMING-L2-Budget | Budget, FinanceManager | `BudgetAllocation.checkBudget()` | Budget interactions |
 | IO-L2-PROC | Procurement Interaction L2 | BPMN-L2-Procurement | DFD-08 | IO-PROC-01 to IO-PROC-04 | — | ProcurementOfficer, Supplier | — | Procurement interactions |
-| IO-L2-INV | Inventory Interaction L2 | BPMN-L2-Inventory | DFD-10 | IO-INV-01 to IO-INV-03 | TIMING-L2-Inventory | WarehouseOfficer, StockLot | `StockLot.allocateStock()` | Inventory interactions |
+| IO-L2-INV | Inventory Interaction L2 | BPMN-L2-Inventory | DFD-10 | IO-INV-01 to IO-INV-03 | TIMING-L2-Inventory | WarehouseOfficer, StockLot | `StockLot.allocate()` / `allocateStock()` | Inventory interactions |
 | IO-L3-PAY | Payroll Approval L3 | BPMN-L3-PayrollApproval | DFD-04 | IO3-PAY-01 to IO3-PAY-06 | TIMING-L3-PayrollApproval | PayrollRun, PaymentGateway | `calculateSalary()`, `PaymentGateway.executePayment()` | Payroll critical timing |
 | IO-L3-BUD | Budget-Check PR L3 | BPMN-L3-BudgetCheck-PR | DFD-07 | IO3-BUD-01 to IO3-BUD-05 | TIMING-L3-BudgetCheckPR | BudgetAllocation, FinanceManager | `BudgetAllocation.checkBudget()` | Budget critical timing |
 | IO-L3-INV | Stock Allocation L3 | BPMN-L3-StockAllocation | DFD-10 | IO3-INV-01 to IO3-INV-04 | TIMING-L3-StockAllocation | StockLot, WarehouseOfficer | `StockLot.allocate()` | Inventory critical timing |

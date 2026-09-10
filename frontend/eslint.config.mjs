@@ -7,6 +7,16 @@ const eslintConfig = [
   {
     ignores: [".next/**", "node_modules/**", "out/**", "build/**"],
   },
+  {
+    files: ["e2e/**/*.ts", "e2e/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

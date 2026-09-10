@@ -136,11 +136,15 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     PASSWORD_MIN_LENGTH: int = 8
     ENABLE_HTTPS: bool = False
+    DATA_ENCRYPTION_KEY: str = ""
+    CSRF_TOKEN_TTL_SECONDS: int = 3600
 
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     RATE_LIMIT_REQUESTS_PER_HOUR: int = 5000
+    RATE_LIMIT_AUTH_REQUESTS_PER_MINUTE: int = 5
+    RATE_LIMIT_AUTH_REQUESTS_PER_HOUR: int = 20
 
     # Global Auth Guard
     # When True, every protected API route requires a valid Bearer access token.
@@ -472,6 +476,16 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "JWT_SECRET must be at least 32 characters in production. "
                     "Refusing to start with a weak JWT secret."
+                )
+            if self.JWT_ALGORITHM == "RS256":
+                if not self.JWT_PRIVATE_KEY or not self.JWT_PUBLIC_KEY:
+                    raise ValueError(
+                        "JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set when "
+                        "JWT_ALGORITHM=RS256 in production."
+                    )
+            if not self.DATA_ENCRYPTION_KEY:
+                raise ValueError(
+                    "DATA_ENCRYPTION_KEY must be set in production for field-level encryption."
                 )
         return self
 

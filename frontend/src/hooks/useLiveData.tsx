@@ -35,7 +35,7 @@ export interface UseLiveDataReturn<T> {
   lastSequence: number | null;
   lastEventTimestamp: number | null;
   isStale: boolean;
-  manualResync: () => Promise<void>;
+  manualResync: () => Promise<boolean>;
 }
 
 const HEALTH_TRANSITION_MS = 2_000;
@@ -81,14 +81,17 @@ export function useLiveData<T = unknown>(
 
   const isStale = isStaleByAge(lastDataAgeMs, lastEventTimestamp);
 
-  const runSnapshotResync = useCallback(async (k: LiveStreamKey) => {
-    if (resyncInProgressRef.current) return;
+  const runSnapshotResync = useCallback(async (k: LiveStreamKey): Promise<boolean> => {
+    if (resyncInProgressRef.current) return false;
     resyncInProgressRef.current = true;
     setConnectionHealth(k, 'syncing');
 
     try {
       const endpoint = getSnapshotEndpoint(k);
-      if (!endpoint) return;
+      if (!endpoint) {
+        setConnectionHealth(k, 'disconnected');
+        return false;
+      }
 
       const res = await apiClient.get<{ event?: string; sequence?: number; data_age_ms?: number; data?: T }>(endpoint, {
         timeout: 15_000,
@@ -102,8 +105,11 @@ export function useLiveData<T = unknown>(
       setStreamData(k, snapshotData, snapshotData, sequence, dataAgeMs);
       setConnectionHealth(k, 'live');
       disconnectCountRef.current = 0;
+      return true;
     } catch (err) {
       console.warn(`[useLiveData] snapshot resync failed for ${k}:`, err);
+      setConnectionHealth(k, 'disconnected');
+      return false;
     } finally {
       resyncInProgressRef.current = false;
     }
@@ -112,7 +118,7 @@ export function useLiveData<T = unknown>(
   const manualResync = useCallback(async () => {
     lastSequenceRef.current = null;
     resetStream(key);
-    await runSnapshotResync(key);
+    return runSnapshotResync(key);
   }, [key, resetStream, runSnapshotResync]);
 
   const applyHealth = useCallback(

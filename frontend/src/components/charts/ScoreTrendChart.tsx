@@ -48,10 +48,10 @@ const LIGHT = {
 };
 
 const DARK = {
-  background: "#1e1e1e",
-  text: "#a8a8a8",
-  grid: "#2a2a2a",
-  border: "#333333",
+  background: "#0F172A",
+  text: "#E2E8F0",
+  grid: "#334155",
+  border: "#475569",
 };
 
 export function ScoreTrendChart({
@@ -173,7 +173,7 @@ export function ScoreTrendChart({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full" role="region" aria-label="Score trend chart">
       {showLegend && (
         <div className="mb-2 flex flex-wrap gap-2">
           {chartSeries.series.map((s) => {
@@ -184,11 +184,13 @@ export function ScoreTrendChart({
                 type="button"
                 onClick={() => toggle(s.key)}
                 aria-pressed={!isHidden}
+                aria-label={`${isHidden ? "Show" : "Hide"} ${s.label} series`}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity",
                   isHidden
                     ? "border-[var(--color-border)] bg-[var(--color-background)] opacity-50"
-                    : "border-transparent bg-[var(--color-background)]"
+                    : "border-transparent bg-[var(--color-background)]",
+                  "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2",
                 )}
               >
                 <span
@@ -201,7 +203,7 @@ export function ScoreTrendChart({
           })}
         </div>
       )}
-      <div ref={containerRef} className="w-full" style={{ height }} />
+      <div ref={containerRef} className="w-full" style={{ height }} role="img" aria-label="Score trend line chart" />
     </div>
   );
 }

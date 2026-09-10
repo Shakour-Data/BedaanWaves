@@ -46,6 +46,8 @@ def _build_upstream_headers(request: Request, correlation_id: str) -> dict[str, 
         "accept",
         "accept-encoding",
         "user-agent",
+        "traceparent",
+        "tracestate",
     }
     upstream: dict[str, str] = {}
     for name, value in request.headers.items():

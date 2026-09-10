@@ -36,6 +36,20 @@ const LEVEL_COLORS: Record<string, string[]> = {
   sub_aspect: ["#60A5FA", "#4ADE83", "#FB9206", "#F8534C", "#C084FC"],
 };
 
+const LEVEL_CHART_HEIGHT: Record<string, number> = {
+  dimension: 300,
+  sub_dimension: 280,
+  aspect: 260,
+  sub_aspect: 240,
+};
+
+const EMPTY_GUIDANCE: Record<string, string> = {
+  dimension: "Awaiting the next daily snapshot from the backend.",
+  sub_dimension: "Sub-dimension scores populate once the hierarchy is recomputed.",
+  aspect: "Aspect scores populate once the hierarchy is recomputed.",
+  sub_aspect: "Sub-aspect scores populate once the hierarchy is recomputed.",
+};
+
 const GREEN = "#10b981";
 const RED = "#ef4444";
 
@@ -52,6 +66,30 @@ function ChartSkeleton() {
       </div>
       <Skeleton className="h-52 w-full rounded" />
     </div>
+  );
+}
+
+function ChartShell({
+  title,
+  children,
+  isEmpty,
+  emptyLabel,
+  emptyGuidance,
+}: {
+  title: string;
+  children: React.ReactNode;
+  isEmpty?: boolean;
+  emptyLabel?: string;
+  emptyGuidance?: string;
+}) {
+  return (
+    <TarotCard title={title}>
+      {isEmpty ? (
+        <EmptyChart label={emptyLabel ?? "No data"} guidance={emptyGuidance} />
+      ) : (
+        children
+      )}
+    </TarotCard>
   );
 }
 
@@ -102,7 +140,7 @@ export function GeneralDashboardTab({ symbol }: GeneralDashboardTabProps) {
   }, [loadSnapshot, symbol]);
 
   const model: ChartsModel | null = useMemo(
-    () => (snapshot ? snapshotToChartsModel(snapshot) : null),
+    () => (snapshot ? snapshotToChartsModel(snapshot, { alignTrendToSnapshot: true }) : null),
     [snapshot],
   );
 
@@ -207,10 +245,53 @@ export function GeneralDashboardTab({ symbol }: GeneralDashboardTabProps) {
             · Spider last point ≡ Trend last point for all dimensions
           </span>
         </div>
-        <span className="text-[var(--color-text-secondary)]">
-          last updated {fmtDate(model.latestDate)} · tolerance ±{parity.tolerance}
-        </span>
+        <div className="flex items-center gap-2">
+          {parity.ok ? (
+            <span className="text-[var(--color-text-secondary)]">
+              last updated {fmtDate(model.latestDate)} · tolerance ±{parity.tolerance}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 px-2.5 py-1 text-xs font-medium text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--color-error)]/40"
+              aria-label="Retry snapshot to restore parity"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry parity
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Mismatch detail list (only shown when parity fails) */}
+      {!parity.ok && parity.mismatches.length > 0 && (
+        <div className="rounded-xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/5 px-4 py-3 text-sm">
+          <p className="mb-2 font-medium text-[var(--color-error)]">
+            Mismatch details (spider vs. trend last point):
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {parity.mismatches.slice(0, 6).map((m) => (
+              <li key={`${m.level}-${m.key}`} className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                <span className="font-mono text-xs text-[var(--color-text-muted)]">
+                  {m.level}:{m.key}
+                </span>
+                <span>Spider: <strong className="text-[var(--color-text-primary)]">{m.spider.toFixed(2)}</strong></span>
+                <span>·</span>
+                <span>Trend: <strong className="text-[var(--color-text-primary)]">{m.trendLast.toFixed(2)}</strong></span>
+                <span className="text-[var(--color-error)]">
+                  Δ {(m.trendLast - m.spider).toFixed(2)}
+                </span>
+              </li>
+            ))}
+            {parity.mismatches.length > 6 && (
+              <li className="text-[var(--color-text-muted)]">
+                +{parity.mismatches.length - 6} more mismatch(es)
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
 
       {/* 20 chart views = 4 levels x 5 families, all from one snapshot */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -241,6 +322,8 @@ export function GeneralDashboardTab({ symbol }: GeneralDashboardTabProps) {
 function LevelSection({ level }: { level: LevelModel }) {
   const palette = LEVEL_COLORS[level.key] ?? LEVEL_COLORS.dimension;
   const meta = LEVEL_META[level.key];
+  const chartHeight = LEVEL_CHART_HEIGHT[level.key] ?? 280;
+  const guidance = EMPTY_GUIDANCE[level.key];
 
   return (
     <section
@@ -254,55 +337,63 @@ function LevelSection({ level }: { level: LevelModel }) {
         <span className="text-xs text-[var(--color-text-secondary)]">{level.short}</span>
       </header>
 
-      <TarotCard title={`◈ ${meta.label} — Score Spider`}>
-        {hasData(level.spider) ? (
-          <div className="flex justify-center">
-            <SpiderChart data={spiderSeries(level)} size={300} color={palette[0]} />
-          </div>
-        ) : (
-          <EmptyChart label="No spider data for this level" />
-        )}
-      </TarotCard>
+      <ChartShell
+        title={`◈ ${meta.label} — Score Spider`}
+        isEmpty={!hasData(level.spider)}
+        emptyLabel="No spider data for this level"
+        emptyGuidance={guidance}
+      >
+        <div className="flex justify-center">
+          <SpiderChart data={spiderSeries(level)} size={chartHeight} color={palette[0]} />
+        </div>
+      </ChartShell>
 
-      <TarotCard title={`◈ ${meta.label} — Score Trend (daily)`}>
-        {level.trend.length > 0 && hasData(level.spider) ? (
-          <ScoreTrendChart series={trendSeries(level)} height={220} showLegend />
-        ) : (
-          <EmptyChart label="No trend data for this level" />
-        )}
-      </TarotCard>
+      <ChartShell
+        title={`◈ ${meta.label} — Score Trend (daily)`}
+        isEmpty={!(level.trend.length > 0 && hasData(level.spider))}
+        emptyLabel="No trend data for this level"
+        emptyGuidance={guidance}
+      >
+        <ScoreTrendChart series={trendSeries(level)} height={chartHeight - 40} showLegend />
+      </ChartShell>
 
-      <TarotCard title={`◈ ${meta.label} — Score Changes (Δ)`}>
-        {hasData(level.scoreDelta) ? (
-          <ColumnChart
-            data={positiveNegativeColumns(level.scoreDelta, "score")}
-            height={180}
-            valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
-          />
-        ) : (
-          <EmptyChart label="No score-change data" />
-        )}
-      </TarotCard>
+      <ChartShell
+        title={`◈ ${meta.label} — Score Changes (Δ)`}
+        isEmpty={!hasData(level.scoreDelta)}
+        emptyLabel="No score-change data"
+        emptyGuidance={guidance}
+      >
+        <ColumnChart
+          data={positiveNegativeColumns(level.scoreDelta, "score")}
+          height={160}
+          valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+        />
+      </ChartShell>
 
-      <TarotCard title={`◈ ${meta.label} — Coefficients (Weight)`}>
-        {hasData(level.weight) ? (
-          <CoefficientChart data={level.weight.map((w) => ({ key: w.key, label: w.label, weight: w.weight }))} height={200} />
-        ) : (
-          <EmptyChart label="No weight data for this level" />
-        )}
-      </TarotCard>
+      <ChartShell
+        title={`◈ ${meta.label} — Coefficients (Weight)`}
+        isEmpty={!hasData(level.weight)}
+        emptyLabel="No weight data for this level"
+        emptyGuidance={guidance}
+      >
+        <CoefficientChart
+          data={level.weight.map((w) => ({ key: w.key, label: w.label, weight: w.weight }))}
+          height={chartHeight - 60}
+        />
+      </ChartShell>
 
-      <TarotCard title={`◈ ${meta.label} — Coefficient Changes (Δ)`}>
-        {hasData(level.weightDelta) ? (
-          <ColumnChart
-            data={positiveNegativeColumns(level.weightDelta, "score")}
-            height={180}
-            valueFormatter={(v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%"}
-          />
-        ) : (
-          <EmptyChart label="No coefficient-change data for this level" />
-        )}
-      </TarotCard>
+      <ChartShell
+        title={`◈ ${meta.label} — Coefficient Changes (Δ)`}
+        isEmpty={!hasData(level.weightDelta)}
+        emptyLabel="No coefficient-change data"
+        emptyGuidance={guidance}
+      >
+        <ColumnChart
+          data={positiveNegativeColumns(level.weightDelta, "score")}
+          height={160}
+          valueFormatter={(v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%"}
+        />
+      </ChartShell>
     </section>
   );
 }
@@ -311,10 +402,12 @@ function hasData(items: ChartItem[]): boolean {
   return items.length > 0 && items.some((i) => typeof i.score === "number" || typeof i.weight === "number");
 }
 
-function EmptyChart({ label }: { label: string }) {
+function EmptyChart({ label, guidance }: { label: string; guidance?: string }) {
   return (
-    <div className="flex min-h-[160px] items-center justify-center text-sm text-[var(--color-text-secondary)]">
-      {label}
+    <div className="flex min-h-[160px] flex-col items-center justify-center gap-1.5 px-4 text-center">
+      <BarChart3 className="h-6 w-6 text-[var(--color-text-muted)]/60" aria-hidden="true" />
+      <span className="text-sm text-[var(--color-text-secondary)]">{label}</span>
+      {guidance && <span className="text-xs text-[var(--color-text-muted)]">{guidance}</span>}
     </div>
   );
 }

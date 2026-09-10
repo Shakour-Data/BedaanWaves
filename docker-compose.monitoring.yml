@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: bedaanwaves-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: bedaanwaves-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--data.retention=120h'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: bedaanwaves-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: bedaanwaves-node-exporter
+    ports:
+      - "9100:9100"
+    pid: host
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: bedaanwaves-postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:your_postgres_password_here@host.docker.internal:5432/bedaanwaves_db?sslmode=disable"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.54.0
+    container_name: bedaanwaves-redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: "redis://host.docker.internal:6379"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    container_name: bedaanwaves-jaeger
+    ports:
+      - "14268:14268"
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      MEMORY_MAX_TRACES: "100000"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: bedaanwaves-elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    container_name: bedaanwaves-logstash
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      - ./monitoring/elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: bedaanwaves-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      SERVER_NAME: bedaanwaves-kibana
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: bedaanwaves-filebeat
+    volumes:
+      - ./monitoring/elk/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/bedaanwaves:ro
+      - filebeat-data:/usr/share/filebeat/data
+    environment:
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+volumes:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:
+  elasticsearch-data:
+  filebeat-data:
+
+networks:
+  monitoring:
+    driver: bridge

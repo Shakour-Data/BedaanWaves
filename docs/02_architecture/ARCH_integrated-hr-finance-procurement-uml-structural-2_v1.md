@@ -124,86 +124,86 @@ skinparam packageStyle rectangle
 title L2: Sub-Packages inside each Domain
 
 package "HR Domain" as HR {
-  package "HR.Core" {
-    [Employee]
-    [HRManager]
-    [LeaveRequest]
-  }
-  package "HR.Recruitment" {
-    [Candidate]
-    [Interview]
-  }
+package "HR.Core" {
+[Employee]
+[HRManager]
+[LeaveRequest]
+}
+package "HR.Recruitment" {
+[Candidate]
+[Interview]
+}
 }
 
 package "Payroll Domain" as PAY {
-  package "Payroll.Core" {
-    [PayrollRun]
-    [SalarySlip]
-    [Payment]
-  }
-  package "Payroll.Calc" {
-    [SalaryCalculator]
-    [DeductionEngine]
-  }
+package "Payroll.Core" {
+[PayrollRun]
+[SalarySlip]
+[Payment]
+}
+package "Payroll.Calc" {
+[SalaryCalculator]
+[DeductionEngine]
+}
 }
 
 package "Budget Domain" as BUD {
-  package "Budget.Core" {
-    [Budget]
-    [BudgetAllocation]
-  }
-  package "Budget.Validation" {
-    [BudgetCheckService]
-    [BudgetValidator]
-  }
+package "Budget.Core" {
+[Budget]
+[BudgetAllocation]
+}
+package "Budget.Validation" {
+[BudgetCheckService]
+[BudgetValidator]
+}
 }
 
 package "Procurement Domain" as PROC {
-  package "Procurement.Core" {
-    [PurchaseRequest]
-    [PurchaseOrder]
-    [ProcurementOfficer]
-  }
-  package "Procurement.Approval" {
-    [FinanceManager]
-    [BudgetCheck]
-  }
+package "Procurement.Core" {
+[PurchaseRequest]
+[PurchaseOrder]
+[ProcurementOfficer]
+}
+package "Procurement.Approval" {
+[FinanceManager]
+[BudgetCheck]
+}
 }
 
 package "Inventory Domain" as INV {
-  package "Inventory.Core" {
-    [GoodsReceipt]
-    [StockLot]
-    [WarehouseOfficer]
-  }
-  package "Inventory.Allocation" {
-    [StockAllocationService]
-    [StockManager]
-  }
+package "Inventory.Core" {
+[GoodsReceipt]
+[StockLot]
+[WarehouseOfficer]
+}
+package "Inventory.Allocation" {
+[StockAllocationService]
+[StockManager]
+}
 }
 
 package "Reporting Domain" as REP {
-  package "Reporting.Core" {
-    [Report]
-    [ExecutiveAnalyst]
-  }
-  package "Reporting.Engine" {
-    [ReportGenerationService]
-    [ReportBuilder]
-  }
+package "Reporting.Core" {
+[Report]
+[ExecutiveAnalyst]
+}
+package "Reporting.Engine" {
+[ReportGenerationService]
+[ReportBuilder]
+}
 }
 
 package "Shared / Cross-Cutting" as SHARED {
-  package "Shared.Audit" {
-    [AuditLog]
-  }
-  package "Shared.Notification" {
-    [Notification]
-  }
-  package "Shared.Security" {
-    [BankGateway]
-    [PaymentGateway]
-  }
+package "Shared.Audit" {
+[AuditLog]
+}
+package "Shared.Notification" {
+[Notification]
+}
+package "Shared.Security" {
+[BankGateway]
+[PaymentGateway]
+}
 }
 
 PAY.Payroll.Calc --> PAY.Payroll.Core : uses
@@ -235,118 +235,118 @@ skinparam packageStyle rectangle
 title L3: Detailed Package Contents — HR & Payroll
 
 package "HR.Domain.HR.Core" {
-  class Employee {
-    +id: UUID
-    +username: str
-    +email: str
-    +full_name: str
-    +department: str
-    +position: str
-    +leave_balance: int
-    +is_active: bool
-    +created_at: datetime
-  }
-  class HRManager {
-    +id: UUID
-    +user_id: UUID
-    +approveRequest(request: LeaveRequest): bool
-    +reviewResume(candidate: Candidate): bool
-  }
-  class LeaveRequest {
-    +id: UUID
-    +employee_id: UUID
-    +leave_type: str
-    +start_date: date
-    +end_date: date
-    +status: str
-    +approved_by: UUID?
-    +created_at: datetime
-  }
+class Employee {
++id: UUID
++username: str
++email: str
++full_name: str
++department: str
++position: str
++leave_balance: int
++is_active: bool
++created_at: datetime
+}
+class HRManager {
++id: UUID
++user_id: UUID
++approveRequest(request: LeaveRequest): bool
++reviewResume(candidate: Candidate): bool
+}
+class LeaveRequest {
++id: UUID
++employee_id: UUID
++leave_type: str
++start_date: date
++end_date: date
++status: str
++approved_by: UUID?
++created_at: datetime
+}
 }
 
 package "HR.Domain.HR.Recruitment" {
-  class Candidate {
-    +id: UUID
-    +full_name: str
-    +email: str
-    +resume_url: str
-    +status: str
-    +created_at: datetime
-  }
-  class Interview {
-    +id: UUID
-    +candidate_id: UUID
-    +scheduled_at: datetime
-    +interviewer_id: UUID
-    +result: str?
-  }
+class Candidate {
++id: UUID
++full_name: str
++email: str
++resume_url: str
++status: str
++created_at: datetime
+}
+class Interview {
++id: UUID
++candidate_id: UUID
++scheduled_at: datetime
++interviewer_id: UUID
++result: str?
+}
 }
 
 package "Payroll.Domain.Payroll.Core" {
-  class PayrollRun {
-    +id: UUID
-    +run_date: date
-    +period_start: date
-    +period_end: date
-    +status: str
-    +approved_by: UUID?
-    +created_at: datetime
-  }
-  class SalarySlip {
-    +id: UUID
-    +payroll_run_id: UUID
-    +employee_id: UUID
-    +gross_salary: decimal
-    +deductions: decimal
-    +net_salary: decimal
-    +currency: str
-    +generated_at: datetime
-  }
-  class Payment {
-    +id: UUID
-    +payroll_run_id: UUID
-    +employee_id: UUID
-    +amount: decimal
-    +currency: str
-    +status: str
-    +transaction_id: str?
-    +paid_at: datetime?
-  }
+class PayrollRun {
++id: UUID
++run_date: date
++period_start: date
++period_end: date
++status: str
++approved_by: UUID?
++created_at: datetime
+}
+class SalarySlip {
++id: UUID
++payroll_run_id: UUID
++employee_id: UUID
++gross_salary: decimal
++deductions: decimal
++net_salary: decimal
++currency: str
++generated_at: datetime
+}
+class Payment {
++id: UUID
++payroll_run_id: UUID
++employee_id: UUID
++amount: decimal
++currency: str
++status: str
++transaction_id: str?
++paid_at: datetime?
+}
 }
 
 package "Payroll.Domain.Payroll.Calc" {
-  class SalaryCalculator {
-    +calculateSalary(employee: Employee, period: DateRange): SalarySlip
-    +calcDeductions(employee: Employee, period: DateRange): decimal
-    +calcBenefits(employee: Employee, period: DateRange): decimal
-  }
+class SalaryCalculator {
++calculateSalary(employee: Employee, period: DateRange): SalarySlip
++calcDeductions(employee: Employee, period: DateRange): decimal
++calcBenefits(employee: Employee, period: DateRange): decimal
+}
 }
 
 package "Shared.CrossCutting.Audit" {
-  class AuditLog {
-    +id: UUID
-    +user_id: UUID?
-    +action: str
-    +entity: str
-    +entity_id: str
-    +details: JSON
-    +ip_address: str
-    +created_at: datetime
-  }
+class AuditLog {
++id: UUID
++user_id: UUID?
++action: str
++entity: str
++entity_id: str
++details: JSON
++ip_address: str
++created_at: datetime
+}
 }
 
 package "Shared.CrossCutting.Notification" {
-  class Notification {
-    +id: UUID
-    +user_id: UUID
-    +type: str
-    +title: str
-    +message: str
-    +channel: str
-    +priority: str
-    +read: bool
-    +created_at: datetime
-  }
+class Notification {
++id: UUID
++user_id: UUID
++type: str
++title: str
++message: str
++channel: str
++priority: str
++read: bool
++created_at: datetime
+}
 }
 
 HRManager --> LeaveRequest : approves
@@ -419,36 +419,36 @@ skinparam backgroundColor #FEFEFE
 title L2: Internal Structure — Payroll Processing Collaboration
 
 package "PayrollProcessingCollaboration" {
-  component "PayrollRun" as PR {
-    port in StartRun as PR_in
-    port out SalarySlipReady as PR_out
-    port in AttendanceData as PR_att
-    port out PaymentInitiated as PR_pay
-  }
+component "PayrollRun" as PR {
+port in StartRun as PR_in
+port out SalarySlipReady as PR_out
+port in AttendanceData as PR_att
+port out PaymentInitiated as PR_pay
+}
 
-  component "SalaryCalculator" as SC {
-    port in CalcRequest as SC_in
-    port out SlipGenerated as SC_out
-  }
+component "SalaryCalculator" as SC {
+port in CalcRequest as SC_in
+port out SlipGenerated as SC_out
+}
 
-  component "BudgetValidator" as BV {
-    port in ValidateRequest as BV_in
-    port out BudgetStatus as BV_out
-  }
+component "BudgetValidator" as BV {
+port in ValidateRequest as BV_in
+port out BudgetStatus as BV_out
+}
 
-  component "PaymentGateway" as PG {
-    port in PaymentRequest as PG_in
-    port out TransferResult as PG_out
-  }
+component "PaymentGateway" as PG {
+port in PaymentRequest as PG_in
+port out TransferResult as PG_out
+}
 
-  component "AuditLogger" as AL {
-    port in LogEvent as AL_in
-  }
+component "AuditLogger" as AL {
+port in LogEvent as AL_in
+}
 
-  component "Notifier" as N {
-    port in Notify as N_in
-    port out NotificationSent as N_out
-  }
+component "Notifier" as N {
+port in Notify as N_in
+port out NotificationSent as N_out
+}
 }
 
 PR_in --> SC_in : calculatesSalary()
@@ -477,38 +477,38 @@ skinparam backgroundColor #FEFEFE
 title L3: Detailed Internal Structure — Budget-Check for Purchase Request
 
 package "BudgetCheckCollaboration" {
-  component "FinanceManager" as FM {
-    port in ReceivePR as FM_in
-    port out ApprovePR as FM_out
-    port out RejectPR as FM_rej
-    port in ReallocationResponse as FM_rea
-  }
+component "FinanceManager" as FM {
+port in ReceivePR as FM_in
+port out ApprovePR as FM_out
+port out RejectPR as FM_rej
+port in ReallocationResponse as FM_rea
+}
 
-  component "BudgetService" as BS {
-    port in CheckRequest as BS_in
-    port out AllocationStatus as BS_out
-    port in UpdateRequest as BS_upd
-  }
+component "BudgetService" as BS {
+port in CheckRequest as BS_in
+port out AllocationStatus as BS_out
+port in UpdateRequest as BS_upd
+}
 
-  component "ExecutiveAnalyst" as EA {
-    port in ReallocationReq as EA_in
-    port out ApproveRealloc as EA_out
-    port out RejectRealloc as EA_rej
-  }
+component "ExecutiveAnalyst" as EA {
+port in ReallocationReq as EA_in
+port out ApproveRealloc as EA_out
+port out RejectRealloc as EA_rej
+}
 
-  component "AuditLogger" as AL2 {
-    port in Log as AL2_in
-  }
+component "AuditLogger" as AL2 {
+port in Log as AL2_in
+}
 
-  component "Notifier" as N2 {
-    port in Notify as N2_in
-  }
+component "Notifier" as N2 {
+port in Notify as N2_in
+}
 
-  component "PurchaseRequest" as PR2 {
-    port in Created as PR2_in
-    port out Approved as PR2_out
-    port out Rejected as PR2_rej
-  }
+component "PurchaseRequest" as PR2 {
+port in Created as PR2_in
+port out Approved as PR2_out
+port out Rejected as PR2_rej
+}
 }
 
 PR2_in --> FM_in : submit()

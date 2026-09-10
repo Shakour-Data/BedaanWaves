@@ -8,7 +8,15 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.dependencies import _auth_rate_limiter
 from app.api.routes.auth import router
+
+
+@pytest.fixture(autouse=True)
+def _reset_auth_rate_limiter():
+    _auth_rate_limiter.reset()
+    yield
+    _auth_rate_limiter.reset()
 
 
 @pytest.fixture
