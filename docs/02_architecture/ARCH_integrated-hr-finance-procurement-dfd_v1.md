@@ -1,475 +1,580 @@
-# مدل جریان داده‌ها (DFD) — سیستم یکپارچه مدیریت منابع انسانی، مالی و خرید
+# DFD — سیستم یکپارچه مدیریت منابع انسانی، مالی و تدارکات
 
-## خلاصه و نقشه‌برداری
+**عنوان:** Integrated HR, Finance & Procurement Management System  
+**نسخه:** v1.0  
+**تاریخ:** 2026-09-09
 
-| سطح | شناسه | عنوان | ارجاع BPMN/UML |
+## نقشه ردیابی
+
+| سطح | شناسه | محتوا | خروجی اصلی |
 |---|---|---|---|
-| 0 | DFD-L0 | نمودار زمینه (Context) | UC-01 |
-| 1 | DFD-L1 | فرآیندهای کلان |泳池泳道 / Component |
-| 2 | DFD-L2.1 … L2.6 | تجزیه هر فرآیند کلان | Activity / Sequence / State Machine |
-| 3 | DFD-L3.1 … L3.3 | نمودارهای اتمی | Activity Diagram (Atomic) |
+| ۰ | DFD-L0 | زمینه و مرز سیستم | فهرست بازیگران و جریان‌های مرزی |
+| ۱ | DFD-L1 | شش فرایند کلان | معماری داده در سطح حوزه |
+| ۲ | DFD-L2.1 تا L2.6 | تجزیه هر فرایند کلان | زیرفرایندهای عملیاتی |
+| ۳ | DFD-L3.1 تا L3.3 | فرایندهای اتمی بحرانی | قوانین تبدیل داده |
+
+## قرارداد نام‌گذاری
+
+- موجودیت‌های بیرونی با نام‌های `Employee`، `HRManager`، `FinanceManager`، `ProcurementOfficer`، `WarehouseOfficer`، `Supplier`، `BankGateway`، `ExecutiveAnalyst` و `Auditor` نمایش داده می‌شوند.
+- مخازن داده با `D1` تا `D14` شماره‌گذاری شده‌اند و نام منطقی هر مخزن در برچسب آن آمده است.
+- فرایندها با شماره سطح و حوزه، مانند `2.2` یا `3.1.4`، شماره‌گذاری شده‌اند.
+- جریان‌ها نام داده را حمل می‌کنند؛ پیکان ورودی و خروجی برای حفظ平衡 DFD مشخص شده‌اند.
+- `AuditLog` برای تمام تغییرات مهم و `Report` برای خروجی‌های تحلیلی استفاده می‌شود.
 
 ---
 
-## سطح 0 — نمودار زمینه (Context Diagram)
+## سطح ۰ — نمودار زمینه
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان بیرونی"]
-        EMP[کارمند / Employee]
-        MGR[مدیریت / OrganizationUnit]
-        VEN[تأمین‌کننده / Vendor]
-        BNK[بانک / Bank]
-        AUD[حسابرسی / Auditor]
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:3px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    subgraph External [External Entities]
+        EMP[Employee]:::entity
+        HRM[HRManager]:::entity
+        FIN[FinanceManager]:::entity
+        PROC[ProcurementOfficer]:::entity
+        WH[WarehouseOfficer]:::entity
+        SUP[Supplier]:::entity
+        BANK[BankGateway]:::entity
+        EXEC[ExecutiveAnalyst]:::entity
+        AUD[Auditor]:::entity
     end
-    SYS["سیستم یکپارچه HR، مالی و خرید\n(Integrated HR, Finance & Procurement)"]
-    EMP --> SYS
-    MGR --> SYS
-    VEN --> SYS
-    BNK --> SYS
-    AUD --> SYS
+
+    SYS([0. Integrated HR, Finance & Procurement]):::process
+
+    EMP <-->|profile, leave, attendance| SYS
+    HRM <-->|hire, transfer, termination approval| SYS
+    FIN <-->|budget decision, payment approval| SYS
+    PROC <-->|purchase request, order status| SYS
+    WH <-->|goods receipt, stock allocation| SYS
+    SUP <-->|quotation, PO acknowledgement, shipment| SYS
+    BANK <-->|payment instruction, transaction result| SYS
+    EXEC <-->|report criteria, dashboards| SYS
+    AUD <-->|audit query, audit evidence| SYS
 ```
 
-این نمودار کل سیستم را به عنوان یک فرآیند واحد در مرکز قرار می‌دهد.  
-هر ذی‌نفع خارجی فقط از طریق رابط‌های مشخص با سیستم تعامل دارد.  
-هدف، دامنه کلی جریان داده‌ها و کنترل‌های کلان است.  
-برای ردیابی: این نمودار معادل «شرح مورد استفاده» (UC-01) در BPMN و «Use Case Model» در UML است.  
-محدودیت: هیچ ذخیره‌سازی یا فرآیند داخلی در این سطح نمایش داده نمی‌شود.  
+این نمودار مرز سامانه را نشان می‌دهد و کل نرم‌افزار را به‌عنوان یک فرایند واحد در نظر می‌گیرد.  
+`Employee` داده‌های هویتی، مرخصی و حضور را وارد می‌کند و فیش حقوقی و اعلان دریافت می‌کند.  
+`HRManager`، `FinanceManager`، `ProcurementOfficer` و `WarehouseOfficer` نقش‌های داخلی سازمان هستند که تصمیم‌ها و عملیات حوزه خود را ارسال می‌کنند.  
+`Supplier` و `BankGateway` سامانه‌های بیرونی تأمین و پرداخت‌اند و `ExecutiveAnalyst` و `Auditor` خروجی‌های مدیریتی و ممیزی دریافت می‌کنند.  
+در این سطح هیچ مخزن داخلی رسم نمی‌شود؛ تمام جریان‌ها از مرز سیستم عبور می‌کنند.  
+این نمودار با مورد استفاده کلان UC-01 و نمودار Use Case سطح ۱ UML هم‌ردیف است.
 
 ---
 
-## سطح 1 — نمودار فرآیندهای کلان (Level-1 DFD)
+## سطح ۱ — فرایندهای کلان
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان بیرونی"]
-        EMP[کارمند / Employee]
-        MGR[مدیریت / OrganizationUnit]
-        VEN[تأمین‌کننده / Vendor]
-        BNK[بانک / Bank]
-        AUD[حسابرسی / Auditor]
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:3px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    subgraph External [External Entities]
+        EMP[Employee]:::entity
+        HRM[HRManager]:::entity
+        FIN[FinanceManager]:::entity
+        PROC[ProcurementOfficer]:::entity
+        WH[WarehouseOfficer]:::entity
+        SUP[Supplier]:::entity
+        BANK[BankGateway]:::entity
+        EXEC[ExecutiveAnalyst]:::entity
+        AUD[Auditor]:::entity
     end
-    subgraph Stores ["ذخایر (Stores)"]
-        S1[(Employee)]
-        S2[(OrganizationUnit)]
-        S3[(Budget)]
-        S4[(BudgetAllocation)]
-        S5[(Product)]
-        S6[(StockLot)]
-        S7[(AuditLog)]
-        S8[(Report)]
-        S9[(Payment)]
+
+    subgraph Processes [Level-1 Processes]
+        P1([1. HR Management]):::process
+        P2([2. Payroll]):::process
+        P3([3. Budget & Credits]):::process
+        P4([4. Procurement]):::process
+        P5([5. Inventory/Warehouse]):::process
+        P6([6. Reporting & Analytics]):::process
     end
-    subgraph Processes ["فرآیندهای سطح 1"]
-        P1[1. HR Management]
-        P2[2. Payroll]
-        P3[3. Budget & Credits]
-        P4[4. Procurement]
-        P5[5. Inventory/Warehouse]
-        P6[6. Reporting & Analytics]
+
+    subgraph Stores [Data Stores]
+        D1[(D1 Employee)]:::store
+        D2[(D2 OrganizationUnit)]:::store
+        D3[(D3 PayrollRun)]:::store
+        D4[(D4 PayrollLine)]:::store
+        D5[(D5 Budget)]:::store
+        D6[(D6 BudgetAllocation)]:::store
+        D7[(D7 PurchaseRequest)]:::store
+        D8[(D8 PurchaseOrder)]:::store
+        D9[(D9 Product)]:::store
+        D10[(D10 StockLot)]:::store
+        D11[(D11 GoodsReceipt)]:::store
+        D12[(D12 Payment)]:::store
+        D13[(D13 Report)]:::store
+        D14[(D14 AuditLog)]:::store
     end
-    EMP --> P1
-    MGR --> P1
-    P1 --> S1
-    P1 --> S2
-    P1 --> P2
-    P2 --> S1
-    P2 --> P3
-    P3 --> S3
-    P3 --> S4
-    P3 --> P4
-    P4 --> VEN
-    P4 --> S5
-    P4 --> P5
-    P5 --> S6
-    P5 --> S7
-    P5 --> P3
-    P6 --> S1
-    P6 --> S3
-    P6 --> S4
-    P6 --> S5
-    P6 --> S6
-    P6 --> S8
-    P6 --> S9
-    P6 --> S7
-    P6 --> AUD
-    P2 --> BNK
-    P3 --> BNK
-    P3 --> S9
+
+    EMP -->|personal data, leave, attendance| P1
+    HRM -->|employment decisions| P1
+    P1 -->|approved employee and org data| D1
+    P1 -->|unit hierarchy| D2
+    P1 -->|attendance and eligibility| P2
+    P1 -->|audit event| D14
+
+    P2 -->|payroll run and lines| D3
+    P2 -->|earnings and deductions| D4
+    P2 -->|payment instruction| D12
+    P2 -->|payment instruction| BANK
+    BANK -->|transaction result| P2
+    P2 -->|payroll liability| P3
+    P2 -->|audit event| D14
+
+    FIN -->|budget plan and allocation decision| P3
+    P3 -->|budget header| D5
+    P3 -->|allocation and remaining credit| D6
+    P3 -->|funding decision| BANK
+    P3 -->|approved credit| P4
+    P3 -->|audit event| D14
+
+    PROC -->|purchase request| P4
+    P4 -->|validated request| D7
+    P4 -->|approved purchase order| D8
+    P4 -->|PO and quotation data| SUP
+    SUP -->|acknowledgement and shipment notice| P4
+    P4 -->|expected goods| P5
+    P4 -->|audit event| D14
+
+    WH -->|receipt and allocation command| P5
+    P5 -->|product master update| D9
+    P5 -->|stock lot and location| D10
+    P5 -->|goods receipt| D11
+    P5 -->|consumption and stock status| P3
+    P5 -->|audit event| D14
+
+    EXEC -->|report criteria| P6
+    P6 -->|integrated facts| D1
+    P6 -->|budget facts| D5
+    P6 -->|allocation facts| D6
+    P6 -->|purchase and stock facts| D8
+    P6 -->|stock facts| D10
+    P6 -->|audit facts| D14
+    P6 -->|published report| D13
+    D13 -->|dashboard and analytical report| EXEC
+    D13 -->|audit report| AUD
 ```
 
-شش فرآیند اصلی بر اساس حوزه عملکردی تفکیک شده‌اند.  
-داده‌های پایه شامل کارمند، واحد سازمانی، بودجه، تخصیص بودجه، کالا، موجودی و گزارش هستند.  
-جریان‌های مالی از طریق «بودجه» و «پرداخت» به پرداخت و خرید متصل هستند.  
-همپوشانی‌های منطقی: Payroll ← HR Management، Procurement ← Budget & Credits، Inventory/Warehouse ← Procurement.  
-گزارش‌گیری از تمام ذخایر و فرآیندها داده می‌گیرد و گزارش را در Report ذخیره می‌کند.  
-ردیابی: معادل «Activity Diagram» و «泳池泳道» در BPMN و «نمودار کامپوننت» در UML است.  
-هر فرآیند سطح ۱ در نمودارهای سطح ۲ تفکیک می‌شود.  
+شش فرایند کلان، پنج حوزه درخواستی به‌علاوه گزارش‌گیری تحلیلی را پوشش می‌دهند.  
+`HR Management` منبع داده `Employee` و `OrganizationUnit` را برای حقوق و گزارش‌ها فراهم می‌کند.  
+`Payroll` از داده‌های پرسنلی و بودجه استفاده می‌کند و `PayrollRun`، `PayrollLine` و `Payment` را تولید می‌کند.  
+`Budget & Credits` اعتبار را تعریف و تخصیص می‌دهد و قبل از خرید یا پرداخت، مانده `BudgetAllocation` را کنترل می‌کند.  
+`Procurement` و `Inventory/Warehouse` زنجیره درخواست خرید، سفارش، رسید کالا، `Product` و `StockLot` را به‌هم وصل می‌کنند.  
+`Reporting & Analytics` فقط داده‌های حوزه‌ای را می‌خواند، `Report` را تولید می‌کند و خروجی را به `ExecutiveAnalyst` و `Auditor` می‌دهد.
 
 ---
 
-## سطح 2 — تجزیه فرآیندها (Level-2 DFD)
+## سطح ۲ — تجزیه فرایندها
 
-### DFD-L2.1 — HR Management
-
-```mermaid
-flowchart LR
-    subgraph External ["اطرافیان"]
-        EMP[Employee]
-        MGR[OrganizationUnit]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(Employee)]
-        S2[(OrganizationUnit)]
-        S3[(AuditLog)]
-    end
-    subgraph Processes ["فرآیند HR"]
-        P1_1[1.1 Recruitment]
-        P1_2[1.2 Personnel File]
-        P1_3[1.3 Org Structure]
-    end
-    EMP --> P1_1
-    MGR --> P1_3
-    P1_1 --> S1
-    P1_2 --> S1
-    P1_3 --> S2
-    P1_1 --> S3
-    P1_2 --> S3
-    P1_3 --> S3
-```
-
-این نمودار فرآیند «مدیریت منابع انسانی» را به سه زیرفرآیند تقسیم می‌کند.  
-داده‌های خروجی به Payroll و Reporting & Analytics ارسال می‌شود.  
-هر موجودیت (Employee, OrganizationUnit) یک ذخیره مجزا است.  
-ردیابی: در BPMN به泳道های «Human Resources» و در UML به «Class Diagram» (Employee, OrganizationUnit) بازمی‌گردد.  
-کنترل‌های امنیتی: تنها مدیران مجاز به تغییر ساختار سازمانی هستند.  
-تغییرات در Employee و OrganizationUnit همواره در AuditLog ثبت می‌شود.  
-
-### DFD-L2.2 — Payroll
+### DFD-L2.1 — مدیریت منابع انسانی
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        EMP[Employee]
-        BNK[Bank]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(Employee)]
-        S2[(PayrollRun)]
-        S3[(PayrollLine)]
-        S4[(BudgetAllocation)]
-        S5[(AuditLog)]
-    end
-    subgraph Processes ["فرآیند حقوق و دستمزد"]
-        P2_1[2.1 Attendance]
-        P2_2[2.2 Salary Calc]
-        P2_3[2.3 Payment]
-    end
-    EMP --> P2_1
-    P2_1 --> S3
-    S1 --> P2_2
-    S3 --> P2_2
-    S4 --> P2_2
-    P2_2 --> S2
-    P2_2 --> S3
-    P2_2 --> S5
-    P2_3 --> BNK
-    P2_3 --> S2
-    P2_3 --> S5
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    EMP[Employee]:::entity
+    HRM[HRManager]:::entity
+    P11([1.1 Recruitment]):::process
+    P12([1.2 Maintain Personnel File]):::process
+    P13([1.3 Manage Organization Unit]):::process
+    P14([1.4 Approve Employment Change]):::process
+    D1[(D1 Employee)]:::store
+    D2[(D2 OrganizationUnit)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    EMP -->|application and profile| P11
+    HRM -->|review and decision| P14
+    P11 -->|candidate and hire data| P12
+    P12 -->|employee record| D1
+    P13 -->|unit hierarchy| D2
+    P14 -->|approved status| D1
+    P14 -->|org assignment| D2
+    P11 -->|audit event| D14
+    P12 -->|audit event| D14
+    P13 -->|audit event| D14
+    P14 -->|audit event| D14
 ```
 
-PayrollRun و PayrollLine برای ردیابی هر اجرای حقوق و خط‌های آن استفاده می‌شود.  
-جریان مالی به تجزیه سطح ۳ («محاسبه نهایی حقوق») راهی می‌شود.  
-ردیابی: BPMN泳道 «Payroll»؛ UML Sequence Diagram برای محاسبه حقوق.  
-همپوشانی: فقط با HR Management (دریافت داده‌های پرسنلی) و Budget & Credits (اعتبار).  
-خروجی: PayrollLine شامل دستمزد پایه، اضافات، کسورات و خالص پرداخت است.  
-تمام محاسبات در AuditLog برای حسابرسی پیگیری می‌شود.  
+این نمودار استخدام، پرونده پرسنلی، ساختار سازمانی و تأیید تغییرات استخدامی را جدا می‌کند.  
+ورودی `Employee` شامل درخواست و اطلاعات هویتی است و `HRManager` تصمیم استخدام، انتقال یا خاتمه همکاری را ثبت می‌کند.  
+`D1 Employee` رکورد پایدار پرسنلی و `D2 OrganizationUnit` سلسله‌مراتب واحد سازمانی است.  
+تمام تغییرات وضعیت و ساختار، یک رویداد در `D14 AuditLog` ایجاد می‌کنند.  
+خروجی‌های تأییدشده به فرایند حقوق ارسال می‌شوند تا eligiblity و داده‌های محاسبه به‌روز باشد.
 
-### DFD-L2.3 — Budget & Credits
+### DFD-L2.2 — حقوق و دستمزد
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        MGR[OrganizationUnit]
-        BNK[Bank]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(Budget)]
-        S2[(BudgetAllocation)]
-        S3[(Payment)]
-        S4[(AuditLog)]
-    end
-    subgraph Processes ["فرآیند بودجه و اعتبار"]
-        P3_1[3.1 Budget Plan]
-        P3_2[3.2 Allocation]
-        P3_3[3.3 Payment]
-    end
-    MGR --> P3_1
-    P3_1 --> S1
-    P3_2 --> S2
-    S2 --> P3_3
-    P3_3 --> BNK
-    P3_3 --> S3
-    P3_3 --> S4
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    EMP[Employee]:::entity
+    FIN[FinanceManager]:::entity
+    BANK[BankGateway]:::entity
+    P21([2.1 Load Attendance]):::process
+    P22([2.2 Calculate Salary]):::process
+    P23([2.3 Review Payroll]):::process
+    P24([2.4 Post Payment]):::process
+    D1[(D1 Employee)]:::store
+    D3[(D3 PayrollRun)]:::store
+    D4[(D4 PayrollLine)]:::store
+    D6[(D6 BudgetAllocation)]:::store
+    D12[(D12 Payment)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    EMP -->|attendance and profile| P21
+    P21 -->|attendance facts| P22
+    D1 -->|base salary and allowances| P22
+    D6 -->|remaining credit| P22
+    P22 -->|calculated run| D3
+    P22 -->|earnings, deductions, net| D4
+    FIN -->|approve or reject| P23
+    P23 -->|approved run| P24
+    P24 -->|payment instruction| D12
+    P24 -->|payment request| BANK
+    BANK -->|transaction result| P24
+    P22 -->|calculation audit| D14
+    P23 -->|approval audit| D14
+    P24 -->|payment audit| D14
 ```
 
-BudgetAllocation برای تقسیم اعتبار به واحدهای سازمانی یا پروژه‌ها به کار می‌رود.  
-Payment به عنوان ذخیره مشترک با Procurement و Payroll عمل می‌کند.  
-ردیابی: BPMN泳道 «Finance»؛ UML Class Diagram برای موجودیت‌های مالی.  
-محدودیت: پرداخت‌ها تنها در صورت کافی بودن اعتبار تایید می‌شوند.  
-خلاصه بودجه به Reporting & Analytics برای تحلیل ارسال می‌شود.  
+`PayrollRun` شناسه اجرای حقوق و `PayrollLine` جزئیات هر کارمند را نگهداری می‌کند.  
+فرایند محاسبه از `Employee`، حضور، مزایا، کسورات و مانده `BudgetAllocation` استفاده می‌کند.  
+`FinanceManager` پیش از ارسال به درگاه، جمع خالص و اعتبار را تأیید می‌کند.  
+نتیجه بانک به `Payment` و `AuditLog` نوشته می‌شود و خطای درگاه مسیر retry را فعال می‌کند.  
+این تجزیه مستقیماً با `calculateSalary()` و `postPayment()` در UML و BPMN سطح ۳ مرتبط است.
 
-### DFD-L2.4 — Procurement
+### DFD-L2.3 — بودجه و اعتبارات
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        MGR[OrganizationUnit]
-        VEN[Vendor]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(PurchaseRequest)]
-        S2[(PurchaseOrder)]
-        S3[(BudgetAllocation)]
-        S4[(Product)]
-        S5[(GoodsReceipt)]
-        S6[(AuditLog)]
-    end
-    subgraph Processes ["فرآیند خرید"]
-        P4_1[4.1 Requisition]
-        P4_2[4.2 Approval]
-        P4_3[4.3 PO Creation]
-    end
-    MGR --> P4_1
-    P4_1 --> S1
-    P4_2 --> S1
-    P4_2 --> S2
-    P4_2 --> S3
-    P4_3 --> VEN
-    P4_3 --> S2
-    P4_3 --> S5
-    P4_3 --> S6
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    EXEC[ExecutiveAnalyst]:::entity
+    FIN[FinanceManager]:::entity
+    BANK[BankGateway]:::entity
+    P31([3.1 Define Budget Plan]):::process
+    P32([3.2 Allocate Credit]):::process
+    P33([3.3 Check and Reserve]):::process
+    P34([3.4 Release and Reconcile]):::process
+    D5[(D5 Budget)]:::store
+    D6[(D6 BudgetAllocation)]:::store
+    D12[(D12 Payment)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    EXEC -->|annual plan and targets| P31
+    P31 -->|budget header| D5
+    FIN -->|allocation decision| P32
+    P32 -->|allocation and remaining| D6
+    FIN -->|expense or payroll request| P33
+    D6 -->|available credit| P33
+    P33 -->|reservation| D6
+    P33 -->|approved funding| P34
+    P34 -->|funding instruction| BANK
+    P34 -->|payment reference| D12
+    P34 -->|release or reconciliation| D6
+    P31 -->|audit event| D14
+    P32 -->|audit event| D14
+    P33 -->|audit event| D14
+    P34 -->|audit event| D14
 ```
 
-PurchaseRequest تا PurchaseOrder و سپس GoodsReceipt جریان دارد.  
-ردیابی: BPMN泳道 «Procurement»؛ UML Activity Diagram برای تأیید خرید.  
-همپوشانی: با Inventory/Warehouse از طریق Product و GoodsReceipt.  
-نقطه اتمی در سطح ۳: «تأیید درخواست خرید».  
-کنترل‌ها: هیچ PurchaseOrder بدون تأیید BudgetAllocation صادر نمی‌شود.  
+بودجه سالانه در `D5 Budget` و سهم هر واحد یا پروژه در `D6 BudgetAllocation` نگهداری می‌شود.  
+`checkBudget()` قبل از رزرو، مقدار درخواست را با `remaining` مقایسه می‌کند.  
+رزرو موقت از کاهش همزمان اعتبار توسط درخواست‌های موازی جلوگیری می‌کند.  
+پرداخت موفق باعث آزادسازی یا تطبیق اعتبار و ثبت `Payment` می‌شود.  
+کمبود اعتبار، درخواست تخصیص مجدد یا رد درخواست را از طریق BPMN سطح ۳ فعال می‌کند.
 
-### DFD-L2.5 — Inventory/Warehouse
+### DFD-L2.4 — تدارکات و خرید
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        VEN[Vendor]
-        MGR[OrganizationUnit]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(Product)]
-        S2[(StockLot)]
-        S3[(GoodsReceipt)]
-        S4[(AuditLog)]
-    end
-    subgraph Processes ["فرآیند انبار"]
-        P5_1[5.1 Receiving]
-        P5_2[5.2 Stocking]
-        P5_3[5.3 Allocation]
-    end
-    VEN --> P5_1
-    P5_1 --> S3
-    P5_2 --> S2
-    P5_3 --> S2
-    MGR --> P5_3
-    P5_1 --> S4
-    P5_2 --> S4
-    P5_3 --> S4
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    PROC[ProcurementOfficer]:::entity
+    FIN[FinanceManager]:::entity
+    SUP[Supplier]:::entity
+    P41([4.1 Create PurchaseRequest]):::process
+    P42([4.2 Validate Request]):::process
+    P43([4.3 Check Budget]):::process
+    P44([4.4 Approve and Issue PO]):::process
+    D6[(D6 BudgetAllocation)]:::store
+    D7[(D7 PurchaseRequest)]:::store
+    D8[(D8 PurchaseOrder)]:::store
+    D9[(D9 Product)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    PROC -->|request lines and amount| P41
+    P41 -->|draft request| D7
+    P42 -->|validation result| D7
+    D9 -->|product and price| P42
+    P43 -->|budget decision| D6
+    P42 -->|valid request| P43
+    FIN -->|approval decision| P44
+    P43 -->|approved credit| P44
+    P44 -->|approved order| D8
+    P44 -->|PO and delivery terms| SUP
+    SUP -->|acknowledgement| P44
+    P41 -->|audit event| D14
+    P42 -->|audit event| D14
+    P43 -->|audit event| D14
+    P44 -->|audit event| D14
 ```
 
-StockLot برای پیگیری سریال یا lot کالاها استفاده می‌شود.  
-Allocation به Budget & Credits و Reporting & Analytics باز می‌گردد.  
-ردیابی: BPMN泳道 «Warehouse»؛ UML State Machine برای چرخه عمر StockLot.  
-نقطه اتمی در سطح ۳: «تخصیص موجودی».  
-خروجی: GoodsReceipt برای ورود کالا و AuditLog برای ردیابی ثبت می‌شود.  
+`PurchaseRequest` قبل از تأیید، اعتبارسنجی کامل بودن سطرها، قیمت و شناسه کالا را انجام می‌دهد.  
+`BudgetAllocation` در `4.3 Check Budget` خوانده و در صورت تأیید، مقدار درخواست رزرو می‌شود.  
+فقط درخواست تأییدشده به `PurchaseOrder` تبدیل می‌شود و برای `Supplier` ارسال می‌گردد.  
+پاسخ تامین‌کننده و شرایط تحویل به مخزن سفارش و رویدادهای ممیزی وصل است.  
+این نمودار با DFD-L3.2 و BPMN-L3 Budget-Check for Purchase Request هم‌ردیف است.
 
-### DFD-L2.6 — Reporting & Analytics
+### DFD-L2.5 — انبار و موجودی
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        MGR[OrganizationUnit]
-        AUD[Auditor]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(Employee)]
-        S2[(Budget)]
-        S3[(BudgetAllocation)]
-        S4[(PurchaseOrder)]
-        S5[(StockLot)]
-        S6[(AuditLog)]
-        S7[(Report)]
-    end
-    subgraph Processes ["فرآیند گزارش‌گیری"]
-        P6_1[6.1 Data Integration]
-        P6_2[6.2 Analytics]
-        P6_3[6.3 Export]
-    end
-    S1 --> P6_1
-    S2 --> P6_1
-    S3 --> P6_1
-    S4 --> P6_1
-    S5 --> P6_1
-    S6 --> P6_1
-    P6_1 --> P6_2
-    P6_2 --> P6_3
-    P6_3 --> S7
-    P6_3 --> MGR
-    P6_3 --> AUD
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    WH[WarehouseOfficer]:::entity
+    SUP[Supplier]:::entity
+    P51([5.1 Receive Goods]):::process
+    P52([5.2 Inspect and Record]):::process
+    P53([5.3 Create StockLot]):::process
+    P54([5.4 Allocate and Issue]):::process
+    D8[(D8 PurchaseOrder)]:::store
+    D9[(D9 Product)]:::store
+    D10[(D10 StockLot)]:::store
+    D11[(D11 GoodsReceipt)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    SUP -->|shipment and packing list| P51
+    D8 -->|ordered quantity| P51
+    P51 -->|physical receipt| P52
+    P52 -->|inspection result| D11
+    P52 -->|accepted quantity| P53
+    D9 -->|product rules and expiry| P53
+    P53 -->|lot and location| D10
+    P54 -->|reserved quantity| D10
+    P54 -->|issue confirmation| D11
+    P51 -->|receipt audit| D14
+    P52 -->|inspection audit| D14
+    P53 -->|lot audit| D14
+    P54 -->|allocation audit| D14
 ```
 
-تمام ذخایر اصلی به عنوان منبع داده در این فرآیند گردهم می‌آیند.  
-گزارش‌ها به صورت Report تولید و به مدیران و حسابرسان ارائه می‌شوند.  
-ردیابی: BPMN泳道 «Reporting»؛ UML Component Diagram برای لایه گزارش‌گیری.  
-خروجی: Report به OrganizationUnit و Auditor ارسال می‌شود.  
-این فرآیند هیچ تغییری در ذخایر اصلی ایجاد نمی‌کند؛ فقط خواندن و تحلیل.  
+رسید فیزیکی با مقدار سفارش و فهرست حمل تامین‌کننده تطبیق داده می‌شود.  
+کالای پذیرفته‌شده به `GoodsReceipt` و سپس به `StockLot` با محل، تاریخ انقضا و مقدار تبدیل می‌شود.  
+`allocateStock()` مقدار رزروشده را از موجودی قابل تخصیص کسر و وضعیت لات را به‌روز می‌کند.  
+مغایرت数量 یا کیفیت، گزارش تفاوت ایجاد می‌کند و از ثبت موجودی قطعی جلوگیری می‌کند.  
+رخدادهای دریافت، بازرسی، ساخت لات و تخصیص در `AuditLog` قابل ممیزی هستند.
+
+### DFD-L2.6 — گزارش‌گیری و تحلیل
+
+```mermaid
+flowchart LR
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    EXEC[ExecutiveAnalyst]:::entity
+    AUD[Auditor]:::entity
+    P61([6.1 Extract Domain Data]):::process
+    P62([6.2 Validate and Transform]):::process
+    P63([6.3 Calculate Metrics]):::process
+    P64([6.4 Publish Report]):::process
+    D1[(D1 Employee)]:::store
+    D3[(D3 PayrollRun)]:::store
+    D5[(D5 Budget)]:::store
+    D6[(D6 BudgetAllocation)]:::store
+    D7[(D7 PurchaseRequest)]:::store
+    D8[(D8 PurchaseOrder)]:::store
+    D10[(D10 StockLot)]:::store
+    D14[(D14 AuditLog)]:::store
+    D13[(D13 Report)]:::store
+
+    EXEC -->|criteria and period| P61
+    P61 -->|employee facts| D1
+    P61 -->|payroll facts| D3
+    P61 -->|budget facts| D5
+    P61 -->|allocation facts| D6
+    P61 -->|purchase facts| D7
+    P61 -->|order facts| D8
+    P61 -->|stock facts| D10
+    P61 -->|audit facts| D14
+    P61 -->|extracted dataset| P62
+    P62 -->|validated dataset| P63
+    P63 -->|metrics and trends| P64
+    P64 -->|published report| D13
+    D13 -->|dashboard| EXEC
+    D13 -->|audit evidence| AUD
+    P62 -->|quality event| D14
+    P64 -->|publication event| D14
+```
+
+گزارش‌گیری از مخازن اصلی خواندن انجام می‌دهد و هیچ رکورد عملیاتی حوزه‌ای را تغییر نمی‌دهد.  
+استخراج، اعتبارسنجی، تبدیل و محاسبه شاخص‌ها به‌ترتیب انجام می‌شوند تا گزارش‌های ناسازگار منتشر نشوند.  
+`Report` شامل دوره، فیلترها، معیارها، نسخه و زمان تولید است.  
+`ExecutiveAnalyst` داشبورد مدیریتی و `Auditor` شواهد ممیزی دریافت می‌کند.  
+رخداد کیفیت داده و انتشار گزارش برای ردیابی و بازتولید گزارش در `AuditLog` ثبت می‌شود.
 
 ---
 
-## سطح ۳ — نمودارهای اتمی (Level-3 DFD)
+## سطح ۳ — فرایندهای اتمی بحرانی
 
-### DFD-L3.1 — محاسبه نهایی حقوق (Final Salary Calculation)
-
-```mermaid
-flowchart LR
-    subgraph External ["اطرافیان"]
-        EMP[Employee]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(Employee)]
-        S2[(PayrollRun)]
-        S3[(PayrollLine)]
-        S4[(BudgetAllocation)]
-        S5[(AuditLog)]
-    end
-    subgraph Processes ["اتم‌های حقوق"]
-        T1[3.1.1 Fetch Base Salary]
-        T2[3.1.2 Calc Allowances]
-        T3[3.1.3 Deductions]
-        T4[3.1.4 Net Pay]
-    end
-    EMP --> S1
-    S1 --> T1
-    T1 --> T2
-    T2 --> T3
-    T3 --> T4
-    T4 --> S3
-    S4 --> T2
-    T4 --> S2
-    T4 --> S5
-```
-
-این نمودار اتمی مسیر دقیق محاسبه حقوق را از داده‌های پایه تا خروجی نهایی نشان می‌دهد.  
-هر مهار (step) یک وظیفه atomic در سطح BPMN و یک تراکنش در Sequence Diagram است.  
-ردیابی: BPMN泳道 «Payroll»، فعالیت‌های ۳.۱.۱ تا ۳.۱.۴؛ UML Activity Diagram.  
-خروجی: PayrollLine شامل دستمزد پایه، اضافات، کسورات و خالص پرداخت است.  
-AuditLog برای پیگیری هر محاسبه الزامی است.  
-
-### DFD-L3.2 — تأیید درخواست خرید (Purchase-Request Approval)
+### DFD-L3.1 — محاسبه نهایی حقوق
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        MGR[OrganizationUnit]
-        VEN[Vendor]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(PurchaseRequest)]
-        S2[(BudgetAllocation)]
-        S3[(PurchaseOrder)]
-        S4[(AuditLog)]
-    end
-    subgraph Processes ["اتم‌های خرید"]
-        T1[3.2.1 Create PR]
-        T2[3.2.2 Check Budget]
-        T3[3.2.3 Manager Approval]
-        T4[3.2.4 Issue PO]
-    end
-    MGR --> T1
-    T1 --> S1
-    S1 --> T2
-    S2 --> T2
-    T2 --> T3
-    T3 --> T4
-    T4 --> S3
-    T4 --> VEN
-    T4 --> S4
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    EMP[Employee]:::entity
+    T1([3.1.1 Load Employee]):::process
+    T2([3.1.2 Load Attendance]):::process
+    T3([3.1.3 Calculate Gross]):::process
+    T4([3.1.4 Calculate Deductions]):::process
+    T5([3.1.5 Calculate Net Pay]):::process
+    T6([3.1.6 Validate and Persist]):::process
+    D1[(D1 Employee)]:::store
+    D4[(D4 PayrollLine)]:::store
+    D3[(D3 PayrollRun)]:::store
+    D6[(D6 BudgetAllocation)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    EMP -->|employee id and period| T1
+    T1 -->|employee profile| T3
+    D1 -->|base salary and allowances| T3
+    T2 -->|attendance facts| T3
+    T3 -->|gross amount| T4
+    T4 -->|deduction amount| T5
+    D6 -->|credit availability| T5
+    T5 -->|net pay| T6
+    T6 -->|PayrollLine| D4
+    T6 -->|PayrollRun summary| D3
+    T6 -->|calculation audit| D14
 ```
 
-مراحل اتمی از ایجاد درخواست تا صدور PurchaseOrder را پوشش می‌دهد.  
-بررسی بودجه و تأیید مدیر نقاط بحرانی تصمیم‌گیری هستند.  
-ردیابی: BPMN泳道 «Procurement»، وابستگی‌های Sequence؛ UML Activity Diagram.  
-خروجی: PurchaseOrder به Vendor ارسال می‌شود و در AuditLog ثبت می‌گردد.  
-هیچ PurchaseRequest بدون تایید BudgetAllocation به Approval نمی‌رسد.  
+ورودی اتمی شامل شناسه کارمند، دوره حقوق، وضعیت استخدام و داده‌های حضور است.  
+قانون تبدیل ناخالص برابر است با `baseSalary + allowances + approved overtime - unpaidLeave`.  
+کسورات شامل مالیات، بیمه و سایر کسرهای تأییدشده است و خالص نباید منفی شود.  
+در صورت ناکافی بودن اعتبار یا نقض قانون محاسبه، `PayrollLine` پایدار نمی‌شود و خطا در `AuditLog` ثبت می‌گردد.  
+خروجی نهایی یک `PayrollLine` با مقادیر ناخالص، کسورات، خالص و نسخه قوانین است که به `PayrollRun` جمع می‌شود.
 
-### DFD-L3.3 — تخصیص موجودی (Stock Allocation)
+### DFD-L3.2 — ثبت و تأیید درخواست خرید
 
 ```mermaid
 flowchart LR
-    subgraph External ["اطرافیان"]
-        MGR[OrganizationUnit]
-    end
-    subgraph Stores ["ذخایر"]
-        S1[(StockLot)]
-        S2[(Product)]
-        S3[(GoodsReceipt)]
-        S4[(AuditLog)]
-    end
-    subgraph Processes ["اتم‌های انبار"]
-        T1[3.3.1 Select Lot]
-        T2[3.3.2 Verify Expiry]
-        T3[3.3.3 Reserve Qty]
-        T4[3.3.4 Confirm Issue]
-    end
-    S3 --> S1
-    S1 --> T1
-    T1 --> T2
-    T2 --> T3
-    T3 --> S1
-    MGR --> T3
-    T4 --> S4
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    PROC[ProcurementOfficer]:::entity
+    FIN[FinanceManager]:::entity
+    T1([3.2.1 Create Draft PR]):::process
+    T2([3.2.2 Validate Lines]):::process
+    T3([3.2.3 Check Budget]):::process
+    T4([3.2.4 Manager Approval]):::process
+    T5([3.2.5 Issue PurchaseOrder]):::process
+    D7[(D7 PurchaseRequest)]:::store
+    D6[(D6 BudgetAllocation)]:::store
+    D8[(D8 PurchaseOrder)]:::store
+    D9[(D9 Product)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    PROC -->|requester, lines, amount| T1
+    T1 -->|draft PR| D7
+    D9 -->|product and unit price| T2
+    T2 -->|valid request| T3
+    D6 -->|remaining credit| T3
+    T3 -->|reservation result| T4
+    FIN -->|approve or reject| T4
+    T4 -->|approved PR| T5
+    T5 -->|PurchaseOrder| D8
+    T5 -->|audit event| D14
+    T2 -->|validation audit| D14
+    T3 -->|budget audit| D14
+    T4 -->|approval audit| D14
 ```
 
-تخصیص موجودی از انتخاب lot تا تایید خروج را دنبال می‌کند.  
-اعتبارسنجی انقضا (expiry) قبل از رزرو الزامی است.  
-ردیابی: BPMN泳道 «Warehouse»؛ UML State Machine برای StockLot.  
-خروجی: کسری یا اضافی موجودی در AuditLog ثبت می‌شود.  
-Product و StockLot به عنوان مرجع اصلی برای تخصیص به کار می‌روند.  
+درخواست باید دارای درخواست‌دهنده فعال، حداقل یک سطر، مقدار مثبت و کالای معتبر باشد.  
+`checkBudget()` مقدار کل درخواست را با مانده تخصیص مقایسه و در صورت موفقیت، رزرو موقت ایجاد می‌کند.  
+تأیید مدیر فقط پس از اعتبارسنجی و رزرو بودجه امکان‌پذیر است و رد درخواست، رزرو را آزاد می‌کند.  
+صدور `PurchaseOrder` یک عمل اتمی است و شماره سفارش، تامین‌کننده، مبلغ و مهلت تحویل را پایدار می‌کند.  
+همه تصمیم‌ها و تغییرات بودجه در `AuditLog` ثبت می‌شوند تا درخواست قابل ممیزی باشد.
+
+### DFD-L3.3 — تخصیص کالا به درخواست‌کننده
+
+```mermaid
+flowchart LR
+    classDef entity fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000;
+    classDef process fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000;
+    classDef store fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000;
+
+    WH[WarehouseOfficer]:::entity
+    T1([3.3.1 Select Eligible Lot]):::process
+    T2([3.3.2 Verify Expiry and Quality]):::process
+    T3([3.3.3 Reserve Quantity]):::process
+    T4([3.3.4 Confirm Issue]):::process
+    D10[(D10 StockLot)]:::store
+    D9[(D9 Product)]:::store
+    D11[(D11 GoodsReceipt)]:::store
+    D14[(D14 AuditLog)]:::store
+
+    WH -->|allocation request| T1
+    D10 -->|available lots| T1
+    D9 -->|product rules| T2
+    D11 -->|receipt evidence| T2
+    T1 -->|selected lot| T2
+    T2 -->|eligible lot| T3
+    T3 -->|reserved quantity| D10
+    T3 -->|reservation result| T4
+    T4 -->|issue confirmation| D11
+    T4 -->|allocation audit| D14
+```
+
+انتخاب لات بر اساس محصول، مقدار قابل تخصیص، تاریخ انقضا، کیفیت و قانون FEFO انجام می‌شود.  
+قبل از رزرو، مقدار درخواست باید از `StockLot.availableQuantity` بیشتر نباشد.  
+رزرو به‌صورت اتمی مقدارavailable را کاهش و مقدارreserved را افزایش می‌دهد تا تخصیص موازی باعث کسری نشود.  
+تأیید خروج، رسید کالا و رویداد ممیزی را به‌روز می‌کند و در صورت مغایرت فیزیکی، تخصیص متوقف می‌شود.  
+خروجی نهایی شامل `StockLot` به‌روز، مقدار تخصیص‌یافته، محل تحویل و `AuditLog` است.
 
 ---
 
-## ردیابی کلی (Traceability Matrix)
+## ماتریس ردیابی
 
-| شناسه DFD | عنوان | BPMN泳道 / Activity | UML artifact |
+| شناسه DFD | فرایند | BPMN | UML |
 |---|---|---|---|
-| DFD-L0 | Context | UC-01 | Use Case Diagram |
-| DFD-L1 | Level-1 |泳池泳道 کلان | Component Diagram |
-| DFD-L2.1 | HR Management |泳道 HR | Class Diagram |
-| DFD-L2.2 | Payroll |泳道 Payroll | Sequence Diagram |
-| DFD-L2.3 | Budget & Credits |泳道 Finance | Class Diagram |
-| DFD-L2.4 | Procurement |泳道 Procurement | Activity Diagram |
-| DFD-L2.5 | Inventory/Warehouse |泳道 Warehouse | State Machine |
-| DFD-L2.6 | Reporting & Analytics |泳道 Reporting | Component Diagram |
-| DFD-L3.1 | Final Salary Calc | Activity 3.1.x | Activity Diagram |
-| DFD-L3.2 | PR Approval | Activity 3.2.x | Activity Diagram |
-| DFD-L3.3 | Stock Allocation | Activity 3.3.x | State Machine |
+| DFD-L0 | Context | BPMN-L1 Overview | Use Case Diagram |
+| DFD-L1 | Level-1 processes | BPMN-L1 Pools | Component Diagram |
+| DFD-L2.1 | HR Management | BPMN-L2 HR | Class Diagram |
+| DFD-L2.2 | Payroll | BPMN-L2 Payroll / L3 Payroll Approval | Sequence Diagram |
+| DFD-L2.3 | Budget & Credits | BPMN-L2 Budget / L3 Budget Check | Class Diagram |
+| DFD-L2.4 | Procurement | BPMN-L2 Procurement / L3 PR Approval | Activity Diagram |
+| DFD-L2.5 | Inventory/Warehouse | BPMN-L2 Inventory / L3 Stock Allocation | State Machine Diagram |
+| DFD-L2.6 | Reporting & Analytics | BPMN-L2 Reporting | Component Diagram |
+| DFD-L3.1 | Final Salary Calculation | `calculateSalary()` | PayrollRun / PayrollLine |
+| DFD-L3.2 | Purchase-Request Approval | `checkBudget()` / approve PR | PurchaseRequest / BudgetAllocation |
+| DFD-L3.3 | Stock Allocation | `allocateStock()` | StockLot / GoodsReceipt |
 
-هر نمودار DFD با یک یا چند Artefact BPMN/UML نگاشت شده است.  
-این ماتریس به عنوان مرجع برای هماهنگی بین تیم‌های تحلیل، توسعه و تست استفاده می‌شود.  
-در صورت تغییر هر یک از فرآیندها، ردیابی در این ماتریس به‌روزرسانی خواهد شد.  
-Artifactهای UML شامل Use Case, Class, Sequence, Activity و State Machine می‌باشند.  
-BPMN泳道ها دقیقاً با فرآیندهای سازمانی (HR, Finance, Procurement, Warehouse, Reporting) تطبیق داده شده‌اند.  
+## قوانین یکپارچگی
 
----
+1. هر فرایند سطح ۲ باید ورودی و خروجی‌های متناظر با فرایند والد سطح ۱ را حفظ کند.
+2. هر تغییر در `Employee`، `BudgetAllocation`، `PurchaseRequest`، `PurchaseOrder`، `StockLot` یا `Payment` باید `AuditLog` تولید کند.
+3. `Reporting & Analytics` حق نوشتن در مخازن عملیاتی ندارد و فقط `Report` را ایجاد می‌کند.
+4. هیچ پرداخت یا سفارش خرید بدون بررسی و رزرو اعتبار صادر نمی‌شود.
+5. هیچ تخصیص موجودی بدون رسید معتبر و لات واجد شرایط انجام نمی‌شود.
 
-*تاریخ تهیه: 2026-09-09*  
-*نسخه: v1.0*
+*پایان سند DFD*
