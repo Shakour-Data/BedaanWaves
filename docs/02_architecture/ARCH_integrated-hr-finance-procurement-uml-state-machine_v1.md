@@ -1,36 +1,36 @@
-﻿# نمودار ماشین حالت UML 2.5 — PurchaseRequest و PayrollRun
+﻿# UML 2.5 State Machine Diagram — PurchaseRequest and PayrollRun
 
-**دامنه:** سیستم یکپارچه مدیریت منابع انسانی، مالی و تدارکات  
-**نسخه:** v1.0  
-**تاریخ:** 2026-09-09
-
----
-
-## ۱. هدف و قوانین‌گذاری
-
-این سند چرخه‌های حالت `PurchaseRequest` و `PayrollRun` را در سه سطح انتزاع مدل‌سازی می‌کند. نام رویدادها، نگهبان‌ها و حالت‌ها با DFD و BPMN هم‌نام هستند.
+**Domain:** Integrated human resources, finance, and procurement management system  
+**Version:** v1.0  
+**Date:** 2026-09-09
 
 ---
 
-## ۲. سطح ۱ — چشم‌انداز دامنه
+## 1. Purpose and Governance
 
-### ۲.۱ ماشین حالت PurchaseRequest
+This document models the state cycles of `PurchaseRequest` and `PayrollRun` at three levels of abstraction. Event, guard, and state names are aligned with the DFD and BPMN models.
+
+---
+
+## 2. Level 1 — Domain Overview
+
+### 2.1 PurchaseRequest State Machine
 
 ```plantuml
 @startuml ARCH-L1-State-PurchaseRequest
 hide empty_description
-state "Draft\nپیش‌نویس" as Draft
-state "Submitted\nثبت‌شده" as Submitted
-state "Budget Checking\nبررسی بودجه" as BudgetChecking
-state "Approved\nتأییدشده" as Approved
-state "Rejected\nردشده" as Rejected
-state "Ordered\nسفارش‌شده" as Ordered
-state "Received\nدریافت‌شده" as Received
-state "Closed\nبسته‌شده" as Closed
+state "Draft" as Draft
+state "Submitted" as Submitted
+state "Budget Checking" as BudgetChecking
+state "Approved" as Approved
+state "Rejected" as Rejected
+state "Ordered" as Ordered
+state "Received" as Received
+state "Closed" as Closed
 
 [*] --> Draft
 Draft --> Submitted : submit()
-Submitted --> BudgetChecking : checkBudget()
+Submitted --> BudgetChecking : BudgetAllocation.checkBudget()
 BudgetChecking --> Approved : budgetAvailable
 BudgetChecking --> Rejected : budgetUnavailable
 Approved --> Ordered : createPurchaseOrder()
@@ -41,21 +41,21 @@ Closed --> [*]
 @enduml
 ```
 
-**توضیح:** درخواست خرید از پیش‌نویس شروع می‌شود و پس از بررسی بودجه، تأیید، صدور سفارش، دریافت کالا و مغایرت‌گیری بسته می‌شود. رد درخواست امکان اصلاح و بازگشت به پیش‌نویس دارد. این چرخه با DFD-L2.4 و فعالیت‌های BPMN حوزه Procurement مطابقت دارد.
+**Explanation:** A purchase request starts in Draft and, after budget checking, approval, purchase-order creation, goods receipt, and reconciliation, reaches Closed. A rejected request can be revised and returned to Draft. This cycle aligns with DFD-L2.4 and the BPMN activities in the Procurement domain.
 
-### ۲.۲ ماشین حالت PayrollRun
+### 2.2 PayrollRun State Machine
 
 ```plantuml
 @startuml ARCH-L1-State-PayrollRun
 hide empty_description
-state "Scheduled\nزمان‌بندی‌شده" as Scheduled
-state "Calculating\nدر حال محاسبه" as Calculating
-state "Pending Approval\nدر انتظار تأیید" as PendingApproval
-state "Approved\nتأییدشده" as Approved
-state "Payment Pending\nدر انتظار پرداخت" as PaymentPending
-state "Paid\nپرداخت‌شده" as Paid
-state "Failed\nناموفق" as Failed
-state "Closed\nبسته‌شده" as Closed
+state "Scheduled" as Scheduled
+state "Calculating" as Calculating
+state "Pending Approval" as PendingApproval
+state "Approved" as Approved
+state "Payment Pending" as PaymentPending
+state "Paid" as Paid
+state "Failed" as Failed
+state "Closed" as Closed
 
 [*] --> Scheduled
 Scheduled --> Calculating : startCalculation()
@@ -63,7 +63,7 @@ Calculating --> PendingApproval : calculationComplete
 Calculating --> Failed : calculationError
 PendingApproval --> Approved : approve()
 PendingApproval --> Failed : reject()
-Approved --> PaymentPending : postPayment()
+Approved --> PaymentPending : PaymentGateway.executePayment()
 PaymentPending --> Paid : paymentConfirmed
 PaymentPending --> Failed : paymentFailed
 Paid --> Closed : archive()
@@ -72,13 +72,13 @@ Closed --> [*]
 @enduml
 ```
 
-**توضیح:** اجرای حقوق مراحل زمان‌بندی، محاسبه، تأیید، پرداخت و بایگانه را طی می‌کند. خطاهای محاسبه، تأیید، پرداخت و بایگانی را طی می‌کند. خطا یا رد تأیید، اجرا را به حالت ناموفق می‌برد و با مجوز مجدد قابل تلاش است.
+**Explanation:** A payroll run proceeds through scheduling, calculation, approval, payment, and archival. Calculation, approval, payment, and archival errors move the run to Failed; a rejected approval also moves it to Failed, and it can be retried with renewed authorization.
 
 ---
 
-## ۳. سطح ۲ — طراحی و زیرسیستم
+## 3. Level 2 — Design and Subsystems
 
-### ۳.۱ PurchaseRequest با رویدادها و نگهبان‌ها
+### 3.1 PurchaseRequest with Events and Guards
 
 ```plantuml
 @startuml ARCH-L2-State-PurchaseRequest
@@ -114,9 +114,9 @@ Approved --> Cancelled : cancel [beforeOrderDispatch]
 @enduml
 ```
 
-**توضیح:** در این سطح، guardها مقدار درخواست، مانده `BudgetAllocation`، نسخه اصلاح و تطابق فاکتور با رسید را کنترل می‌کنند. دریافت ناقص به حالت `PartiallyReceived` می‌رود و کسری کالا می‌تواند سفارش جدید ایجاد کند. همه گذارهای مهم رویداد `AuditLog` تولید می‌کنند.
+**Explanation:** At this level, guards control the request amount, the `BudgetAllocation` balance, the revision version, and invoice-to-receipt matching. A partial receipt enters `PartiallyReceived`, and a stock shortage can create a new order. All important transitions generate an `AuditLog` event.
 
-### ۳.۲ PayrollRun با رویدادها و نگهبان‌ها
+### 3.2 PayrollRun with Events and Guards
 
 ```plantuml
 @startuml ARCH-L2-State-PayrollRun
@@ -146,13 +146,13 @@ Failed --> Scheduled : retry [retryCount < maxRetries]
 @enduml
 ```
 
-**توضیح:** داده‌های پرسنلی و حضور از `Employee` و `PayrollLine` بارگذاری می‌شوند. نگهبان‌ها باز بودن دوره، مثبت بودن خالص پرداخت، نقش تأییدکننده و مانده بودجه را بررسی می‌کنند. متد `calculateSalary()` در گذار محاسبه و `postPayment()` در گذار پرداخت فراخوانی می‌شود.
+**Explanation:** Personnel and attendance data are loaded from `Employee` and `PayrollLine`. Guards check whether the period is open, net pay is non-negative, the approver's role, and the budget balance. The `calculateSalary()` method is called during the calculation transition, and `PaymentGateway.executePayment()` is called during the payment transition.
 
 ---
 
-## ۴. سطح ۳ — پیاده‌سازی، حالت‌های مرکب و تاریخچه
+## 4. Level 3 — Implementation, Composite States, and History
 
-### ۴.۱ PurchaseRequest با Composite State و History
+### 4.1 PurchaseRequest with Composite States and History
 
 ```plantuml
 @startuml ARCH-L3-State-PurchaseRequest
@@ -165,7 +165,7 @@ state "Validation" as Validation {
   state "Compliance Check" as Compliance
   BudgetCheck --> ManagerReview : budgetOk
   ManagerReview --> Compliance : approved
-  Compliance --> BudgetCheck : correctionRequired
+  Compliance --> BudgetCheck : correctionRequired [retryCount < maxCorrections]
 }
 state "Approved" as Approved
 state "Ordered" as Ordered
@@ -175,12 +175,12 @@ state "Receiving" as Receiving {
   state "Quality Check" as Quality
   Awaiting --> Partial : shipmentReceived
   Partial --> Quality : qtyComplete
-  Quality --> Awaiting : discrepancy
+  Quality --> Awaiting : discrepancy [retryCount < maxCorrections]
 }
 state "Reconciled" as Reconciled
 state "Rejected" as Rejected
-state H1 as H1 <<history>>
-state H2 as H2 <<history>>
+state H1 <<history>>
+state H2 <<history>>
 
 [*] --> Draft
 Draft --> Submitted : submit()
@@ -198,9 +198,9 @@ H2 --> Receiving
 @enduml
 ```
 
-**توضیح:** `Validation` و `Receiving` حالت‌های مرکب هستند؛ زیرحالت‌های داخلی، بررسی بودجه، تأیید مدیر، انطباق، انتظار تامین‌کننده، دریافت جزئی و کنترل کیفیت را جدا می‌کنند. `H1` آخرین زیرحالت اعتبارسنجی و `H2` آخرین زیرحالت دریافت را برای ادامه عملیات حفظ می‌کند. خطاهای انطباق و مغایرت کالا بدون از دست رفتن زمینه فرایند، مسیر اصلاح را فعال می‌کنند.
+**Explanation:** `Validation` and `Receiving` are composite states; their internal substates separate budget checking, manager approval, compliance, supplier waiting, partial receipt, and quality control. `H1` retains the last validation substate and `H2` retains the last receiving substate so processing can resume. Compliance errors and goods discrepancies trigger correction paths without losing process context.
 
-### ۴.۲ PayrollRun با Composite State و History
+### 4.2 PayrollRun with Composite States and History
 
 ```plantuml
 @startuml ARCH-L3-State-PayrollRun
@@ -215,7 +215,7 @@ state "Processing" as Processing {
   Load --> Gross : dataLoaded
   Gross --> Net : rulesApplied
   Net --> Generate : netPay >= 0
-  Generate --> Load : correctionRequired
+  Generate --> Load : correctionRequired [retryCount < maxCorrections]
 }
 state "Pending Approval" as PendingApproval
 state "Approved" as Approved
@@ -225,19 +225,19 @@ state "Payment" as Payment {
   state "Confirmation" as Confirmation
   Create --> Gateway : paymentCreated
   Gateway --> Confirmation : requestSent
-  Confirmation --> Create : retryableFailure
+  Confirmation --> Create : retryableFailure [retryCount < maxRetries]
 }
 state "Paid" as Paid
 state "Failed" as Failed
 state "Closed" as Closed
-state H as H <<history>>
+state H <<history>>
 
 [*] --> Scheduled
 Scheduled --> Processing : start()
 Processing --> PendingApproval : calculationComplete
 PendingApproval --> Approved : approve()
 PendingApproval --> Failed : reject()
-Approved --> Payment : postPayment()
+Approved --> Payment : PaymentGateway.executePayment()
 Payment --> Paid : confirmed()
 Paid --> Closed : archive()
 Processing --> H : suspend()
@@ -246,46 +246,46 @@ Failed --> Scheduled : retry()
 @enduml
 ```
 
-**توضیح:** `Processing` عملیات بارگذاری، محاسبه ناخالص، اعمال قوانین و تولید فیش را دربر می‌گیرد. `Payment` ساخت `Payment`، فراخوانی درگاه و دریافت تأییدیه را مدل‌سازی می‌کند. `H` امکان توقف موقت و ادامه از آخرین زیرحالت را فراهم می‌سازد. خطاهای قابل重试 تا `maxRetries` و خطاهای قانونی مستقیماً به `Failed` می‌روند.
+**Explanation:** `Processing` covers loading, gross-pay calculation, rule application, and slip generation. `Payment` models payment creation, gateway invocation, and confirmation. `H` enables suspension and resumption from the last substate. Retryable errors may be retried up to `maxRetries`; rule violations go directly to `Failed`.
 
 ---
 
-## ۵. نگهبان‌ها، عملیات ورودی/خروجی و استثناها
+## 5. Guards, Input/Output Operations, and Exceptions
 
-| شناسه | حالت/گذار | نگهبان یا عملیات | نتیجه و خطا |
+| ID | State/Transition | Guard or Operation | Result and Error |
 |---|---|---|---|
-| ST-PR-01 | Draft → Submitted | `totalAmount > 0` و `requester.isActive` | در غیر این صورت `ValidationException` |
-| ST-PR-02 | Budget Check → Manager Review | `amount <= BudgetAllocation.remaining` | در غیر این صورت `InsufficientBudgetException` |
-| ST-PR-03 | Manager Review → Approved | `approver.authorizationLevel >= requiredLevel` | در غیر این صورت `AuthorizationException` |
-| ST-PR-04 | Receiving → Reconciled | `receivedQty = orderedQty` و `invoice.amount = receipt.amount` | ایجاد `DiscrepancyReport` |
-| ST-PAY-01 | Processing → Pending Approval | `calculateSalary()` بدون نقض قانون و `netPay >= 0` | ایجاد `CalculationException` |
-| ST-PAY-02 | Pending Approval → Approved | `approver.role = FinanceManager` | ایجاد `ApprovalRejectedException` |
-| ST-PAY-03 | Payment → Paid | `gateway.status = Success` | خطای درگاه به `Failed` یا retry می‌رود |
-| ST-PAY-04 | Paid → Closed | `AuditLog` پایدار شده باشد | خطای بایگانی مانع بستن اجرا می‌شود |
+| ST-PR-01 | Draft → Submitted | `totalAmount > 0` and `requester.isActive` | Otherwise `ValidationException` |
+| ST-PR-02 | Budget Check → Manager Review | `amount <= BudgetAllocation.remaining` | Otherwise `InsufficientBudgetException` |
+| ST-PR-03 | Manager Review → Approved | `approver.authorizationLevel >= requiredLevel` | Otherwise `AuthorizationException` |
+| ST-PR-04 | Receiving → Reconciled | `receivedQty = orderedQty` and `invoice.amount = receipt.amount` | Creates `DiscrepancyReport` |
+| ST-PAY-01 | Processing → Pending Approval | `calculateSalary()` completes without a rule violation and `netPay >= 0` | Creates `CalculationException` |
+| ST-PAY-02 | Pending Approval → Approved | `approver.role = FinanceManager` | Creates `ApprovalRejectedException` |
+| ST-PAY-03 | Payment → Paid | `gateway.status = Success` | Gateway error goes to `Failed` or is retried |
+| ST-PAY-04 | Paid → Closed | `AuditLog` persisted | Archival error prevents run closure |
 
 ---
 
-## ۶. ردپا به DFD و BPMN
+## 6. Traceability to DFD and BPMN
 
-| شناسه State Machine | فرایند DFD | فعالیت BPMN | موجودیت/متد UML |
+| State Machine ID | DFD Process | BPMN Activity | UML Entity/Method |
 |---|---|---|---|
 | PurchaseRequest Draft/Submitted | DFD-L2.4 Procurement | Create PurchaseRequest | `PurchaseRequest.submit()` |
-| Budget Check | DFD-L3.2 Purchase-Request Approval | Check Budget | `Budget.checkBudget()` |
-| Ordered/Receiving | DFD-L2.4 و DFD-L2.5 | Issue PO / Record Goods Receipt | `PurchaseOrder`, `GoodsReceipt` |
-| PayrollRun Processing | DFD-L2.2 و DFD-L3.1 | Calculate Salary | `PayrollRun.calculateSalary()` |
-| PayrollRun Payment | DFD-L2.2 و DFD-L2.3 | Post Payment | `Payment.postPayment()` |
-| Reconciled/Closed | DFD-L2.6 Reporting | Generate Report | `Report.generateReport()` |
+| Budget Check | DFD-L3.2 Purchase-Request Approval | Check Budget | `BudgetAllocation.checkBudget()` |
+| Ordered/Receiving | DFD-L2.4 and DFD-L2.5 | Issue PO / Record Goods Receipt | `PurchaseOrder`, `GoodsReceipt`, `StockLot.allocate()` / `allocateStock()` |
+| PayrollRun Processing | DFD-L2.2 and DFD-L3.1 | Calculate Salary | `PayrollRun.calculateSalary()` |
+| PayrollRun Payment | DFD-L2.2 and DFD-L2.3 | Post Payment | `PaymentGateway.executePayment()` |
+| Reconciled/Closed | DFD-L2.6 Reporting | Generate Report | `ReportEngine.generateReport()` |
 
 ---
 
-## ۷. قواعد یکپارچگی
+## 7. Integrity Rules
 
-1. هر گذار وضعیت باید یک رویداد قابل ردیابی در `AuditLog` ایجاد کند.
-2. هیچ `PurchaseOrder` بدون گذار `Approved` و تأیید بودجه صادر نمی‌شود.
-3. هیچ `Payment` بدون `PayrollRun` در حالت `Approved` ایجاد نمی‌شود.
-4. وضعیت‌های `Paid` و `Reconciled` غیرقابل بازگشت هستند و هرگونه جبران خطای `Closed` نیازمند عملیات مدیریتی و رویداد ممیزی جداگانه است.
-5. `History` فقط آخرین زیرحالت معتبر را بازیابی می‌کند و اجازه عبور از تأیید بودجه را نمی‌دهد.
+1. Every state transition must create a traceable event in `AuditLog`.
+2. No `PurchaseOrder` is issued without the `Approved` transition and budget approval.
+3. No `Payment` is created without `PayrollRun` being in the `Approved` state.
+4. The `Paid` and `Reconciled` states are irreversible; any compensation for a `Closed` error requires a separate administrative operation and audit event.
+5. `History` restores only the last valid substate and does not allow budget approval to be bypassed.
 
 ---
 
-*پایان سند*
+*End of document*

@@ -37,14 +37,11 @@ def _configure_logging(config: GatewayConfig) -> None:
 
 
 def _build_upstream_headers(request: Request, correlation_id: str) -> dict[str, str]:
-    """Forward a safe allow-list of headers to the backend."""
     forward = {
         "authorization",
         "cookie",
         "x-correlation-id",
         "x-request-id",
-        "x-user-id",
-        "x-username",
         "content-type",
         "accept",
         "accept-encoding",
@@ -54,6 +51,9 @@ def _build_upstream_headers(request: Request, correlation_id: str) -> dict[str, 
     for name, value in request.headers.items():
         if name.lower() in forward:
             upstream[name] = value
+    user_id = getattr(request.state, "user_id", None)
+    if user_id is not None:
+        upstream["X-User-ID"] = str(user_id)
     upstream["X-Correlation-ID"] = correlation_id
     upstream["X-Gateway"] = "bedaanwaves-gateway"
     return upstream
@@ -61,8 +61,7 @@ def _build_upstream_headers(request: Request, correlation_id: str) -> dict[str, 
 
 @asynccontextmanager
 async def gateway_lifespan(app: FastAPI):
-    """Manage the gateway's proxy client lifecycle."""
-    config = get_gateway_config()
+    config = getattr(app.state, "gateway_config", get_gateway_config())
     logger.info(
         "Starting BedaanWaves API Gateway (backend=%s, port=%s)",
         config.backend_url,
@@ -93,21 +92,19 @@ def create_gateway_app(config: Optional[GatewayConfig] = None) -> FastAPI:
         openapi_url="/openapi.json" if os.environ.get("GATEWAY_ENABLE_DOCS", "true").lower() in ("1", "true", "yes") else None,
         lifespan=gateway_lifespan,
     )
+    app.state.gateway_config = config
 
-    # Middleware order matters: the last middleware added is the outermost.
-    # Desired stack (outermost -> innermost):
-    #   SecurityHeaders -> Logging -> RateLimit -> Auth -> CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=list(config.cors_origins),
+        allow_credentials=config.cors_allow_credentials,
+        allow_methods=list(config.cors_allow_methods),
+        allow_headers=list(config.cors_allow_headers),
     )
-    app.add_middleware(GatewayAuthMiddleware, enabled=config.auth_enabled)
-    app.add_middleware(GatewayRateLimitMiddleware, enabled=config.rate_limit_enabled)
-    app.add_middleware(GatewayLoggingMiddleware, enabled=True)
-    app.add_middleware(GatewaySecurityHeadersMiddleware)
+    app.add_middleware(GatewayAuthMiddleware, enabled=config.auth_enabled, config=config)
+    app.add_middleware(GatewayRateLimitMiddleware, enabled=config.rate_limit_enabled, config=config)
+    app.add_middleware(GatewayLoggingMiddleware, enabled=True, config=config)
+    app.add_middleware(GatewaySecurityHeadersMiddleware, config=config)
 
     # ------------------------------------------------------------------
     # Health endpoints
@@ -175,6 +172,7 @@ def create_gateway_app(config: Optional[GatewayConfig] = None) -> FastAPI:
                 request_headers=upstream_headers,
                 correlation_id=correlation_id,
                 body=body,
+                query_string=request.url.query or None,
             )
         except ProxyTimeoutError:
             return JSONResponse(
@@ -193,11 +191,17 @@ def create_gateway_app(config: Optional[GatewayConfig] = None) -> FastAPI:
             )
 
         excluded = {"content-encoding", "content-length", "transfer-encoding", "connection"}
-        response_headers = {
-            k: v for k, v in upstream.headers.items() if k.lower() not in excluded
-        }
-        response_headers["X-Correlation-ID"] = correlation_id
-        response_headers["X-Gateway"] = "bedaanwaves-gateway"
+        response_headers = [
+            (key, value)
+            for key, value in upstream.headers.items()
+            if key.lower() not in excluded
+        ]
+        response_headers.extend(
+            [
+                ("X-Correlation-ID", correlation_id),
+                ("X-Gateway", "bedaanwaves-gateway"),
+            ]
+        )
 
         return StreamingResponse(
             upstream.aiter_raw(),

@@ -1,25 +1,25 @@
 # UML 2.5 Interaction Diagrams — Sequence and Communication
 
-**عنوان:** UML 2.5 Interaction Diagrams — سیستم یکپارچه HR/Finance/Procurement  
-**نسخه:** v1.0  
-**تاریخ:** 2026-09-09
+**Title:** UML 2.5 Interaction Diagrams — Integrated HR/Finance/Procurement System
+**Version:** v1.0
+**Date:** 2026-09-09
 
 ---
 
-## ۱. مقدمه
+## 1. Introduction
 
-این سند دو نوع نمودار تعاملی UML 2.5 را در سه سطح انتزاع ارائه می‌کند:
+This document presents two types of UML 2.5 interaction diagrams at three levels of abstraction:
 
-- **Sequence:** ترتیب زمانی پیام‌ها، حلقه‌ها، شاخه‌ها، فراخوانی‌های ناهمگام و مدیریت خطا.
-- **Communication:** لینک اشیاء و شماره پیام‌ها با تمرکز بر همکاری ساختاری.
+- **Sequence:** The temporal order of messages, loops, branches, asynchronous calls, and error handling.
+- **Communication:** Object links and message numbers, with a focus on structural collaboration.
 
-نام‌های مشترک با DFD، BPMN و Class Diagram شامل `Employee`، `PayrollRun`، `BudgetAllocation`، `PurchaseRequest`، `PurchaseOrder`، `StockLot`، `GoodsReceipt`، `Payment`، `Report` و `AuditLog` است.
+Names shared with the DFD, BPMN, and Class Diagram include `Employee`, `PayrollRun`, `BudgetAllocation`, `PurchaseRequest`, `PurchaseOrder`, `StockLot`, `GoodsReceipt`, `Payment`, `Report`, and `AuditLog`.
 
 ---
 
-## ۲. نمودار توالی — نوع ۱۱
+## 2. Sequence Diagrams — Type 11
 
-### ۲.۱ سطح ۱ — دریافت گزارش مالی
+### 2.1 Level 1 — Generate Financial Report
 
 ```plantuml
 @startuml ARCH-L1-Sequence-Report
@@ -33,8 +33,8 @@ participant "Report API" as API
 participant "Report Engine" as ENGINE
 database "Reporting DB" as DB
 
-EXEC -> API : generateReport(criteria)
-API -> ENGINE : generateReport(criteria)
+EXEC -> API : ReportEngine.generateReport(criteria)
+API -> ENGINE : ReportEngine.generateReport(criteria)
 ENGINE -> DB : read aggregated facts
 DB --> ENGINE : dataset
 ENGINE --> API : Report
@@ -43,9 +43,9 @@ API --> EXEC : Report
 @enduml
 ```
 
-**توضیح:** تحلیلگر معیار گزارش را به API می‌دهد، Report Engine داده‌های تجمیعی را از Reporting DB می‌خواند و `Report` را برمی‌گرداند. این سناریو با DFD-L2.6 و مؤلفه Reporting در Class/Component هم‌خوان است. در سطح ۱ فقط ترتیب کلی فراخوانی‌ها نمایش داده شده و جزییات خطا و صف در سطح‌های بعدی اضافه می‌شود.
+**Explanation:** The analyst provides the report criteria to the API. The Report Engine reads aggregated data from the Reporting DB and returns a `Report`. This scenario is consistent with DFD-L2.6 and the Reporting component in the Class/Component diagrams. At Level 1, only the overall call order is shown; error and queue details are added at later levels.
 
-### ۲.۲ سطح ۲ — محاسبه حقوق یک کارمند
+### 2.2 Level 2 — Calculate an Employee's Salary
 
 ```plantuml
 @startuml ARCH-L2-Sequence-Payroll
@@ -68,7 +68,7 @@ RUN -> CALC : calculateSalary(employee, period)
 loop for each payroll line
   CALC -> EMP : loadAttendance(employeeId, period)
   EMP --> CALC : Attendance
-  CALC -> BUD : checkBudget(allocationId, netAmount)
+  CALC -> BUD : BudgetAllocation.checkBudget(allocationId, netAmount)
   BUD --> CALC : BudgetDecision
   CALC --> RUN : PayrollLine
 end
@@ -86,9 +86,9 @@ end
 @enduml
 ```
 
-**توضیح:** حلقه برای تولید `PayrollLine` هر کارمند اجرا می‌شود و `calculateSalary()` داده‌های حضور و بودجه را ترکیب می‌کند. شاخه `alt` خطای محاسبه را از مسیر موفق جدا می‌کند. `postPayment()` پس از تأیید اجرا فراخوانی می‌شود و نتیجه به `HRManager` بازمی‌گردد. این سناریو مستقیماً با DFD-L3.1 و BPMN-L3 Payroll Approval مرتبط است.
+**Explanation:** The loop runs to produce a `PayrollLine` for each employee, and `calculateSalary()` combines attendance and budget data. The `alt` branch separates calculation failure from the successful path. `postPayment()` is called after approval is executed, and the result is returned to `HRManager`. This scenario is directly related to DFD-L3.1 and BPMN-L3 Payroll Approval.
 
-### ۲.۳ سطح ۳ — همزمانی، پیام ناهمگام و مدیریت خطا
+### 2.3 Level 3 — Concurrency, Asynchronous Messages, and Error Handling
 
 ```plantuml
 @startuml ARCH-L3-Sequence-Critical
@@ -112,13 +112,13 @@ par calculate lines
   RUN -> CALC : calculateSalary(employee, period)
   CALC --> RUN : PayrollLine
 else validate budget
-  RUN -> BUD : checkBudget(allocationId, amount)
+  RUN -> BUD : BudgetAllocation.checkBudget(allocationId, amount)
   BUD --> RUN : BudgetDecision
 end
 RUN -> AUDIT : append(CalculationAudit)
 AUDIT --> RUN : Ack
 RUN -> PAY : postPayment(paymentCommand)
-PAY -> PAY : executePayment()
+PAY -> PAY : PaymentGateway.executePayment()
 alt payment success
   PAY --> RUN : PaymentConfirmed
   RUN -> AUDIT : append(PaymentAudit)
@@ -138,13 +138,13 @@ end
 @enduml
 ```
 
-**توضیح:** `par` محاسبه خطوط و بررسی بودجه را همزمان نشان می‌دهد؛ پرداخت پس از تکمیل هر دو شاخه انجام می‌شود. پیام ممیزی همگام و پیام retry به صف ناهمگام ارسال می‌شود. خطای درگاه باعث ثبت `ErrorAudit` و زمان‌بندی تلاش مجدد می‌شود. این سطح با Interaction Overview و Timing Diagram سطح ۳ هماهنگ است.
+**Explanation:** `par` shows line calculation and budget validation running concurrently; payment occurs after both branches complete. The audit message is synchronous, while the retry message is sent asynchronously to the queue. A gateway error causes `ErrorAudit` to be recorded and a retry to be scheduled. This level is consistent with the Level 3 Interaction Overview and Timing Diagram.
 
 ---
 
-## ۳. نمودار ارتباطی — نوع ۱۲
+## 3. Communication Diagrams — Type 12
 
-### ۳.۱ سطح ۱ — ارتباط اشیاء در معماری کلی
+### 3.1 Level 1 — Object Communication in the Overall Architecture
 
 ```plantuml
 @startuml ARCH-L1-Communication
@@ -159,7 +159,7 @@ object "ReportingDB" as DB
 object "Report" as REPORT
 
 EXEC --> API : requestReport
-API --> ENGINE : generateReport
+API --> ENGINE : ReportEngine.generateReport()
 ENGINE --> DB : readFacts
 DB --> ENGINE : dataset
 ENGINE --> REPORT : create
@@ -168,9 +168,9 @@ REPORT --> EXEC : deliver
 @enduml
 ```
 
-**توضیح:** ارتباط سطح ۱ بین تحلیلگر، API، موتور گزارش، پایگاه داده و شیء گزارش را نشان می‌دهد. هر لینک یک همکاری معنایی دارد و شماره پیام در سطح‌های بعدی دقیق می‌شود. این نما با Use Case `Generate Analytical Reports` و DFD-L2.6 مطابقت دارد.
+**Explanation:** Level 1 communication shows the analyst, API, report engine, database, and report object. Each link represents a semantic collaboration, and message numbering becomes precise at later levels. This view corresponds to the `Generate Analytical Reports` use case and DFD-L2.6.
 
-### ۳.۲ سطح ۲ — پیام‌های فرایند میانی
+### 3.2 Level 2 — Intermediate Process Messages
 
 ```plantuml
 @startuml ARCH-L2-Communication
@@ -186,7 +186,7 @@ object "PurchaseOrder" as PO
 object "AuditLog" as AUDIT
 
 PROC --> PR : 1: submit()
-PR --> BUD : 2: checkBudget()
+PR --> BUD : 2: BudgetAllocation.checkBudget()
 BUD --> FIN : 3: decision
 FIN --> PR : 4: approve()
 PR --> PO : 5: issue()
@@ -196,9 +196,9 @@ PO --> PROC : 7: notify()
 @enduml
 ```
 
-**توضیح:** شماره پیام‌ها ترتیب همکاری را از ایجاد درخواست تا صدور سفارش مشخص می‌کند. `BudgetAllocation` پیش از تأیید بررسی می‌شود و `AuditLog` پس از تصمیم نهایی ثبت می‌گردد. این ترتیب با DFD-L3.2 و Activity سطح ۲ یکسان است.
+**Explanation:** Message numbers define the collaboration order from request creation through purchase-order issuance. `BudgetAllocation.checkBudget()` is performed before approval, and `AuditLog` is recorded after the final decision. This order matches DFD-L3.2 and the Level 2 Activity diagram.
 
-### ۳.۳ سطح ۳ — شماره‌گذاری دقیق پیام‌ها
+### 3.3 Level 3 — Detailed Message Numbering
 
 ```plantuml
 @startuml ARCH-L3-Communication
@@ -220,7 +220,7 @@ EMP --> RUN : 1.3: Employee
 RUN --> CALC : 2.1: calculateSalary(employee, period)
 CALC --> EMP : 2.2: loadAttendance(employeeId, period)
 EMP --> CALC : 2.3: Attendance
-CALC --> BUD : 2.4: checkBudget(allocationId, amount)
+CALC --> BUD : 2.4: BudgetAllocation.checkBudget(allocationId, amount)
 BUD --> CALC : 2.5: BudgetDecision
 CALC --> RUN : 2.6: PayrollLine
 RUN --> PAY : 3.1: postPayment(paymentCommand)
@@ -229,32 +229,36 @@ RUN --> AUDIT : 4.1: append(AuditEvent)
 AUDIT --> RUN : 4.2: Ack
 RUN --> HRM : 5.1: PayrollRun status
 
-alt calculation failed
-  RUN --> AUDIT : 6.1: append(ErrorAudit)
-  AUDIT --> RUN : 6.2: Ack
-else payment failed
-  RUN --> AUDIT : 6.3: append(PaymentError)
-  RUN --> RUN : 6.4: enqueueRetry()
-end
+note right of AUDIT
+  Exception path: calculation failed
+end note
+RUN --> AUDIT : 6.1: append(ErrorAudit)
+AUDIT --> RUN : 6.2: Ack
+
+note right of RUN
+  Exception path: payment failed
+end note
+RUN --> AUDIT : 6.3: append(PaymentError)
+RUN --> RUN : 6.4: enqueueRetry()
 
 @enduml
 ```
 
-**توضیح:** شماره‌های اعشاری ترتیب فراخوانی‌های هم‌سطح و تو‌در‌تو را نشان می‌دهند. محاسبه حقوق، بررسی بودجه، پرداخت و ممیزی در یک سناریوی بحرانی هماهنگ شده‌اند. شاخه‌های خطا پیام‌های `ErrorAudit` و `enqueueRetry()` را فعال می‌کنند. این نمودار با Sequence سطح ۳ و Timing Diagram سطح ۳ هم‌خوان است.
+**Explanation:** Decimal message numbers show the order of peer and nested calls. Payroll calculation, budget validation, payment, and auditing are coordinated in a critical scenario. The separately labeled exception paths record `ErrorAudit` or `PaymentError` and schedule a retry with `enqueueRetry()`. This diagram aligns with the Level 3 Sequence and Timing diagrams.
 
 ---
 
-## ۴. قوانین تعامل
+## 4. Interaction Rules
 
-| شناسه | قانون | پیامدهای نقض |
+| ID | Rule | Consequence of Violation |
 |---|---|---|
-| INT-01 | `calculateSalary()` باید قبل از `postPayment()` کامل شود | پرداخت انجام نمی‌شود و `PayrollRun` ناموفق می‌شود |
-| INT-02 | `checkBudget()` باید قبل از رزرو و صدور PO کامل شود | `PurchaseRequest` تأیید نمی‌شود |
-| INT-03 | `allocateStock()` باید پس از `GoodsReceipt` معتبر فراخوانی شود | تخصیص رد و `StockShortageException` ثبت می‌شود |
-| INT-04 | همه پیام‌های تصمیم و پرداخت باید `AuditLog` تولید کنند | عملیات از نظر ممیزی ناقص است |
-| INT-05 | پیام‌های retry باید شناسه همبستگی و سقف تلاش داشته باشند | درخواست تکراری یا حلقه نامحدود ایجاد می‌شود |
+| INT-01 | `calculateSalary()` must complete before `postPayment()` | Payment is not executed and `PayrollRun` fails |
+| INT-02 | `BudgetAllocation.checkBudget()` must complete before reservation and PO issuance | `PurchaseRequest` is not approved |
+| INT-03 | `StockLot.allocate()` / `allocateStock()` must be called only after a valid `GoodsReceipt` | Allocation is rejected and `StockShortageException` is recorded |
+| INT-04 | All decision and payment messages must produce an `AuditLog` | The operation is incomplete from an audit perspective |
+| INT-05 | Retry messages must have a correlation ID and an attempt limit | Duplicate requests or an infinite loop may occur |
 
-## ۵. ردپا
+## 5. Traceability
 
 | Interaction | DFD | BPMN | UML Class / Method |
 |---|---|---|---|
@@ -263,4 +267,4 @@ end
 | Check Budget PR | DFD-L2.3 / L3.2 | BPMN-L3 Budget Check PR | `BudgetAllocation.checkBudget()` |
 | Allocate Stock | DFD-L2.5 / L3.3 | BPMN-L3 Stock Allocation | `StockLot.allocate()` / `allocateStock()` |
 
-*پایان سند Sequence و Communication*
+*End of Sequence and Communication document*

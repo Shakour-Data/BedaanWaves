@@ -631,10 +631,14 @@ async def lifespan(app: FastAPI):
             logger.error(f"Error during shutdown: {e}", exc_info=True)
 
     try:
-        if "event_bus" in app.state.container._instances:
-            await app.state.container.get("event_bus").stop()
-        if "multi_database_manager" in app.state.container._instances:
-            await app.state.container.get("multi_database_manager").shutdown()
+        if app.state.container.has("event_bus"):
+            ev = app.state.container.get("event_bus")
+            if hasattr(ev, "stop"):
+                await ev.stop()
+        if app.state.container.has("multi_database_manager"):
+            mdb = app.state.container.get("multi_database_manager")
+            if hasattr(mdb, "shutdown"):
+                await mdb.shutdown()
     except Exception as e:
         logger.error(f"Error during infrastructure shutdown: {e}", exc_info=True)
     logger.info("BedaanWaves application shutdown complete")
@@ -675,12 +679,10 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH, settings=settings)
+app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED, settings=settings)
+app.add_middleware(RequestLoggingMiddleware, enabled=True, settings=settings)
 app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH)
-app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED)
-app.add_middleware(RequestLoggingMiddleware, enabled=settings.LOG_LEVEL.upper() == "INFO")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -688,6 +690,7 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+app.add_middleware(SecurityHeadersMiddleware, settings=settings)
 
 
 def custom_openapi():

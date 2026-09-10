@@ -748,7 +748,7 @@ EA is "Idle"
 ## ۷. ضوابط و محدودیت‌ها
 
 1. **PlantUML Version:** نمودارهای Timing با PlantUML v1.2024+ سازگار هستند. Interaction Overview در PlantUML به طور Native پشتیبانی نمی‌شود؛ برای آن‌ها از جداول ساختاریافته استفاده شده است.
-2. **Timing Precision:** اعداد زمانی در نمودارها تقریبی هستند و بر اساس اندازه‌گیری‌هایProduction قابل تنظیم هستند.
+2. **Timing Precision:** اعداد زمانی در نمودارها تقریبی هستند و بر اساس اندازه‌گیری‌های Production قابل تنظیم هستند.
 3. **Payroll Target:** هدف `<= 2s` برای پرداخت حقوق یک هدف سخت (Hard Target) است و هرگونه تخلف از آن باید در `AuditLog` ثبت شود.
 4. **Concurrency:** در Timing Diagrams، توازي (par) فرضی است و در پیاده‌سازی واقعی باید با موازی‌سازی (Async/Await) پیاده شود.
 5. **Traceability:** هر شناسه (`IO-XXX` یا `TIMING-XXX`) باید در **Requirement Traceability Matrix (RTM)** به سند نیازمندی ردیابی شود.

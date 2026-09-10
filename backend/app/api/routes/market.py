@@ -163,12 +163,23 @@ async def get_latest_prices(
     Get latest prices for multiple symbols with single query optimization
 
     Args:
-        symbols: List of symbols
+        symbols: List of symbols (supports both repeated query params and
+                 comma-separated values, e.g. ``?symbols=AAPL&symbols=MSFT``
+                 or ``?symbols=AAPL,MSFT``)
         include_change: Include price change percentage
 
     Returns:
-        Dictionary with latest prices
+        Dictionary with latest prices keyed by the original-case symbol
     """
+    # Normalise: a single comma-separated string becomes individual symbols
+    normalised: list[str] = []
+    for raw in symbols:
+        for part in raw.split(","):
+            part = part.strip()
+            if part:
+                normalised.append(part)
+    symbols = normalised
+
     if not symbols:
         return {
             "status": "success",
@@ -195,11 +206,8 @@ async def get_latest_prices(
     # Get all latest candles in a single query by asset ID
     asset_ids = [asset.id for asset in assets_by_symbol.values()]
 
-    # Use first symbol's market to determine candle model (all should be from same market for this endpoint)
-    # In a real implementation, we might need to handle multiple markets, but for NASDAQ focus:
-    symbols[0]
-    # Extract market from symbol or use default - for now assuming NASDAQ as this is NASDAQ-focused endpoint
-    Candle = candle_model_for_market("NASDAQ")  # Default to NASDAQ for this endpoint
+    # All candle data is stored in intl_price_candles (NASDAQ-equivalent model)
+    Candle = candle_model_for_market("NASDAQ")
 
     latest_candles_query = (
         select(Candle)
@@ -216,17 +224,16 @@ async def get_latest_prices(
         if candle.asset_id not in latest_candles:
             latest_candles[candle.asset_id] = candle
 
-    # Build response using fetched data
+    # Build response using fetched data, keyed by the canonical (DB) symbol casing
     result = {}
     for symbol_lower, asset in assets_by_symbol.items():
-        original_symbol = symbol_lower_map[symbol_lower]
         candle = latest_candles.get(asset.id)
 
         if candle:
             change = float(candle.close) - float(candle.open)
             change_pct = (change / float(candle.open)) * 100 if float(candle.open) > 0 else 0.0
 
-            result[original_symbol] = {
+            result[asset.symbol] = {
                 "price": float(candle.close),
                 "change": round(change, 2),
                 "change_pct": round(change_pct, 2),

@@ -41,6 +41,19 @@ class GatewayConfig:
         default_factory=lambda: os.environ.get("GATEWAY_PROXY_PREFIX", "/api/v1")
     )
 
+    trusted_proxies: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            p.strip()
+            for p in os.environ.get("GATEWAY_TRUSTED_PROXIES", "").split(",")
+            if p.strip()
+        )
+    )
+
+    enable_https: bool = field(
+        default_factory=lambda: os.environ.get("GATEWAY_ENABLE_HTTPS", "false").lower()
+        in ("1", "true", "yes", "on")
+    )
+
     # ------------------------------------------------------------------
     # Rate limiting
     # ------------------------------------------------------------------
@@ -136,6 +149,41 @@ class GatewayConfig:
         in ("1", "true", "yes", "on")
     )
 
+    cors_origins: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            p.strip()
+            for p in os.environ.get(
+                "GATEWAY_CORS_ORIGINS",
+                "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3005,http://127.0.0.1:3005",
+            ).split(",")
+            if p.strip()
+        )
+    )
+    cors_allow_credentials: bool = field(
+        default_factory=lambda: os.environ.get("GATEWAY_CORS_ALLOW_CREDENTIALS", "true").lower()
+        in ("1", "true", "yes", "on")
+    )
+    cors_allow_methods: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            p.strip().upper()
+            for p in os.environ.get(
+                "GATEWAY_CORS_ALLOW_METHODS",
+                "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+            ).split(",")
+            if p.strip()
+        )
+    )
+    cors_allow_headers: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            p.strip()
+            for p in os.environ.get(
+                "GATEWAY_CORS_ALLOW_HEADERS",
+                "Authorization,Content-Type,X-Correlation-ID,X-Request-ID",
+            ).split(",")
+            if p.strip()
+        )
+    )
+
     # ------------------------------------------------------------------
     # Proxy behaviour
     # ------------------------------------------------------------------
@@ -154,7 +202,7 @@ class GatewayConfig:
             h.strip()
             for h in os.environ.get(
                 "GATEWAY_PROXY_FORWARD_HEADERS",
-                "authorization,cookie,x-correlation-id,x-request-id",
+                "authorization,cookie,x-correlation-id,x-request-id,content-type,accept,accept-encoding,user-agent",
             ).split(",")
             if h.strip()
         )

@@ -1,14 +1,50 @@
 import logging
 from typing import Any
 
+from app.core.utils import utc_now_iso
+
 logger = logging.getLogger(__name__)
 
 
+def _setup_otlp_exporter(provider, endpoint: str | None = None) -> None:
+    """Attach an OTLP span exporter to the given TracerProvider."""
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+    kwargs: dict[str, Any] = {}
+    if endpoint:
+        kwargs["endpoint"] = endpoint
+    processor = BatchSpanProcessor(OTLPSpanExporter(**kwargs))
+    provider.add_span_processor(processor)
+
+
+def _setup_jaeger_exporter(provider, endpoint: str | None = None) -> None:
+    """Attach a Jaeger Thrift exporter as a fallback."""
+    try:
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+
+        processor = BatchSpanProcessor(
+            JaegerExporter(endpoint=endpoint, insecure=True)
+        )
+        provider.add_span_processor(processor)
+    except ImportError:
+        logger.warning("Jaeger exporter package not installed; skipping jaeger exporter")
+
+
 class TracingManager:
-    def __init__(self, service_name: str = "bedaanwaves", enabled: bool = True):
+    def __init__(
+        self,
+        service_name: str = "bedaanwaves",
+        enabled: bool = True,
+        otlp_endpoint: str | None = None,
+        jaeger_endpoint: str | None = None,
+        use_otlp: bool = True,
+    ):
         self.service_name = service_name
         self.enabled = enabled
         self._tracer = None
+        self._otlp_endpoint = otlp_endpoint
+        self._jaeger_endpoint = jaeger_endpoint
+        self._use_otlp = use_otlp
 
     async def initialize(self) -> None:
         if not self.enabled:
@@ -17,15 +53,20 @@ class TracingManager:
 
         try:
             from opentelemetry import trace
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
             from opentelemetry.sdk.resources import Resource
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-            resource = Resource.create({"service.name": self.service_name})
+            resource = Resource.create(
+                {"service.name": self.service_name, "service.start_time": utc_now_iso()}
+            )
             provider = TracerProvider(resource=resource)
-            processor = BatchSpanProcessor(OTLPSpanExporter())
-            provider.add_span_processor(processor)
+
+            if self._use_otlp or self._otlp_endpoint:
+                _setup_otlp_exporter(provider, endpoint=self._otlp_endpoint)
+            elif self._jaeger_endpoint:
+                _setup_jaeger_exporter(provider, endpoint=self._jaeger_endpoint)
+
             trace.set_tracer_provider(provider)
             self._tracer = trace.get_tracer(self.service_name)
             logger.info("OpenTelemetry tracing initialized")

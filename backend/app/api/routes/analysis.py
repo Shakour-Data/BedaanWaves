@@ -670,7 +670,7 @@ async def get_symbol_scoring(
     financial_ingest_service = FinancialDataIngestService()
     await financial_ingest_service.initialize()
     fundamental_data = await financial_ingest_service.get_latest_fundamentals(
-        asset_id=asset.symbol,
+        asset_id=str(asset.id),
         market=MarketType(asset.market) if asset.market in [m.value for m in MarketType] else MarketType.US
     )
     financials = fundamental_data.get("financials", {})

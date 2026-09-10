@@ -1,26 +1,26 @@
 # UML 2.5 Structural Diagrams — Class, Object, Component, Deployment
 
-**عنوان:** UML 2.5 Structural Diagrams — سیستم یکپارچه HR/Finance/Procurement  
-**نسخه:** v1.0  
-**تاریخ:** 2026-09-09
+**Title:** UML 2.5 Structural Diagrams — Integrated HR/Finance/Procurement System
+**Version:** v1.0
+**Date:** 2026-09-09
 
 ---
 
-## ۱. مقدمه و قراردادها
+## 1. Introduction and Conventions
 
-این سند چهار نوع نمودار ساختاری UML 2.5 را در سه سطح انتزاع ارائه می‌کند:
+This document presents four types of UML 2.5 structural diagrams at three levels of abstraction:
 
-- **سطح ۱:** دامنه و چشم‌انداز سیستم
-- **سطح ۲:** طراحی و زیرسیستم‌ها
-- **سطح ۳:** جزییات پیاده‌سازی، امضاها، قیود و استقرار
+- **Level 1:** Domain and System Context
+- **Level 2:** Design and Subsystems
+- **Level 3:** Implementation Details, Signatures, Constraints, and Deployment
 
-نام‌های اصلی عبارت‌اند از `Employee`، `OrganizationUnit`، `PayrollRun`، `PayrollLine`، `Budget`، `BudgetAllocation`، `PurchaseRequest`، `PurchaseOrder`، `Product`، `StockLot`، `GoodsReceipt`، `Payment`، `Report` و `AuditLog`.
+Key entities are `Employee`, `OrganizationUnit`, `PayrollRun`, `PayrollLine`, `Budget`, `BudgetAllocation`, `PurchaseRequest`, `PurchaseOrder`, `Product`, `StockLot`, `GoodsReceipt`, `Payment`, `Report`, and `AuditLog`.
 
 ---
 
-## ۲. نمودار کلاس — نوع ۱
+## 2. Class Diagram — Type 1
 
-### ۲.۱ سطح ۱ — مدل دامنه
+### 2.1 Level 1 — Domain Model
 
 ```plantuml
 @startuml ARCH-L1-Class-Domain
@@ -66,9 +66,9 @@ AuditLog "0..*" --> StockLot : records
 @enduml
 ```
 
-**توضیح:** مدل دامنه موجودیت‌های اصلی و روابط معنایی آن‌ها را بدون جزییات فناوری نشان می‌دهد. هر `PayrollRun` از چند `PayrollLine` تشکیل می‌شود و هر `Budget` می‌تواند چند `BudgetAllocation` داشته باشد. `PurchaseRequest` پس از تأیید به `PurchaseOrder` تبدیل می‌شود و رسید کالا، `StockLot` تولید می‌کند. `Report` و `AuditLog` روابط مشاهده‌ای و ممیزی چند حوزه را نگهداری می‌کنند.
+**Description:** The domain model shows core entities and their semantic relationships without technical details. Each `PayrollRun` consists of multiple `PayrollLine` items, and each `Budget` can have multiple `BudgetAllocation` items. A `PurchaseRequest` converts to a `PurchaseOrder` upon approval, and a goods receipt creates `StockLot` items. `Report` and `AuditLog` maintain cross-domain observation and audit relationships.
 
-### ۲.۲ سطح ۲ — طراحی زیرسیستم‌ها
+### 2.2 Level 2 — Subsystem Design
 
 ```plantuml
 @startuml ARCH-L2-Class-Design
@@ -145,9 +145,9 @@ Notification <-- Payroll : sends
 @enduml
 ```
 
-**توضیح:** کلاس‌های طراحی، مرز زیرسیستم‌ها و خدمات تخصصی را مشخص می‌کنند. `SalaryCalculator` فقط محاسبه می‌کند، `BudgetValidator` اعتبار را بررسی می‌کند و `StockManager` تخصیص موجودی را انجام می‌دهد. `ProcurementService` درخواست و سفارش را هماهنگ می‌کند و `ReportEngine` خروجی تحلیلی تولید می‌کند. `AuditLog` و `Notification` خدمات مشترک بین همه حوزه‌ها هستند.
+**Description:** Design classes define subsystem boundaries and specialized services. `SalaryCalculator` performs calculations only, `BudgetValidator` checks validity, and `StockManager` handles stock allocation. `ProcurementService` coordinates requests and orders, and `ReportEngine` produces analytical output. `AuditLog` and `Notification` are shared services across all domains.
 
-### ۲.۳ سطح ۳ — کلاس‌های پیاده‌سازی
+### 2.3 Level 3 — Implementation Classes
 
 ```plantuml
 @startuml ARCH-L3-Class-Implementation
@@ -234,6 +234,9 @@ class Report {
   -type: ReportType
   -period: DateRange
   -payload: JSON
+}
+
+class ReportEngine {
   +generateReport(criteria: ReportCriteria): Report
 }
 
@@ -260,27 +263,27 @@ Report --> AuditLog : publication event
 note right of PayrollLine
   invariant: netAmount >= 0
   invariant: netAmount = grossAmount - deductionAmount
-end note
+endnote
 
 note right of BudgetAllocation
   invariant: reservedAmount + spentAmount <= allocatedAmount
-end note
+endnote
 
 note right of StockLot
   invariant: availableQuantity >= 0
   invariant: reservedQuantity >= 0
-end note
+endnote
 
 @enduml
 ```
 
-**توضیح:** در سطح پیاده‌سازی، دیدگاه_private_ داده‌ها و عملیات_public_ سرویس‌ها نمایش داده شده‌اند. `calculateSalary()` یک `PayrollLine` برمی‌گرداند، `checkBudget()` یک `BudgetDecision` تولید می‌کند و `allocateStock()` در کلاس `StockLot` به‌صورت `allocate()` مدل شده است. قیدها مقدار خالص غیرمنفی، باقی‌مانده بودجه و موجودی قابل تخصیص را کنترل می‌کنند. خطاهای مقدار نامعتبر، کمبود بودجه و تخصیص بیش از موجودی باید به سرویس فراخوانی‌کننده گزارش شوند.
+**Description:** At the implementation level, private data and public service operations are shown. `calculateSalary()` returns a `PayrollLine`, `checkBudget()` produces a `BudgetDecision`, and `allocate()` on `StockLot` models the entity operation with `allocateStock()` as the service alias. Constraints enforce non-negative net amount, remaining budget, and allocatable stock. Errors for invalid amounts, budget shortfalls, and over-allocation must be reported to the calling service.
 
 ---
 
-## ۳. نمودار شیء — نوع ۲
+## 3. Object Diagram — Type 2
 
-### ۳.۱ سطح ۱ — نمونه دامنه
+### 3.1 Level 1 — Domain Snapshot
 
 ```plantuml
 @startuml ARCH-L1-Object
@@ -313,9 +316,9 @@ po --> lot : fulfilledBy
 @enduml
 ```
 
-**توضیح:** این نمونه یک کارمند فعال، واحد مالی، یک درخواست خرید پیش‌نویس، سفارش ایجادشده و لات موجودی را در یک سناریوی کلی نشان می‌دهد. مقادیر، نمونه‌ای از ارتباط معنایی بین اشیاء هستند و رفتار محاسبه یا پرداخت را اجرا نمی‌کنند. این نما با مدل دامنه سطح ۱ کلاس هم‌خوان است.
+**Description:** This snapshot shows an active employee, the Finance unit, a draft purchase request, a created order, and a stock lot in a single scenario. Values represent sample semantic links between objects and do not execute calculation or payment behavior. This view is consistent with the Level 1 class domain model.
 
-### ۳.۲ سطح ۲ — نمونه میانه فرایند
+### 3.2 Level 2 — Mid-Process Snapshot
 
 ```plantuml
 @startuml ARCH-L2-Object
@@ -348,9 +351,9 @@ run --> audit : records
 @enduml
 ```
 
-**توضیح:** شیء `PayrollRun` در میانه محاسبه قرار دارد و `PayrollLine` مقادیر ناخالص، کسورات و خالص را نگهداری می‌کند. `BudgetAllocation` مقدار رزروشده برای پرداخت را نشان می‌دهد و `AuditLog` رویداد محاسبه را ثبت کرده است. این لحظه با `calculateSalary()` و `checkBudget()` در سطح ۳ کلاس مرتبط است.
+**Description:** The `PayrollRun` object is mid-calculation and the `PayrollLine` holds gross, deduction, and net amounts. `BudgetAllocation` shows the reserved amount for payment, and `AuditLog` has recorded the calculation event. This moment relates to `calculateSalary()` and `checkBudget()` in the Level 3 class diagram.
 
-### ۳.۳ سطح ۳ — نمونه تراکنش مالی بحرانی
+### 3.3 Level 3 — Critical Financial Transaction Snapshot
 
 ```plantuml
 @startuml ARCH-L3-Object
@@ -388,13 +391,13 @@ payment --> audit : records
 @enduml
 ```
 
-**توضیح:** این نمونه لحظه‌ای را نشان می‌دهد که `Payment` ایجاد شده اما تأییدیه بانک هنوز دریافت نشده است. `transactionId` و `providerReference` هنوز تهی هستند و وضعیت‌ها `Processing` و `Pending` باقی مانده‌اند. پس از تأیید بانک، وضعیت پرداخت به `Paid` تغییر می‌کند، رزرو بودجه به `spentAmount` منتقل می‌شود و رویداد نهایی در `AuditLog` ثبت می‌گردد.
+**Description:** This snapshot shows a moment where `Payment` has been created but bank confirmation has not yet been received. `transactionId` and `providerReference` are still null, and statuses remain `Processing` and `Pending`. After bank confirmation, the payment status changes to `Paid`, the budget reservation moves to `spentAmount`, and the final event is recorded in `AuditLog`.
 
 ---
 
-## ۴. نمودار مؤلفه — نوع ۳
+## 4. Component Diagram — Type 3
 
-### ۴.۱ سطح ۱ — مؤلفه‌های سطح بالا
+### 4.1 Level 1 — Top-Level Components
 
 ```plantuml
 @startuml ARCH-L1-Component
@@ -426,9 +429,9 @@ INV --> SHARED : audit and notification
 @enduml
 ```
 
-**توضیح:** مؤلفه‌های سطح بالا مرزهای منطقی HR، حقوق، بودجه، خرید، انبار و گزارش‌گیری را نشان می‌دهند. مؤلفه مشترک، رویدادهای ممیزی و اعلان‌ها را مدیریت می‌کند. جریان‌های بین مؤلفه‌ها با جریان‌های DFD-L1 و Laneهای BPMN-L1 مطابقت دارند.
+**Description:** Top-level components show logical boundaries for HR, Payroll, Budget, Procurement, Inventory, and Reporting. The shared component manages audit events and notifications. Inter-component flows align with DFD-L1 flows and BPMN-L1 lanes.
 
-### ۴.۲ سطح ۲ — زیرمؤلفه‌ها
+### 4.2 Level 2 — Subcomponents
 
 ```plantuml
 @startuml ARCH-L2-Component
@@ -467,9 +470,9 @@ REPORT --> STOCK
 @enduml
 ```
 
-**توضیح:** هر مؤلفه سطح بالا به API، سرویس دامنه و موتور تخصصی تجزیه شده است. `Salary Calculator` عملیات محاسبه حقوق، `Budget Validator` بررسی اعتبار، `Purchase Service` چرخه درخواست و سفارش، و `Stock Manager` تخصیص موجودی را انجام می‌دهد. `Report Engine` از سرویس‌های دامنه برای ساخت گزارش استفاده می‌کند.
+**Description:** Each top-level component decomposes into API, domain service, and specialized engine. `Salary Calculator` performs payroll calculation, `Budget Validator` checks validity, `Purchase Service` handles the request and order lifecycle, and `Stock Manager` handles stock allocation. `Report Engine` uses domain services to build reports.
 
-### ۴.۳ سطح ۳ — رابط‌ها و وابستگی‌ها
+### 4.3 Level 3 — Provided and Required Interfaces
 
 ```plantuml
 @startuml ARCH-L3-Component
@@ -538,13 +541,13 @@ STOCK ..> IAudit : required
 @enduml
 ```
 
-**توضیح:** رابط‌های ارائه‌شده، قراردادهای قابل فراخوانی هر مؤلفه را مشخص می‌کنند. `IPayrollService.calculateSalary()`، `IBudgetService.checkBudget()`، `IProcurementService.approveRequest()`، `IInventoryService.allocateStock()` و `IReportService.generateReport()` نام‌های مشترک با BPMN و DFD دارند. رابط‌های موردنیاز، وابستگی‌های بین مؤلفه‌ها و نقطه ثبت `AuditLog` را نشان می‌دهند.
+**Description:** Provided interfaces specify each component's callable contracts. `IPayrollService.calculateSalary()`, `IBudgetService.checkBudget()`, `IProcurementService.approveRequest()`, `IInventoryService.allocateStock()`, and `IReportService.generateReport()` share names with BPMN and DFD. Required interfaces show inter-component dependencies and the `AuditLog` registration point.
 
 ---
 
-## ۵. نمودار استقرار — نوع ۴
+## 5. Deployment Diagram — Type 4
 
-### ۵.۱ سطح ۱ — گره‌های فیزیکی
+### 5.1 Level 1 — Physical Nodes
 
 ```plantuml
 @startuml ARCH-L1-Deployment
@@ -587,9 +590,9 @@ API --> NOTIFY : HTTPS/Webhook
 @enduml
 ```
 
-**توضیح:** گره‌های اصلی شامل клієнт، خوشه اپلیکیشن، خوشه پایگاه داده و گره گزارش‌گیری هستند. سرویس‌های بانکی و اعلان به‌عنوان سرویس‌های بیرونی مدل شده‌اند. خواندن گزارش از `Read Replica` انجام می‌شود تا بار گزارش‌گیری روی تراکنش‌های عملیاتی کاهش یابد.
+**Description:** Primary nodes include clients, the application cluster, the database cluster, and the reporting node. Banking and notification services are modeled as external services. Report reads use the `Read Replica` to reduce load on operational transactions.
 
-### ۵.۲ سطح ۲ — تخصیص مؤلفه‌ها و پروتکل‌ها
+### 5.2 Level 2 — Component Allocation and Protocols
 
 ```plantuml
 @startuml ARCH-L2-Deployment
@@ -630,9 +633,9 @@ BROKER --> WORKERS : AMQP
 @enduml
 ```
 
-**توضیح:** مؤلفه‌های API روی گره‌های `:8080` مستقر می‌شوند و نوشته‌ها به PostgreSQL Primary و خواندن‌ها به Replica ارسال می‌شوند. Workerها عملیات طولانی حقوق، خرید و گزارش را پردازش می‌کنند. `Message Broker` پیام‌های ناهمگام و.retry را جدا می‌کند و ارتباط با بانک از HTTPS انجام می‌شود.
+**Description:** API components deploy on `:8080` nodes with writes to PostgreSQL Primary and reads from Replica. Workers process long-running payroll, procurement, and reporting operations. The `Message Broker` decouples async messages and retries, and bank communication uses HTTPS.
 
-### ۵.۳ سطح ۳ — کانفیگ و ظرفیت گره‌ها
+### 5.3 Level 3 — Node Configuration and Capacity
 
 ```plantuml
 @startuml ARCH-L3-Deployment
@@ -686,23 +689,23 @@ WORKER_JAR --> BROKER : AMQPS :5671
 @enduml
 ```
 
-**توضیح:** پیکربندی سطح ۳ نسخه سیستم‌عامل، تعداد نمونه‌ها، پورت‌ها، نسخه PostgreSQL، سقف اتصال و زمان انتظار بانک را مشخص می‌کند. API سه نمونه، Worker دو نمونه و Report یک نمونه دارد. تراکنش‌های عملیاتی به Primary و گزارش‌ها به Replica وصل می‌شوند. زمان انتظار بانک پنج ثانیه و تلاش مجدد حداکثر سه بار تعریف شده است.
+**Description:** Level 3 configuration specifies OS version, instance counts, ports, PostgreSQL version, connection limits, and bank timeout. API has three instances, Worker has two, and Report has one. Operational transactions connect to Primary and reports to Replica. Bank timeout is five seconds with a maximum of three retries.
 
 ---
 
-## ۶. ردپا و قوانین یکپارچگی
+## 6. Traceability and Integrity Rules
 
-| نمودار | سطح ۱ | سطح ۲ | سطح ۳ |
+| Diagram | Level 1 | Level 2 | Level 3 |
 |---|---|---|---|
-| Class | مدل دامنه | زیرسیستم و خدمات | امضا، Visibility و invariant |
-| Object | سناریوی کلی | میانه محاسبه | تراکنش پرداخت |
-| Component | مؤلفه‌های حوزه | زیرمؤلفه‌ها | رابط‌های provided/required |
-| Deployment | گره‌های فیزیکی | تخصیص و پروتکل | OS، نسخه، پورت و ظرفیت |
+| Class | Domain Model | Subsystems and Services | Signatures, Visibility, and Invariants |
+| Object | Overview Scenario | Mid-Calculation | Payment Transaction |
+| Component | Domain Components | Subcomponents | Provided/Required Interfaces |
+| Deployment | Physical Nodes | Allocation and Protocols | OS, Version, Port, and Capacity |
 
-1. نام `calculateSalary()` در Class، Component، Sequence و BPMN یکسان است.
-2. `checkBudget()` همیشه `BudgetAllocation` را می‌خواند و در صورت تأیید، رزرو ایجاد می‌کند.
-3. `allocateStock()` فقط روی `StockLot` معتبر و دارای موجودی قابل تخصیص اجرا می‌شود.
-4. `generateReport()` از داده‌های عملیاتی نوشتن انجام نمی‌دهد و `Report` را تولید می‌کند.
-5. تمام تغییرات مهم از طریق `AuditLog` و تمام اعلان‌ها از طریق `Notification` ردیابی می‌شوند.
+1. The name `calculateSalary()` is consistent across Class, Component, Sequence, and BPMN diagrams.
+2. `checkBudget()` always reads `BudgetAllocation` and creates a reservation upon approval.
+3. `allocateStock()` executes only on a valid `StockLot` with allocatable quantity.
+4. `generateReport()` does not write to operational data and produces a `Report`.
+5. All significant changes are tracked via `AuditLog` and all notifications via `Notification`.
 
-*پایان سند*
+*End of Document*

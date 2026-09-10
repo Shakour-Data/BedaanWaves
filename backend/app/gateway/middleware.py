@@ -1,405 +1,633 @@
-"""Gateway-specific middleware.
-
-Provides FastAPI/Starlette middlewares used exclusively by the API Gateway:
-
-- :class:`GatewayRateLimitMiddleware` — Redis-backed distributed rate limiting
-  at the gateway edge.
-- :class:`GatewayAuthMiddleware` — centralised JWT (RS256) validation before
-  requests reach the backend.
-- :class:`GatewayLoggingMiddleware` — structured JSON request/response logging
-  with correlation ID propagation.
-"""
-
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 import json
 import logging
+import os
+import re
 import time
 import uuid
-from collections import deque
-from typing import Any
+from typing import Any, Callable
 
-import redis.asyncio as aioredis
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from app.infrastructure.utils.redis_rate_limiter import InMemoryRateLimiter, RedisRateLimiter
 
 from .config import GatewayConfig, get_gateway_config
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "GatewayRateLimitMiddleware",
     "GatewayAuthMiddleware",
     "GatewayLoggingMiddleware",
+    "GatewayRateLimitMiddleware",
     "GatewaySecurityHeadersMiddleware",
+    "_RedisRateLimiter",
+    "_client_ip",
+    "_decode_jwt",
 ]
 
+_RedisRateLimiter = RedisRateLimiter
+_CORRELATION_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+_ALLOWED_JWT_ALGORITHMS = {
+    "HS256",
+    "HS384",
+    "HS512",
+    "RS256",
+    "RS384",
+    "RS512",
+    "ES256",
+    "ES384",
+    "ES512",
+}
+_RATE_LIMIT_EXEMPT_PATHS = {
+    "/",
+    "/health",
+    "/health/live",
+    "/health/ready",
+    "/health/ready/services",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+}
+_RATE_LIMIT_EXEMPT_PREFIXES = (
+    "/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+)
 
-def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    client = getattr(request, "client", None)
-    host = getattr(client, "host", None) if client is not None else None
-    if forwarded and host:
-        return forwarded.split(",")[0].strip()
-    return host or "unknown"
+
+def _header(container: Any, name: str) -> str | None:
+    target = name.lower().encode("latin-1")
+    for key, value in container.get("headers", []):
+        raw_key = key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1")
+        if raw_key == target:
+            return value.decode("latin-1", "replace") if isinstance(value, bytes) else str(value)
+    return None
 
 
-def _decode_jwt(token: str, config: GatewayConfig) -> dict[str, Any] | None:
-    """Decode and validate a JWT access token using RS256 keys."""
-    try:
-        from jose import JWTError, jwt
-
-        verification_key = config.jwt_public_key or config.jwt_secret
-        payload = jwt.decode(
-            token,
-            verification_key,
-            algorithms=[config.jwt_algorithm],
+def _set_header(message: Message, name: str, value: str) -> None:
+    target = name.lower().encode("latin-1")
+    raw_value = value.encode("latin-1", "replace")
+    headers = [
+        (key, val)
+        for key, val in message.get("headers", [])
+        if not (
+            (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
+            == target
         )
-        return payload
-    except Exception:
+    ]
+    headers.append((target, raw_value))
+    message["headers"] = headers
+
+
+def _replace_request_header(scope: Scope, name: str, value: str | None) -> None:
+    target = name.lower().encode("latin-1")
+    headers = [
+        (key, val)
+        for key, val in scope.get("headers", [])
+        if not (
+            (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
+            == target
+        )
+    ]
+    if value is not None:
+        headers.append((target, value.encode("latin-1", "replace")))
+    scope["headers"] = headers
+
+
+def _state_value(scope: Scope, name: str, default: Any = None) -> Any:
+    state = scope.get("state")
+    if isinstance(state, dict):
+        return state.get(name, default)
+    return getattr(state, name, default)
+
+
+def _set_state(scope: Scope, name: str, value: Any) -> None:
+    state = scope.setdefault("state", {})
+    if isinstance(state, dict):
+        state[name] = value
+    else:
+        setattr(state, name, value)
+
+
+def _request_headers(scope: Scope) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key, value in scope.get("headers", []):
+        raw_key = key.decode("latin-1", "ignore") if isinstance(key, bytes) else str(key)
+        raw_value = value.decode("latin-1", "replace") if isinstance(value, bytes) else str(value)
+        result[raw_key.lower()] = raw_value
+    return result
+
+
+def _is_trusted_proxy(host: str | None, trusted_proxies: tuple[str, ...] | list[str]) -> bool:
+    if not host:
+        return False
+    try:
+        address = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return False
+    for proxy in trusted_proxies:
+        item = proxy.strip()
+        if not item:
+            continue
+        if item == "*":
+            return True
+        try:
+            if "/" in item:
+                if address in ipaddress.ip_network(item, strict=False):
+                    return True
+            elif address == ipaddress.ip_address(item.strip("[]")):
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def _forwarded_ip(value: str) -> str | None:
+    for item in value.split(","):
+        candidate = item.strip()
+        if candidate.startswith("["):
+            end = candidate.find("]")
+            if end != -1:
+                candidate = candidate[1:end]
+            else:
+                candidate = candidate.split(":", 1)[0]
+        else:
+            candidate = candidate.split(":", 1)[0]
+        try:
+            ipaddress.ip_address(candidate)
+        except ValueError:
+            continue
+        return candidate
+    return None
+
+
+def _client_ip(
+    scope: Scope,
+    trusted_proxies: tuple[str, ...] | list[str] | None = None,
+) -> str:
+    client = scope.get("client")
+    direct_host = str(client[0]) if client else None
+    proxies = tuple(trusted_proxies or ())
+    forwarded = _request_headers(scope).get("x-forwarded-for")
+    if forwarded and _is_trusted_proxy(direct_host, proxies):
+        client_ip = _forwarded_ip(forwarded)
+        if client_ip:
+            return client_ip
+    return direct_host or "unknown"
+
+
+def _normalise_path(path: str) -> str:
+    if not path.startswith("/"):
+        path = f"/{path}"
+    return path.rstrip("/") or "/"
+
+
+def _path_matches(path: str, prefix: str) -> bool:
+    normal_path = _normalise_path(path)
+    normal_prefix = _normalise_path(prefix)
+    if normal_prefix == "/":
+        return True
+    return normal_path == normal_prefix or normal_path.startswith(f"{normal_prefix}/")
+
+
+def _is_rate_limit_exempt(path: str, proxy_prefix: str) -> bool:
+    normal_path = _normalise_path(path)
+    if normal_path in _RATE_LIMIT_EXEMPT_PATHS:
+        return True
+    if any(_path_matches(normal_path, prefix) for prefix in _RATE_LIMIT_EXEMPT_PREFIXES):
+        return True
+    return any(
+        _path_matches(normal_path, f"{proxy_prefix}/health")
+        for _ in (0,)
+    )
+
+
+def _validated_user_id(value: Any) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return str(uuid.UUID(value.strip()))
+    except (AttributeError, ValueError, TypeError):
         return None
 
 
-class _RedisRateLimiter:
-    """Redis-backed rate limiter using sorted sets (mirrors backend impl)."""
+def _jwt_material(config: GatewayConfig) -> tuple[str, str | None]:
+    gateway_algorithm = os.environ.get("GATEWAY_JWT_ALGORITHM", "").strip().upper()
+    configured_algorithm = str(getattr(config, "jwt_algorithm", "") or "").strip().upper()
+    public_key = str(getattr(config, "jwt_public_key", "") or "").strip()
+    secret = str(getattr(config, "jwt_secret", "") or "").strip()
 
-    def __init__(self, redis_url: str) -> None:
-        self.redis_url = redis_url
-        self._client: Any = None
-        self._connected = False
+    if gateway_algorithm:
+        algorithm = gateway_algorithm
+    elif configured_algorithm == "RS256" and not public_key:
+        algorithm = os.environ.get("JWT_ALGORITHM", "").strip().upper() or os.environ.get("ALGORITHM", "").strip().upper() or configured_algorithm
+    else:
+        algorithm = configured_algorithm
 
-    async def _get_client(self) -> Any:
-        if self._client is None:
-            try:
-                self._client = aioredis.from_url(
-                    self.redis_url, socket_connect_timeout=5
-                )
-                await self._client.ping()
-                self._connected = True
-            except Exception as exc:
-                logger.warning("Gateway Redis rate limiter connection failed: %s", exc)
-                self._connected = False
-                self._client = None
-        return self._client
+    if algorithm in {"HS256", "HS384", "HS512"}:
+        key = secret or os.environ.get("GATEWAY_JWT_SECRET", "").strip() or os.environ.get("JWT_SECRET", "").strip()
+    elif algorithm in {"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}:
+        key = public_key or os.environ.get("GATEWAY_JWT_PUBLIC_KEY", "").strip() or os.environ.get("JWT_PUBLIC_KEY", "").strip()
+    else:
+        key = None
+    return algorithm or "RS256", key or None
 
-    async def is_allowed(
-        self, key: str, per_minute: int, per_hour: int
-    ) -> tuple[bool, dict]:
-        now = time.time()
-        client = await self._get_client()
-        if client is None:
-            return True, {"redis_available": False}
 
-        minute_key = f"gw_rate_limit:{key}:minute"
-        hour_key = f"gw_rate_limit:{key}:hour"
-        pipeline = client.pipeline()
-        minute_ts = int(now)
-        hour_ts = int(now / 3600)
+def _decode_jwt(token: str, config: GatewayConfig) -> dict[str, Any] | None:
+    algorithm, verification_key = _jwt_material(config)
+    if not verification_key or algorithm not in _ALLOWED_JWT_ALGORITHMS:
+        return None
+    try:
+        from jose import jwt
 
-        pipeline.zadd(minute_key, {str(minute_ts): minute_ts})
-        pipeline.zremrangebyscore(minute_key, 0, now - 60)
-        pipeline.zcard(minute_key)
+        payload = jwt.decode(
+            token,
+            verification_key,
+            algorithms=[algorithm],
+            options={"require": ["exp", "sub", "type", "user_id"]},
+        )
+    except Exception as exc:
+        logger.info("Gateway token validation failed: %s", type(exc).__name__)
+        return None
+    if not isinstance(payload, dict):
+        return None
+    subject = payload.get("sub")
+    user_id = _validated_user_id(payload.get("user_id"))
+    if payload.get("type") != "access" or not isinstance(subject, str) or not subject.strip() or user_id is None:
+        return None
+    result = dict(payload)
+    result["sub"] = subject.strip()
+    result["user_id"] = user_id
+    return result
 
-        pipeline.zadd(hour_key, {str(hour_ts): hour_ts})
-        pipeline.zremrangebyscore(hour_key, 0, now - 3600)
-        pipeline.zcard(hour_key)
 
+def _unauthorized(detail: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        headers={"WWW-Authenticate": "Bearer"},
+        content={"status": "error", "error_code": "UNAUTHORIZED", "message": detail},
+    )
+
+
+def _auth_unavailable() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "error",
+            "error_code": "GATEWAY_AUTH_UNAVAILABLE",
+            "message": "Gateway JWT verification is not configured",
+        },
+    )
+
+
+def _too_many_requests(detail: str, retry_after: int = 60) -> JSONResponse:
+    response = JSONResponse(
+        status_code=429,
+        content={"status": "error", "error_code": "RATE_LIMITED", "message": detail},
+    )
+    response.headers["Retry-After"] = str(max(1, int(retry_after)))
+    return response
+
+
+def _register_shutdown(app: ASGIApp, callback: Callable[[], Any]) -> None:
+    register = getattr(app, "add_event_handler", None)
+    if callable(register):
         try:
-            results = await pipeline.execute()
-        except Exception as exc:
-            logger.warning("Gateway Redis rate limiter operation failed: %s", exc)
-            self._client = None
-            self._connected = False
-            return True, {"redis_available": False}
+            register("shutdown", callback)
+        except (TypeError, ValueError):
+            pass
 
-        minute_count = results[2]
-        hour_count = results[5]
-        minute_allowed = minute_count < per_minute
-        hour_allowed = hour_count < per_hour
 
-        if minute_allowed:
-            await client.expire(minute_key, 120)
-        if hour_allowed:
-            await client.expire(hour_key, 7200)
-
-        return minute_allowed and hour_allowed, {
-            "redis_available": True,
-            "minute_count": minute_count,
-            "hour_count": hour_count,
-            "minute_limit": per_minute,
-            "hour_limit": per_hour,
-        }
+class GatewayRateLimitMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        enabled: bool = True,
+        config: GatewayConfig | None = None,
+        limiter: Any | None = None,
+        fallback_limiter: Any | None = None,
+    ) -> None:
+        self.app = app
+        self.config = config or get_gateway_config()
+        self.enabled = enabled and bool(self.config.rate_limit_enabled)
+        self.per_minute = max(1, int(self.config.rate_limit_requests_per_minute))
+        self.per_hour = max(1, int(self.config.rate_limit_requests_per_hour))
+        self.trusted_proxies = tuple(getattr(self.config, "trusted_proxies", ()))
+        self._limiter = limiter or RedisRateLimiter(redis_url=self.config.redis_url)
+        self._fallback_limiter = fallback_limiter or InMemoryRateLimiter()
+        _register_shutdown(app, self.close)
 
     async def close(self) -> None:
-        if self._client is not None:
-            await self._client.aclose()
-            self._client = None
-            self._connected = False
+        close_method = getattr(self._limiter, "close", None)
+        if callable(close_method):
+            result = close_method()
+            if result is not None:
+                await result
 
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-class GatewayRateLimitMiddleware(BaseHTTPMiddleware):
-    """Distributed rate limiting at the gateway edge using Redis."""
+        path = str(scope.get("path", ""))
+        if not self.enabled or scope.get("method") == "OPTIONS" or _is_rate_limit_exempt(path, self.config.proxy_prefix):
+            await self.app(scope, receive, send)
+            return
 
-    def __init__(self, app, *, enabled: bool = True) -> None:
-        super().__init__(app)
-        self.enabled = enabled
-        self.config = get_gateway_config()
-        self.per_minute = self.config.rate_limit_requests_per_minute
-        self.per_hour = self.config.rate_limit_requests_per_hour
-        self._limiter = _RedisRateLimiter(self.config.redis_url)
-        self._windows: dict[str, deque[float]] = {}
-        self._last_activity: dict[str, float] = {}
-        self._eviction_interval = 3600
-        self._lock = __import__("threading").Lock()
-
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
-            return await call_next(request)
-        if request.method == "OPTIONS":
-            return await call_next(request)
-
-        key = _client_ip(request)
+        client_ip = _client_ip(scope, self.trusted_proxies)
+        key = hashlib.sha256(f"gateway:{client_ip}".encode("utf-8")).hexdigest()
         allowed, info = await self._limiter.is_allowed(key, self.per_minute, self.per_hour)
+        info = dict(info or {})
 
         if not info.get("redis_available", False):
-            if self._fallback_rate_limit(key, time.monotonic()):
-                return self._too_many_requests("Rate limit exceeded (fallback)")
+            fallback_allowed, fallback_info = await self._fallback_limiter.is_allowed(
+                key, self.per_minute, self.per_hour
+            )
+            info.update(fallback_info or {})
+            info["redis_available"] = False
+            if not fallback_allowed:
+                retry_after = max(1, int(info.get("retry_after", 60)))
+                response = _too_many_requests("Rate limit exceeded (fallback)", retry_after)
+                self._add_headers(response.headers, info)
+                response.headers["X-RateLimit-Source"] = "fallback"
+                await response(scope, receive, send)
+                return
 
         if not allowed:
-            response = self._too_many_requests(
-                "Hourly rate limit exceeded"
-                if info.get("hour_count", 0) >= self.per_hour
-                else "Rate limit exceeded"
+            hourly = int(info.get("hour_count", 0)) >= self.per_hour
+            retry_after = max(1, int(info.get("hour_reset", 3600 if hourly else 60)))
+            response = _too_many_requests(
+                "Hourly rate limit exceeded" if hourly else "Rate limit exceeded",
+                retry_after,
             )
-            response.headers["Retry-After"] = (
-                str(3600) if info.get("hour_count", 0) >= self.per_hour else str(60)
-            )
-            return response
+            self._add_headers(response.headers, info)
+            response.headers["X-RateLimit-Source"] = "redis" if info.get("redis_available") else "fallback"
+            await response(scope, receive, send)
+            return
 
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit-Minute"] = str(self.per_minute)
-        response.headers["X-RateLimit-Limit-Hour"] = str(self.per_hour)
-        response.headers["X-RateLimit-Remaining-Minute"] = str(
-            max(0, self.per_minute - info.get("minute_count", 0))
-        )
-        response.headers["X-RateLimit-Remaining-Hour"] = str(
-            max(0, self.per_hour - info.get("hour_count", 0))
-        )
-        return response
+        async def send_with_rate_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                self._add_headers(message, info)
+                _set_header(message, "X-RateLimit-Source", "redis" if info.get("redis_available") else "fallback")
+            await send(message)
 
-    def _fallback_rate_limit(self, key: str, now: float) -> bool:
-        with self._lock:
-            self._last_activity[key] = now
-            if len(self._windows) > 1000:
-                cutoff = now - self._eviction_interval
-                for k in [k for k, t in self._last_activity.items() if t < cutoff]:
-                    self._windows.pop(k, None)
-                    self._last_activity.pop(k, None)
-            window = self._windows.setdefault(key, deque())
-            cutoff = now - 3600
-            while window and window[0] < cutoff:
-                window.popleft()
-            if len(window) >= self.per_hour:
-                return True
-            minute_cutoff = now - 60
-            while window and window[0] < minute_cutoff:
-                window.popleft()
-            if len(window) >= self.per_minute:
-                return True
-            window.append(now)
-            return False
+        await self.app(scope, receive, send_with_rate_headers)
 
-    @staticmethod
-    def _too_many_requests(detail: str) -> Response:
-        return JSONResponse(
-            status_code=429,
-            content={"status": "error", "error_code": "RATE_LIMITED", "message": detail},
-        )
+    def _add_headers(self, container: Any, info: dict[str, Any]) -> None:
+        minute_count = max(0, int(info.get("minute_count", 0)))
+        hour_count = max(0, int(info.get("hour_count", 0)))
+        _set_header(container, "X-RateLimit-Limit-Minute", str(self.per_minute))
+        _set_header(container, "X-RateLimit-Limit-Hour", str(self.per_hour))
+        _set_header(container, "X-RateLimit-Remaining-Minute", str(max(0, self.per_minute - minute_count)))
+        _set_header(container, "X-RateLimit-Remaining-Hour", str(max(0, self.per_hour - hour_count)))
+        minute_reset = max(1, int(info.get("minute_reset", 60 - (int(time.time()) % 60))))
+        hour_reset = max(1, int(info.get("hour_reset", 3600 - (int(time.time()) % 3600))))
+        _set_header(container, "X-RateLimit-Reset-Minute", str(minute_reset))
+        _set_header(container, "X-RateLimit-Reset-Hour", str(hour_reset))
 
 
-class GatewayAuthMiddleware(BaseHTTPMiddleware):
-    """Centralised JWT (RS256) authentication at the gateway edge."""
-
-    def __init__(self, app, *, enabled: bool = True) -> None:
-        super().__init__(app)
-        self.enabled = enabled
-        self.config = get_gateway_config()
+class GatewayAuthMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        enabled: bool = True,
+        config: GatewayConfig | None = None,
+    ) -> None:
+        self.app = app
+        self.config = config or get_gateway_config()
+        self.enabled = enabled and bool(self.config.auth_enabled)
         self.api_prefix = self.config.api_prefix
         self.public_paths = set(self.config.is_public_path)
-        self.public_prefixes = list(self.config.is_public_prefix)
+        self.public_prefixes = tuple(self.config.is_public_prefix)
+        self.algorithm, self.verification_key = _jwt_material(self.config)
 
     def _is_public(self, path: str) -> bool:
-        if path in self.public_paths:
+        normal_path = _normalise_path(path)
+        if normal_path in {_normalise_path(item) for item in self.public_paths}:
             return True
-        for prefix in self.public_prefixes:
-            if path.startswith(prefix):
-                return True
-        return False
+        return any(_path_matches(normal_path, prefix) for prefix in self.public_prefixes)
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
-            self._try_attach_user(request)
-            return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        if request.method == "OPTIONS":
-            return await call_next(request)
+        path = str(scope.get("path", ""))
+        headers = _request_headers(scope)
+        _replace_request_header(scope, "x-user-id", None)
+        _replace_request_header(scope, "x-username", None)
 
-        path = request.url.path
-        if not path.startswith(self.api_prefix) or self._is_public(path):
-            return await call_next(request)
-
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.lower().startswith("bearer "):
-            return self._unauthorized("Authorization header missing or malformed")
-
-        token = auth_header.split(" ", 1)[1].strip()
-        payload = _decode_jwt(token, self.config)
         if (
-            payload is None
-            or payload.get("type") != "access"
-            or payload.get("sub") is None
+            not self.enabled
+            or scope.get("method") == "OPTIONS"
+            or not _path_matches(path, self.api_prefix)
+            or self._is_public(path)
         ):
-            return self._unauthorized("Invalid or expired token")
+            if not self.enabled:
+                self._attach_user(scope, headers)
+            await self.app(scope, receive, send)
+            return
 
-        request.state.user_id = payload.get("user_id")
-        request.state.username = payload.get("sub")
-        request.state.jwt_payload = payload
-        return await call_next(request)
+        if not self.verification_key or self.algorithm not in _ALLOWED_JWT_ALGORITHMS:
+            await _auth_unavailable()(scope, receive, send)
+            return
 
-    def _try_attach_user(self, request: Request) -> None:
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.lower().startswith("bearer "):
-            token = auth_header.split(" ", 1)[1].strip()
-            payload = _decode_jwt(token, self.config)
-            if payload and payload.get("type") == "access":
-                request.state.user_id = payload.get("user_id")
-                request.state.username = payload.get("sub")
-                request.state.jwt_payload = payload
+        authorization = headers.get("authorization", "")
+        scheme, separator, token = authorization.partition(" ")
+        if not separator or scheme.lower() != "bearer" or not token.strip() or any(ch.isspace() for ch in token):
+            await _unauthorized("Authorization header missing or malformed")(scope, receive, send)
+            return
 
-    @staticmethod
-    def _unauthorized(detail: str) -> JSONResponse:
-        return JSONResponse(
-            status_code=401,
-            headers={"WWW-Authenticate": "Bearer"},
-            content={"status": "error", "error_code": "UNAUTHORIZED", "message": detail},
-        )
+        payload = _decode_jwt(token.strip(), self.config)
+        if payload is None:
+            await _unauthorized("Invalid or expired token")(scope, receive, send)
+            return
+
+        user_id = str(payload["user_id"])
+        username = str(payload["sub"])
+        _set_state(scope, "user_id", user_id)
+        _set_state(scope, "username", username)
+        _set_state(scope, "jwt_payload", payload)
+        _replace_request_header(scope, "x-user-id", user_id)
+        await self.app(scope, receive, send)
+
+    def _attach_user(self, scope: Scope, headers: dict[str, str]) -> None:
+        authorization = headers.get("authorization", "")
+        scheme, separator, token = authorization.partition(" ")
+        if not separator or scheme.lower() != "bearer" or not token.strip():
+            return
+        payload = _decode_jwt(token.strip(), self.config)
+        if payload is None:
+            return
+        user_id = str(payload["user_id"])
+        username = str(payload["sub"])
+        _set_state(scope, "user_id", user_id)
+        _set_state(scope, "username", username)
+        _set_state(scope, "jwt_payload", payload)
+        _replace_request_header(scope, "x-user-id", user_id)
 
 
-class GatewayLoggingMiddleware(BaseHTTPMiddleware):
-    """Structured JSON request/response logging with correlation ID propagation."""
-
-    def __init__(self, app, *, enabled: bool = True) -> None:
-        super().__init__(app)
+class GatewayLoggingMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        enabled: bool = True,
+        config: GatewayConfig | None = None,
+    ) -> None:
+        self.app = app
+        self.config = config or get_gateway_config()
         self.enabled = enabled
-        self.config = get_gateway_config()
+        self.trusted_proxies = tuple(getattr(self.config, "trusted_proxies", ()))
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
-            return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not self.enabled:
+            await self.app(scope, receive, send)
+            return
 
         start_time = time.monotonic()
-        correlation_id = getattr(request.state, "correlation_id", None) or uuid.uuid4().hex
-        request.state.correlation_id = correlation_id
+        headers = _request_headers(scope)
+        incoming = headers.get("x-correlation-id")
+        correlation_id = incoming if incoming and _CORRELATION_ID_RE.fullmatch(incoming) else uuid.uuid4().hex
+        _set_state(scope, "correlation_id", correlation_id)
+        path = str(scope.get("path", ""))
+        client_ip = _client_ip(scope, self.trusted_proxies)
+        user_agent = headers.get("user-agent", "")[:500]
+        status_code: int | None = None
 
         self._log(
             "request",
-            {
-                "method": request.method,
-                "path": request.url.path,
-                "correlation_id": correlation_id,
-                "client_ip": _client_ip(request),
-                "user_agent": request.headers.get("user-agent", ""),
-            },
+            method=str(scope.get("method", "")),
+            path=path,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
         )
 
+        async def send_with_logging(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = int(message.get("status", 0))
+                _set_header(message, "X-Correlation-ID", correlation_id)
+                _set_header(message, "X-Process-Time", f"{time.monotonic() - start_time:.3f}")
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_with_logging)
         except Exception as exc:
-            duration = time.monotonic() - start_time
             self._log(
                 "request_error",
-                {
-                    "method": request.method,
-                    "path": request.url.path,
-                    "correlation_id": correlation_id,
-                    "duration_s": round(duration, 4),
-                    "error": str(exc),
-                },
+                method=str(scope.get("method", "")),
+                path=path,
+                correlation_id=correlation_id,
+                duration_ms=round((time.monotonic() - start_time) * 1000, 3),
+                error_type=type(exc).__name__,
                 level="error",
             )
             raise
 
-        duration = time.monotonic() - start_time
-        response.headers["X-Correlation-ID"] = correlation_id
-        response.headers["X-Process-Time"] = f"{duration:.3f}"
-
         self._log(
             "response",
-            {
-                "method": request.method,
-                "path": request.url.path,
-                "correlation_id": correlation_id,
-                "status_code": response.status_code,
-                "duration_s": round(duration, 4),
-            },
+            method=str(scope.get("method", "")),
+            path=path,
+            status_code=status_code or 0,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            duration_ms=round((time.monotonic() - start_time) * 1000, 3),
         )
-        return response
 
-    def _log(self, event: str, payload: dict, level: str = "info") -> None:
+    def _log(self, event: str, level: str = "info", **values: Any) -> None:
+        record = {"event": event, **values}
         if self.config.log_json:
-            record = {"event": event, **payload}
-            getattr(logger, level)(json.dumps(record, default=str))
+            getattr(logger, level)(json.dumps(record, ensure_ascii=False, default=str))
         else:
             getattr(logger, level)(
-                "%s: %s [correlation_id=%s] %s",
-                event.upper(),
-                payload.get("method"),
-                payload.get("correlation_id"),
-                payload.get("path"),
+                "%s method=%s path=%s status=%s correlation_id=%s duration_ms=%s",
+                event,
+                record.get("method", ""),
+                record.get("path", ""),
+                record.get("status_code", "-"),
+                record.get("correlation_id", "-"),
+                record.get("duration_ms", "-"),
             )
 
 
-class GatewaySecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Injects OWASP-recommended security headers on every gateway response."""
+class GatewaySecurityHeadersMiddleware:
+    def __init__(self, app: ASGIApp, *, config: GatewayConfig | None = None) -> None:
+        self.app = app
+        self.config = config or get_gateway_config()
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        response: Response = await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains; preload"
-        )
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.bedaanwaves.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "img-src 'self' data: https:; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self' https://api.bedaanwaves.com wss://api.bedaanwaves.com; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
-        )
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = (
-            "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-        )
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["X-Gateway"] = "bedaanwaves-gateway"
+        async def send_with_security_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                self._apply(scope, message)
+            await send(message)
 
-        if request.url.path.startswith("/api/"):
-            response.headers["Cache-Control"] = (
-                "no-store, no-cache, must-revalidate, proxy-revalidate"
+        await self.app(scope, receive, send_with_security_headers)
+
+    def _apply(self, scope: Scope, message: Message) -> None:
+        content_type = (_header(message, "content-type") or "").lower()
+        path = str(scope.get("path", ""))
+        enable_https = bool(getattr(self.config, "enable_https", False)) or os.environ.get("GATEWAY_ENABLE_HTTPS", "false").lower() in {"1", "true", "yes", "on"}
+        if enable_https or scope.get("scheme") == "https":
+            _set_header(
+                message,
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains; preload",
             )
-            response.headers["Pragma"] = "no-cache"
-            response.headers["Expires"] = "0"
+
+        if content_type.startswith("text/html"):
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self' data: https:; "
+                "connect-src 'self' ws: wss: "
+                "http://localhost:3000 http://localhost:3005 "
+                "http://127.0.0.1:3000 http://127.0.0.1:3005 "
+                "ws://localhost:3000 ws://localhost:3005 "
+                "ws://127.0.0.1:3000 ws://127.0.0.1:3005; "
+                "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+            )
+        else:
+            csp = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+        _set_header(message, "Content-Security-Policy", csp)
+        _set_header(message, "X-Frame-Options", "DENY")
+        _set_header(message, "X-Content-Type-Options", "nosniff")
+        _set_header(message, "Referrer-Policy", "strict-origin-when-cross-origin")
+        _set_header(
+            message,
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+        )
+        _set_header(message, "Cross-Origin-Resource-Policy", "same-origin")
+        _set_header(message, "X-Gateway", "bedaanwaves-gateway")
+
+        proxy_prefix = _normalise_path(self.config.proxy_prefix)
+        if _path_matches(path, proxy_prefix) or path.startswith("/api/"):
+            _set_header(message, "Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+            _set_header(message, "Pragma", "no-cache")
+            _set_header(message, "Expires", "0")
 
         for header_name in ("Server", "X-Powered-By"):
-            try:
-                del response.headers[header_name]
-            except KeyError:
-                pass
-
-        return response
+            target = header_name.lower().encode("latin-1")
+            message["headers"] = [
+                (key, value)
+                for key, value in message.get("headers", [])
+                if not (
+                    (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
+                    == target
+                )
+            ]

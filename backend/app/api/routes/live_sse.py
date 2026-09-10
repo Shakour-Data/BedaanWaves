@@ -8,7 +8,10 @@ Provides 5 server-sent event streaming endpoints:
     GET /api/v1/live-sse/scores/stream?scope=NASDAQ
     GET /api/v1/live-sse/news/stream
 
-Authentication requires the `Authorization: Bearer <token>` header.
+Authentication requires the `Authorization: Bearer <token>` header or a
+`?token=<token>` query parameter (the latter is needed for browser SSE clients
+which cannot set custom headers). Token fragments are scrubbed from all log
+output.
 
 SSE response headers disable all intermediate buffering so that pings and
 events arrive at the client with minimal added latency. Provider errors
@@ -76,11 +79,19 @@ def _safe_log(level: int, fmt: str, *args: object) -> None:
 
 
 def _extract_token(request: Request) -> str | None:
-    """Extract token from Authorization header only."""
+    """Extract token from Authorization header or ?token= query parameter.
+
+    The Authorization header is preferred. The query parameter is a fallback
+    for SSE clients (EventSource) which cannot send custom headers.
+    """
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         return auth_header.split(" ", 1)[1].strip()
-    return None
+
+    token = request.query_params.get("token")
+    if token:
+        token = token.strip()
+    return token
 
 
 def _authenticate(request: Request) -> dict[str, object]:

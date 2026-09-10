@@ -1,282 +1,573 @@
-"""Global API Middleware
-
-Provides FastAPI/Starlette middlewares for the BedaanWaves backend:
-- CorrelationIdMiddleware: attaches/propagates X-Correlation-ID
-- AuthGuardMiddleware: enforces Bearer token on protected paths
-- RateLimitMiddleware: Redis-backed rate limiting with in-memory fallback
-- RequestLoggingMiddleware: logs requests/responses with timing
-- SecurityHeadersMiddleware: adds OWASP security headers
-"""
-
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 import logging
-import threading
+import re
 import time
 import uuid
 from collections import deque
+from typing import Any, Callable
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.core.config import get_settings
-from app.infrastructure.utils.redis_rate_limiter import RedisRateLimiter
+from app.core.config import Settings, get_settings
+from app.infrastructure.utils.redis_rate_limiter import InMemoryRateLimiter, RedisRateLimiter
 from app.services.user.auth_service import decode_token
 
-settings = get_settings()
+logger = logging.getLogger(__name__)
 
 __all__ = [
-    "CorrelationIdMiddleware",
     "AuthGuardMiddleware",
+    "CorrelationIdMiddleware",
     "RateLimitMiddleware",
     "RequestLoggingMiddleware",
     "SecurityHeadersMiddleware",
     "_client_ip",
 ]
 
+_CORRELATION_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+_RATE_LIMIT_EXEMPT_PATHS = {
+    "/",
+    "/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+    "/api/v1/health",
+    "/api/v1/docs",
+    "/api/v1/redoc",
+    "/api/v1/openapi.json",
+}
+_RATE_LIMIT_EXEMPT_PREFIXES = (
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+    "/api/v1/health",
+    "/api/v1/docs",
+    "/api/v1/redoc",
+    "/api/v1/openapi.json",
+)
 
-def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    client = getattr(request, "client", None)
-    client_host = getattr(client, "host", None) if client is not None else None
-    if forwarded and client_host and client_host in settings.TRUSTED_PROXIES:
-        return forwarded.split(",")[0].strip()
-    return client_host or "unknown"
+
+def _header(container: Any, name: str) -> str | None:
+    target = name.lower().encode("latin-1")
+    for key, value in container.get("headers", []):
+        raw_key = key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1")
+        if raw_key == target:
+            return value.decode("latin-1", "replace") if isinstance(value, bytes) else str(value)
+    return None
 
 
-class CorrelationIdMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        correlation_id = request.headers.get("x-correlation-id") or uuid.uuid4().hex
-        request.state.correlation_id = correlation_id
-        response = await call_next(request)
-        response.headers["X-Correlation-ID"] = correlation_id
-        return response
+def _set_header(message: Message, name: str, value: str) -> None:
+    target = name.lower().encode("latin-1")
+    raw_value = value.encode("latin-1", "replace")
+    headers = [
+        (key, val)
+        for key, val in message.get("headers", [])
+        if not (
+            (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
+            == target
+        )
+    ]
+    headers.append((target, raw_value))
+    message["headers"] = headers
 
 
-class AuthGuardMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, enabled: bool = True) -> None:
-        super().__init__(app)
+def _replace_request_header(scope: Scope, name: str, value: str | None) -> None:
+    target = name.lower().encode("latin-1")
+    headers = [
+        (key, val)
+        for key, val in scope.get("headers", [])
+        if not (
+            (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
+            == target
+        )
+    ]
+    if value is not None:
+        headers.append((target, value.encode("latin-1", "replace")))
+    scope["headers"] = headers
+
+
+def _state_value(scope: Scope, name: str, default: Any = None) -> Any:
+    state = scope.get("state")
+    if isinstance(state, dict):
+        return state.get(name, default)
+    return getattr(state, name, default)
+
+
+def _set_state(scope: Scope, name: str, value: Any) -> None:
+    state = scope.setdefault("state", {})
+    if isinstance(state, dict):
+        state[name] = value
+    else:
+        setattr(state, name, value)
+
+
+def _request_headers(scope: Scope) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key, value in scope.get("headers", []):
+        raw_key = key.decode("latin-1", "ignore") if isinstance(key, bytes) else str(key)
+        raw_value = value.decode("latin-1", "replace") if isinstance(value, bytes) else str(value)
+        result[raw_key.lower()] = raw_value
+    return result
+
+
+def _is_trusted_proxy(host: str | None, trusted_proxies: tuple[str, ...] | list[str]) -> bool:
+    if not host:
+        return False
+    try:
+        address = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return False
+    for proxy in trusted_proxies:
+        item = proxy.strip()
+        if not item:
+            continue
+        if item == "*":
+            return True
+        try:
+            if "/" in item:
+                if address in ipaddress.ip_network(item, strict=False):
+                    return True
+            elif address == ipaddress.ip_address(item.strip("[]")):
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def _forwarded_ip(value: str) -> str | None:
+    for item in value.split(","):
+        candidate = item.strip().strip("[]").split(":", 1)[0]
+        try:
+            ipaddress.ip_address(candidate)
+        except ValueError:
+            continue
+        return candidate
+    return None
+
+
+def _client_ip(
+    scope: Scope,
+    trusted_proxies: tuple[str, ...] | list[str] | None = None,
+) -> str:
+    client = scope.get("client")
+    direct_host = str(client[0]) if client else None
+    proxies = tuple(trusted_proxies or ())
+    forwarded = _request_headers(scope).get("x-forwarded-for")
+    if forwarded and _is_trusted_proxy(direct_host, proxies):
+        client_ip = _forwarded_ip(forwarded)
+        if client_ip:
+            return client_ip
+    return direct_host or "unknown"
+
+
+def _normalise_path(path: str) -> str:
+    if not path.startswith("/"):
+        path = f"/{path}"
+    return path.rstrip("/") or "/"
+
+
+def _path_matches(path: str, prefix: str) -> bool:
+    normal_path = _normalise_path(path)
+    normal_prefix = _normalise_path(prefix)
+    if normal_prefix == "/":
+        return True
+    return normal_path == normal_prefix or normal_path.startswith(f"{normal_prefix}/")
+
+
+def _is_rate_limit_exempt(path: str) -> bool:
+    normal_path = _normalise_path(path)
+    if normal_path in _RATE_LIMIT_EXEMPT_PATHS:
+        return True
+    return any(_path_matches(normal_path, prefix) for prefix in _RATE_LIMIT_EXEMPT_PREFIXES)
+
+
+def _validated_user_id(value: Any) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return str(uuid.UUID(value.strip()))
+    except (AttributeError, ValueError, TypeError):
+        return None
+
+
+def _validated_access_payload(token: str, decoder: Callable[[str], Any]) -> dict[str, Any] | None:
+    try:
+        payload = decoder(token)
+    except Exception as exc:
+        logger.info("Token validation failed: %s", type(exc).__name__)
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("type") != "access":
+        return None
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.strip():
+        return None
+    user_id = _validated_user_id(payload.get("user_id"))
+    if user_id is None:
+        return None
+    result = dict(payload)
+    result["sub"] = subject.strip()
+    result["user_id"] = user_id
+    return result
+
+
+def _unauthorized(detail: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        headers={"WWW-Authenticate": "Bearer"},
+        content={"status": "error", "error_code": "UNAUTHORIZED", "message": detail},
+    )
+
+
+def _too_many_requests(detail: str, retry_after: int = 60) -> JSONResponse:
+    response = JSONResponse(
+        status_code=429,
+        content={"status": "error", "error_code": "RATE_LIMITED", "message": detail},
+    )
+    response.headers["Retry-After"] = str(max(1, int(retry_after)))
+    return response
+
+
+def _register_shutdown(app: ASGIApp, callback: Callable[[], Any]) -> None:
+    register = getattr(app, "add_event_handler", None)
+    if callable(register):
+        try:
+            register("shutdown", callback)
+        except (TypeError, ValueError):
+            pass
+
+
+class CorrelationIdMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        incoming = _request_headers(scope).get("x-correlation-id")
+        correlation_id = incoming if incoming and _CORRELATION_ID_RE.fullmatch(incoming) else uuid.uuid4().hex
+        _set_state(scope, "correlation_id", correlation_id)
+
+        async def send_with_correlation(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                _set_header(message, "X-Correlation-ID", correlation_id)
+            await send(message)
+
+        await self.app(scope, receive, send_with_correlation)
+
+
+class AuthGuardMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        enabled: bool = True,
+        settings: Settings | None = None,
+        token_decoder: Callable[[str], Any] | None = None,
+    ) -> None:
+        self.app = app
         self.enabled = enabled
-        self.api_prefix = settings.API_V1_STR
-        self.public_paths = set(settings.AUTH_PUBLIC_PATHS)
-        self.public_prefixes = list(settings.AUTH_PUBLIC_PREFIXES)
+        self.settings = settings or get_settings()
+        self.api_prefix = self.settings.API_V1_STR
+        self.public_paths = set(self.settings.AUTH_PUBLIC_PATHS)
+        self.public_prefixes = tuple(self.settings.AUTH_PUBLIC_PREFIXES)
+        self.trusted_proxies = tuple(self.settings.TRUSTED_PROXIES)
+        self._token_decoder = token_decoder or decode_token
 
     def _is_public(self, path: str) -> bool:
-        if path in self.public_paths:
+        normal_path = _normalise_path(path)
+        if normal_path in {_normalise_path(item) for item in self.public_paths}:
             return True
-        for prefix in self.public_prefixes:
-            if path.startswith(prefix):
-                return True
-        return False
+        return any(_path_matches(normal_path, prefix) for prefix in self.public_prefixes)
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
-            self._try_attach_user(request)
-            return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        if request.method == "OPTIONS":
-            return await call_next(request)
+        path = str(scope.get("path", ""))
+        headers = _request_headers(scope)
+        if (
+            not self.enabled
+            or scope.get("method") == "OPTIONS"
+            or not _path_matches(path, self.api_prefix)
+            or self._is_public(path)
+        ):
+            if not self.enabled:
+                _replace_request_header(scope, "x-user-id", None)
+                _replace_request_header(scope, "x-username", None)
+            await self.app(scope, receive, send)
+            return
 
-        path = request.url.path
-        if not path.startswith(self.api_prefix) or self._is_public(path):
-            return await call_next(request)
+        authorization = headers.get("authorization", "")
+        scheme, separator, token = authorization.partition(" ")
+        if not separator or scheme.lower() != "bearer" or not token.strip() or any(ch.isspace() for ch in token):
+            await _unauthorized("Authorization header missing or malformed")(scope, receive, send)
+            return
 
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.lower().startswith("bearer "):
-            return self._unauthorized("Authorization header missing or malformed")
+        payload = _validated_access_payload(token.strip(), self._token_decoder)
+        if payload is None:
+            await _unauthorized("Invalid or expired token")(scope, receive, send)
+            return
 
-        token = auth_header.split(" ", 1)[1].strip()
-        payload = decode_token(token)
-        if payload is None or payload.get("type") != "access" or payload.get("sub") is None:
-            return self._unauthorized("Invalid or expired token")
-
-        request.state.user_id = payload.get("user_id")
-        request.state.username = payload.get("sub")
-        return await call_next(request)
-
-    def _try_attach_user(self, request: Request) -> None:
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.lower().startswith("bearer "):
-            token = auth_header.split(" ", 1)[1].strip()
-            payload = decode_token(token)
-            if payload and payload.get("type") == "access":
-                request.state.user_id = payload.get("user_id")
-                request.state.username = payload.get("sub")
-
-    @staticmethod
-    def _unauthorized(detail: str) -> JSONResponse:
-        return JSONResponse(
-            status_code=401,
-            headers={"WWW-Authenticate": "Bearer"},
-            content={"status": "error", "error_code": "UNAUTHORIZED", "message": detail},
-        )
+        user_id = str(payload["user_id"])
+        username = str(payload["sub"])
+        _set_state(scope, "user_id", user_id)
+        _set_state(scope, "username", username)
+        _set_state(scope, "jwt_payload", payload)
+        _replace_request_header(scope, "x-user-id", user_id)
+        await self.app(scope, receive, send)
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, enabled: bool = True) -> None:
-        super().__init__(app)
-        self.enabled = enabled
-        self.per_minute = settings.RATE_LIMIT_REQUESTS_PER_MINUTE
-        self.per_hour = settings.RATE_LIMIT_REQUESTS_PER_HOUR
-        self._redis_limiter = RedisRateLimiter(redis_url=settings.REDIS_URL)
-        self._windows: dict[str, deque[float]] = {}
-        self._last_activity: dict[str, float] = {}
-        self._eviction_interval = 3600
-        self._lock = threading.Lock()
+class RateLimitMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        enabled: bool = True,
+        settings: Settings | None = None,
+        limiter: Any | None = None,
+        fallback_limiter: Any | None = None,
+    ) -> None:
+        self.app = app
+        self.settings = settings or get_settings()
+        self.enabled = enabled and bool(self.settings.RATE_LIMIT_ENABLED)
+        self.per_minute = max(1, int(self.settings.RATE_LIMIT_REQUESTS_PER_MINUTE))
+        self.per_hour = max(1, int(self.settings.RATE_LIMIT_REQUESTS_PER_HOUR))
+        self.trusted_proxies = tuple(self.settings.TRUSTED_PROXIES)
+        self._limiter = limiter or RedisRateLimiter(redis_url=self.settings.REDIS_URL)
+        self._fallback_limiter = fallback_limiter or InMemoryRateLimiter()
+        _register_shutdown(app, self.close)
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
-            return await call_next(request)
+    async def close(self) -> None:
+        close_method = getattr(self._limiter, "close", None)
+        if callable(close_method):
+            result = close_method()
+            if result is not None:
+                await result
 
-        if request.method == "OPTIONS":
-            return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        key = _client_ip(request)
-        now = time.monotonic()
+        path = str(scope.get("path", ""))
+        if not self.enabled or scope.get("method") == "OPTIONS" or _is_rate_limit_exempt(path):
+            await self.app(scope, receive, send)
+            return
 
-        allowed, info = await self._redis_limiter.is_allowed(
-            key, self.per_minute, self.per_hour
-        )
+        client_ip = _client_ip(scope, self.trusted_proxies)
+        key = hashlib.sha256(f"api:{client_ip}".encode("utf-8")).hexdigest()
+        allowed, info = await self._limiter.is_allowed(key, self.per_minute, self.per_hour)
+        info = dict(info or {})
 
         if not info.get("redis_available", False):
-            fallback_blocked = self._fallback_rate_limit(key, now)
-            if fallback_blocked:
-                return self._too_many_requests("Rate limit exceeded (fallback)")
+            fallback_allowed, fallback_info = await self._fallback_limiter.is_allowed(
+                key, self.per_minute, self.per_hour
+            )
+            info.update(fallback_info or {})
+            info["redis_available"] = False
+            if not fallback_allowed:
+                retry_after = max(1, int(info.get("retry_after", 60)))
+                response = _too_many_requests("Rate limit exceeded (fallback)", retry_after)
+                self._add_headers(response.headers, info)
+                response.headers["X-RateLimit-Source"] = "fallback"
+                await response(scope, receive, send)
+                return
 
         if not allowed:
-            response = self._too_many_requests(
-                "Hourly rate limit exceeded"
-                if info.get("hour_count", 0) >= self.per_hour
-                else "Rate limit exceeded"
+            hourly = int(info.get("hour_count", 0)) >= self.per_hour
+            retry_after = max(1, int(info.get("hour_reset", 3600 if hourly else 60)))
+            response = _too_many_requests(
+                "Hourly rate limit exceeded" if hourly else "Rate limit exceeded",
+                retry_after,
             )
-            response.headers["Retry-After"] = (
-                str(3600) if info.get("hour_count", 0) >= self.per_hour else str(60)
-            )
-            return response
+            self._add_headers(response.headers, info)
+            response.headers["X-RateLimit-Source"] = "redis" if info.get("redis_available") else "fallback"
+            await response(scope, receive, send)
+            return
 
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit-Minute"] = str(self.per_minute)
-        response.headers["X-RateLimit-Limit-Hour"] = str(self.per_hour)
-        remaining_minute = max(0, self.per_minute - info.get("minute_count", 0))
-        remaining_hour = max(0, self.per_hour - info.get("hour_count", 0))
-        response.headers["X-RateLimit-Remaining-Minute"] = str(remaining_minute)
-        response.headers["X-RateLimit-Remaining-Hour"] = str(remaining_hour)
-        return response
+        async def send_with_rate_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                self._add_headers(message, info)
+                message_source = "redis" if info.get("redis_available") else "fallback"
+                _set_header(message, "X-RateLimit-Source", message_source)
+            await send(message)
 
-    def _fallback_rate_limit(self, key: str, now: float) -> bool:
-        with self._lock:
-            self._last_activity[key] = now
-            if len(self._windows) > 1000:
-                cutoff = now - self._eviction_interval
-                inactive_keys = [k for k, t in self._last_activity.items() if t < cutoff]
-                for k in inactive_keys:
-                    self._windows.pop(k, None)
-                    self._last_activity.pop(k, None)
+        await self.app(scope, receive, send_with_rate_headers)
 
-            window = self._windows.setdefault(key, deque())
-            cutoff = now - 3600
-            while window and window[0] < cutoff:
-                window.popleft()
-
-            if len(window) >= self.per_hour:
-                return True
-
-            minute_cutoff = now - 60
-            while window and window[0] < minute_cutoff:
-                window.popleft()
-            if len(window) >= self.per_minute:
-                return True
-
-            window.append(now)
-            return False
-
-    @staticmethod
-    def _too_many_requests(detail: str) -> Response:
-        return JSONResponse(
-            status_code=429,
-            content={"status": "error", "error_code": "RATE_LIMITED", "message": detail},
-        )
+    def _add_headers(self, container: Any, info: dict[str, Any]) -> None:
+        minute_count = max(0, int(info.get("minute_count", 0)))
+        hour_count = max(0, int(info.get("hour_count", 0)))
+        _set_header(container, "X-RateLimit-Limit-Minute", str(self.per_minute))
+        _set_header(container, "X-RateLimit-Limit-Hour", str(self.per_hour))
+        _set_header(container, "X-RateLimit-Remaining-Minute", str(max(0, self.per_minute - minute_count)))
+        _set_header(container, "X-RateLimit-Remaining-Hour", str(max(0, self.per_hour - hour_count)))
+        minute_reset = max(1, int(info.get("minute_reset", 60 - (int(time.time()) % 60))))
+        hour_reset = max(1, int(info.get("hour_reset", 3600 - (int(time.time()) % 3600))))
+        _set_header(container, "X-RateLimit-Reset-Minute", str(minute_reset))
+        _set_header(container, "X-RateLimit-Reset-Hour", str(hour_reset))
 
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, enabled: bool = True) -> None:
-        super().__init__(app)
+class RequestLoggingMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        enabled: bool = True,
+        settings: Settings | None = None,
+    ) -> None:
+        self.app = app
         self.enabled = enabled
+        self.settings = settings or get_settings()
+        self.trusted_proxies = tuple(self.settings.TRUSTED_PROXIES)
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
-            return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not self.enabled:
+            await self.app(scope, receive, send)
+            return
 
         start_time = time.monotonic()
-        correlation_id = getattr(request.state, "correlation_id", "unknown")
-        logger = logging.getLogger(__name__)
-        logger.info(
-            "Request: %s %s [correlation_id=%s] client=%s",
-            request.method,
-            request.url.path,
-            correlation_id,
-            _client_ip(request),
+        path = str(scope.get("path", ""))
+        correlation_id = str(_state_value(scope, "correlation_id", "unknown"))
+        client_ip = _client_ip(scope, self.trusted_proxies)
+        headers = _request_headers(scope)
+        user_agent = headers.get("user-agent", "")[:500]
+        status_code: int | None = None
+
+        self._log(
+            "request",
+            method=str(scope.get("method", "")),
+            path=path,
+            client_ip=client_ip,
+            correlation_id=correlation_id,
+            user_agent=user_agent,
         )
 
+        async def send_with_timing(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = int(message.get("status", 0))
+                process_time = time.monotonic() - start_time
+                _set_header(message, "X-Process-Time", f"{process_time:.3f}")
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_with_timing)
         except Exception as exc:
             process_time = time.monotonic() - start_time
             logger.error(
-                "Request failed: %s %s [correlation_id=%s] duration=%.3fs error=%s",
-                request.method,
-                request.url.path,
+                "request_failed path=%s correlation_id=%s duration=%.3fs error_type=%s",
+                path,
                 correlation_id,
                 process_time,
-                exc,
+                type(exc).__name__,
             )
             raise
 
         process_time = time.monotonic() - start_time
-        response.headers["X-Process-Time"] = f"{process_time:.3f}"
-        logger.info(
-            "Response: %s %s [correlation_id=%s] status=%d duration=%.3fs",
-            request.method,
-            request.url.path,
-            correlation_id,
-            response.status_code,
-            process_time,
+        self._log(
+            "response",
+            method=str(scope.get("method", "")),
+            path=path,
+            status_code=status_code or 0,
+            client_ip=client_ip,
+            correlation_id=correlation_id,
+            duration_ms=round(process_time * 1000, 3),
         )
-        return response
+
+    def _log(self, event: str, **values: Any) -> None:
+        record = {"event": event, **values}
+        if str(self.settings.LOG_FORMAT).lower() == "json":
+            import json
+
+            logger.info(json.dumps(record, ensure_ascii=False, default=str))
+        else:
+            logger.info(
+                "%s path=%s status=%s correlation_id=%s client=%s duration_ms=%s",
+                event,
+                record.get("path", ""),
+                record.get("status_code", "-"),
+                record.get("correlation_id", "-"),
+                record.get("client_ip", "-"),
+                record.get("duration_ms", "-"),
+            )
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response: Response = await call_next(request)
+class SecurityHeadersMiddleware:
+    def __init__(self, app: ASGIApp, *, settings: Settings | None = None) -> None:
+        self.app = app
+        self.settings = settings or get_settings()
 
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.bedaanwaves.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "img-src 'self' data: https:; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self' https://api.bedaanwaves.com wss://api.bedaanwaves.com; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_security_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                self._apply(scope, message)
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)
+
+    def _apply(self, scope: Scope, message: Message) -> None:
+        headers = _request_headers(scope)
+        content_type = (_header(message, "content-type") or "").lower()
+        path = str(scope.get("path", ""))
+
+        if self.settings.ENABLE_HTTPS or str(self.settings.ENVIRONMENT).lower() == "production" or scope.get("scheme") == "https":
+            _set_header(
+                message,
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains; preload",
+            )
+
+        if content_type.startswith("text/html"):
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self' data: https:; "
+                "connect-src 'self' ws: wss: "
+                "http://localhost:3000 http://localhost:3005 "
+                "http://127.0.0.1:3000 http://127.0.0.1:3005 "
+                "ws://localhost:3000 ws://localhost:3005 "
+                "ws://127.0.0.1:3000 ws://127.0.0.1:3005; "
+                "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+            )
+        else:
+            csp = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+        _set_header(message, "Content-Security-Policy", csp)
+        _set_header(message, "X-Frame-Options", "DENY")
+        _set_header(message, "X-Content-Type-Options", "nosniff")
+        _set_header(message, "Referrer-Policy", "strict-origin-when-cross-origin")
+        _set_header(
+            message,
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), interest-cohort=()",
         )
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
+        _set_header(message, "Cross-Origin-Resource-Policy", "same-origin")
 
-        if request.url.path.startswith("/api/"):
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
-            response.headers["Pragma"] = "no-cache"
-            response.headers["Expires"] = "0"
+        if path == "/api" or path.startswith("/api/") or path == "/data-health":
+            _set_header(message, "Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+            _set_header(message, "Pragma", "no-cache")
+            _set_header(message, "Expires", "0")
 
         for header_name in ("Server", "X-Powered-By"):
-            try:
-                del response.headers[header_name]
-            except KeyError:
-                pass
-
-        return response
+            target = header_name.lower().encode("latin-1")
+            message["headers"] = [
+                (key, value)
+                for key, value in message.get("headers", [])
+                if not (
+                    (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
+                    == target
+                )
+            ]

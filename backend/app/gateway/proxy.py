@@ -116,6 +116,7 @@ class ProxyClient:
         request_headers: Mapping[str, str],
         correlation_id: str,
         body: Optional[bytes] = None,
+        query_string: Optional[str] = None,
     ) -> httpx.Response:
         """Forward a request to the backend and return the raw response.
 
@@ -135,9 +136,13 @@ class ProxyClient:
         if prefix and target_path.startswith(prefix):
             target_path = target_path[len(prefix):] or "/"
 
+        url = target_path
+        if query_string:
+            url = f"{url}?{query_string}"
+
         request_kwargs: dict = {
             "method": method,
-            "url": target_path,
+            "url": url,
             "headers": upstream_headers,
         }
         if body is not None:
