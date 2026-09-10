@@ -539,7 +539,7 @@ PR2_rej --> AL2_in : logFinalRejection()
 نمودار Profile در UML 2.5 برای گسترش یا تخصص‌بخشی (Stereotype) به عناصر استاندارد UML استفاده می‌شود. از آنجا که PlantUML پشتیبانی کامل از Profile Diagrams را ندارد، در این سند:
 - **Level 1:** نمای کلی پروفایل و حوزه‌های آن
 - **Level 2:** جدول استریوتیپ‌ها و Tagged Values
-- **Level 3:** جدول قیود OCL و قوانینintangibility
+- **Level 3:** جدول قیود یکپارچگی
 
 ### ۴.۱ سطح ۱ — نمای کلی پروفایل
 

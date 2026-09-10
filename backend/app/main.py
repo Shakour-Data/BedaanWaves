@@ -20,7 +20,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.middleware import (
@@ -93,6 +93,7 @@ from app.services.ml.coefficient_learning_service import CoefficientLearningServ
 from app.services.news.continuous_news_ingestion_service import ContinuousNewsIngestionService
 from app.services.system.backup_service import BackupService
 from app.services.system.data_integrity_service import DataIntegrityService
+from app.services.system.incident_response_service import IncidentResponseService
 from app.services.system.logging_service import LoggingService
 from app.services.system.metrics_service import MetricsService
 from app.services.system.notification_dispatcher_service import NotificationDispatcher
@@ -329,9 +330,16 @@ async def lifespan(app: FastAPI):
         await multi_db.initialize()
         container.register_instance("multi_database_manager", multi_db)
 
-        tracing = TracingManager(service_name=settings.APP_NAME, enabled=settings.TRACING_ENABLED)
+        tracing = TracingManager(
+            service_name=settings.APP_NAME,
+            enabled=settings.TRACING_ENABLED,
+            otlp_endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+            jaeger_endpoint=settings.JAEGER_ENDPOINT,
+            use_otlp=False,
+        )
         await tracing.initialize()
         container.register_instance("tracing_manager", tracing)
+        tracing.instrument_app(app)
 
         event_bus: InMemoryEventBus | KafkaEventBus
         if settings.EVENT_BUS_BACKEND == "kafka":
@@ -390,6 +398,40 @@ async def lifespan(app: FastAPI):
         # System services
         backup_svc = BackupService()
         container.register_instance("backup_service", backup_svc)
+
+        # Incident Response service
+        incident_response_svc = IncidentResponseService()
+        incident_response_svc.register_runbook("high-error-rate", {
+            "summary": "High 5xx error rate detected",
+            "steps": [
+                "Check upstream service status",
+                "Review recent deployments",
+                "Scale backend replicas if necessary",
+                "Inspect application logs for stack traces",
+            ],
+            "severity": "critical",
+        })
+        incident_response_svc.register_runbook("service-down", {
+            "summary": "Critical service is unreachable",
+            "steps": [
+                "Check systemd service status",
+                "Review container logs",
+                "Verify database connectivity",
+                "Restart service if health check fails",
+            ],
+            "severity": "critical",
+        })
+        incident_response_svc.register_runbook("high-latency", {
+            "summary": "p95 latency exceeding SLO threshold",
+            "steps": [
+                "Check database query performance",
+                "Review slow query logs",
+                "Check for resource saturation (CPU/memory)",
+                "Scale horizontally if needed",
+            ],
+            "severity": "warning",
+        })
+        container.register_instance("incident_response_service", incident_response_svc)
 
         # Disaster Recovery service
         from app.services.system.disaster_recovery_service import DisasterRecoveryService
@@ -786,6 +828,18 @@ async def root():
         "version": settings.APP_VERSION,
         "docs": settings.DOCS_URL
     }
+
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Root-level Prometheus metrics endpoint for scraping.
+
+    Exposes all registered prometheus_client metrics including
+    application, infrastructure, and business metrics.
+    """
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    metrics_data = generate_latest()
+    return Response(content=metrics_data, media_type=CONTENT_TYPE_LATEST)
 
 
 def handle_signal(signum, frame):

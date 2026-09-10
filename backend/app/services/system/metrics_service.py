@@ -21,6 +21,7 @@ REQUEST_LATENCY = Histogram(
     "bedaanwaves_request_latency_seconds",
     "Request latency in seconds",
     ["method", "endpoint"],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
 )
 ACTIVE_CONNECTIONS = Gauge(
     "bedaanwaves_active_connections",
@@ -30,6 +31,30 @@ SIGNAL_COUNT = Counter(
     "bedaanwaves_signals_total",
     "Total generated signals",
     ["signal_type"],
+)
+ACTIVE_USERS = Gauge(
+    "bedaanwaves_active_users",
+    "Number of concurrently active users (5-min window)",
+)
+STOCK_SCORE_COUNT = Counter(
+    "bedaanwaves_stock_scores_computed_total",
+    "Total stock scores computed",
+    ["dimension"],
+)
+DATA_FRESHNESS_LAG = Gauge(
+    "bedaanwaves_data_freshness_lag_seconds",
+    "Seconds since last successful data ingestion",
+    ["source"],
+)
+ALERT_TRIGGER_COUNT = Counter(
+    "bedaanwaves_alerts_triggered_total",
+    "Total user-defined alerts triggered",
+    ["alert_type"],
+)
+CACHE_OPERATIONS = Counter(
+    "bedaanwaves_cache_operations_total",
+    "Cache hit/miss operations",
+    ["operation", "result"],
 )
 
 
@@ -120,6 +145,30 @@ class MetricsService(BaseService):
 
     def render_prometheus(self) -> bytes:
         return generate_latest(REGISTRY)
+
+    def record_active_users(self, count: int) -> None:
+        """Update the active-users gauge."""
+        ACTIVE_USERS.set(count)
+
+    def record_stock_score(self, dimension: str, count: int = 1) -> None:
+        """Increment the stock-score-computed counter."""
+        STOCK_SCORE_COUNT.labels(dimension=dimension).inc(count)
+
+    def record_data_freshness(self, source: str, lag_seconds: float) -> None:
+        """Set the data-freshness-lag gauge for a given source."""
+        DATA_FRESHNESS_LAG.labels(source=source).set(lag_seconds)
+
+    def record_alert_triggered(self, alert_type: str, count: int = 1) -> None:
+        """Increment the alert-trigger counter."""
+        ALERT_TRIGGER_COUNT.labels(alert_type=alert_type).inc(count)
+
+    def record_cache_operation(self, operation: str, result: str, count: int = 1) -> None:
+        """Increment the cache-operations counter."""
+        CACHE_OPERATIONS.labels(operation=operation, result=result).inc(count)
+
+    def record_signal(self, signal_type: str, count: int = 1) -> None:
+        """Increment the signal counter."""
+        SIGNAL_COUNT.labels(signal_type=signal_type).inc(count)
 
     async def health_check(self) -> dict[str, Any]:
         return {

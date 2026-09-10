@@ -1,26 +1,36 @@
 # Prometheus Configuration for BedaanWaves
-# This file configures Prometheus for metrics collection
+# Updated: root-level /metrics endpoint added, OTel metrics, business metrics
 
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    monitor: 'bedaanwaves-monitor'
+    environment: 'production'
+
+rule_files:
+  - "rules/*.yml"
 
 scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
   - job_name: 'bedaanwaves-api'
     static_configs:
       - targets: ['localhost:3000']
     metrics_path: /metrics
     scrape_interval: 5s
     scrape_timeout: 4s
-    params:
-      format: ['prometheus']
 
   - job_name: 'bedaanwaves-services'
     static_configs:
       - targets: ['localhost:3000']
-    metrics_path: /api/v1/system/metrics
+    metrics_path: /api/v1/system/metrics/prometheus
     scrape_interval: 10s
     scrape_timeout: 8s
+    params:
+      format: ['prometheus']
 
   - job_name: 'node'
     static_configs:
@@ -40,5 +50,13 @@ scrape_configs:
     scrape_interval: 15s
     scrape_timeout: 10s
 
-rule_files:
-  - "rules/*.yml"
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['localhost:8888']
+    scrape_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['localhost:9093']
+    follow_redirects: true
