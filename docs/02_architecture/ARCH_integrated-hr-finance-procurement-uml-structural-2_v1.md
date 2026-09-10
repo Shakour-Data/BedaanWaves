@@ -37,22 +37,21 @@ This document models three UML 2.5 structural diagram types for the Package, Com
 
 | English Name | Description |
 |-------------|-------------|
-| Employee | Employee |
-| HRManager | HR Manager |
-| PayrollRun | Payroll run |
-| Budget | Overall budget |
-| BudgetAllocation | Budget allocation to a department |
-| PurchaseRequest | Purchase request |
-| PurchaseOrder | Purchase order |
-| GoodsReceipt | Goods receipt |
-| StockLot | Stock lot |
-| Payment | Payment |
-| Report | Report |
-| AuditLog | Audit log |
-| WarehouseOfficer | Warehouse officer |
-| FinanceManager | Finance manager |
-| ProcurementOfficer | Procurement officer |
-| ExecutiveAnalyst | Executive analyst |
-| Supplier | Supplier |
-| BankGateway | Payment gateway |
-
+| `Employee` | Employee |
+| `HRManager` | HR Manager |
+| `PayrollRun` | Payroll run |
+| `Budget` | Overall budget |
+| `BudgetAllocation` | Budget allocation to a department |
+| `PurchaseRequest` | Purchase request |
+| `PurchaseOrder` | Purchase order |
+| `GoodsReceipt` | Goods receipt |
+| `StockLot` | Stock lot |
+| `Payment` | Payment |
+| `Report` | Report |
+| `AuditLog` | Audit log |
+| `WarehouseOfficer` | Warehouse officer |
+| `FinanceManager` | Finance manager |
+| `ProcurementOfficer` | Procurement officer |
+| `ExecutiveAnalyst` | Executive analyst |
+| `Supplier` | Supplier |
+| `BankGateway` | Payment gateway |
