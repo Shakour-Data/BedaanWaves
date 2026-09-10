@@ -155,3 +155,19 @@ backend/schema_audit.py
 # Kilo / Trae AI
 .trae/
 .kilo/
+
+# Backend directories (temp, logs, scripts, backups)
+backend/logs/
+backend/scripts/
+backend/backups/
+backend/temp/
+backend/data/archive/
+backend/__pycache__/
+
+# Root level temp directories
+backups/
+deployment/scripts/
+scripts/audit_*.py
+
+# Test integration (k6 load tests)
+tests/integration/k6/
