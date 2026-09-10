@@ -104,7 +104,7 @@ ENVIRONMENT=development
 DATABASE_URL=postgresql://$PostgresUser:$PostgresPassword@${PostgresHost}:${PostgresPort}/${DatabaseName}
 DATABASE_ECHO=False
 DATABASE_POOL_SIZE=20
-DATABASE_MAX_OVERFLOW=40
+DATABASE_MAX_OVERFLOW=10
 
 REDIS_URL=redis://localhost:6379/0
 CACHE_ENABLED=True

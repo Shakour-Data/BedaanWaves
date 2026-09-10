@@ -16,7 +16,7 @@ class TestDatabaseConfiguration:
     def test_default_configuration(self, database_service):
         assert database_service.async_mode is True
         assert database_service.pool_size == 20
-        assert database_service.max_overflow == 40
+        assert database_service.max_overflow == 10
         assert database_service.engine is None
         assert database_service.session_factory is None
 
@@ -65,7 +65,7 @@ class TestStats:
     def test_get_stats(self, database_service):
         stats = database_service.get_stats()
         assert stats["pool_size"] == 20
-        assert stats["max_overflow"] == 40
+        assert stats["max_overflow"] == 10
         assert stats["async_mode"] is True
         assert "***" in stats["database_url"]
         assert stats["active_sessions"] == 0

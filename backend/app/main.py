@@ -626,6 +626,10 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down BedaanWaves application...")
     if hasattr(app.state, 'container'):
         try:
+            if app.state.container.has("_periodic_self_heal_task"):
+                self_heal_task = app.state.container.get("_periodic_self_heal_task")
+                self_heal_task.cancel()
+                await asyncio.gather(self_heal_task, return_exceptions=True)
             await app.state.container.shutdown_all()
         except Exception as e:
             logger.error(f"Error during shutdown: {e}", exc_info=True)
@@ -845,10 +849,3 @@ async def prometheus_metrics():
     return Response(content=metrics_data, media_type=CONTENT_TYPE_LATEST)
 
 
-def handle_signal(signum, frame):
-    logger.info(f"Received signal {signum}, initiating graceful shutdown...")
-    sys.exit(0)
-
-
-signal.signal(signal.SIGTERM, handle_signal)
-signal.signal(signal.SIGINT, handle_signal)

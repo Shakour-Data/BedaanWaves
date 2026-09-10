@@ -50,7 +50,8 @@ class StockService(CachedService):
 
     async def _run_blocking(self, func, *args, **kwargs):
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
+        operation = loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
+        return await asyncio.wait_for(operation, timeout=settings.DATA_PROVIDER_TIMEOUT)
 
     def _fetch_yfinance_search(self, query: str) -> list[dict[str, Any]]:
         """Blocking call to yfinance for symbol suggestions.
@@ -146,12 +147,13 @@ class StockService(CachedService):
                 continue
         return results
 
-    async def search(self, query: str) -> list[dict[str, Any]]:
+    async def search(self, query: str, limit: int = 25) -> list[dict[str, Any]]:
         """
         Search stocks using yfinance live suggestions.
 
         Args:
             query: Search query
+            limit: Maximum number of suggestions to return
 
         Returns:
             Search results from live API
@@ -159,9 +161,10 @@ class StockService(CachedService):
         cache_key = f"search:{query}"
         cached = self.get_cached(cache_key)
         if cached:
-            return cached
+            return cached[:limit]
 
         results = await self._run_blocking(self._fetch_yfinance_search, query)
+        results = results[:limit]
         self.set_cached(cache_key, results, ttl_seconds=300)
         return results
 

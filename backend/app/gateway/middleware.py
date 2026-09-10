@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import ipaddress
 import json
 import logging
 import os
@@ -16,6 +15,22 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.infrastructure.utils.redis_rate_limiter import InMemoryRateLimiter, RedisRateLimiter
 
 from .config import GatewayConfig, get_gateway_config
+from app.shared.middleware_utils import (
+    _CORRELATION_ID_RE as _SHARED_CORRELATION_ID_RE,
+    _header,
+    _set_header,
+    _replace_request_header,
+    _state_value,
+    _set_state,
+    _request_headers,
+    _client_ip,
+    _normalise_path,
+    _path_matches,
+    _validated_user_id,
+    _unauthorized,
+    _too_many_requests,
+    _register_shutdown,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +45,10 @@ __all__ = [
 ]
 
 _RedisRateLimiter = RedisRateLimiter
-_CORRELATION_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+# Use shared correlation ID regex
+_CORRELATION_ID_RE = _SHARED_CORRELATION_ID_RE
+
+# Gateway-specific JWT algorithms
 _ALLOWED_JWT_ALGORITHMS = {
     "HS256",
     "HS384",
@@ -42,7 +60,9 @@ _ALLOWED_JWT_ALGORITHMS = {
     "ES384",
     "ES512",
 }
-_RATE_LIMIT_EXEMPT_PATHS = {
+
+# Gateway-specific rate limit exempt paths
+_RateLimitExemptPathsGateway = {
     "/",
     "/health",
     "/health/live",
@@ -52,7 +72,7 @@ _RATE_LIMIT_EXEMPT_PATHS = {
     "/redoc",
     "/openapi.json",
 }
-_RATE_LIMIT_EXEMPT_PREFIXES = (
+_RateLimitExemptPrefixesGateway = (
     "/health",
     "/docs",
     "/redoc",
@@ -60,163 +80,16 @@ _RATE_LIMIT_EXEMPT_PREFIXES = (
 )
 
 
-def _header(container: Any, name: str) -> str | None:
-    target = name.lower().encode("latin-1")
-    for key, value in container.get("headers", []):
-        raw_key = key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1")
-        if raw_key == target:
-            return value.decode("latin-1", "replace") if isinstance(value, bytes) else str(value)
-    return None
-
-
-def _set_header(message: Message, name: str, value: str) -> None:
-    target = name.lower().encode("latin-1")
-    raw_value = value.encode("latin-1", "replace")
-    headers = [
-        (key, val)
-        for key, val in message.get("headers", [])
-        if not (
-            (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
-            == target
-        )
-    ]
-    headers.append((target, raw_value))
-    message["headers"] = headers
-
-
-def _replace_request_header(scope: Scope, name: str, value: str | None) -> None:
-    target = name.lower().encode("latin-1")
-    headers = [
-        (key, val)
-        for key, val in scope.get("headers", [])
-        if not (
-            (key.lower() if isinstance(key, bytes) else str(key).lower().encode("latin-1"))
-            == target
-        )
-    ]
-    if value is not None:
-        headers.append((target, value.encode("latin-1", "replace")))
-    scope["headers"] = headers
-
-
-def _state_value(scope: Scope, name: str, default: Any = None) -> Any:
-    state = scope.get("state")
-    if isinstance(state, dict):
-        return state.get(name, default)
-    return getattr(state, name, default)
-
-
-def _set_state(scope: Scope, name: str, value: Any) -> None:
-    state = scope.setdefault("state", {})
-    if isinstance(state, dict):
-        state[name] = value
-    else:
-        setattr(state, name, value)
-
-
-def _request_headers(scope: Scope) -> dict[str, str]:
-    result: dict[str, str] = {}
-    for key, value in scope.get("headers", []):
-        raw_key = key.decode("latin-1", "ignore") if isinstance(key, bytes) else str(key)
-        raw_value = value.decode("latin-1", "replace") if isinstance(value, bytes) else str(value)
-        result[raw_key.lower()] = raw_value
-    return result
-
-
-def _is_trusted_proxy(host: str | None, trusted_proxies: tuple[str, ...] | list[str]) -> bool:
-    if not host:
-        return False
-    try:
-        address = ipaddress.ip_address(host.strip("[]"))
-    except ValueError:
-        return False
-    for proxy in trusted_proxies:
-        item = proxy.strip()
-        if not item:
-            continue
-        if item == "*":
-            return True
-        try:
-            if "/" in item:
-                if address in ipaddress.ip_network(item, strict=False):
-                    return True
-            elif address == ipaddress.ip_address(item.strip("[]")):
-                return True
-        except ValueError:
-            continue
-    return False
-
-
-def _forwarded_ip(value: str) -> str | None:
-    for item in value.split(","):
-        candidate = item.strip()
-        if candidate.startswith("["):
-            end = candidate.find("]")
-            if end != -1:
-                candidate = candidate[1:end]
-            else:
-                candidate = candidate.split(":", 1)[0]
-        else:
-            candidate = candidate.split(":", 1)[0]
-        try:
-            ipaddress.ip_address(candidate)
-        except ValueError:
-            continue
-        return candidate
-    return None
-
-
-def _client_ip(
-    scope: Scope,
-    trusted_proxies: tuple[str, ...] | list[str] | None = None,
-) -> str:
-    client = scope.get("client")
-    direct_host = str(client[0]) if client else None
-    proxies = tuple(trusted_proxies or ())
-    forwarded = _request_headers(scope).get("x-forwarded-for")
-    if forwarded and _is_trusted_proxy(direct_host, proxies):
-        client_ip = _forwarded_ip(forwarded)
-        if client_ip:
-            return client_ip
-    return direct_host or "unknown"
-
-
-def _normalise_path(path: str) -> str:
-    if not path.startswith("/"):
-        path = f"/{path}"
-    return path.rstrip("/") or "/"
-
-
-def _path_matches(path: str, prefix: str) -> bool:
-    normal_path = _normalise_path(path)
-    normal_prefix = _normalise_path(prefix)
-    if normal_prefix == "/":
-        return True
-    return normal_path == normal_prefix or normal_path.startswith(f"{normal_prefix}/")
-
-
 def _is_rate_limit_exempt(path: str, proxy_prefix: str) -> bool:
+    """Check if a path is exempt from rate limiting (Gateway middleware)."""
     normal_path = _normalise_path(path)
-    if normal_path in _RATE_LIMIT_EXEMPT_PATHS:
+    if normal_path in _RateLimitExemptPathsGateway:
         return True
-    if any(_path_matches(normal_path, prefix) for prefix in _RATE_LIMIT_EXEMPT_PREFIXES):
-        return True
-    return any(
-        _path_matches(normal_path, f"{proxy_prefix}/health")
-        for _ in (0,)
-    )
-
-
-def _validated_user_id(value: Any) -> str | None:
-    if not isinstance(value, str) or not value.strip():
-        return None
-    try:
-        return str(uuid.UUID(value.strip()))
-    except (AttributeError, ValueError, TypeError):
-        return None
+    return any(_path_matches(normal_path, prefix) for prefix in _RateLimitExemptPrefixesGateway)
 
 
 def _jwt_material(config: GatewayConfig) -> tuple[str, str | None]:
+    """Resolve JWT algorithm and verification key from config and environment."""
     gateway_algorithm = os.environ.get("GATEWAY_JWT_ALGORITHM", "").strip().upper()
     configured_algorithm = str(getattr(config, "jwt_algorithm", "") or "").strip().upper()
     public_key = str(getattr(config, "jwt_public_key", "") or "").strip()
@@ -239,6 +112,7 @@ def _jwt_material(config: GatewayConfig) -> tuple[str, str | None]:
 
 
 def _decode_jwt(token: str, config: GatewayConfig) -> dict[str, Any] | None:
+    """Decode and validate a JWT token for the gateway."""
     algorithm, verification_key = _jwt_material(config)
     if not verification_key or algorithm not in _ALLOWED_JWT_ALGORITHMS:
         return None
@@ -266,15 +140,8 @@ def _decode_jwt(token: str, config: GatewayConfig) -> dict[str, Any] | None:
     return result
 
 
-def _unauthorized(detail: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=401,
-        headers={"WWW-Authenticate": "Bearer"},
-        content={"status": "error", "error_code": "UNAUTHORIZED", "message": detail},
-    )
-
-
 def _auth_unavailable() -> JSONResponse:
+    """Create a 503 response when gateway auth is not configured."""
     return JSONResponse(
         status_code=503,
         content={
@@ -283,24 +150,6 @@ def _auth_unavailable() -> JSONResponse:
             "message": "Gateway JWT verification is not configured",
         },
     )
-
-
-def _too_many_requests(detail: str, retry_after: int = 60) -> JSONResponse:
-    response = JSONResponse(
-        status_code=429,
-        content={"status": "error", "error_code": "RATE_LIMITED", "message": detail},
-    )
-    response.headers["Retry-After"] = str(max(1, int(retry_after)))
-    return response
-
-
-def _register_shutdown(app: ASGIApp, callback: Callable[[], Any]) -> None:
-    register = getattr(app, "add_event_handler", None)
-    if callable(register):
-        try:
-            register("shutdown", callback)
-        except (TypeError, ValueError):
-            pass
 
 
 class GatewayRateLimitMiddleware:
@@ -421,8 +270,6 @@ class GatewayAuthMiddleware:
 
         path = str(scope.get("path", ""))
         headers = _request_headers(scope)
-        _replace_request_header(scope, "x-user-id", None)
-        _replace_request_header(scope, "x-username", None)
 
         if (
             not self.enabled
@@ -434,6 +281,10 @@ class GatewayAuthMiddleware:
                 self._attach_user(scope, headers)
             await self.app(scope, receive, send)
             return
+
+        # Auth enabled and protected path - clear any existing user headers first
+        _replace_request_header(scope, "x-user-id", None)
+        _replace_request_header(scope, "x-username", None)
 
         if not self.verification_key or self.algorithm not in _ALLOWED_JWT_ALGORITHMS:
             await _auth_unavailable()(scope, receive, send)
@@ -456,6 +307,7 @@ class GatewayAuthMiddleware:
         _set_state(scope, "username", username)
         _set_state(scope, "jwt_payload", payload)
         _replace_request_header(scope, "x-user-id", user_id)
+        _replace_request_header(scope, "x-username", username)
         await self.app(scope, receive, send)
 
     def _attach_user(self, scope: Scope, headers: dict[str, str]) -> None:
@@ -472,6 +324,7 @@ class GatewayAuthMiddleware:
         _set_state(scope, "username", username)
         _set_state(scope, "jwt_payload", payload)
         _replace_request_header(scope, "x-user-id", user_id)
+        _replace_request_header(scope, "x-username", username)
 
 
 class GatewayLoggingMiddleware:

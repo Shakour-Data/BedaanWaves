@@ -62,6 +62,7 @@ async def search_stocks(
     if response:
         _add_version_header(response, "v1")
 
+    failed_enrichment = 0
     if q.strip():
         # yfinance suggestions only contain symbol/name; enrich with full data.
         suggestions = await service.search(q.strip())
@@ -73,25 +74,20 @@ async def search_stocks(
             if isinstance(data, dict) and "error" not in data:
                 results.append(data)
             else:
-                # Fallback to the bare suggestion if enrichment failed.
-                fallback = next((s for s in suggestions if s.get("symbol") == symbol), None)
-                if fallback:
-                    results.append({
-                        "symbol": symbol,
-                        "name": fallback.get("name", symbol),
-                        "price": 0,
-                        "change": 0,
-                        "change_percent": 0,
-                        "volume": 0,
-                        "sector": fallback.get("sector", "-"),
-                        "exchange": fallback.get("exchange", ""),
-                    })
+                failed_enrichment += 1
+                self_logger = getattr(service, "logger", logger)
+                self_logger.warning("Stock enrichment failed for symbol=%s", symbol)
     else:
         multiple = await service.get_multiple(DEFAULT_POPULAR_TICKERS)
         results = [data for data in multiple.values() if isinstance(data, dict) and "error" not in data]
 
+    if q.strip():
+        failed_enrichment = len(symbols) - len(results)
+    else:
+        failed_enrichment = len(DEFAULT_POPULAR_TICKERS) - len(results)
+
     return {
-        "status": "success",
+        "status": "partial_failure" if failed_enrichment else "success",
         "query": q,
         "count": len(results),
         "data": results[:limit],

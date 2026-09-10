@@ -758,9 +758,9 @@ async def get_coefficient_history_by_level(
             detail="level must be dimension, sub_dimension, aspect, or sub_aspect",
         )
     try:
-        series: List[dict] = []
+        series: list[dict] = []
         source_count: int = 0
-        latest_date: Optional[str] = None
+        latest_date: str | None = None
 
         # ---- TemporalSnapshotService parity-first path (only dimension) ----
         if level == "dimension":

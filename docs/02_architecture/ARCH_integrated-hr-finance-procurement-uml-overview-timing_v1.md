@@ -1,235 +1,235 @@
-# UML Interaction Overview & Timing Diagrams — HR/Finance/Procurement v1
+# UML Interaction Overview & Timing Diagrams — Integrated HR/Finance/Procurement v1
 
-**عنوان:** UML Interaction Overview & Timing Diagrams — سیستم یکپارچه HR/Finance/Procurement  
-**نسخه:** v1.0  
-**تاریخ:** 2026-09-09  
-**وضعیت:** پیش‌نویس برای مستندسازی  
-**نگارنده:** Kilo
+**Title:** UML Interaction Overview & Timing Diagrams — Integrated HR/Finance/Procurement System  
+**Version:** v1.0  
+**Date:** 2026-09-09  
+**Status:** Draft for documentation  
+**Author:** Kilo
 
 ---
 
-## فهرست مطالب
+## Table of Contents
 
-1. [مقدمه](#1-مقدمه)
+1. [Introduction](#1-introduction)
 2. [Interaction Overview — Levels 1-3](#2-interaction-overview--levels-1-3)
 3. [Timing Diagrams — Levels 1-3](#3-timing-diagrams--levels-1-3)
-4. [محدودیت‌های زمانی و اهداف عملکرد](#4-محدودیت‌های-زمانی-و-اهداف-عملکرد)
-5. [ردپا (Traceability)](#5-ردپا-traceability)
-6. [کنوانسیون‌های نام‌گذاری](#6-کنوانسیون‌های-نام-گذاری)
-7. [ضوابط و محدودیت‌ها](#7-ضوابط-و-محدودیت‌ها)
+4. [Timing Constraints and Performance Targets](#4-timing-constraints-and-performance-targets)
+5. [Traceability](#5-traceability)
+6. [Naming Conventions](#6-naming-conventions)
+7. [Rules and Constraints](#7-rules-and-constraints)
 
 ---
 
-## ۱. مقدمه
+## 1. Introduction
 
-این سند نمودارهای **UML Interaction Overview** و **UML Timing** را برای لایه‌های تعامل و زمانی سیستم یکپارچه **منابع انسانی (HR)**، **مالی (Payroll/Budget)** و **تدارکات (Procurement/Inventory)** مدل‌سازی می‌کند.
+This document models **UML Interaction Overview** and **UML Timing** diagrams for the interaction and temporal layers of the integrated **Human Resources (HR)**, **Finance (Payroll/Budget)**, and **Procurement/Inventory** system.
 
-### ۱.۱ مقیاس مدل‌سازی
+### 1.1 Modeling Scale
 
-| سطح | محدوده | خروجی |
-|-----|--------|-------|
-| **Level 1** | نمای کلی تعاملات و تایم‌های سطح سیستم | جداول ساختاریافته + نمودار تایم کلی |
-| **Level 2** | تفکیک تعاملات بر اساس حوزه کاری | جداول حوزه‌ای + نمودارهای تایم حوزه‌ای |
-| **Level 3** | جریان‌های بحرانی و تایم‌های بحرانی | جداول دقیق + نمودارهای تایم بحرانی |
+| Level | Scope | Output |
+|-------|-------|--------|
+| **Level 1** | High-level system interactions and timing | Structured tables + overall timing diagram |
+| **Level 2** | Domain-specific interaction breakdowns | Domain tables + domain timing diagrams |
+| **Level 3** | Critical flows and critical timings | Detailed tables + critical timing diagrams |
 
-### ۱.۲ دامنه ثابت
+### 1.2 Fixed Scope
 
-| نام انگلیسی | توضیح فارسی |
-|------------|-------------|
-| `Employee` | کارمند |
-| `HRManager` | مدیر منابع انسانی |
-| `PayrollRun` | اجرای پرداخت حقوق |
-| `Budget` | بودجه کلی |
-| `BudgetAllocation` | تخصیص بودجه به واحد |
-| `PurchaseRequest` | درخواست خرید |
-| `PurchaseOrder` | سفارش خرید |
-| `GoodsReceipt` | ثبت ورود کالا |
-| `StockLot` | لات موجودی |
-| `Payment` | پرداخت |
-| `Report` | گزارش |
-| `AuditLog` | گزارش ممیزی |
-| `WarehouseOfficer` | کارمند انبار |
-| `FinanceManager` | مدیر مالی |
-| `ProcurementOfficer` | کارمند تدارکات |
-| `ExecutiveAnalyst` | مدیرعامل/تحلیلگر |
-| `Supplier` | تامین‌کننده |
-| `BankGateway` | درگاه پرداخت |
+| English Name | Description |
+|--------------|-------------|
+| `Employee` | Employee |
+| `HRManager` | HR Manager |
+| `PayrollRun` | Payroll execution |
+| `Budget` | Overall budget |
+| `BudgetAllocation` | Budget allocation to department |
+| `PurchaseRequest` | Purchase request |
+| `PurchaseOrder` | Purchase order |
+| `GoodsReceipt` | Goods receipt registration |
+| `StockLot` | Inventory lot |
+| `Payment` | Payment |
+| `Report` | Report |
+| `AuditLog` | Audit log |
+| `WarehouseOfficer` | Warehouse employee |
+| `FinanceManager` | Finance manager |
+| `ProcurementOfficer` | Procurement employee |
+| `ExecutiveAnalyst` | CEO/Analyst |
+| `Supplier` | Supplier |
+| `BankGateway` | Payment gateway |
 
 ---
 
-## ۲. Interaction Overview — Levels 1-3
+## 2. Interaction Overview — Levels 1-3
 
-> **نکته:** PlantUML پشتیبانی کامل از نمودارهای Interaction Overview را ندارد. در این سند از **جداول ساختاریافته** و **ارجاع به نمودارهای BPMN مرتبط** برای مدل‌سازی Interaction Overview استفاده شده است.
+> **Note:** PlantUML does not fully support Interaction Overview diagrams. This document uses **structured tables** and **references to related BPMN diagrams** to model Interaction Overview.
 
-### ۲.۱ Level 1 — نمای کلی تعاملات
+### 2.1 Level 1 — High-Level Interaction View
 
-#### ۲.۱.۱ جدول نقش‌های کلیدی (Interaction Overview L1)
+#### 2.1.1 Key Roles Table (Interaction Overview L1)
 
-| شناسه | نقش (Lifeline) | نوع | تعاملات اصلی |
-|-------|----------------|-----|---------------|
-| IO-ACT-01 | `Employee` | Primary Actor | ورود، ثبت درخواست مرخصی، دریافت اعلان |
-| IO-ACT-02 | `HRManager` | Boundary Controller | تایید مرخصی، بررسی رزومه، ارسال به PayrollRun |
-| IO-ACT-03 | `PayrollRun` | Entity/Service | محاسبه حقوق (`calculateSalary()`)، تولید SalarySlip |
-| IO-ACT-04 | `FinanceManager` | Boundary Controller | تایید پرداخت، بررسی بودجه (`checkBudget()`)، ایجاد Payment |
-| IO-ACT-05 | `Budget` | Entity | اعتبارسنجی بودجه، کسر از `BudgetAllocation` |
-| IO-ACT-06 | `ProcurementOfficer` | Primary Actor | ایجاد PurchaseRequest، ایجاد PurchaseOrder |
-| IO-ACT-07 | `WarehouseOfficer` | Primary Actor | ثبت GoodsReceipt، تخصیص موجودی (`allocateStock()`) |
-| IO-ACT-08 | `Supplier` | External System | دریافت PO، ارسال کالا |
-| IO-ACT-09 | `BankGateway` | External System | پرداخت، تأیید تراکنش |
-| IO-ACT-10 | `ExecutiveAnalyst` | Primary Actor | تولید گزارش (`generateReport()`)، تخصیص مجدد بودجه |
+| ID | Role (Lifeline) | Type | Primary Interactions |
+|----|-----------------|------|----------------------|
+| IO-ACT-01 | `Employee` | Primary Actor | Login, submit leave request, receive notifications |
+| IO-ACT-02 | `HRManager` | Boundary Controller | Approve leave, review resume, send to PayrollRun |
+| IO-ACT-03 | `PayrollRun` | Entity/Service | Calculate salary (`calculateSalary()`), generate SalarySlip |
+| IO-ACT-04 | `FinanceManager` | Boundary Controller | Approve payment, review budget (`checkBudget()`), create Payment |
+| IO-ACT-05 | `Budget` | Entity | Validate budget, deduct from `BudgetAllocation` |
+| IO-ACT-06 | `ProcurementOfficer` | Primary Actor | Create PurchaseRequest, create PurchaseOrder |
+| IO-ACT-07 | `WarehouseOfficer` | Primary Actor | Register GoodsReceipt, allocate inventory (`allocateStock()`) |
+| IO-ACT-08 | `Supplier` | External System | Receive PO, send goods |
+| IO-ACT-09 | `BankGateway` | External System | Process payment, confirm transaction |
+| IO-ACT-10 | `ExecutiveAnalyst` | Primary Actor | Generate reports (`generateReport()`), reallocate budget |
 
-#### ۲.۱.۲ جدول مسیرهای تعامل اصلی (Interaction Overview L1)
+#### 2.1.2 Main Interaction Paths Table (Interaction Overview L1)
 
-| شناسه مسیر | مبدأ | مقصد | پیام (Message) | نوع | نتیجه |
-|-------------|------|------|----------------|-----|-------|
+| Path ID | Source | Target | Message | Type | Result |
+|---------|--------|--------|---------|------|--------|
 | IO-MSG-01 | `Employee` | `HRManager` | SubmitLeaveRequest | Synchronous | `LeaveRequest` |
-| IO-MSG-02 | `HRManager` | `Employee` | LeaveApproved/Rejected | Asynchronous | اعلان |
-| IO-MSG-03 | `HRManager` | `PayrollRun` | SendAttendanceData | Synchronous | داده‌های حضور |
-| IO-MSG-04 | `PayrollRun` | `FinanceManager` | PayrollSummary | Synchronous | خلاصه حقوق |
+| IO-MSG-02 | `HRManager` | `Employee` | LeaveApproved/Rejected | Asynchronous | Notification |
+| IO-MSG-03 | `HRManager` | `PayrollRun` | SendAttendanceData | Synchronous | Attendance data |
+| IO-MSG-04 | `PayrollRun` | `FinanceManager` | PayrollSummary | Synchronous | Payroll summary |
 | IO-MSG-05 | `FinanceManager` | `Budget` | CheckBudget | Synchronous | `BudgetStatus` |
 | IO-MSG-06 | `FinanceManager` | `BankGateway` | ExecutePayment | Synchronous | `TransactionResult` |
 | IO-MSG-07 | `ProcurementOfficer` | `FinanceManager` | SubmitPurchaseRequest | Synchronous | `PurchaseRequest` |
 | IO-MSG-08 | `FinanceManager` | `Supplier` | SendPurchaseOrder | Asynchronous | `PurchaseOrder` |
-| IO-MSG-09 | `Supplier` | `WarehouseOfficer` | ShipGoods | Asynchronous | کالا فیزیکی |
+| IO-MSG-09 | `Supplier` | `WarehouseOfficer` | ShipGoods | Asynchronous | Physical goods |
 | IO-MSG-10 | `WarehouseOfficer` | `ExecutiveAnalyst` | IntegratedDataReport | Asynchronous | `Report` |
 
-#### ۲.۱.۳ جدول Combining Fragments (Interaction Overview L1)
+#### 2.1.3 Combining Fragments Table (Interaction Overview L1)
 
-| شناسه | نوع Fragment | موقعیت | شرط | توضیح |
-|-------|-------------|--------|-----|-------|
-| IO-ALT-01 | `alt` | Payroll Approval | budgetOK? | اگر بودجه کافی باشد پرداخت، در غیر این صورت تاخیر |
-| IO-ALT-02 | `alt` | Procurement | reallocationRequested? | در صورت درخواست reassign، ارسال به Executive |
-| IO-OPT-01 | `opt` | Inventory | checkReorderLevel? | بررسی اختیاری حداقل موجودی |
-| IO-PAR-01 | `par` | Reporting | parallel | aggregationData, generateMetrics | همزمان تجمیع داده و تولید متریک |
+| ID | Fragment Type | Location | Condition | Description |
+|----|---------------|----------|-----------|-------------|
+| IO-ALT-01 | `alt` | Payroll Approval | budgetOK? | If budget sufficient, proceed to payment; otherwise delay |
+| IO-ALT-02 | `alt` | Procurement | reallocationRequested? | If reassignment requested, send to Executive |
+| IO-OPT-01 | `opt` | Inventory | checkReorderLevel? | Optional minimum inventory check |
+| IO-PAR-01 | `par` | Reporting | parallel | aggregationData, generateMetrics | Simultaneously aggregate data and generate metrics |
 
 ---
 
-### ۲.۲ Level 2 — تعاملات حوزه‌ای
+### 2.2 Level 2 — Domain Interactions
 
-#### ۲.۲.۱ حوزه HR — Recruitment & Leave Management
+#### 2.2.1 HR Domain — Recruitment & Leave Management
 
-| شناسه تعامل | مبدأ | مقصد | پیام | Outcome |
-|-------------|------|------|------|---------|
+| Interaction ID | Source | Target | Message | Outcome |
+|----------------|--------|--------|---------|---------|
 | IO-HR-01 | `Employee` | `HRManager` | SubmitLeaveRequest | `LeaveRequest` |
-| IO-HR-02 | `HRManager` | `Employee` | LeaveDecision | اعلان |
+| IO-HR-02 | `HRManager` | `Employee` | LeaveDecision | Notification |
 | IO-HR-03 | `Employee` | `HRManager` | SubmitResume | `Candidate` |
-| IO-HR-04 | `HRManager` | `Employee` | InterviewSchedule | اعلان |
+| IO-HR-04 | `HRManager` | `Employee` | InterviewSchedule | Notification |
 
 **Fragment:**
-- `alt` (نوع درخواست؟) → استخدام | مرخصی
-- `alt` (تایید؟) → تایید | رد
+- `alt` (request type?) → Recruitment | Leave
+- `alt` (approved?) → Approved | Rejected
 
-#### ۲.۲.۲ حوزه Payroll — حقوق و دستمزد
+#### 2.2.2 Payroll Domain — Payroll Processing
 
-| شناسه تعامل | مبدأ | مقصد | پیام | Outcome |
-|-------------|------|------|------|---------|
-| IO-PAY-01 | `HRManager` | `PayrollRun` | ApprovePayrollList | لیست تایید شده |
-| IO-PAY-02 | `PayrollRun` | `FinanceManager` | PayrollSummary | خلاصه حقوق |
+| Interaction ID | Source | Target | Message | Outcome |
+|----------------|--------|--------|---------|---------|
+| IO-PAY-01 | `HRManager` | `PayrollRun` | ApprovePayrollList | Approved list |
+| IO-PAY-02 | `PayrollRun` | `FinanceManager` | PayrollSummary | Payroll summary |
 | IO-PAY-03 | `FinanceManager` | `BankGateway` | ExecutePayment | `TransactionResult` |
-| IO-PAY-04 | `BankGateway` | `FinanceManager` | PaymentConfirmation | تأییدیه |
+| IO-PAY-04 | `BankGateway` | `FinanceManager` | PaymentConfirmation | Confirmation |
 
 **Fragment:**
-- `alt` (تراکنش موفق؟) → پرداخت | خطای تراکنش
-- `alt` (بودجه کافی؟) → تایید | تاخیر/تمدید
+- `alt` (transaction successful?) → Payment | Transaction error
+- `alt` (sufficient budget?) → Approved | Delay/Postpone
 
-#### ۲.۲.۳ حوزه Budget — بودجه و تخصیص
+#### 2.2.3 Budget Domain — Budgeting and Allocation
 
-| شناسه تعامل | مبدأ | مقصد | پیام | Outcome |
-|-------------|------|------|------|---------|
+| Interaction ID | Source | Target | Message | Outcome |
+|----------------|--------|--------|---------|---------|
 | IO-BUD-01 | `ExecutiveAnalyst` | `Budget` | DefineAnnualBudget | `Budget` |
 | IO-BUD-02 | `Budget` | `FinanceManager` | AllocationCreated | `BudgetAllocation` |
 | IO-BUD-03 | `FinanceManager` | `Budget` | CheckBudget | `BudgetStatus` |
-| IO-BUD-04 | `FinanceManager` | `ProcurementOfficer` | BudgetApproval | تأییدیه |
+| IO-BUD-04 | `FinanceManager` | `ProcurementOfficer` | BudgetApproval | Confirmation |
 
 **Fragment:**
-- `alt` (بودجه کافی؟) → کسر از بودجه | رد هزینه
+- `alt` (sufficient budget?) → Deduct from budget | Reject expense
 
-#### ۲.۲.۴ حوزه Procurement — خرید و تدارکات
+#### 2.2.4 Procurement Domain — Purchasing
 
-| شناسه تعامل | مبدأ | مقصد | پیام | Outcome |
-|-------------|------|------|------|---------|
+| Interaction ID | Source | Target | Message | Outcome |
+|----------------|--------|--------|---------|---------|
 | IO-PROC-01 | `ProcurementOfficer` | `FinanceManager` | SubmitPurchaseRequest | `PurchaseRequest` |
-| IO-PROC-02 | `FinanceManager` | `ProcurementOfficer` | ApprovePR | تأیید |
+| IO-PROC-02 | `FinanceManager` | `ProcurementOfficer` | ApprovePR | Approval |
 | IO-PROC-03 | `FinanceManager` | `Supplier` | SendPurchaseOrder | `PurchaseOrder` |
-| IO-PROC-04 | `Supplier` | `WarehouseOfficer` | ShipGoods | کالا فیزیکی |
+| IO-PROC-04 | `Supplier` | `WarehouseOfficer` | ShipGoods | Physical goods |
 
 **Fragment:**
-- `alt` (بودجه کافی؟) → تایید | رد
+- `alt` (sufficient budget?) → Approved | Rejected
 
-#### ۲.۲.۵ حوزه Inventory — مدیریت موجودی
+#### 2.2.5 Inventory Domain — Inventory Management
 
-| شناسه تعامل | مبدأ | مقصد | پیام | Outcome |
-|-------------|------|------|------|---------|
+| Interaction ID | Source | Target | Message | Outcome |
+|----------------|--------|--------|---------|---------|
 | IO-INV-01 | `WarehouseOfficer` | `WarehouseOfficer` | ReceiveGoods | `GoodsReceipt` |
-| IO-INV-02 | `WarehouseOfficer` | `StockLot` | AllocateStock | `StockLot` به‌روز |
-| IO-INV-03 | `WarehouseOfficer` | `ProcurementOfficer` | AllocationNotice | اعلان |
+| IO-INV-02 | `WarehouseOfficer` | `StockLot` | AllocateStock | Updated `StockLot` |
+| IO-INV-03 | `WarehouseOfficer` | `ProcurementOfficer` | AllocationNotice | Notification |
 
 **Fragment:**
-- `alt` (موجودی کافی؟) → تخصیص | Overflow → ExecutiveAnalyst
+- `alt` (sufficient stock?) → Allocation | Overflow → ExecutiveAnalyst
 
-#### ۲.۲.۶ حوزه Reporting — گزارش‌گیری و تحلیل
+#### 2.2.6 Reporting Domain — Reporting and Analysis
 
-| شناسه تعامل | مبدأ | مقصد | پیام | Outcome |
-|-------------|------|------|------|---------|
-| IO-REP-01 | `ExecutiveAnalyst` | `System` | RequestIntegratedData | درخواست داده |
+| Interaction ID | Source | Target | Message | Outcome |
+|----------------|--------|--------|---------|---------|
+| IO-REP-01 | `ExecutiveAnalyst` | `System` | RequestIntegratedData | Data request |
 | IO-REP-02 | `System` | `ExecutiveAnalyst` | DeliverReport | `Report` |
 
 **Fragment:**
-- `opt` (نیاز به اصلاح؟) → درخواست اصلاح | انتشار
+- `opt` (needs correction?) → Request correction | Publish
 
 ---
 
-### ۲.۳ Level 3 — تعاملات بحرانی
+### 2.3 Level 3 — Critical Interactions
 
-#### ۲.۳.۱ تایید پرداخت حقوق (Payroll Approval) — Interaction Overview
+#### 2.3.1 Payroll Approval — Interaction Overview
 
-| شناسه | مراحل تعامل | نوع پیام | تاخیر هدف | زمان واقعی |
-|-------|-------------|----------|-----------|------------|
+| ID | Interaction Steps | Message Type | Target Latency | Actual Time |
+|----|-------------------|--------------|----------------|-------------|
 | IO3-PAY-01 | `HRManager` → `PayrollRun`: ApprovePayrollList | Sync | <= 500ms | TBD |
 | IO3-PAY-02 | `PayrollRun` → `PayrollRun`: `calculateSalary()` | Local | <= 1500ms | TBD |
 | IO3-PAY-03 | `PayrollRun` → `FinanceManager`: PayrollSummary | Sync | <= 200ms | TBD |
 | IO3-PAY-04 | `FinanceManager` → `Budget`: CheckBudget | Sync | <= 300ms | TBD |
-| IO3-PAY-05 | `FinanceManager` → `BankGateway`: ExecutePayment | Sync | <= 1000ms | TBD |
-| IO3-PAY-06 | `BankGateway` → `FinanceManager`: PaymentConfirmation | Async | <= 2000ms | TBD |
+| IO3-PAY-05 | `FinanceManager` → `PaymentGateway`: ExecutePayment | Sync | <= 1000ms | TBD |
+| IO3-PAY-06 | `PaymentGateway` → `FinanceManager`: PaymentConfirmation | Async | <= 2000ms | TBD |
 
 **Fragment:**
-- `alt` (تراکنش ناموفق؟) → Retry بعد از ۵ دقیقه | خطا نهایی
+- `alt` (transaction failed?) → Retry after 5 minutes | Final error
 
-#### ۲.۳.۲ بررسی بودجه برای درخواست خرید (Budget-Check PR) — Interaction Overview
+#### 2.3.2 Budget Check for Purchase Request — Interaction Overview
 
-| شناسه | مراحل تعامل | نوع پیام | تاخیر هدف | زمان واقعی |
-|-------|-------------|----------|-----------|------------|
+| ID | Interaction Steps | Message Type | Target Latency | Actual Time |
+|----|-------------------|--------------|----------------|-------------|
 | IO3-BUD-01 | `ProcurementOfficer` → `FinanceManager`: SubmitPR | Sync | <= 300ms | TBD |
-| IO3-BUD-02 | `FinanceManager` → `Budget`: CheckBudget | Sync | <= 200ms | TBD |
+| IO3-BUD-02 | `FinanceManager` → `BudgetAllocation`: `checkBudget()` | Sync | <= 200ms | TBD |
 | IO3-BUD-03 | `FinanceManager` → `ExecutiveAnalyst`: RequestReallocation | Async | <= 500ms | TBD |
-| IO3-BUD-04 | `ExecutiveAnalyst` → `Budget`: Reallocate | Sync | <= 1000ms | TBD |
+| IO3-BUD-04 | `ExecutiveAnalyst` → `BudgetAllocation`: Reallocate | Sync | <= 1000ms | TBD |
 | IO3-BUD-05 | `FinanceManager` → `Supplier`: ApprovePO | Async | <= 500ms | TBD |
 
 **Fragment:**
-- `alt` (reassign موفق؟) → تکرار بررسی | توقف نهایی
+- `alt` (reassignment successful?) → Repeat check | Final stop
 
-#### ۲.۳.۳ تخصیص موجودی (Stock Allocation) — Interaction Overview
+#### 2.3.3 Stock Allocation — Interaction Overview
 
-| شناسه | مراحل تعامل | نوع پیام | تاخیر هدف | زمان واقعی |
-|-------|-------------|----------|-----------|------------|
+| ID | Interaction Steps | Message Type | Target Latency | Actual Time |
+|----|-------------------|--------------|----------------|-------------|
 | IO3-INV-01 | `WarehouseOfficer` → `WarehouseOfficer`: ReceiveGoods | Local | <= 100ms | TBD |
-| IO3-INV-02 | `WarehouseOfficer` → `StockLot`: `allocateStock()` | Local | <= 500ms | TBD |
+| IO3-INV-02 | `WarehouseOfficer` → `StockLot`: `allocate()` | Local | <= 500ms | TBD |
 | IO3-INV-03 | `WarehouseOfficer` → `ExecutiveAnalyst`: OverflowAlert | Async | <= 300ms | TBD |
 | IO3-INV-04 | `ExecutiveAnalyst` → `WarehouseOfficer`: WarehouseExpansion | Async | <= 1000ms | TBD |
 
 **Fragment:**
-- `alt` (Overflow؟) → ExecutiveAnalyst | تخصیص عادی
+- `alt` (Overflow?) → ExecutiveAnalyst | Normal allocation
 
 ---
 
-## ۳. Timing Diagrams — Levels 1-3
+## 3. Timing Diagrams — Levels 1-3
 
-### ۳.۱ Level 1 — تایم‌های کلی سیستم
+### 3.1 Level 1 — Overall System Timing
 
 ```plantuml
 @startuml ARCH-L1-Timing
 skinparam backgroundColor #FEFEFE
-title L1: Timing Overview — سیستم یکپارچه HR/Finance/Procurement
+title L1: Timing Overview — Integrated HR/Finance/Procurement System
 
 concise "Employee" as E
 concise "HRManager" as HR
@@ -278,18 +278,18 @@ BG is "Idle"
 @enduml
 ```
 
-**توضیح L1:** این نمودار تایم کلی یک چرخه کامل حقوق تا پرداخت را نشان می‌دهد. هدف کلیدی **Payroll <= 2s** (از لحظه تایید HRManager تا تأیید پرداخت) است که در این نمودار با خط چین هدف مشخص شده است.
+**L1 Explanation:** This diagram shows the overall timing of a complete payroll-to-payment cycle. The key target is **Payroll <= 2s** (from HRManager approval to payment confirmation), indicated by the dashed target line in this diagram.
 
 ---
 
-### ۳.۲ Level 2 — تایم‌های حوزه‌ای
+### 3.2 Level 2 — Domain Timing
 
-#### ۳.۲.۱ حوزه Payroll — Timing Diagram
+#### 3.2.1 Payroll Domain — Timing Diagram
 
 ```plantuml
 @startuml ARCH-L2-Timing-Payroll
 skinparam backgroundColor #FEFEFE
-title L2: Timing — حوزه Payroll (حقوق و دستمزد)
+title L2: Timing — Payroll Domain (Payroll Processing)
 
 concise "HRManager" as HR
 concise "PayrollRun" as PR
@@ -335,14 +335,14 @@ BG is "Idle"
 @enduml
 ```
 
-**توضیح L2-Payroll:** تایم‌های دقیق حوزه حقوق نشان می‌دهد که پردازش حقوق (`calculateSalary`) حدود ۱۲۰۰ms و بررسی بودجه حدود ۲۰۰ms زمان می‌برد. هدف کلی <= 2s رعایت می‌شود.
+**L2-Payroll Explanation:** Detailed payroll domain timings show that payroll processing (`calculateSalary`) takes approximately 1200ms and budget review takes approximately 200ms. The overall <= 2s target is met.
 
-#### ۳.۲.۲ حوزه Procurement — Timing Diagram
+#### 3.2.2 Procurement Domain — Timing Diagram
 
 ```plantuml
 @startuml ARCH-L2-Timing-Procurement
 skinparam backgroundColor #FEFEFE
-title L2: Timing — حوزه Procurement (تدارکات)
+title L2: Timing — Procurement Domain (Procurement)
 
 concise "ProcurementOfficer" as PO
 concise "FinanceManager" as FM
@@ -391,14 +391,14 @@ WH is "Idle"
 @enduml
 ```
 
-**توضیح L2-Procurement:** فرآیند تدارکات معمولاً طولانی‌تر از پرداخت حقوق است (۴ ثانیه در این نمونه). تأخیر اصلی در ارسال کالا توسط تامین‌کننده است.
+**L2-Procurement Explanation:** Procurement processes are typically longer than payroll payments (4 seconds in this sample). The main delay is supplier shipping time.
 
-#### ۳.۲.۳ حوزه Budget — Timing Diagram
+#### 3.2.3 Budget Domain — Timing Diagram
 
 ```plantuml
 @startuml ARCH-L2-Timing-Budget
 skinparam backgroundColor #FEFEFE
-title L2: Timing — حوزه Budget (بودجه)
+title L2: Timing — Budget Domain (Budgeting)
 
 concise "ExecutiveAnalyst" as EA
 concise "FinanceManager" as FM
@@ -429,24 +429,24 @@ BUD is "Idle"
 @enduml
 ```
 
-**توضیح L2-Budget:** بررسی بودجه (`checkBudget`) باید بسیار سریع باشد (زیر از ۲۰۰ms) تا ساختار درخواست‌های پرتکرار مسدود نشود.
+**L2-Budget Explanation:** Budget checking (`checkBudget`) must be very fast (under 200ms) so high-frequency request flows are not blocked.
 
 ---
 
-### ۳.۳ Level 3 — تایم‌های بحرانی
+### 3.3 Level 3 — Critical Timing
 
-#### ۳.۳.۱ تایید پرداخت حقوق (Payroll Approval) — Timing Diagram
+#### 3.3.1 Payroll Approval — Timing Diagram
 
 ```plantuml
 @startuml ARCH-L3-Timing-PayrollApproval
 skinparam backgroundColor #FEFEFE
-title L3: Timing — تایید پرداخت حقوق (Critical Path)
+title L3: Timing — Payroll Approval (Critical Path)
 
 concise "HRManager" as HR
 concise "PayrollRun" as PR
 concise "FinanceManager" as FM
-concise "Budget" as BUD
-concise "BankGateway" as BG
+concise "BudgetAllocation" as BUD
+concise "PaymentGateway" as BG
 concise "AuditLog" as AL
 
 @0
@@ -494,23 +494,23 @@ BG is "Idle"
 @enduml
 ```
 
-**توضیح L3-Payroll:** این نمودار تایم بحرانی پرداخت حقوق است. کل جریان از ۱۰۰ms (شروع تایید HR) تا ۳۵۰۰ms (ثبت AuditLog) ادامه دارد. هدف **Payroll <= 2s** از لحظه شروع `calculateSalary` تا `PaymentSent` است. در این نمودار محاسبه حقوق ۱۲۰۰ms، بررسی بودجه ۲۰۰ms و پرداخت ۱۰۰۰ms زمان می‌برد که مجموعاً ۲۴۰۰ms است. با بهینه‌سازی موازی‌سازی، می‌توان زیر ۲۰۰۰ms رسید.
+**L3-Payroll Explanation:** This critical timing diagram covers payroll approval. The full flow runs from 100ms (HR approval start) to 3500ms (AuditLog registration). The end-to-end payroll target is **<= 2000ms** from the start of `calculateSalary` to `PaymentSent`. In this diagram, salary calculation takes 1200ms, budget check takes 200ms, and payment takes 1000ms, totaling 2400ms. With parallelization, the target can be met under 2000ms.
 
-**Constraint:**
-- **پرداخت حقوق:** Target <= 2000ms (از شروع `calculateSalary` تا `PaymentSent`)
-- **بررسی بودجه:** Target <= 200ms
-- **پرداخت بانکی:** Target <= 1000ms
+**Constraints:**
+- **Payroll processing:** Target <= 2000ms (from `calculateSalary` start to `PaymentSent`)
+- **Budget check:** Target <= 200ms
+- **Bank payment:** Target <= 1000ms
 
-#### ۳.۳.۲ بررسی بودجه برای درخواست خرید (Budget-Check PR) — Timing Diagram
+#### 3.3.2 Budget Check for Purchase Request — Timing Diagram
 
 ```plantuml
 @startuml ARCH-L3-Timing-BudgetCheckPR
 skinparam backgroundColor #FEFEFE
-title L3: Timing — بررسی بودجه برای درخواست خرید (Critical Path)
+title L3: Timing — Budget Check for Purchase Request (Critical Path)
 
 concise "ProcurementOfficer" as PO
 concise "FinanceManager" as FM
-concise "Budget" as BUD
+concise "BudgetAllocation" as BUD
 concise "ExecutiveAnalyst" as EA
 concise "Supplier" as SUP
 
@@ -555,14 +555,14 @@ SUP is "Idle"
 @enduml
 ```
 
-**توضیح L3-Budget:** این نمودار مسیر بحرانی بررسی بودجه + درخواست reassign را نشان می‌دهد. کل فرآیند ۲۵۰۰ms زمان می‌برد که قابل قبول است.
+**L3-Budget Explanation:** This diagram shows the critical path for budget check + reassignment request. The full process takes 2500ms, which is acceptable.
 
-#### ۳.۳.۳ تخصیص موجودی (Stock Allocation) — Timing Diagram
+#### 3.3.3 Stock Allocation — Timing Diagram
 
 ```plantuml
 @startuml ARCH-L3-Timing-StockAllocation
 skinparam backgroundColor #FEFEFE
-title L3: Timing — تخصیص موجودی (Critical Path)
+title L3: Timing — Stock Allocation (Critical Path)
 
 concise "WarehouseOfficer" as WH
 concise "StockLot" as SL
@@ -600,174 +600,174 @@ EA is "Idle"
 @enduml
 ```
 
-**توضیح L3-Stock:** تخصیص موجودی باید زیر ۵۰۰ms انجام شود تا جریان انبار مسدود نشود. در این نمودار بازرسی ۵۰۰ms و تخصیص ۵۰۰ms زمان می‌برد.
+**L3-Stock Explanation:** Stock allocation must complete within 500ms so warehouse flow is not blocked. In this diagram, inspection takes 500ms and allocation takes 500ms.
 
 ---
 
-## ۴. محدودیت‌های زمانی و اهداف عملکرد
+## 4. Timing Constraints and Performance Targets
 
-### ۴.۱ جدول اهداف زمانی (SLA Targets)
+### 4.1 Timing Targets Table (SLA Targets)
 
-| فرآیند | هدف (Target) | ضریب اطمینان | محدودیت سخت (Hard Limit) | واحد |
-|---------|--------------|--------------|-------------------------|------|
-| محاسبه حقوق (`calculateSalary`) | <= 1200ms | 99% | <= 1500ms | میلی‌ثانیه |
-| بررسی بودجه (`checkBudget`) | <= 200ms | 99.9% | <= 300ms | میلی‌ثانیه |
-| پرداخت بانکی (`executePayment`) | <= 1000ms | 99% | <= 2000ms | میلی‌ثانیه |
-| کل فرآیند حقوق (Payroll End-to-End) | <= 2000ms | 95% | <= 2500ms | میلی‌ثانیه |
-| تخصیص موجودی (`allocateStock`) | <= 500ms | 99.5% | <= 800ms | میلی‌ثانیه |
-| تولید گزارش (`generateReport`) | <= 3000ms | 98% | <= 5000ms | میلی‌ثانیه |
-| ثبت GoodsReceipt | <= 200ms | 99.9% | <= 300ms | میلی‌ثانیه |
+| Process | Target | Confidence Factor | Hard Limit | Unit |
+|---------|--------|-------------------|------------|------|
+| Payroll calculation (`calculateSalary`) | <= 1200ms | 99% | <= 1500ms | ms |
+| Budget check (`BudgetAllocation.checkBudget`) | <= 200ms | 99.9% | <= 300ms | ms |
+| Bank payment (`PaymentGateway.executePayment`) | <= 1000ms | 99% | <= 2000ms | ms |
+| Payroll end-to-end process | <= 2000ms | 95% | <= 2500ms | ms |
+| Stock allocation (`StockLot.allocate`) | <= 500ms | 99.5% | <= 800ms | ms |
+| Report generation (`ReportEngine.generateReport`) | <= 3000ms | 98% | <= 5000ms | ms |
+| GoodsReceipt registration | <= 200ms | 99.9% | <= 300ms | ms |
 
-### ۴.۲ محدودیت‌های تاخیر (Delay Constraints)
+### 4.2 Delay Constraints
 
-| نوع تاخیر | مقدار حداکثر | منشأ | راه‌حل |
-|-----------|--------------|-------|--------|
-| **Network Latency** | <= 100ms | ارتباط سرویس‌ها | استفاده از HTTP/2، Keep-Alive |
-| **Database Query** | <= 200ms | PostgreSQL | Index Optimization، Connection Pool |
-| **Message Broker** | <= 50ms | RabbitMQ/Kafka | Partitioning، Dedicated Broker |
-| **Bank Gateway** | <= 1000ms | درگاه بانک | Timeout Circuit Breaker، Retry با Exponential Backoff |
-| **Retry Delay** | <= 5 دقیقه | خطای تراکنش | Scheduler-based Retry، DLQ |
-| **Cache Miss** | <= 500ms | Redis Cache | warming، Pre-computation |
+| Delay Type | Maximum Value | Origin | Solution |
+|------------|--------------|--------|----------|
+| **Network Latency** | <= 100ms | Service communication | Use HTTP/2, Keep-Alive |
+| **Database Query** | <= 200ms | PostgreSQL | Index Optimization, Connection Pool |
+| **Message Broker** | <= 50ms | RabbitMQ/Kafka | Partitioning, Dedicated Broker |
+| **Bank Gateway** | <= 1000ms | Bank gateway | Timeout Circuit Breaker, Retry with Exponential Backoff |
+| **Retry Delay** | <= 5 minutes | Transaction error | Scheduler-based Retry, DLQ |
+| **Cache Miss** | <= 500ms | Redis Cache | Warming, Pre-computation |
 
-### ۴.۳ هدف Payroll <= 2s
+### 4.3 Payroll <= 2s Target
 
-**تعریف:** کل زمان از لحظه تایید `HRManager` تا تأیید موفق `BankGateway` باید کمتر از یا برابر با **2000ms** باشد.
+**Definition:** The total time from HRManager approval to successful BankGateway confirmation must be less than or equal to **2000ms**.
 
-**اجزای هدف:**
+**Target Components:**
 
-| مرحله | زمان هدف | زمان حداکثر | تاخیر مجاز |
-|-------|----------|-------------|------------|
-| ۱. تایید HRManager | 0ms | 500ms | 500ms |
-| ۲. محاسبه حقوق (`calculateSalary`) | 1200ms | 1500ms | 300ms |
-| ۳. بررسی بودجه (`checkBudget`) | 200ms | 300ms | 100ms |
-| ۴. ایجاد Payment و ارسال به Bank | 300ms | 500ms | 200ms |
-| ۵. پرداخت بانکی | 1000ms | 2000ms | 1000ms |
-| **جمع** | **2700ms** | **4800ms** | — |
+| Stage | Target Time | Maximum Time | Allowable Delay |
+|-------|-------------|--------------|-----------------|
+| 1. HRManager approval | 0ms | 500ms | 500ms |
+| 2. Payroll calculation (`calculateSalary`) | 1200ms | 1500ms | 300ms |
+| 3. Budget check (`BudgetAllocation.checkBudget`) | 200ms | 300ms | 100ms |
+| 4. Payment creation and submission to bank | 300ms | 500ms | 200ms |
+| 5. Bank payment | 1000ms | 2000ms | 1000ms |
+| **Total** | **2700ms** | **4800ms** | — |
 
-**توجه:** هدف ۲۰۰۰ms فقط برای مراحل ۲، ۳ و ۵ تعریف شده است (از شروع `calculateSalary` تا پایان پرداخت). با موازی‌سازی مراحل ۳ و ۵، می‌توان زیر ۲۰۰۰ms رسید.
+**Note:** The 2000ms target applies to stages 2, 3, and 5 (from `calculateSalary` start to payment completion). With parallelization of stages 3 and 5, the target can be met under 2000ms.
 
-**راه‌حل‌های بهینه‌سازی:**
-- موازی‌سازی `checkBudget` با `calculateSalary` (از طریق prefetch)
-- استفاده از Redis Cache برای `BudgetAllocation`
-- استفاده از Connection Pool برای PostgreSQL
-- Circuit Breaker برای Bank Gateway
+**Optimization Solutions:**
+- Parallelize `BudgetAllocation.checkBudget` with `calculateSalary` (via prefetch)
+- Use Redis Cache for `BudgetAllocation`
+- Use Connection Pool for PostgreSQL
+- Circuit Breaker for Bank Gateway
 
 ---
 
-## ۵. ردپا (Traceability)
+## 5. Traceability
 
-### ۵.۱ نگاشت به BPMN
+### 5.1 BPMN Mapping
 
-| Interaction Overview / Timing | فرآیند BPMN | Entity | متد |
-|-------------------------------|-------------|--------|-----|
+| Interaction Overview / Timing | BPMN Process | Entity | Method |
+|-------------------------------|--------------|--------|--------|
 | IO-PAY-01 | BPMN-PAY-01 | `PayrollRun` | `calculateSalary()` |
-| IO-PAY-02 | BPMN-PAY-02 | `BankGateway` | `executePayment()` |
-| IO-BUD-01 | BPMN-BUD-01 | `Budget` | `checkBudget()` |
+| IO-PAY-02 | BPMN-PAY-02 | `PaymentGateway` | `executePayment()` |
+| IO-BUD-01 | BPMN-BUD-01 | `BudgetAllocation` | `checkBudget()` |
 | IO-PROC-01 | BPMN-PROC-01 | `ProcurementOfficer` | `createPurchaseRequest()` |
 | IO-INV-01 | BPMN-INV-01 | `WarehouseOfficer` | `allocateStock()` |
-| TIMING-L1 | BPMN-L1 | سیستم یکپارچه | — |
+| TIMING-L1 | BPMN-L1 | Integrated system | — |
 | TIMING-L2-Payroll | BPMN-L2-Payroll | `PayrollRun` | `calculateSalary()` |
-| TIMING-L3-Budget | BPMN-L3-BudgetCheck-PR | `Budget` | `checkBudget()` |
+| TIMING-L3-Budget | BPMN-L3-BudgetCheck-PR | `BudgetAllocation` | `checkBudget()` |
 
-### ۵.۲ نگاشت به DFD
+### 5.2 DFD Mapping
 
-| Interaction Overview / Timing | فرآیند DFD | توضیح |
-|-------------------------------|------------|-------|
-| IO-PAY-01 | DFD-04 | محاسبه حقوق |
-| IO-PAY-02 | DFD-11 | اجرای پرداخت |
-| IO-BUD-01 | DFD-07 | اعتبارسنجی بودجه |
-| IO-INV-01 | DFD-10 | به‌روزرسانی موجودی |
-| IO-REP-01 | DFD-12 | تولید گزارش |
-| TIMING-L1 | DFD-01 | Context - تایم کلی |
-| TIMING-L2-Payroll | DFD-04 | محاسبه حقوق |
-| TIMING-L3-Budget | DFD-07 | اعتبارسنجی بودجه |
+| Interaction Overview / Timing | DFD Process | Description |
+|-------------------------------|-------------|-------------|
+| IO-PAY-01 | DFD-04 | Payroll calculation |
+| IO-PAY-02 | DFD-11 | Payment execution |
+| IO-BUD-01 | DFD-07 | Budget validation |
+| IO-INV-01 | DFD-10 | Inventory update |
+| IO-REP-01 | DFD-12 | Report generation |
+| TIMING-L1 | DFD-01 | Context - Overall timing |
+| TIMING-L2-Payroll | DFD-04 | Payroll calculation |
+| TIMING-L3-Budget | DFD-07 | Budget validation |
 
-### ۵.۳ ماتریس ردیابی کامل
+### 5.3 Full Traceability Matrix
 
-| شناسه | نام نمودار | BPMN | DFD | UML Interaction | UML Timing | Entity | متد | خروجی |
-|--------|-----------|------|-----|-----------------|------------|--------|-----|-------|
-| IO-L1 | Interaction Overview L1 | BPMN-L1 | DFD-01 | IO-ACT-01 تا IO-ACT-10 | TIMING-L1 | همه | — | جداول تعامل |
-| IO-L2-HR | HR Interaction L2 | BPMN-L2-HR | DFD-03 | IO-HR-01 تا IO-HR-04 | — | Employee, HRManager | — | تعاملات HR |
-| IO-L2-PAY | Payroll Interaction L2 | BPMN-L2-Payroll | DFD-04 | IO-PAY-01 تا IO-PAY-04 | TIMING-L2-Payroll | PayrollRun, FinanceManager | `calculateSalary()` | تعاملات حقوق |
-| IO-L2-BUD | Budget Interaction L2 | BPMN-L2-Budget | DFD-07 | IO-BUD-01 تا IO-BUD-04 | TIMING-L2-Budget | Budget, FinanceManager | `checkBudget()` | تعاملات بودجه |
-| IO-L2-PROC | Procurement Interaction L2 | BPMN-L2-Procurement | DFD-08 | IO-PROC-01 تا IO-PROC-04 | — | ProcurementOfficer, Supplier | — | تعاملات تدارکات |
-| IO-L2-INV | Inventory Interaction L2 | BPMN-L2-Inventory | DFD-10 | IO-INV-01 تا IO-INV-03 | TIMING-L2-Inventory | WarehouseOfficer, StockLot | `allocateStock()` | تعاملات موجودی |
-| IO-L3-PAY | Payroll Approval L3 | BPMN-L3-PayrollApproval | DFD-04 | IO3-PAY-01 تا IO3-PAY-06 | TIMING-L3-PayrollApproval | PayrollRun, BankGateway | `calculateSalary()`, `executePayment()` | تایم بحرانی حقوق |
-| IO-L3-BUD | Budget-Check PR L3 | BPMN-L3-BudgetCheck-PR | DFD-07 | IO3-BUD-01 تا IO3-BUD-05 | TIMING-L3-BudgetCheckPR | Budget, FinanceManager | `checkBudget()` | تایم بحرانی بودجه |
-| IO-L3-INV | Stock Allocation L3 | BPMN-L3-StockAllocation | DFD-10 | IO3-INV-01 تا IO3-INV-04 | TIMING-L3-StockAllocation | StockLot, WarehouseOfficer | `allocateStock()` | تایم بحرانی موجودی |
+| ID | Diagram Name | BPMN | DFD | UML Interaction | UML Timing | Entity | Method | Output |
+|----|--------------|------|-----|-----------------|------------|--------|--------|--------|
+| IO-L1 | Interaction Overview L1 | BPMN-L1 | DFD-01 | IO-ACT-01 to IO-ACT-10 | TIMING-L1 | All | — | Interaction tables |
+| IO-L2-HR | HR Interaction L2 | BPMN-L2-HR | DFD-03 | IO-HR-01 to IO-HR-04 | — | Employee, HRManager | — | HR interactions |
+| IO-L2-PAY | Payroll Interaction L2 | BPMN-L2-Payroll | DFD-04 | IO-PAY-01 to IO-PAY-04 | TIMING-L2-Payroll | PayrollRun, FinanceManager | `calculateSalary()` | Payroll interactions |
+| IO-L2-BUD | Budget Interaction L2 | BPMN-L2-Budget | DFD-07 | IO-BUD-01 to IO-BUD-04 | TIMING-L2-Budget | Budget, FinanceManager | `BudgetAllocation.checkBudget()` | Budget interactions |
+| IO-L2-PROC | Procurement Interaction L2 | BPMN-L2-Procurement | DFD-08 | IO-PROC-01 to IO-PROC-04 | — | ProcurementOfficer, Supplier | — | Procurement interactions |
+| IO-L2-INV | Inventory Interaction L2 | BPMN-L2-Inventory | DFD-10 | IO-INV-01 to IO-INV-03 | TIMING-L2-Inventory | WarehouseOfficer, StockLot | `StockLot.allocateStock()` | Inventory interactions |
+| IO-L3-PAY | Payroll Approval L3 | BPMN-L3-PayrollApproval | DFD-04 | IO3-PAY-01 to IO3-PAY-06 | TIMING-L3-PayrollApproval | PayrollRun, PaymentGateway | `calculateSalary()`, `PaymentGateway.executePayment()` | Payroll critical timing |
+| IO-L3-BUD | Budget-Check PR L3 | BPMN-L3-BudgetCheck-PR | DFD-07 | IO3-BUD-01 to IO3-BUD-05 | TIMING-L3-BudgetCheckPR | BudgetAllocation, FinanceManager | `BudgetAllocation.checkBudget()` | Budget critical timing |
+| IO-L3-INV | Stock Allocation L3 | BPMN-L3-StockAllocation | DFD-10 | IO3-INV-01 to IO3-INV-04 | TIMING-L3-StockAllocation | StockLot, WarehouseOfficer | `StockLot.allocate()` | Inventory critical timing |
 
-### ۵.۴ ماتریس ردیابی به UML Class Diagrams
+### 5.4 UML Class Diagram Traceability
 
-| Interaction Overview | UML Class | Operation | نوع Operation |
-|---------------------|-----------|-----------|---------------|
+| Interaction Overview | UML Class | Operation | Operation Type |
+|---------------------|-----------|-----------|----------------|
 | IO-PAY-01 | `PayrollRun` | `calculateSalary()` | Service Task |
-| IO-PAY-02 | `BankGateway` | `executePayment()` | Service Task |
-| IO-BUD-01 | `Budget` | `checkBudget()` | Service Task |
+| IO-PAY-02 | `PaymentGateway` | `executePayment()` | Service Task |
+| IO-BUD-01 | `BudgetAllocation` | `checkBudget()` | Service Task |
 | IO-PROC-01 | `ProcurementOfficer` | `createPurchaseRequest()` | User Task |
 | IO-INV-01 | `WarehouseOfficer` | `allocateStock()` | Service Task |
 | IO-REP-01 | `ReportEngine` | `generateReport()` | Service Task |
 
 ---
 
-## ۶. کنوانسیون‌های نام‌گذاری
+## 6. Naming Conventions
 
-### ۶.۱ شناسه‌های Interaction Overview
+### 6.1 Interaction Overview IDs
 
-| پیشوند | حوزه | مثال |
-|--------|------|------|
-| `IO-ACT-` | نقش‌های Lifeline | `IO-ACT-01` |
-| `IO-MSG-` | پیام‌های تعامل | `IO-MSG-01` |
+| Prefix | Domain | Example |
+|--------|--------|---------|
+| `IO-ACT-` | Lifeline roles | `IO-ACT-01` |
+| `IO-MSG-` | Interaction messages | `IO-MSG-01` |
 | `IO-ALT-` | Combining Fragment | `IO-ALT-01` |
 | `IO-OPT-` | Optional Fragment | `IO-OPT-01` |
 | `IO-PAR-` | Parallel Fragment | `IO-PAR-01` |
-| `IO3-PAY-` | تعاملات L3 Payroll | `IO3-PAY-01` |
-| `IO3-BUD-` | تعاملات L3 Budget | `IO3-BUD-01` |
-| `IO3-INV-` | تعاملات L3 Inventory | `IO3-INV-01` |
+| `IO3-PAY-` | L3 Payroll interactions | `IO3-PAY-01` |
+| `IO3-BUD-` | L3 Budget interactions | `IO3-BUD-01` |
+| `IO3-INV-` | L3 Inventory interactions | `IO3-INV-01` |
 
-### ۶.۲ شناسه‌های Timing Diagrams
+### 6.2 Timing Diagram IDs
 
-| پیشوند | حوزه | مثال |
-|--------|------|------|
-| `TIMING-L1` | تایم کلی سیستم | `TIMING-L1` |
-| `TIMING-L2-` | تایم حوزه‌ای | `TIMING-L2-Payroll` |
-| `TIMING-L3-` | تایم بحرانی | `TIMING-L3-PayrollApproval` |
+| Prefix | Domain | Example |
+|--------|--------|---------|
+| `TIMING-L1` | Overall system timing | `TIMING-L1` |
+| `TIMING-L2-` | Domain timing | `TIMING-L2-Payroll` |
+| `TIMING-L3-` | Critical timing | `TIMING-L3-PayrollApproval` |
 
-### ۶.۳ متدهای کلیدی
+### 6.3 Key Methods
 
-| متد | کلاس والد | توضیح |
-|-----|-----------|-------|
-| `calculateSalary()` | `PayrollRun` | محاسبه حقوق خالص کارمند |
-| `checkBudget()` | `Budget` | بررسی کافی بودن بودجه برای هزینه |
-| `allocateStock()` | `StockLot` / `WarehouseOfficer` | تخصیص موجودی ورودی به لات‌ها |
-| `generateReport()` | `ReportEngine` | تولید گزارش یکپارچه از داده‌های چند حوزه |
-| `executePayment()` | `BankGateway` | اجرای پرداخت از طریق بانک |
-| `recordGoodsReceipt()` | `WarehouseOfficer` | ثبت ورود کالا به انبار |
-
----
-
-## ۷. ضوابط و محدودیت‌ها
-
-1. **PlantUML Version:** نمودارهای Timing با PlantUML v1.2024+ سازگار هستند. Interaction Overview در PlantUML به طور Native پشتیبانی نمی‌شود؛ برای آن‌ها از جداول ساختاریافته استفاده شده است.
-2. **Timing Precision:** اعداد زمانی در نمودارها تقریبی هستند و بر اساس اندازه‌گیری‌های Production قابل تنظیم هستند.
-3. **Payroll Target:** هدف `<= 2s` برای پرداخت حقوق یک هدف سخت (Hard Target) است و هرگونه تخلف از آن باید در `AuditLog` ثبت شود.
-4. **Concurrency:** در Timing Diagrams، توازي (par) فرضی است و در پیاده‌سازی واقعی باید با موازی‌سازی (Async/Await) پیاده شود.
-5. **Traceability:** هر شناسه (`IO-XXX` یا `TIMING-XXX`) باید در **Requirement Traceability Matrix (RTM)** به سند نیازمندی ردیابی شود.
-6. **Dynamic Timing:** تایم‌های واقعی ممکن است بسته به بار سیستم (Load) تغییر کنند؛ برای آن از **Adaptive Timeout** و **Circuit Breaker** استفاده شود.
-7. **Retry Policy:** در صورت خطای تراکنش، Retry بعد از **۵ دقیقه** و حداکثر **۳ بار** انجام می‌شود.
+| Method | Parent Class | Description |
+|--------|--------------|-------------|
+| `calculateSalary()` | `PayrollRun` | Calculate net employee salary |
+| `checkBudget()` | `BudgetAllocation` | Validate sufficient budget for expense |
+| `allocate()` / `allocateStock()` | `StockLot` / `WarehouseOfficer` | Allocate incoming inventory to lots |
+| `generateReport()` | `ReportEngine` | Generate integrated report from multi-domain data |
+| `executePayment()` | `PaymentGateway` | Execute payment through bank |
+| `recordGoodsReceipt()` | `WarehouseOfficer` | Register incoming goods to warehouse |
 
 ---
 
-## پیوست A — خلاصه اهداف زمانی
+## 7. Rules and Constraints
 
-| فرآیند | هدف | وضعیت |
-|---------|------|-------|
-| Payroll End-to-End | <= 2000ms | **هدف سخت** |
-| `calculateSalary()` | <= 1200ms | هدف |
-| `checkBudget()` | <= 200ms | هدف |
-| `executePayment()` | <= 1000ms | هدف |
-| `allocateStock()` | <= 500ms | هدف |
-| `generateReport()` | <= 3000ms | هدف |
+1. **PlantUML Version:** Timing diagrams are compatible with PlantUML v1.2024+. Interaction Overview is not natively supported in PlantUML; structured tables are used instead.
+2. **Timing Precision:** Timing values are approximate and adjustable based on production measurements.
+3. **Payroll Target:** The `<= 2s` target for payroll is a Hard Target, and any violation must be logged in `AuditLog`.
+4. **Concurrency:** In Timing Diagrams, concurrency (par) is assumed and must be implemented with Async/Await in production.
+5. **Traceability:** Every ID (`IO-XXX` or `TIMING-XXX`) must be traced in the **Requirement Traceability Matrix (RTM)** to the requirements document.
+6. **Dynamic Timing:** Actual timings may vary based on system load; use **Adaptive Timeout** and **Circuit Breaker**.
+7. **Retry Policy:** On transaction error, retry after **5 minutes** with a maximum of **3 attempts**.
 
 ---
 
-*پایان سند*
+## Appendix A — Timing Targets Summary
+
+| Process | Target | Status |
+|---------|--------|--------|
+| Payroll End-to-End | <= 2000ms | **Hard Target** |
+| `calculateSalary()` | <= 1200ms | Target |
+| `BudgetAllocation.checkBudget()` | <= 200ms | Target |
+| `PaymentGateway.executePayment()` | <= 1000ms | Target |
+| `StockLot.allocate()` | <= 500ms | Target |
+| `ReportEngine.generateReport()` | <= 3000ms | Target |
+
+---
+
+*End of document*

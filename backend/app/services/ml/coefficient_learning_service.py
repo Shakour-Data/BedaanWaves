@@ -9,6 +9,7 @@ Uses hierarchical ML models to learn optimal weights for:
 - Sub-Aspects (Level 4: 173 sub-aspects)
 """
 
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any

@@ -83,7 +83,7 @@ class RealTimeMarketDataService(BaseService):
         STRICT: Raises DataProviderException on failure. Never returns fake data.
         """
         cache_key = f"quote:{symbol.upper()}"
-        cached = self._get_cached(cache_key)
+        cached = await self._get_cached(cache_key)
         if cached is not None:
             return RealtimeQuoteResponse(**cached)
 
@@ -114,7 +114,7 @@ class RealTimeMarketDataService(BaseService):
         )
 
         ttl = self._settings.REALTIME_QUOTE_CACHE_TTL_SECONDS
-        self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
+        await self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
         self._last_fetch_ts[symbol.upper()] = datetime.now(UTC)
         return response
 
@@ -139,7 +139,7 @@ class RealTimeMarketDataService(BaseService):
             start_date = end_date - timedelta(days=self._settings.DEFAULT_LOOKBACK_DAYS)
 
         cache_key = f"hist:{symbol.upper()}:{interval}:{start_date.date()}:{end_date.date()}"
-        cached = self._get_cached(cache_key)
+        cached = await self._get_cached(cache_key)
         if cached is not None:
             return HistoricalDataResponse(**cached)
 
@@ -183,7 +183,7 @@ class RealTimeMarketDataService(BaseService):
         )
 
         ttl = self._settings.HISTORICAL_DATA_CACHE_TTL_SECONDS
-        self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
+        await self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
         self._last_fetch_ts[symbol.upper()] = datetime.now(UTC)
         return response
 
@@ -197,7 +197,7 @@ class RealTimeMarketDataService(BaseService):
         STRICT: Raises DataProviderException on failure. Never returns fake data.
         """
         cache_key = f"intraday:{symbol.upper()}:{interval}"
-        cached = self._get_cached(cache_key)
+        cached = await self._get_cached(cache_key)
         if cached is not None:
             return IntradayDataResponse(**cached)
 
@@ -239,7 +239,7 @@ class RealTimeMarketDataService(BaseService):
         )
 
         ttl = self._settings.INTRADAY_DATA_CACHE_TTL_SECONDS
-        self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
+        await self._set_cached(cache_key, response.model_dump(mode="json"), ttl)
         self._last_fetch_ts[symbol.upper()] = datetime.now(UTC)
         return response
 
@@ -407,15 +407,11 @@ class RealTimeMarketDataService(BaseService):
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _get_cached(self, key: str) -> dict[str, Any] | None:
+    async def _get_cached(self, key: str) -> dict[str, Any] | None:
         if self._cache is None:
             return None
         try:
-            loop = asyncio.get_running_loop()
-            future = asyncio.run_coroutine_threadsafe(
-                self._cache.get(key, namespace="market_data"), loop
-            )
-            result = future.result(timeout=2)
+            result = await self._cache.get(key, namespace="market_data")
             if hasattr(result, 'value') and hasattr(result, 'is_success'):
                 if result.is_success:
                     return result.value
@@ -426,21 +422,18 @@ class RealTimeMarketDataService(BaseService):
             self.logger.debug(f"Cache get miss for {key}: {exc}")
             return None
 
-    def _set_cached(self, key: str, value: Any, ttl: int) -> None:
+    async def _set_cached(self, key: str, value: Any, ttl: int) -> None:
         if self._cache is None:
             return
         try:
-            loop = asyncio.get_running_loop()
-            future = asyncio.run_coroutine_threadsafe(
-                self._cache.set(key, value, namespace="market_data", ttl=ttl), loop
-            )
-            future.result(timeout=2)
+            await self._cache.set(key, value, namespace="market_data", ttl=ttl)
         except Exception as exc:
             self.logger.debug(f"Cache set failed for {key}: {exc}")
 
     async def _run_blocking(self, func, *args, **kwargs):
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
+        operation = loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
+        return await asyncio.wait_for(operation, timeout=self._settings.DATA_PROVIDER_TIMEOUT)
 
     def _fetch_yfinance_quote(self, symbol: str) -> dict[str, Any] | None:
         """

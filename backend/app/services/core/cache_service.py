@@ -236,7 +236,7 @@ class CacheService(BaseService):
     async def get_or_set(
         self,
         key: str,
-        factory: callable,
+        factory: Callable[[], Any] | Any,
         namespace: str = "default",
         ttl: int | None = None,
     ) -> Any:
@@ -256,7 +256,9 @@ class CacheService(BaseService):
         if cached is not None:
             return cached
 
-        value = await factory() if callable(factory) else factory
+        value = factory() if callable(factory) else factory
+        if inspect.isawaitable(value):
+            value = await value
         await self.set(key, value, namespace, ttl)
         return value
 

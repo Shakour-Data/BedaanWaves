@@ -58,38 +58,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["analysis"])
 
 
-def _confidence_floor(min_confidence: float) -> float:
-    """
-    Return the SQL confidence threshold to apply.
-
-    Seeded signals store ``confidence`` on a 0-1 scale (e.g. 0.67) while the
-    ``min_confidence`` query parameter is documented as 0-1 as well. Older
-    seeds used a 0-100 scale. Auto-detect the active scale by sampling the
-    table so the filter never silently drops every row.
-    """
-    try:
-        (
-            select(func.max(MLSignal.confidence))
-            .where(MLSignal.is_active)
-            .limit(1)
-            .execution_options(synchronize_session=False)
-        )
-    except Exception:
-        return min_confidence
-
-    # We can't execute the inner query synchronously here without a session,
-    # so we instead apply a safe upper-bound: if the caller passed a value
-    # already on the 0-1 scale, use it directly; otherwise (e.g. 0.6) treat
-    # the threshold as-is because real signals never exceed 1.0. The historical
-    # *100 heuristic (>= 6) is only used when the caller is clearly asking for
-    # the legacy 0-100 scale via a value > 1.
-    if min_confidence is None:
-        return 0.0
-    if min_confidence <= 1.0:
-        return min_confidence
-    return min_confidence * 100.0
-
-
 def _now_for_column(column):
     """
     Return a SQL expression that evaluates to the current time and is

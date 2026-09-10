@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
 import time
 from typing import Any
 
@@ -42,14 +41,16 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
         connect_timeout: float = 1.5,
         socket_timeout: float = 1.5,
         circuit_breaker_seconds: float = 30.0,
+        fail_closed: bool = True,
     ) -> None:
         self.redis_url = redis_url
         self.connect_timeout = max(0.1, float(connect_timeout))
         self.socket_timeout = max(0.1, float(socket_timeout))
         self.circuit_breaker_seconds = max(0.0, float(circuit_breaker_seconds))
+        self.fail_closed = fail_closed
         self._client: Any | None = None
         self._connected = False
-        self._client_lock = threading.Lock()
+        self._client_lock = asyncio.Lock()
         self._unavailable_until = 0.0
 
     async def _get_client(self) -> Any | None:
@@ -88,7 +89,10 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
         per_hour = max(1, int(per_hour))
         client = await self._get_client()
         if client is None:
-            return True, self._unavailable_info(per_minute, per_hour)
+            info = self._unavailable_info(per_minute, per_hour)
+            if self.fail_closed:
+                return False, info
+            return True, info
 
         now = int(time.time())
         minute_window = now - (now % 60)
@@ -124,12 +128,16 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
                 "hour_limit": per_hour,
                 "minute_reset": minute_reset,
                 "hour_reset": hour_reset,
+                "retry_after": hour_reset if not allowed and hour_count >= per_hour else minute_reset,
             }
         except Exception as exc:
             logger.warning("Redis rate limiter operation failed: %s", exc)
             await self._close_client()
             self._unavailable_until = time.monotonic() + self.circuit_breaker_seconds
-            return True, self._unavailable_info(per_minute, per_hour)
+            info = self._unavailable_info(per_minute, per_hour)
+            if self.fail_closed:
+                return False, info
+            return True, info
 
     @staticmethod
     def _unavailable_info(per_minute: int, per_hour: int) -> dict[str, Any]:
@@ -141,6 +149,7 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
             "hour_limit": per_hour,
             "minute_reset": 60,
             "hour_reset": 3600,
+            "retry_after": 60,
         }
 
     async def _close_client(self) -> None:

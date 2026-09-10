@@ -1,29 +1,29 @@
-# DFD — سیستم یکپارچه مدیریت منابع انسانی، مالی و تدارکات
+# DFD — Integrated HR, Finance & Procurement Management System
 
-**عنوان:** Integrated HR, Finance & Procurement Management System  
-**نسخه:** v1.0  
-**تاریخ:** 2026-09-09
+**Title:** Integrated HR, Finance & Procurement Management System  
+**Version:** v1.0  
+**Date:** 2026-09-09
 
-## نقشه ردیابی
+## Traceability Map
 
-| سطح | شناسه | محتوا | خروجی اصلی |
+| Level | ID | Content | Primary Output |
 |---|---|---|---|
-| ۰ | DFD-L0 | زمینه و مرز سیستم | فهرست بازیگران و جریان‌های مرزی |
-| ۱ | DFD-L1 | شش فرایند کلان | معماری داده در سطح حوزه |
-| ۲ | DFD-L2.1 تا L2.6 | تجزیه هر فرایند کلان | زیرفرایندهای عملیاتی |
-| ۳ | DFD-L3.1 تا L3.3 | فرایندهای اتمی بحرانی | قوانین تبدیل داده |
+| 0 | DFD-L0 | System context and boundary | External actors and boundary flows |
+| 1 | DFD-L1 | Six high-level processes | Domain-level data architecture |
+| 2 | DFD-L2.1 through L2.6 | Decomposition of each high-level process | Operational sub-processes |
+| 3 | DFD-L3.1 through L3.3 | Critical atomic processes | Detailed data transformation rules |
 
-## قرارداد نام‌گذاری
+## Naming Convention
 
-- موجودیت‌های بیرونی با نام‌های `Employee`، `HRManager`، `FinanceManager`، `ProcurementOfficer`، `WarehouseOfficer`، `Supplier`، `BankGateway`، `ExecutiveAnalyst` و `Auditor` نمایش داده می‌شوند.
-- مخازن داده با `D1` تا `D14` شماره‌گذاری شده‌اند و نام منطقی هر مخزن در برچسب آن آمده است.
-- فرایندها با شماره سطح و حوزه، مانند `2.2` یا `3.1.4`، شماره‌گذاری شده‌اند.
-- جریان‌ها نام داده را حمل می‌کنند؛ پیکان ورودی و خروجی برای حفظ تعادل DFD مشخص شده‌اند.
-- `AuditLog` برای تمام تغییرات مهم و `Report` برای خروجی‌های تحلیلی استفاده می‌شود.
+- External entities use the names `Employee`, `HRManager`, `FinanceManager`, `ProcurementOfficer`, `WarehouseOfficer`, `Supplier`, `BankGateway`, `ExecutiveAnalyst`, and `Auditor`.
+- Data stores are numbered `D1` through `D14`, with each store's logical name included in its label.
+- Processes use level and domain numbers, such as `2.2` or `3.1.4`.
+- Flows carry data names, and input/output arrows preserve DFD balance.
+- `AuditLog` records all material changes, and `Report` contains analytical outputs.
 
 ---
 
-## سطح ۰ — نمودار زمینه
+## Level 0 — Context Diagram
 
 ```mermaid
 flowchart LR
@@ -56,16 +56,16 @@ flowchart LR
     AUD <-->|audit query, audit evidence| SYS
 ```
 
-این نمودار مرز سامانه را نشان می‌دهد و کل نرم‌افزار را به‌عنوان یک فرایند واحد در نظر می‌گیرد.  
-`Employee` داده‌های هویتی، مرخصی و حضور را وارد می‌کند و فیش حقوقی و اعلان دریافت می‌کند.  
-`HRManager`، `FinanceManager`، `ProcurementOfficer` و `WarehouseOfficer` نقش‌های داخلی سازمان هستند که تصمیم‌ها و عملیات حوزه خود را ارسال می‌کنند.  
-`Supplier` و `BankGateway` سامانه‌های بیرونی تأمین و پرداخت‌اند و `ExecutiveAnalyst` و `Auditor` خروجی‌های مدیریتی و ممیزی دریافت می‌کنند.  
-در این سطح هیچ مخزن داخلی رسم نمی‌شود؛ تمام جریان‌ها از مرز سیستم عبور می‌کنند.  
-این نمودار با Use Case سطح ۱ UML هم‌ردیف است.
+This diagram defines the system boundary and treats the software as one process.  
+`Employee` provides identity, leave, and attendance data and receives salary slips and notifications.  
+`HRManager`, `FinanceManager`, `ProcurementOfficer`, and `WarehouseOfficer` are internal organizational roles that submit decisions and operations for their domains.  
+`Supplier` and `BankGateway` are external supply and payment systems, while `ExecutiveAnalyst` and `Auditor` receive management and audit outputs.  
+No internal data stores appear at this level; every flow crosses the system boundary.  
+This diagram aligns with the Level-1 UML Use Case Diagram.
 
 ---
 
-## سطح ۱ — فرایندهای کلان
+## Level 1 — High-Level Processes
 
 ```mermaid
 flowchart LR
