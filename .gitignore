@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *.class
 *.so
+*.dylib
+*.dll
 .Python
 build/
 develop-eggs/
@@ -32,52 +34,75 @@ yarn-error.log*
 .pnpm-debug*
 .npm
 
-# Frontend
-build/
-dist/
+# Frontend build
 .next/
 out/
 .nuxt/
 .vercel/
 tsconfig.tsbuildinfo
-temp_emnapi.json
-# Don't ignore frontend/src/lib (contains API utilities, caught by generic lib/)
-!frontend/src/lib/
-!frontend/src/lib/api/dashboard.ts
 
 # OS
 .DS_Store
 Thumbs.db
 *.swp
+*.swo
 *.bak
 *.tmp
-DatabaseConfigs.txt
-*.bat
+*.temp
+*.out
+*.log
 
-# VS Code/JetBrains
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Trae AI internal state
+# Trae AI
 .trae/
 
-# Kilo AI internal state
+# Kilo AI
 .kilo/
 
-# Static analysis reports (generated)
-backend/static_analysis_report.md
+# Caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # Test artifacts
 backend/app/tests/regression/
-.trae/specs/realtime-data-streaming/spec.md
+.trae/specs/
 
-# Backend logs
-backend/logs/
-logs/
+# ML artifacts
+*.joblib
+*.pkl
+*.h5
+*.onnx
+*.tflite
 
-# Backend temporary/debug files
+# Database
+*.sql.backup
+database/pginst*.exe
+pginst_extracted/
+pginst*.exe
+
+# Backup files
+backups/
+archive/
+
+# Generated docs
+docs/openapi.yaml
+docs/openapi_report.md
+docs/INVENTORY.md
+docs/OBSOLETE_FILES_REPORT.md
+docs/DUPLICATES_REMOVAL_REPORT.md
+
+# Static analysis reports
+backend/static_analysis_report.md
+
+# Backend temp/debug
 backend/debug_*.py
 backend/debug_*.txt
 backend/*_raw.csv
@@ -97,63 +122,29 @@ backend/verify_refresh.py
 backend/count_mypy.py
 backend/db_quality_audit.py
 backend/fix_*.py
-
-# Backend scripts (development)
 backend/scripts/
 
-# Machine learning artifacts
-*.joblib
-
-# Backup files
-backend/*.backup
-backups/
-
-# Database backups
-database/pginst*.exe
-pginst_extracted/
-
-# Postgres installer
-pginst*.exe
-pginst_extracted/
-
-# Purification
-purification/
-
-# Scripts
-scripts/
-
-# Deployment scripts
-deployment/scripts/
-
-# Docs generated
-docs/openapi.yaml
-
-# Temporary files
-*.tmp
-*.temp
-*.out
-*.log
-
-# ESLint/TypeScript temp
-eslint_*.txt
-scripts/check_*.py
-scripts/find_parse2.js
-scripts/fix_imports.py
-scripts/verify_no_mock_data.py
-
-# PostgreSQL installer
-pginst*.exe
-pginst_extracted/
-
-# Debug/test files
-test_*.py
-test_*.txt
-verify_*.py
+# Root temp scripts
+*.pyc
+__pycache__/
+fix_*.py
 check_*.py
-
-# Root-level debug/temp files
+verify_*.py
+count_*.py
+inspect_*.py
+db_quality_audit.py
+deep_inspect.py
+forensic.py
+get_assets.py
+file_inventory.csv
+eslint_*.txt
 *.txt
-*.csv
+!README.md
+!STRUCTURE.md
+!MIGRATION.md
+!AGENTS.md
+
+# Additional debug/test files (root and backend)
 *.pyc
 fix_*.py
 inspect_*.py
@@ -168,3 +159,18 @@ find_port.py
 kill*.py
 pytest_full_output.txt
 file_inventory.csv
+*.log
+*.out
+*.tmp
+*.temp
+backend/logs/
+scripts/
+deployment/scripts/
+.env.template
+backend/test_*.py
+backend/find_port.py
+backend/kill*.py
+backend/quality_audit.py
+backend/schema_audit.py
+backend/test_*.py
+backend/test_*.txt
