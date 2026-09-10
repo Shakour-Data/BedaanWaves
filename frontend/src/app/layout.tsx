@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { UXProviders } from "@/providers/UXProviders";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { ErrorBoundary } from "@/components/ux/ErrorBoundary";
+import { useFrontendObservability } from "@/lib/frontend-observability";
 import "./globals.css";
+
+function FrontendObservabilityInit() {
+  useFrontendObservability();
+  return null;
+}
 
 export const metadata: Metadata = {
   title: "BedaanWaves | Market Analysis Platform",
@@ -32,7 +38,10 @@ export default function RootLayout({
       <body>
         <ReactQueryProvider>
           <ErrorBoundary>
-            <UXProviders>{children}</UXProviders>
+            <UXProviders>
+              <FrontendObservabilityInit />
+              {children}
+            </UXProviders>
           </ErrorBoundary>
         </ReactQueryProvider>
       </body>

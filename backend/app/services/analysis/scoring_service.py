@@ -12,6 +12,7 @@ from typing import Any
 from app.core.utils import utc_now_iso
 from app.core.config import get_settings as _get_settings
 from app.services.core.dependency_container import get_global_container
+from app.services.system.metrics_service import MetricsService
 
 from ..core import AnalysisService
 from ..ml import CoefficientLearningService
@@ -315,7 +316,15 @@ class ScoringService(AnalysisService):
         scores["grade"] = self._assign_grade(scores["overall_score"])
         scores["signals"] = self._generate_signals(scores["dimension_scores"])
 
-        # Cache the dimension scores for potential reuse
+        try:
+            metrics_svc = get_global_container().get("metrics_service")
+            if isinstance(metrics_svc, MetricsService):
+                metrics_svc.record_stock_score("overall")
+                for dim, dim_score in scores["dimension_scores"].items():
+                    metrics_svc.record_stock_score(dim)
+        except Exception:
+            pass
+
         self._scores_cache[ticker] = scores["dimension_scores"]
 
         return scores

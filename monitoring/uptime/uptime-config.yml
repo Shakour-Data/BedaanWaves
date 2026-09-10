@@ -1,0 +1,65 @@
+# Uptime / Synthetic Monitoring Configuration for BedaanWaves
+# Use these endpoints with UptimeRobot, Pingdom, Datadog Synthetics, or similar.
+
+endpoints:
+  - name: "Backend Health"
+    url: "http://localhost:3000/health"
+    method: GET
+    expected_status: 200
+    expected_json_path: "$.status"
+    expected_json_value: "healthy"
+    interval_seconds: 60
+    timeout_seconds: 10
+    retries: 3
+
+  - name: "API Health"
+    url: "http://localhost:3000/api/v1/health/"
+    method: GET
+    expected_status: 200
+    interval_seconds: 60
+    timeout_seconds: 10
+
+  - name: "Prometheus Metrics"
+    url: "http://localhost:9090/-/healthy"
+    method: GET
+    expected_status: 200
+    interval_seconds: 120
+    timeout_seconds: 10
+
+  - name: "Grafana"
+    url: "http://localhost:3001/api/health"
+    method: GET
+    expected_status: 200
+    interval_seconds: 120
+    timeout_seconds: 10
+
+  - name: "Jaeger"
+    url: "http://localhost:16686/"
+    method: GET
+    expected_status: 200
+    interval_seconds: 120
+    timeout_seconds: 10
+
+  - name: "Elasticsearch"
+    url: "http://localhost:9200/_cluster/health"
+    method: GET
+    expected_status: 200
+    interval_seconds: 120
+    timeout_seconds: 10
+
+  - name: "Frontend"
+    url: "http://localhost:3005"
+    method: GET
+    expected_status: 200
+    interval_seconds: 60
+    timeout_seconds: 10
+
+alerting:
+  # Alert after 2 consecutive failures
+  failure_threshold: 2
+  # Alert after 5 minutes of downtime
+  downtime_threshold_minutes: 5
+  channels:
+    - email
+    - slack
+    - pagerduty

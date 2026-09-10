@@ -1,0 +1,133 @@
+# ============================================================
+# BedaanWaves ETL Pipeline Configuration (Apache NiFi)
+# ============================================================
+# Data ingestion pipeline from operational databases to analytics warehouse
+# ============================================================
+
+# --- Source: Orders Database ---
+- name: GetChangedOrders
+  type: GetDatabaseTable
+  properties:
+    database_connection_pooling_service: dbcp-service-orders
+    table_name: orders
+    fetch_column: updated_at
+    query_strategy: Use latest timestamp
+
+- name: RouteOrderChanges
+  type: RouteOnAttribute
+  properties:
+    route_if: ${order_status:equals('confirmed')}
+    route_else: ${order_status:equals('cancelled')}
+
+- name: TransformOrderToParquet
+  type: UpdateAttribute
+  properties:
+    parquet_schema_definition: |
+      order_id: string, user_id: string, items: array, total_amount: double,
+      status: string, created_at: timestamp, updated_at: timestamp
+
+# --- Source: Payments Database ---
+- name: GetPayments
+  type: GetDatabaseTable
+  properties:
+    database_connection_pooling_service: dbcp-service-payments
+    table_name: payments
+    fetch_column: processed_at
+
+- name: TransformPaymentToParquet
+  type: UpdateAttribute
+  properties:
+    parquet_schema_definition: |
+      payment_id: string, order_id: string, amount: double,
+      status: string, processed_at: timestamp
+
+# --- Source: Market Data ---
+- name: ConsumeMarketTicks
+  type: ConsumeKafka
+  properties:
+    topic: bedaanwaves.market-data.ticks
+    poll_timeout: 5000
+
+- name: AggregateTicks
+  type: UpdateAttribute
+  properties:
+    record_separator: "\n"
+    mime_type: application/json
+
+# --- Data Quality Checks ---
+- name: ValidateOrderData
+  type: ValidateRecord
+  properties:
+    record_schema: |
+      {
+        "type": "object",
+        "properties": {
+          "order_id": {"type": "string"},
+          "total_amount": {"type": "number", "minimum": 0}
+        },
+        "required": ["order_id", "total_amount"]
+      }
+
+- name: RouteInvalidRecords
+  type: RouteOnAttribute
+  properties:
+    route_if: ${invalid:equals(true)}
+    route_else: ${invalid:equals(false)}
+
+# --- Data Transformation ---
+- name: EnrichOrderWithUserData
+  type: LookupRecord
+  properties:
+    lookup_service: lookup-users
+    lookup_key_field: user_id
+
+- name: CalculateDerivedFields
+  type: UpdateRecord
+  properties:
+    derivations: |
+      order_hour = hour(created_at)
+      order_day_of_week = day_of_week(created_at)
+      is_weekend = day_of_week >= 6
+
+# --- Load: Data Warehouse ---
+- name: PutParquetToS3
+  type: PutS3Object
+  properties:
+    bucket: bedaanwaves-data-lake
+    prefix: orders/date=${now()}/
+    storage_unit: parquet
+
+- name: PutParquetToWarehouse
+  type: PutDatabaseRecord
+  properties:
+    database_connection_pooling_service: dbcp-service-warehouse
+    table_name: orders_fact
+    batch_size: 1000
+
+# --- Incremental Loading ---
+- name: GetLastUpdateTimestamp
+  type: GetDatabaseTable
+  properties:
+    database_connection_pooling_service: dbcp-service-metadata
+    table_name: ingestion_state
+    fetch_column: last_updated
+
+- name: UpdateIngestionState
+  type: PutDatabaseRecord
+  properties:
+    database_connection_pooling_service: dbcp-service-metadata
+    table_name: ingestion_state
+    record_id_field: source_name
+
+# --- Error Handling ---
+- name: RouteToDLQ
+  type: PutKafka
+  properties:
+    topic: bedaanwaves.dlq.etl
+
+# --- Monitoring ---
+- name: ReportETLMetrics
+  type: ReportUsage
+  properties:
+    metrics_group: bedaanwaves.etl
+    metrics_value_field: record_count

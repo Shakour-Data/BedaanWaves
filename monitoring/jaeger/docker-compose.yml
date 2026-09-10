@@ -1,0 +1,40 @@
+# Jaeger Configuration for BedaanWaves
+# Distributed tracing backend for microservices
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: bedaanwaves-jaeger
+    environment:
+      - COLLECTOR_ZOOKEEPER_SERVERS=zookeeper:2181
+      - COLLECTOR_KAFKA_OFFSET_TOPIC=jaeger-kafka-offsets
+      - COLLECTOR_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - COLLECTOR_KAFKA_FORMAT=json
+      - QUERY_BASE_PATH=/jaeger
+    ports:
+      - "16686:16686"   # Query UI
+      - "14268:14268"   # Collector HTTP
+      - "14269:14269"   # Collector admin
+      - "14250:14250"   # Collector gRPC
+      - "14267:14267"   # Collector internal
+    depends_on:
+      - kafka
+      - zookeeper
+    restart: unless-stopped
+
+  jaeger-kafka-offsets:
+    image: bitnami/kafka:latest
+    container_name: bedaanwaves-jaeger-kafka
+    environment:
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@jaeger-kafka-offsets:9093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://jaeger-kafka-offsets:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+    volumes:
+      - jaeger_kafka_data:/bitnami/kafka
+
+volumes:
+  jaeger_kafka_data:

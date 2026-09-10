@@ -1,0 +1,184 @@
+openapi: 3.0.3
+info:
+  title: BedaanWaves Inventory Service API
+  description: |
+    Inventory management service for BedaanWaves platform.
+    Handles stock reservation, release, and availability queries.
+    
+    **Saga Integration:** This service participates in distributed transactions
+    via the Saga pattern. Stock reservation is a critical step in the order flow.
+  version: "1.0.0"
+
+servers:
+  - url: /api/v1
+    description: Relative to current host
+
+paths:
+  /inventory/reserve:
+    post:
+      summary: Reserve stock
+      description: |
+        Reserves stock for an order. Called by the Saga Orchestrator
+        during the order flow saga.
+      operationId: reserveStock
+      tags:
+        - inventory
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveStockRequest"
+      responses:
+        "200":
+          description: Stock reserved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReservationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /inventory/release:
+    post:
+      summary: Release stock
+      description: |
+        Releases previously reserved stock.
+        Used as a compensation action in the Saga pattern.
+      operationId: releaseStock
+      tags:
+        - inventory
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseStockRequest"
+      responses:
+        "200":
+          description: Stock released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReservationResponse"
+
+  /inventory/{symbol}/availability:
+    get:
+      summary: Check stock availability
+      operationId: checkAvailability
+      tags:
+        - inventory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: quantity
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Availability status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+
+components:
+  schemas:
+    ReserveStockRequest:
+      type: object
+      required:
+        - order_id
+        - items
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockItem"
+
+    ReleaseStockRequest:
+      type: object
+      required:
+        - order_id
+      properties:
+        order_id:
+          type: string
+          format: uuid
+
+    StockItem:
+      type: object
+      required:
+        - symbol
+        - quantity
+      properties:
+        symbol:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+
+    StockReservationResponse:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [reserved, released]
+        reserved_at:
+          type: string
+          format: date-time
+
+    AvailabilityResponse:
+      type: object
+      properties:
+        symbol:
+          type: string
+        available_quantity:
+          type: integer
+        reserved_quantity:
+          type: integer
+        is_available:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error_code:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

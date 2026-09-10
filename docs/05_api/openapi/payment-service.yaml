@@ -1,0 +1,208 @@
+openapi: 3.0.3
+info:
+  title: BedaanWaves Payment Service API
+  description: |
+    Payment processing service for BedaanWaves platform.
+    Handles payment authorization, capture, refund, and status queries.
+    
+    **Saga Integration:** This service participates in distributed transactions
+    via the Saga pattern. Payment processing is a critical step in the order flow.
+  version: "1.0.0"
+  contact:
+    name: BedaanWaves Team
+    email: api@bedaanwaves.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: /api/v1
+    description: Relative to current host
+
+paths:
+  /payments:
+    post:
+      summary: Process payment
+      description: |
+        Processes a payment for an order. This is called by the Saga Orchestrator
+        during the order flow saga.
+      operationId: processPayment
+      tags:
+        - payments
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessPaymentRequest"
+      responses:
+        "200":
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "402":
+          description: Payment failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentFailureResponse"
+
+  /payments/{payment_id}/refund:
+    post:
+      summary: Refund payment
+      description: |
+        Refunds a previously processed payment.
+        Used as a compensation action in the Saga pattern.
+      operationId: refundPayment
+      tags:
+        - payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+      responses:
+        "200":
+          description: Refund initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /payments/{payment_id}:
+    get:
+      summary: Get payment status
+      operationId: getPayment
+      tags:
+        - payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentDetailResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ProcessPaymentRequest:
+      type: object
+      required:
+        - order_id
+        - amount
+        - payment_method
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: float
+          minimum: 0
+        payment_method:
+          type: string
+          enum: [credit_card, debit_card, wallet, bank_transfer]
+        currency:
+          type: string
+          default: USD
+        metadata:
+          type: object
+          additionalProperties: true
+
+    RefundRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        amount:
+          type: number
+          format: float
+
+    PaymentResponse:
+      type: object
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processed, refunded, failed]
+        message:
+          type: string
+
+    PaymentDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/PaymentResponse"
+        - type: object
+          properties:
+            order_id:
+              type: string
+              format: uuid
+            amount:
+              type: number
+            currency:
+              type: string
+            processed_at:
+              type: string
+              format: date-time
+
+    PaymentFailureResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error_code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PaymentFailureResponse"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PaymentFailureResponse"

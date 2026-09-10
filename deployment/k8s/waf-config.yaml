@@ -1,23 +1,62 @@
 apiVersion: v1
-kind="ConfigMap"
+kind: ConfigMap
 metadata:
   name: bedaanwaves-waf-rules
   namespace: default
 data:
   waf-rules.conf: |
-    # ModSecurity Core Rule Set (CRS) baseline rules
-    # Placeholder for WAF configuration
-    # In production, deploy with a proper WAF like:
-    # - AWS WAF + API Gateway
-    # - Cloudflare WAF
-    # - NGINX ModSecurity
-    # - Kong with OWASP CRS plugin
+    # OWASP Core Rule Set (CRS) v4.x baseline
+    # This config should be applied to your WAF (AWS WAF, Cloudflare, ModSecurity, Kong)
     
-    # Recommended ruleset:
-    # 1. OWASP Core Rule Set (CRS) v4.x
-    # 2. SQL Injection detection
-    # 3. XSS detection
-    # 4. Path traversal protection
-    # 5. Rate limiting rules
-    # 6. Bot detection
-    # 7. Geo-blocking for known bad IPs
+    # 1. SQL Injection Protection
+    SecRule ARGS "@detectSQLi" \
+      "id:1001,\
+      phase:2,\
+      deny,\
+      status:403,\
+      log,\
+      msg:'SQL Injection Attack Detected'"
+    
+    # 2. XSS Protection
+    SecRule ARGS "@detectXSS" \
+      "id:1002,\
+      phase:2,\
+      deny,\
+      status:403,\
+      log,\
+      msg:'XSS Attack Detected'"
+    
+    # 3. Path Traversal Protection
+    SecRule ARGS "@contains ../" \
+      "id:1003,\
+      phase:2,\
+      deny,\
+      status:403,\
+      log,\
+      msg:'Path Traversal Detected'"
+    
+    # 4. Rate Limiting (example: 100 req/min per IP)
+    SecAction "id:1004,\
+      phase:1,\
+      pass,\
+      nolog,\
+      initcol:global=global,\
+      setvar:ip.limiter=0"
+    
+    # 5. Block known bad bots
+    SecRule REQUEST_HEADERS:User-Agent "@rx (sqlmap|nikto|nmap|masscan)" \
+      "id:1005,\
+      phase:1,\
+      deny,\
+      status:403,\
+      log,\
+      msg:'Known Malicious Bot Detected'"
+    
+    # 6. Block requests with suspicious patterns
+    SecRule REQUEST_URI "@rx (exec|system|passthru|shell_exec|eval|base64_decode)" \
+      "id:1006,\
+      phase:1,\
+      deny,\
+      status:403,\
+      log,\
+      msg:'Suspicious PHP/Command Pattern Detected'"

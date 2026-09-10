@@ -76,22 +76,42 @@ class LoggerService(BaseService):
 
     def _setup_logging(self) -> None:
         """Setup logging configuration"""
-        # Create log directory if needed
         if self.enable_file:
             self.log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Configure root logger
+        try:
+            import structlog
+
+            structlog.configure(
+                processors=[
+                    structlog.stdlib.filter_by_level,
+                    structlog.stdlib.add_logger_name,
+                    structlog.stdlib.add_log_level,
+                    structlog.stdlib.PositionalArgumentsFormatter(),
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.StackInfoRenderer(),
+                    structlog.processors.format_exc_info,
+                    structlog.processors.UnicodeDecoder(),
+                    structlog.processors.JSONRenderer(),
+                ],
+                context_class=dict,
+                logger_factory=structlog.stdlib.LoggerFactory(),
+                wrapper_class=structlog.stdlib.BoundLogger,
+                cache_logger_on_first_use=True,
+            )
+            self.logger.info("structlog enabled for structured JSON logging")
+        except ImportError:
+            self.logger.info("structlog not available; using stdlib logging")
+
         root_logger = logging.getLogger()
         root_logger.setLevel(self.log_level)
 
-        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(self.log_level)
         console_formatter = self._get_formatter(detailed=False)
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
 
-        # File handler (if enabled)
         if self.enable_file:
             log_file = self.log_dir / f"bedaanwaves_{datetime.now().strftime('%Y%m%d')}.log"
             file_handler = logging.FileHandler(log_file)

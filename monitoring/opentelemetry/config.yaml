@@ -1,0 +1,93 @@
+# OpenTelemetry Collector Configuration for BedaanWaves
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: bedaanwaves
+
+  jaeger:
+    protocols:
+      thrift_binary:
+        endpoint: "0.0.0.0:14250"
+      thrift_http:
+        endpoint: "0.0.0.0:14268"
+
+  zipkin:
+    endpoint: "0.0.0.0:9411"
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 65
+    spike_limit_percentage: 20
+
+  batch:
+    timeout: 10s
+
+  resource:
+    attributes:
+      - key: service.name
+        value: bedaanwaves
+        action: insert
+
+  transform:
+    traces:
+      - trace_statements:
+          - context: log
+            statements:
+              - set(attributes["correlation_id"], attributes["http.request.header.x-correlation-id"])
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: bedaanwaves
+
+  jaeger:
+    endpoint: "jaeger:14250"
+    tls:
+      insecure: true
+
+  logging:
+    loglevel: debug
+
+  otlp:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+
+connectors:
+  healthcheck:
+  spanmetrics:
+    histogram_disaggregation: true
+    dimensions:
+      - name: http.method
+      - name: http.route
+      - name: service.name
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch, memory_limiter]
+      exporters: [prometheus, logging]
+
+    traces:
+      receivers: [otlp, jaeger, zipkin]
+      processors: [batch, memory_limiter, transform]
+      exporters: [jaeger, logging]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [logging]

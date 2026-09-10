@@ -16,6 +16,7 @@ from . import (
     ml,
     news,
     notifications,
+    observability,
     password_reset,
     portfolios,
     privacy,
@@ -46,10 +47,12 @@ market_router = market.router
 ml_router = ml.router
 news_router = news.router
 notifications_router = notifications.router
+observability_router = observability.router
 password_reset_router = password_reset.router
 portfolio_router = portfolios.router
 privacy_router = privacy.router
 ranking_router = ranking.router
+security_audit_router = security_audit.router
 settings_router = settings.router
 specialized_router = specialized.router
 stocks_router = stocks.router
@@ -93,6 +96,8 @@ __all__ = [
     "news_router",
     "notifications",
     "notifications_router",
+    "observability",
+    "observability_router",
     "password_reset",
     "password_reset_router",
     "portfolio_router",
@@ -101,6 +106,8 @@ __all__ = [
     "privacy",
     "ranking",
     "ranking_router",
+    "security_audit",
+    "security_audit_router",
     "settings",
     "settings_router",
     "specialized",

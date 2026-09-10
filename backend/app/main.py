@@ -48,10 +48,12 @@ from app.api.routes import (
     ml_router,
     news_router,
     notifications_router,
+    observability_router,
     password_reset_router,
     portfolio_router,
     privacy_router,
     ranking_router,
+    service_map_router,
     settings_router,
     specialized_router,
     stocks_router,
@@ -619,6 +621,8 @@ async def lifespan(app: FastAPI):
     app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
     app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
     app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+    app.include_router(observability_router, prefix="/api/v1/system/observability", tags=["observability"])
+    app.include_router(service_map_router, prefix="/api/v1/system", tags=["observability"])
     app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
     app.include_router(live_sse_router, prefix="/api/v1/live-sse", tags=["live-sse"])
     app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
@@ -630,6 +634,7 @@ async def lifespan(app: FastAPI):
     app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
     app.include_router(compare_router, prefix="/api/v1/compare", tags=["compare"])
     app.include_router(privacy_router, prefix="/api/v1/privacy", tags=["privacy"])
+    app.include_router(security_audit_router, prefix="/api/v1/security", tags=["security-audit"])
 
     logger.info("Registered all API routes")
     logger.info("BedaanWaves application ready")

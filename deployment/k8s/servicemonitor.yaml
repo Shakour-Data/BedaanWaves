@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bedaanwaves-api
+  namespace: bedaanwaves
+  labels:
+    app: bedaanwaves-api
+spec:
+  selector:
+    matchLabels:
+      app: bedaanwaves-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: bedaanwaves-pods
+  namespace: bedaanwaves
+spec:
+  selector:
+    matchLabels:
+      app: bedaanwaves-api
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -53,6 +53,9 @@ class _StreamState:
     last_good_freshness_ts: float | None = None
     last_seen_ts: float = 0.0
     known_threshold_s: float | None = None
+    error_budget_total: float = 100.0
+    error_budget_remaining: float = 100.0
+    error_budget_start: float = field(default_factory=lambda: time.monotonic())
 
 
 class SLOMonitor(BaseService):
@@ -202,6 +205,10 @@ class SLOMonitor(BaseService):
 
         duration_s = min(_WINDOW_S, now - state.samples[0][0]) if state.samples else 0.0
 
+        error_rate = error_count / total if total > 0 else 0.0
+        budget_consumed = error_rate * 100.0
+        state.error_budget_remaining = max(0.0, state.error_budget_remaining - budget_consumed)
+
         if error_count > 0:
             if state.current_severity == SEVERITY_ERROR:
                 if state.consecutive_good >= _GOOD_TICKS_RECOVERY:
@@ -322,3 +329,17 @@ class SLOMonitor(BaseService):
                 )
         except Exception as exc:
             self.logger.warning("SLOMonitor notification dispatch failed: %s", exc)
+
+    def get_error_budget_summary(self) -> dict[str, Any]:
+        """Return error budget status for all monitored streams."""
+        return {
+            key: {
+                "error_budget_remaining": state.error_budget_remaining,
+                "error_budget_total": state.error_budget_total,
+                "current_severity": state.current_severity,
+                "budget_consumed_pct": round(
+                    100.0 - state.error_budget_remaining, 2
+                ),
+            }
+            for key, state in self._states.items()
+        }
