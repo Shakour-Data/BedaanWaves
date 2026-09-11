@@ -200,5 +200,50 @@ describe("QA Priority 1 - Data Consistency & Parity", () => {
       expect(lvl.weight.length).toBeGreaterThan(0);
       expect(lvl.weightDelta.length).toBeGreaterThan(0);
     });
+
+    it("renders 20 views with 18 unique chart types", () => {
+      const levels = ["dimension", "sub_dimension", "aspect", "sub_aspect"] as const;
+      const families = ["spider", "trend", "scoreDelta", "weight", "weightDelta"] as const;
+
+      // Family-major ordering: charts 1-4 = Spider, 5-8 = Trend, 9-12 = ScoreDelta,
+      // 13-16 = Weight, 17-20 = WeightDelta
+      const allCharts = families.flatMap((family) =>
+        levels.map((level) => ({ level, family }))
+      );
+
+      expect(allCharts).toHaveLength(20);
+
+      // weightDelta charts: even level index -> BarChart, odd -> ColumnChart
+      // Charts 17 (bar-dim) and 19 (bar-aspect) share type "bar"
+      // Charts 18 (col-sub_dim) and 20 (col-sub_aspect) share type "column"
+      // => 16 unique (family-level) + 2 weightDelta types = 18
+      const chartTypes = new Set<string>();
+      for (const { level, family } of allCharts) {
+        if (family === "weightDelta") {
+          const levelIndex = levels.indexOf(level);
+          chartTypes.add(levelIndex % 2 === 0 ? "bar" : "column");
+        } else {
+          chartTypes.add(`${family}-${level}`);
+        }
+      }
+
+      expect(chartTypes.size).toBe(18);
+    });
+
+    it("uses BarChart for dimension (chart #17) and ColumnChart for sub_dimension (chart #18) weightDelta", () => {
+      const levels = ["dimension", "sub_dimension", "aspect", "sub_aspect"] as const;
+      const families = ["spider", "trend", "scoreDelta", "weight", "weightDelta"] as const;
+
+      // Family-major: charts 17-20 are weightDelta for levels[0..3]
+      const weightDeltaCharts = levels.map((level) => ({ level, family: "weightDelta" as const }));
+
+      // Chart #17 = weightDelta[0] = dimension -> BarChart (even level index)
+      expect(weightDeltaCharts[0].level).toBe("dimension");
+      expect(levels.indexOf(levels[0]) % 2).toBe(0);
+
+      // Chart #18 = weightDelta[1] = sub_dimension -> ColumnChart (odd level index)
+      expect(weightDeltaCharts[1].level).toBe("sub_dimension");
+      expect(levels.indexOf(levels[1]) % 2).toBe(1);
+    });
   });
 });

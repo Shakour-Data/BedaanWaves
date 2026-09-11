@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import time
 from typing import Any
 
@@ -59,7 +60,7 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
         if time.monotonic() < self._unavailable_until:
             return None
 
-        with self._client_lock:
+        async with self._client_lock:
             if self._client is not None:
                 return self._client
             if time.monotonic() < self._unavailable_until:

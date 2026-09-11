@@ -15,6 +15,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import and_, desc, func, select
@@ -30,6 +31,7 @@ from app.services.analysis.coefficient_history_service import (
 from app.services.analysis.hierarchy import (
     tier_scores_with_aliases,
 )
+from app.services.analysis.hierarchical_score_trend_service import HierarchicalScoreTrendService
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 
 try:
@@ -87,6 +89,17 @@ def _compute_delta(a: float | None, b: float | None) -> tuple[float | None, floa
     else:
         pct = round(delta / b * 100.0, 4)
     return delta, pct
+
+
+def _to_float(value: Any) -> float | None:
+    """Normalize database numerics without rejecting Decimal values."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result
 
 
 def _dict_delta(new_map: dict | None, old_map: dict | None) -> dict[str, tuple[float | None, float | None]]:
@@ -234,13 +247,12 @@ class TemporalSnapshotService:
         sh_rows = sh_res.all()
 
         # Aggregate from RawPerformanceScore for sub-dimension / aspect / sub-aspect
+        # First get the latest captured_at per asset, then get the JSON columns
         rps_effective_date = None
-        rps_q = (
+        rps_subq = (
             select(
+                RawPerformanceScore.asset_id,
                 func.max(func.date(RawPerformanceScore.captured_at)).label("max_date"),
-                RawPerformanceScore.sub_dimension_scores,
-                RawPerformanceScore.aspect_scores,
-                RawPerformanceScore.sub_aspect_scores,
             )
             .join(Asset, Asset.id == RawPerformanceScore.asset_id, isouter=True)
             .where(
@@ -251,10 +263,32 @@ class TemporalSnapshotService:
                     RawPerformanceScore.data_quality.in_(("VALIDATED", "CLEANED")),
                 )
             )
-            .order_by(desc(RawPerformanceScore.captured_at))
+            .group_by(RawPerformanceScore.asset_id)
+            .subquery()
+        )
+        
+        rps_q = (
+            select(
+                rps_subq.c.max_date,
+                RawPerformanceScore.sub_dimension_scores,
+                RawPerformanceScore.aspect_scores,
+                RawPerformanceScore.sub_aspect_scores,
+            )
+            .join(
+                rps_subq,
+                and_(
+                    RawPerformanceScore.asset_id == rps_subq.c.asset_id,
+                    func.date(RawPerformanceScore.captured_at) == rps_subq.c.max_date,
+                )
+            )
+            .where(RawPerformanceScore.data_quality.in_(("VALIDATED", "CLEANED")))
         )
         if symbol:
-            rps_q = rps_q.where(func.lower(Asset.symbol) == func.lower(symbol)).limit(1)
+            asset_q = select(Asset.id).where(func.lower(Asset.symbol) == func.lower(symbol))
+            asset_res = await db.execute(asset_q)
+            asset_id = asset_res.scalar_one_or_none()
+            if asset_id:
+                rps_q = rps_q.where(RawPerformanceScore.asset_id == asset_id).limit(1)
         else:
             rps_q = rps_q.limit(500)
 
@@ -470,16 +504,44 @@ class TemporalSnapshotService:
         daily_points: list[dict[str, Any]] = []
         intraday_points: list[dict[str, Any]] = []
 
-        # Daily
+        # Fetch all hierarchical trends in parallel
+        hierarchical_trends: dict[str, list[dict[str, Any]]] = {}
+        for level in ("sub_dimension", "aspect", "sub_aspect"):
+            try:
+                svc = HierarchicalScoreTrendService()
+                result = await svc.get_trend(
+                    level=level, days=window_daily, market="NASDAQ", latest=True, db=db
+                )
+                hierarchical_trends[level] = result.get("series", [])
+            except Exception as exc:
+                logger.warning(f"hierarchical trend {level} fallback: {exc}")
+                hierarchical_trends[level] = []
+
+        # Build a map: date -> {level: metrics}
+        hierarchical_by_date: dict[str, dict[str, dict[str, float]]] = {}
+        for level, series in hierarchical_trends.items():
+            for pt in series:
+                date_str = str(pt.get("date"))
+                if date_str not in hierarchical_by_date:
+                    hierarchical_by_date[date_str] = {}
+                hierarchical_by_date[date_str][level] = pt.get("metrics", {})
+
+        # Daily - from MarketScoreTrendService (dimension level) + hierarchical trends
         try:
             svc = MarketScoreTrendService()
             data = await svc.get_trend(days=window_daily, market="NASDAQ", db=db)
             for pt in data or []:
+                date_str = str(pt.get("date"))
+                level_scores: dict[str, float] = dict(pt.get("avg_dimensions") or {})
+                # Merge hierarchical scores for this date
+                if date_str in hierarchical_by_date:
+                    for level_metrics in hierarchical_by_date[date_str].values():
+                        level_scores.update(level_metrics)
                 daily_points.append({
-                    "date": str(pt.get("date")),
-                    "effective_at": str(pt.get("date")),
+                    "date": date_str,
+                    "effective_at": date_str,
                     "overall": float(pt.get("avg_score")) if isinstance(pt.get("avg_score"), (int, float)) else None,
-                    "level_scores": pt.get("avg_dimensions") or {},
+                    "level_scores": level_scores,
                     "count": int(pt.get("symbol_count")) if pt.get("symbol_count") is not None else None,
                 })
         except Exception as exc:

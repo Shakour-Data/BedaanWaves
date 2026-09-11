@@ -1,15 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('QA Priority 1 - E2E Navigation & Redirect', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
-  });
-
-  test('SC-001: should redirect from protected nested route to general dashboard', async ({ page }) => {
+test.describe('QA Priority 1 - E2E Navigation (Auth Disabled)', () => {
+  test('SC-001: should navigate to analysis page directly', async ({ page }) => {
     await page.goto('/analysis');
     await page.waitForURL(/\/analysis/);
     expect(page.url()).toContain('/analysis');

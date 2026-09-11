@@ -533,9 +533,10 @@ class FundamentalAnalysisService(AnalysisService):
     def _calc_operating_leverage(self, f: dict[str, Any]) -> float:
         operating_income = f.get("operating_income", 0) or 0.0
         revenue = f.get("revenue", 0) or 0.0
-        if revenue <= 0:
+        if revenue <= 0 or operating_income <= 0:
             return 0.0
-        return (operating_income / revenue) * revenue
+        contribution_margin = operating_income
+        return contribution_margin / operating_income
 
     # ── Liquidity Ratios ──
 
@@ -690,7 +691,7 @@ class FundamentalAnalysisService(AnalysisService):
             - Liquidity (weight 20)
             - Leverage/solvency (weight 25)
             - Growth (weight 15)
-          - Valuation reasonableness (weight 10)
+            - Valuation reasonableness (weight 10)
         """
         score = 0.0
         net_margin = ratios.get("net_margin", 0.0)
@@ -717,7 +718,8 @@ class FundamentalAnalysisService(AnalysisService):
             score += 10
         elif 10 <= pe_ratio <= 50 and 1 <= pb_ratio <= 10:
             score += 5
-        score += min(max(0, 10 - pe_ratio * 0.05 + pb_ratio * 0.5), 10)
+        else:
+            score += max(0, 10 - max(0, (pe_ratio - 10) * 0.1))
 
         return round(max(0, min(100, score)), 2)
 
@@ -750,7 +752,7 @@ class FundamentalAnalysisService(AnalysisService):
         roe = (net_income / equity) * 100  # Percentage
 
         # Verify DuPont identity: ROE = NPM × AT × FL
-        calculated_roe = net_profit_margin * asset_turnover * financial_leverage / 100  # Adjust for percentage
+        calculated_roe = net_profit_margin * asset_turnover * financial_leverage
 
         return {
             "roe": round(roe, 2),

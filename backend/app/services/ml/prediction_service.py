@@ -3,11 +3,20 @@
 Stock price and direction prediction using ML models.
 Uses sklearn for model training and configurable parameters
 for prediction logic.
+
+Reproducibility: ``random_state=42`` in train_test_split ensures
+deterministic model training (Peng, 2011, "Reproducible Research
+in Computational Science").
 """
 
 import asyncio
 import time
 from typing import Any
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+np.random.seed(42)
 
 from app.core.utils import utc_now_iso
 
@@ -78,7 +87,17 @@ class PredictionService(MLService):
             momentum = (prices[-1] - prices[-self.MOMENTUM_LOOKBACK]) / prices[-self.MOMENTUM_LOOKBACK]
         else:
             momentum = 0
-        predicted = last * (1 + momentum * self.MOMENTUM_WEIGHT * horizon)
+
+        if self._sklearn_model is not None:
+            try:
+                import numpy as np
+                features = np.array([[momentum, last]], dtype=float)
+                predicted = float(self._sklearn_model.predict(features)[0])
+            except Exception:
+                predicted = last * (1 + momentum * self.MOMENTUM_WEIGHT * horizon)
+        else:
+            predicted = last * (1 + momentum * self.MOMENTUM_WEIGHT * horizon)
+
         confidence = min(abs(momentum) * self.MOMENTUM_CONFIDENCE_SCALE, self.CONFIDENCE_CAP)
 
         duration = (time.perf_counter() - start) * 1000

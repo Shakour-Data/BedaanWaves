@@ -42,7 +42,7 @@ class AnomalyDetectionService(MLService):
                 f"minimum required: {self._min_training_samples}"
             )
         mean = sum(values) / len(values)
-        variance = sum((x - mean) ** 2 for x in values) / len(values)
+        variance = sum((x - mean) ** 2 for x in values) / (len(values) - 1)
         std = math.sqrt(variance) if variance > 0 else 1.0
         self.model = {"trained": True, "mean": mean, "std": std}
         return {"status": "trained", "mean": mean, "std": std}

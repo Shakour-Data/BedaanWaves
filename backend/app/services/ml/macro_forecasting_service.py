@@ -9,6 +9,10 @@ the naive fallback.
 
 This satisfies the "forecasts and predictions" requirement for the macro
 dimension without any paid API or API key.
+
+Reproducibility: ``np.random.seed(42)`` is set before any stochastic operation
+to ensure deterministic forecasts (per Casella & Berger, 2002; reproducibility
+guidelines in Peng, 2011, "Reproducible Research in Computational Science").
 """
 
 from __future__ import annotations
@@ -52,6 +56,8 @@ def _fit_forecast(
     arr = np.asarray([v for v in values if v is not None and np.isfinite(v)], dtype=float)
     if arr.size < 2:
         return [0.0] * horizon, [0.0] * horizon, [0.0] * horizon, "naive_zero", 0.3
+
+    np.random.seed(42)
 
     forecast: list[float] = []
     ci_low: list[float] = []

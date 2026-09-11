@@ -53,7 +53,7 @@ spec:
             secretKeyRef:
               name: bedaanwaves-secrets
               key: redis-url
-      - name: JWT_SECRET
+        - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: bedaanwaves-secrets
@@ -303,7 +303,7 @@ stringData:
   database-url-market: "postgresql+asyncpg://user:pass@postgres-market:5432/bedaanwaves_market"
   database-url-ml: "postgresql+asyncpg://user:pass@postgres-ml:5432/bedaanwaves_ml"
   redis-url: "redis://redis:6379/0"
-   jwt-secret: "REPLACE_WITH_64_CHAR_RANDOM_SECRET"
-   data-encryption-key: "REPLACE_WITH_32_BYTE_BASE64_KEY"
-   backup-encryption-key: "REPLACE_WITH_32_BYTE_BASE64_KEY"
-   admin-password: "REPLACE_WITH_STRONG_PASSWORD"
+  jwt-secret: "REPLACE_WITH_64_CHAR_RANDOM_SECRET"
+  data-encryption-key: "REPLACE_WITH_32_BYTE_BASE64_KEY"
+  backup-encryption-key: "REPLACE_WITH_32_BYTE_BASE64_KEY"
+  admin-password: "REPLACE_WITH_STRONG_PASSWORD"

@@ -100,7 +100,7 @@ class GatewayConfig:
             p.strip()
             for p in os.environ.get(
                 "GATEWAY_AUTH_PUBLIC_PREFIXES",
-                "/api/v1/auth,/api/v1/health,/docs,/openapi.json,/redoc",
+                "/api/v1/auth,/api/v1/health,/api/v1/system/observability,/docs,/openapi.json,/redoc",
             ).split(",")
             if p.strip()
         )

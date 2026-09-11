@@ -13,7 +13,7 @@
 
 - شناسه‌های DFD با `DFD-Lx.y` و مخازن با `D1` تا `D14` نمایش داده می‌شوند.
 - شناسه‌های BPMN با `BPMN-Lx-<Domain>` و استثناها با `EX-<Domain><Seq>` نام‌گذاری می‌شوند.
-- نام موجودیت‌ها و عملیات‌ها در همهٔ нотاسیون‌ها یکسان است: `Employee`, `PayrollRun`, `PayrollLine`, `Budget`, `BudgetAllocation`, `PurchaseRequest`, `PurchaseOrder`, `Product`, `StockLot`, `GoodsReceipt`, `Payment`, `Report`, `AuditLog`.
+- نام موجودیت‌ها و عملیات‌ها در همهٔ نمادگذاری‌ها یکسان است: `Employee`, `PayrollRun`, `PayrollLine`, `Budget`, `BudgetAllocation`, `PurchaseRequest`, `PurchaseOrder`, `Product`, `StockLot`, `GoodsReceipt`, `Payment`, `Report`, `AuditLog`.
 - عملیات‌های کلیدی: `calculateSalary()`, `BudgetAllocation.checkBudget()`, `BudgetAllocation.reserve()`, `StockLot.allocate()` / `allocateStock()`, `generateReport()`, `executePayment()`.
 - هر تغییر مهم، تأیید، رد، رزرو، پرداخت، تخصیص و انتشار گزارش باید یک رویداد `AuditLog` ایجاد کند.
 
@@ -553,7 +553,7 @@ T4 -->|allocation audit| D14
 
 # ۲. BPMN
 
-> **نکتهٔ нотاسیون:** کدهای این بخش با PlantUML Activity Notation و برچسب‌های BPMN-style نوشته شده‌اند؛ استخرها و لین‌ها نقش بازیگران و واحدهای داخلی را نشان می‌دهند. برای اجرا در Camunda یا Flowable باید مدل به BPMN 2.0 XML تبدیل و Data Objects، Signals، Timers و Error Events به آن افزوده شود.
+> **نکتهٔ نمادگذاری:** کدهای این بخش با PlantUML Activity Notation و برچسب‌های BPMN-style نوشته شده‌اند؛ استخرها و لین‌ها نقش بازیگران و واحدهای داخلی را نشان می‌دهند. برای اجرا در Camunda یا Flowable باید مدل به BPMN 2.0 XML تبدیل و Data Objects، Signals، Timers و Error Events به آن افزوده شود.
 
 ## سطح ۱ — نمای کلان فرایند
 
@@ -2671,7 +2671,7 @@ BG is "Idle"
 @enduml
 ```
 
-این نمودار چرخهٔ کلی تأیید حقوق تا پرداخت را در بازهٔ نمونه نشان می‌دهد. هدف سخت، پردازش حقوق تا تأیید پرداخت در حدود ۲ ثانیه است؛ زمان‌های نمونه برای اندازه‌گیریproduction قابل تنظیم‌اند.
+این نمودار چرخهٔ کلی تأیید حقوق تا پرداخت را در بازهٔ نمونه نشان می‌دهد. هدف سخت، پردازش حقوق تا تأیید پرداخت در حدود ۲ ثانیه است؛ زمان‌های نمونه برای اندازه‌گیری production قابل تنظیم‌اند.
 
 ### سطح ۲ — زمان‌بندی دامنه حقوق
 
@@ -2713,7 +2713,7 @@ BG is "Idle"
 @enduml
 ```
 
-محاسبه حقوق در نمونه �1200ms، بررسی بودجه حدود 200ms و پرداخت حدود 1000ms زمان می‌گیرد. هدف کل فرایند حقوق <= 2000ms از شروع `calculateSalary()` تا ارسال/تأیید پرداخت است.
+محاسبه حقوق در نمونه ۱۲۰۰ms، بررسی بودجه حدود 200ms و پرداخت حدود 1000ms زمان می‌گیرد. هدف کل فرایند حقوق <= 2000ms از شروع `calculateSalary()` تا ارسال/تأیید پرداخت است.
 
 ### سطح ۲ — زمان‌بندی تدارکات
 
@@ -2943,7 +2943,7 @@ EA is "Idle"
 9. زمان‌های Timing Diagram باید به آزمون عملکرد، circuit breaker و alertهای observability متصل شوند.
 10. هر سطح جدید باید balance ورودی/خروجی سطح والد را حفظ کند.
 
-### محدودیت‌های нотاسیون
+### محدودیت‌های نمادگذاری
 
 - DFD با Mermaid Flowchart و با کلاس‌های Entity، Process و Data Store نمایش داده شده است.
 - BPMN با PlantUML Activity Notation و معنای BPMN-style مدل شده؛ برای اجرای واقعی باید به BPMN 2.0 XML تبدیل شود.

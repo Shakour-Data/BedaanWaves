@@ -58,7 +58,7 @@ def _risk_score(closes: list[float]) -> float:
     if not returns:
         return 50.0
     mean_return = sum(returns) / len(returns)
-    variance = sum((r - mean_return) ** 2 for r in returns) / len(returns)
+    variance = sum((r - mean_return) ** 2 for r in returns) / (len(returns) - 1)
     volatility = math.sqrt(variance) * math.sqrt(252)
     if volatility >= 1.0:
         return 0.0

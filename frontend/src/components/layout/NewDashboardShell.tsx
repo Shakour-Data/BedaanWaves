@@ -16,11 +16,14 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
   const isLoading = useAuthStore((state) => state.loading);
   const router = useRouter();
 
+  // During development, allow access without authentication
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isDevelopment && !isLoading && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, isDevelopment]);
 
   if (isLoading) {
     return (
@@ -33,7 +36,7 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isDevelopment && !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
         <p className="text-sm text-[var(--color-text-muted)]">Redirecting to login...</p>

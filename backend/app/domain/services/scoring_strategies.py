@@ -26,7 +26,7 @@ class TseScoringStrategy(IScoringStrategy):
             return 90
         if pe < 15:
             return 75
-        return max(0, 100 - pe)
+        return max(0, 100 - pe * 0.5)
 
 
 class GlobalScoringStrategy(IScoringStrategy):
@@ -42,4 +42,4 @@ class GlobalScoringStrategy(IScoringStrategy):
             return 0.0
         if pe < 10:
             return 90
-        return max(0, 100 - pe)
+        return max(0, 100 - pe * 0.5)

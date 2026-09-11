@@ -70,7 +70,11 @@ class TestRegister:
         patch(
             "app.api.routes.auth.create_refresh_token",
             return_value="refresh.jwt.token",
-        ) as mock_refresh:
+        ) as mock_refresh, \
+        patch(
+            "app.api.routes.auth.store_refresh_token",
+            new_callable=AsyncMock,
+        ) as mock_store:
             yield {
                 "username": mock_username,
                 "email": mock_email,
@@ -78,6 +82,7 @@ class TestRegister:
                 "hash": mock_hash,
                 "access": mock_access,
                 "refresh": mock_refresh,
+                "store": mock_store,
             }
 
     def test_success(self, client, mock_service, mock_user):
@@ -150,11 +155,16 @@ class TestLogin:
         patch(
             "app.api.routes.auth.create_refresh_token",
             return_value="refresh.jwt.token",
-        ) as mock_refresh:
+        ) as mock_refresh, \
+        patch(
+            "app.api.routes.auth.store_refresh_token",
+            new_callable=AsyncMock,
+        ) as mock_store:
             yield {
                 "auth": mock_auth,
                 "access": mock_access,
                 "refresh": mock_refresh,
+                "store": mock_store,
             }
 
     def test_login_success(self, client, mock_service, mock_user):

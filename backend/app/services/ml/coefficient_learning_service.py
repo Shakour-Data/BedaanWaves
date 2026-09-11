@@ -17,6 +17,9 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+
+np.random.seed(42)
+
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -360,10 +363,6 @@ class CoefficientLearningService(MLService):
                 ("sub_dimensions", "sub_dimension_scores",
                  [f"{dim}_{sub_dim}" for dim, sub_dims in self.sub_dimension_map.items()
                   for sub_dim in sub_dims]),
-                # For aspects and sub-aspects, we need to derive from hierarchy
-                # For now, we'll use placeholder names - in practice these would come from ScoringService
-                ("aspects", "aspect_scores", [f"aspect_{i}" for i in range(80)]),
-                ("sub_aspects", "sub_aspect_scores", [f"sub_aspect_{i}" for i in range(173)])
             ]
 
             for level_name, score_key, target_names in levels_config:

@@ -51,7 +51,11 @@ class ScoringSnapshot(Base):
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
     date = Column(Date, nullable=False, index=True)
-    snapshot_tier = Column(Enum(SnapshotTier, name="snapshot_tier"), nullable=True, default=SnapshotTier.DAILY)
+    snapshot_tier = Column(
+        Enum("daily", "hourly", name="snapshot_tier", native_enum=False),
+        nullable=True,
+        default="daily"
+    )
     effective_at = Column(DateTime(timezone=True), nullable=True, index=True)
     level = Column(Enum(SnapshotLevel, name="snapshot_level"), nullable=False, index=True)
     level_key = Column(String(100), nullable=False, index=True)
@@ -84,7 +88,5 @@ class ScoringSnapshot(Base):
         return value
 
     @validates("snapshot_tier")
-    def _validate_snapshot_tier(self, key: str, value: SnapshotTier) -> SnapshotTier:
-        if isinstance(value, str):
-            return SnapshotTier(value)
-        return value
+    def _validate_snapshot_tier(self, key: str, value: str) -> str:
+        return value.lower()

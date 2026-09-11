@@ -17,8 +17,13 @@ class MomentumEngine:
         gains = [d for d in deltas if d > 0]
         losses = [-d for d in deltas if d < 0]
 
-        avg_gain = sum(gains[-period:]) / period if gains else 0
-        avg_loss = sum(losses[-period:]) / period if losses else 0
+        avg_gain = sum(gains[:period]) / period if len(gains) >= period else (sum(gains) / len(gains) if gains else 0)
+        avg_loss = sum(losses[:period]) / period if len(losses) >= period else (sum(losses) / len(losses) if losses else 0)
+
+        for i in range(period, len(gains)):
+            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        for i in range(period, len(losses)):
+            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
 
         if avg_loss == 0:
             return 100.0
@@ -31,7 +36,22 @@ class MomentumEngine:
         ema_12 = self._calculate_ema(prices, 12, source)
         ema_26 = self._calculate_ema(prices, 26, source)
         macd_line = ema_12 - ema_26
-        return round(macd_line, 2), round(ema_12, 2), round(ema_26, 2)
+
+        macd_values = []
+        for i in range(26, len(prices) + 1):
+            subset = prices[:i]
+            f = self._calculate_ema(subset, 12, source)
+            s = self._calculate_ema(subset, 26, source)
+            if f is not None and s is not None:
+                macd_values.append(f - s)
+
+        signal_line = 0.0
+        histogram = macd_line
+        if len(macd_values) >= 9:
+            signal_line = self._calculate_ema(macd_values, 9, source)
+            histogram = macd_line - signal_line
+
+        return round(macd_line, 2), round(signal_line, 2), round(histogram, 2), round(ema_12, 2), round(ema_26, 2)
 
     def _calculate_ema(self, prices: list[float], period: int, source: str = "unknown") -> float:
         AdjustedPriceValidator.validate_price_array(prices, source)

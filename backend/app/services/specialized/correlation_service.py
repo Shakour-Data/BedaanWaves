@@ -61,18 +61,18 @@ class CorrelationService(AnalysisService):
             return {"status": "empty", "symbols": [], "matrix": {}, "pairs": {"high": [], "inverse": []}}
 
         series_by_symbol = {s: returns_map[s] for s in symbols}
-        # Align all series to the shortest length for fair comparison.
-        min_len = min(len(series_by_symbol[s]) for s in symbols)
+        max_len = max(len(series_by_symbol[s]) for s in symbols)
+        offset_start = {s: max_len - len(series_by_symbol[s]) for s in symbols}
 
         matrix: dict[str, dict[str, float]] = {}
         for s in symbols:
             matrix[s] = {}
-            sa = series_by_symbol[s][:min_len]
+            sa = series_by_symbol[s][offset_start[s]:]
             for t in symbols:
                 if s == t:
                     matrix[s][t] = 1.0
                 else:
-                    tb = series_by_symbol[t][:min_len]
+                    tb = series_by_symbol[t][offset_start[t]:]
                     matrix[s][t] = round(self._pearson(sa, tb), 4)
 
         high_pairs: list[dict[str, Any]] = []

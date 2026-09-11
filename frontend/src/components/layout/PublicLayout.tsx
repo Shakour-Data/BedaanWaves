@@ -76,16 +76,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
             <div className="hidden md:flex items-center gap-3">
               <Link
-                href="/login"
+                href="/"
                 className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors px-4 py-2"
               >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="text-sm font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-5 py-2.5 rounded-xl shadow-lg shadow-[var(--color-primary)]/20 transition-all hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5"
-              >
-                Get Started
+                Home
               </Link>
             </div>
 
@@ -129,18 +123,12 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
-            <div className="pt-4 border-t border-[var(--color-border)] flex flex-col gap-2">
+            <div className="pt-4 border-t border-[var(--color-border)]">
               <Link
-                href="/login"
+                href="/"
                 className="block text-center px-4 py-3 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
               >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="block text-center px-4 py-3 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors"
-              >
-                Get Started
+                Home
               </Link>
             </div>
           </div>

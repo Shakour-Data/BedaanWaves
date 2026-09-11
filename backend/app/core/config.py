@@ -169,6 +169,7 @@ class Settings(BaseSettings):
         "/api/v1/analysis",
         "/api/v1/news",
         "/api/v1/health",
+        "/api/v1/system/observability",
     ]
     # Permissions granted to a normal (non-admin) authenticated user.
     DEFAULT_USER_PERMISSIONS: list[str] = [

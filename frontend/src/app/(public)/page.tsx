@@ -137,17 +137,17 @@ export default function HomePage() {
 
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
-                  href="/register"
-                  className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[var(--color-primary)]/25 transition-all hover:shadow-2xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5"
+                  href="/"
+                  className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[var(--color-primary)]/25 transition-all hover:shadow-2xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 cursor-not-allowed opacity-80"
                 >
-                  Get Started Free
+                  Coming Soon
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
-                  href="/login"
-                  className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-4 text-base font-semibold text-[var(--color-text-primary)] transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] hover:shadow-lg"
+                  href="/"
+                  className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-4 text-base font-semibold text-[var(--color-text-primary)] transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] hover:shadow-lg cursor-not-allowed opacity-80"
                 >
-                  Sign In
+                  Coming Soon
                 </Link>
               </div>
             </div>
@@ -236,8 +236,8 @@ export default function HomePage() {
 
             <div className="mt-16 text-center">
               <Link
-                href="/register"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5"
+                href="/"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 cursor-not-allowed opacity-80"
               >
                 Create Free Account
                 <ArrowRight className="h-4 w-4" />
@@ -339,15 +339,15 @@ export default function HomePage() {
                 </p>
                 <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
-                    href="/register"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5"
+                    href="/"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5 cursor-not-allowed opacity-80"
                   >
                     Create Free Account
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
-                    href="/login"
-                    className="inline-flex items-center gap-2 rounded-xl border-2 border-white px-8 py-4 text-base font-semibold text-white transition-all hover:bg-white/10 hover:shadow-lg"
+                    href="/"
+                    className="inline-flex items-center gap-2 rounded-xl border-2 border-white px-8 py-4 text-base font-semibold text-white transition-all hover:bg-white/10 hover:shadow-lg cursor-not-allowed opacity-80"
                   >
                     Sign In
                   </Link>

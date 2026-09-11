@@ -1,5 +1,6 @@
 """Authentication Service"""
 
+import hashlib
 import logging
 import os
 import secrets
@@ -14,7 +15,7 @@ from sqlalchemy import select, update
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
-from app.models.models import User
+from app.models.models import RefreshToken, User
 
 settings = get_settings()
 
@@ -88,6 +89,26 @@ def decode_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+async def store_refresh_token(user_id, refresh_token: str, user_agent: str | None = None) -> None:
+    """Persist a hashed refresh token so the refresh endpoint can validate it server-side."""
+    token_hash = _hash_token(refresh_token)
+    expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    async with async_session_maker() as session:
+        stored = RefreshToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            revoked=False,
+            user_agent=user_agent,
+        )
+        session.add(stored)
+        await session.commit()
 
 
 async def get_user_by_username(username: str) -> User | None:

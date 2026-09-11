@@ -16,6 +16,8 @@ import { priceFormatter } from "@/lib/utils";
 interface BarChartProps {
   data: { time: string | UTCTimestamp; value: number; color?: string }[];
   height?: number;
+  valueFormatter?: (value: number) => string;
+  ariaLabel?: string;
 }
 
 const LIGHT = {
@@ -30,7 +32,7 @@ const DARK = {
   grid: "#2a2a2a",
   border: "#333333" };
 
-export function BarChart({ data, height = 320 }: BarChartProps) {
+export function BarChart({ data, height = 320, valueFormatter, ariaLabel = "Bar chart" }: BarChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const { theme } = useAppStore();
@@ -70,9 +72,10 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
         tickMarkFormatter: timeScaleFormatter,
       },
       crosshair: { mode: CrosshairMode.Normal },
-      localization: {
+       localization: {
         locale: "en-US",
-        priceFormatter: priceFormatter },
+        priceFormatter: valueFormatter ?? priceFormatter,
+      },
       autoSize: false });
     chartRef.current = chart;
 
@@ -92,7 +95,7 @@ export function BarChart({ data, height = 320 }: BarChartProps) {
       chart.remove();
       chartRef.current = null;
     };
-  }, [chartSeries, colors, height]);
+  }, [chartSeries, colors, height, valueFormatter]);
 
-  return <div ref={containerRef} className="w-full" style={{ height }} />;
+  return <div ref={containerRef} className="w-full" style={{ height }} role="img" aria-label={ariaLabel} />;
 }

@@ -53,28 +53,6 @@ async def get_general_dashboard(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/dashboard/{dimension}", response_model=dict)
-async def get_dimension_dashboard(
-    dimension: str,
-    limit: int = Query(50, ge=1, le=200),
-    latest: bool = Query(False),
-    end_date: str | None = Query(None, alias="end_date"),
-    db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """Per-dimension dashboard endpoint (technical, fundamental, risk, news, board, ai)."""
-    service = DashboardService()
-    try:
-        result = await service.get_dashboard(
-            db=db, dimension=dimension, latest=latest,
-        )
-        return result
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        logger.error(f"Dimension dashboard error ({dimension}): {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
 @router.get("/dashboard/snapshot", response_model=SnapshotResponse)
 async def get_dashboard_snapshot(
     symbol: str | None = Query(None, min_length=1, max_length=16),
@@ -109,6 +87,62 @@ async def get_dashboard_snapshot(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.error(f"Dashboard snapshot error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/dashboard/snapshots", response_model=SnapshotIndexResponse)
+async def get_dashboard_snapshots_index(
+    hourly_limit: int = Query(168, ge=24, le=720),
+    daily_limit: int = Query(365, ge=30, le=1095),
+    db: AsyncSession = Depends(get_async_session),
+) -> SnapshotIndexResponse:
+    """Enumerate recent hourly + daily snapshots for time-slider (FR1, FR8).
+
+    Frontend TypeScript contract expects shape:
+      { hourly: SnapshotIndexEntry[], daily: SnapshotIndexEntry[] }
+    (no outer status/count envelope — arrays carry their own length).
+    """
+    service = TemporalSnapshotService()
+    try:
+        await service.initialize()
+        try:
+            entries = await service.enumerate_snapshots(
+                db=db,
+                hourly_limit=hourly_limit,
+                daily_limit=daily_limit,
+            )
+        finally:
+            await service.shutdown()
+        hourly_entries = [e for e in entries if e.get("tier") == "hourly"]
+        daily_entries = [e for e in entries if e.get("tier") == "daily"]
+        return {
+            "hourly": hourly_entries,
+            "daily": daily_entries,
+        }
+    except Exception as exc:
+        logger.error(f"Snapshot index error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/dashboard/{dimension}", response_model=dict)
+async def get_dimension_dashboard(
+    dimension: str,
+    limit: int = Query(50, ge=1, le=200),
+    latest: bool = Query(False),
+    end_date: str | None = Query(None, alias="end_date"),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Per-dimension dashboard endpoint (technical, fundamental, risk, news, board, ai)."""
+    service = DashboardService()
+    try:
+        result = await service.get_dashboard(
+            db=db, dimension=dimension, latest=latest,
+        )
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"Dimension dashboard error ({dimension}): {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 

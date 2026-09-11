@@ -38,7 +38,10 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
     });
     if (confirmed) {
       logout();
-      router.push("/login");
+      // Don't redirect to login during development
+      if (process.env.NODE_ENV !== 'development') {
+        router.push("/login");
+      }
     }
   }, [confirm, logout, router, addToast]);
 

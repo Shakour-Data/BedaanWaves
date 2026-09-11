@@ -30,8 +30,6 @@ const frontendPages = [
   { name: "Profile", path: "/settings/profile", description: "User profile management", status: "Live API" },
   { name: "Help", path: "/help", description: "Documentation and support", status: "Static" },
   { name: "Methodology", path: "/methodology", description: "Scoring methodology", status: "Static" },
-  { name: "Login", path: "/login", description: "User authentication", status: "Live API" },
-  { name: "Register", path: "/register", description: "New user registration", status: "Live API" },
 ];
 
 const coreTables = [

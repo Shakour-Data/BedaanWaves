@@ -64,6 +64,9 @@ vi.mock("@/components/charts/ScoreTrendChart", () => ({
 vi.mock("@/components/charts/ColumnChart", () => ({
   ColumnChart: () => <div data-testid="column-chart" />,
 }));
+vi.mock("@/components/charts/BarChart", () => ({
+  BarChart: () => <div data-testid="bar-chart" />,
+}));
 vi.mock("@/components/charts/CoefficientChart", () => ({
   CoefficientChart: () => <div data-testid="coefficient-chart" />,
 }));
@@ -154,8 +157,9 @@ describe("GeneralDashboardTab", () => {
 
     expect(screen.getAllByTestId("spider-chart")).toHaveLength(2);
     expect(screen.getAllByTestId("trend-chart")).toHaveLength(2);
-    expect(screen.getAllByTestId("column-chart")).toHaveLength(4);
+    expect(screen.getAllByTestId("column-chart")).toHaveLength(2);
     expect(screen.getAllByTestId("coefficient-chart")).toHaveLength(2);
+    expect(screen.getAllByTestId("bar-chart")).toHaveLength(2);
     expect(screen.getAllByTestId("tarot-card")).toHaveLength(10);
   });
 

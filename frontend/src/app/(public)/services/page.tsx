@@ -60,8 +60,8 @@ const pricingPlans = [
     period: "/month",
     description: "Perfect for getting started with market analysis.",
     features: ["Basic market data", "5 watchlists", "3 technical indicators", "Email alerts"],
-    cta: "Get Started",
-    href: "/register",
+    cta: "Coming Soon",
+    href: "/",
   },
   {
     name: "Pro",
@@ -69,8 +69,8 @@ const pricingPlans = [
     period: "/month",
     description: "For serious traders who need advanced tools.",
     features: ["Real-time data", "Unlimited watchlists", "All technical indicators", "AI scoring", "Portfolio tracking", "Priority support"],
-    cta: "Start Free Trial",
-    href: "/register",
+    cta: "Coming Soon",
+    href: "/",
     popular: true,
   },
   {
@@ -207,11 +207,12 @@ export default function ServicesPage() {
                       "mt-8 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all",
                       plan.popular
                         ? "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                        : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:shadow-md"
+                        : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:shadow-md",
+                      plan.cta === "Coming Soon" && "cursor-not-allowed opacity-60 hover:shadow-none hover:-translate-y-0"
                     )}
                   >
                     {plan.cta}
-                    {plan.popular && <ArrowRight className="h-4 w-4" />}
+                    {plan.popular && plan.cta !== "Coming Soon" && <ArrowRight className="h-4 w-4" />}
                   </Link>
                 </div>
               ))}

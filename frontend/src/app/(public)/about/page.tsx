@@ -167,8 +167,8 @@ export default function AboutPage() {
                 </p>
                 <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
-                    href="/register"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5"
+                    href="/"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5 cursor-not-allowed opacity-80"
                   >
                     Start Free Trial
                     <ArrowRight className="h-4 w-4" />

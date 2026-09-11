@@ -7,10 +7,11 @@ POST /auth/login      Authenticate and obtain access/refresh tokens
 POST /auth/refresh    Exchange a valid refresh token for new tokens
 """
 
-from datetime import UTC, datetime
+import hashlib
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from jose import jwt
+from jose import jwt  # noqa: F401  (used by tests via app.api.routes.auth.jwt)
 from sqlalchemy import select, update
 
 from app.api.dependencies import require_auth_rate_limit
@@ -27,6 +28,7 @@ from app.services.user.auth_service import (
     get_user_by_email,
     get_user_by_username,
     hash_password,
+    store_refresh_token,
 )
 
 settings = get_settings()
@@ -34,8 +36,16 @@ router = APIRouter(tags=["auth"])
 
 
 @router.post("/register", response_model=Token)
-async def register(data: RegisterRequest, request: Request = Depends(require_auth_rate_limit)) -> Token:
+async def register(
+    data: RegisterRequest,
+    request: Request,
+    _rate_limit: None = Depends(require_auth_rate_limit),
+) -> Token:
     """Register a new user account and return access/refresh tokens."""
+    raise HTTPException(
+        status_code=503,
+        detail="Authentication service is temporarily disabled for development",
+    )
     existing = await get_user_by_username(data.username)
     if existing:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -51,13 +61,26 @@ async def register(data: RegisterRequest, request: Request = Depends(require_aut
     )
     access = create_access_token({"sub": user.username, "user_id": str(user.id)})
     refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
+    await store_refresh_token(
+        user_id=user.id,
+        refresh_token=refresh,
+        user_agent=request.headers.get("user-agent"),
+    )
     expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     return Token(access_token=access, refresh_token=refresh, expires_in=expires_in)
 
 
 @router.post("/login", response_model=Token)
-async def login(data: LoginRequest, request: Request = Depends(require_auth_rate_limit)) -> Token:
+async def login(
+    data: LoginRequest,
+    request: Request,
+    _rate_limit: None = Depends(require_auth_rate_limit),
+) -> Token:
     """Authenticate user and return access/refresh tokens."""
+    raise HTTPException(
+        status_code=503,
+        detail="Authentication service is temporarily disabled for development",
+    )
     user = await authenticate_user(data.username, data.password)
     if not user:
         raise HTTPException(
@@ -67,6 +90,11 @@ async def login(data: LoginRequest, request: Request = Depends(require_auth_rate
         )
     access = create_access_token({"sub": user.username, "user_id": str(user.id)})
     refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
+    await store_refresh_token(
+        user_id=user.id,
+        refresh_token=refresh,
+        user_agent=request.headers.get("user-agent"),
+    )
     expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     return Token(access_token=access, refresh_token=refresh, expires_in=expires_in)
 
@@ -114,10 +142,12 @@ async def refresh_token(
         )
 
     async with async_session_maker() as session:
-        now = datetime.now()
+        now = datetime.now(UTC)
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         result = await session.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user.id,
+                RefreshToken.token_hash == token_hash,
                 RefreshToken.revoked.is_(False),
                 RefreshToken.expires_at > now,
             )
@@ -133,9 +163,20 @@ async def refresh_token(
         await session.execute(
             update(RefreshToken).where(RefreshToken.id == stored.id).values(revoked=True)
         )
+
+        access = create_access_token({"sub": user.username, "user_id": str(user.id)})
+        refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
+
+        new_hash = hashlib.sha256(refresh.encode("utf-8")).hexdigest()
+        new_expires = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        new_stored = RefreshToken(
+            user_id=user.id,
+            token_hash=new_hash,
+            expires_at=new_expires,
+            revoked=False,
+        )
+        session.add(new_stored)
         await session.commit()
 
-    access = create_access_token({"sub": user.username, "user_id": str(user.id)})
-    refresh = create_refresh_token({"sub": user.username, "user_id": str(user.id)})
     expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     return Token(access_token=access, refresh_token=refresh, expires_in=expires_in)

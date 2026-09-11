@@ -17,6 +17,7 @@ interface ColumnChartProps {
   height?: number;
   valueFormatter?: (value: number) => string;
   yAxisLabel?: string;
+  ariaLabel?: string;
 }
 
 const LIGHT = {
@@ -36,7 +37,7 @@ const DARK = {
 const DEFAULT_GREEN = "#10b981";
 const DEFAULT_RED = "#ef4444";
 
-export function ColumnChart({ data, height = 240, valueFormatter, yAxisLabel = "Value" }: ColumnChartProps) {
+export function ColumnChart({ data, height = 240, valueFormatter, yAxisLabel = "Value", ariaLabel = "Column chart" }: ColumnChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const { theme } = useAppStore();
@@ -129,5 +130,5 @@ export function ColumnChart({ data, height = 240, valueFormatter, yAxisLabel = "
     };
   }, [chartData, colors, height, valueFormatter, yAxisLabel]);
 
-  return <div ref={containerRef} className="w-full" style={{ height }} />;
+  return <div ref={containerRef} className="w-full" style={{ height }} role="img" aria-label={ariaLabel} />;
 }

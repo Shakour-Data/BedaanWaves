@@ -125,7 +125,7 @@ class RiskAnalysisService(AnalysisService):
             return 0.0
 
         mean = sum(values) / len(values)
-        variance = sum((x - mean) ** 2 for x in values) / len(values)
+        variance = sum((x - mean) ** 2 for x in values) / (len(values) - 1)
         return math.sqrt(variance)
 
     def _calculate_max_drawdown(self, returns: list[float]) -> float:
@@ -150,11 +150,13 @@ class RiskAnalysisService(AnalysisService):
         mean_return = sum(returns) / len(returns)
         excess_return = mean_return - risk_free_rate
 
-        downside_returns = [r for r in returns if r < 0]
+        mar = 0.0
+        downside_returns = [r - mar for r in returns if r < mar]
         if not downside_returns:
             return 0.0
 
-        downside_volatility = self._calculate_std_dev(downside_returns)
+        downside_variance = sum(r ** 2 for r in downside_returns) / len(returns)
+        downside_volatility = math.sqrt(downside_variance)
 
         return (excess_return / downside_volatility) if downside_volatility > 0 else 0
 
@@ -163,11 +165,12 @@ class RiskAnalysisService(AnalysisService):
         if not returns or not market_returns or len(returns) != len(market_returns):
             return 1.0
 
-        mean_asset = sum(returns) / len(returns)
-        mean_market = sum(market_returns) / len(market_returns)
+        n = len(returns)
+        mean_asset = sum(returns) / n
+        mean_market = sum(market_returns) / n
 
-        covariance = sum((returns[i] - mean_asset) * (market_returns[i] - mean_market) for i in range(len(returns))) / len(returns)
-        market_variance = sum((r - mean_market) ** 2 for r in market_returns) / len(market_returns)
+        covariance = sum((returns[i] - mean_asset) * (market_returns[i] - mean_market) for i in range(n)) / (n - 1)
+        market_variance = sum((r - mean_market) ** 2 for r in market_returns) / (n - 1)
 
         return covariance / market_variance if market_variance != 0 else 1.0
 

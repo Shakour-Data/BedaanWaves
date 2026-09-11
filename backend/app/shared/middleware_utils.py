@@ -17,6 +17,7 @@ import time
 import uuid
 from typing import Any, Callable
 
+from starlette.datastructures import MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -49,8 +50,12 @@ def _header(container: Any, name: str) -> str | None:
     return None
 
 
-def _set_header(message: Message, name: str, value: str) -> None:
-    """Set a header in an ASGI message, replacing any existing value."""
+def _set_header(message: Message | MutableHeaders, name: str, value: str) -> None:
+    """Set a header in an ASGI message or MutableHeaders object."""
+    if isinstance(message, MutableHeaders):
+        message[name] = value
+        return
+
     target = name.lower().encode("latin-1")
     raw_value = value.encode("latin-1", "replace")
     headers = [

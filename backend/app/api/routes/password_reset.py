@@ -41,6 +41,10 @@ async def request_password_reset(data: PasswordResetRequest, request: Request = 
     Always returns a generic ``status: success`` message to prevent account
     enumeration, whether or not the e-mail exists in the database.
     """
+    raise HTTPException(
+        status_code=503,
+        detail="Password recovery service is temporarily disabled for development",
+    )
     raw_token = await create_password_reset_token(data.email)
     if raw_token is not None:
         logger.info(

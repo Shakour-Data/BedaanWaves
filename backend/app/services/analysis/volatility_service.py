@@ -65,7 +65,7 @@ class VolatilityService(AnalysisService):
             return 0.0
 
         mean = sum(returns) / len(returns)
-        variance = sum((r - mean) ** 2 for r in returns) / len(returns)
+        variance = sum((r - mean) ** 2 for r in returns) / (len(returns) - 1)
         return math.sqrt(variance)
 
     def _calculate_annualized_volatility(self, returns: list[float]) -> float:

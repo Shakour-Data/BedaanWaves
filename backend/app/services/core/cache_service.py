@@ -19,7 +19,6 @@ from .base_service import BaseService
 
 
 class CacheBackend(ABC):
-    """Abstract base for cache backends"""
 
     @abstractmethod
     async def get(self, key: str) -> Any | None:
@@ -396,26 +395,38 @@ class CacheService(BaseService):
         Returns:
             Number of keys invalidated
         """
-        if isinstance(self.backend, RedisCacheBackend):
-            try:
-                full_pattern = self._get_key(namespace, pattern)
-                count = 0
-                async for key in self.backend._client.scan_iter(
-                    match=full_pattern, count=100
-                ):
-                    await self.backend._client.delete(key)
-                    count += 1
-                self.logger.info(
-                    f"Invalidated {count} cache keys matching {full_pattern}"
-                )
-                return count
-            except Exception as exc:
-                self.logger.debug(f"Pattern invalidation failed: {exc}")
+        # Check if backend supports pattern invalidation (Redis only)
+        backend_type_name = type(self.backend).__name__
+        if backend_type_name != 'RedisCacheBackend':
+            self.logger.warning(
+                "Pattern invalidation not supported for non-Redis backends"
+            )
+            return 0
 
-        self.logger.warning(
-            "Pattern invalidation not supported for non-Redis backends"
-        )
-        return 0
+        try:
+            from app.infrastructure.cache.redis_cache_backend import (
+                RedisCacheBackend,
+            )
+            if not isinstance(self.backend, RedisCacheBackend):
+                self.logger.warning(
+                    "Pattern invalidation not supported for non-Redis backends"
+                )
+                return 0
+
+            full_pattern = self._get_key(namespace, pattern)
+            count = 0
+            async for key in self.backend._client.scan_iter(
+                match=full_pattern, count=100
+            ):
+                await self.backend._client.delete(key)
+                count += 1
+            self.logger.info(
+                f"Invalidated {count} cache keys matching {full_pattern}"
+            )
+            return count
+        except Exception as exc:
+            self.logger.debug(f"Pattern invalidation failed: {exc}")
+            return 0
 
     async def warm_cache(
         self,

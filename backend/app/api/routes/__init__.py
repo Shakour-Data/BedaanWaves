@@ -22,6 +22,7 @@ from . import (
     privacy,
     ranking,
     security_audit,
+    service_map,
     settings,
     specialized,
     stocks,
@@ -53,6 +54,7 @@ portfolio_router = portfolios.router
 privacy_router = privacy.router
 ranking_router = ranking.router
 security_audit_router = security_audit.router
+service_map_router = service_map.router
 settings_router = settings.router
 specialized_router = specialized.router
 stocks_router = stocks.router
@@ -108,6 +110,8 @@ __all__ = [
     "ranking_router",
     "security_audit",
     "security_audit_router",
+    "service_map",
+    "service_map_router",
     "settings",
     "settings_router",
     "specialized",

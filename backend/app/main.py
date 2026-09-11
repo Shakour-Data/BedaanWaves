@@ -53,6 +53,7 @@ from app.api.routes import (
     portfolio_router,
     privacy_router,
     ranking_router,
+    security_audit_router,
     service_map_router,
     settings_router,
     specialized_router,

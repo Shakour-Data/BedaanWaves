@@ -1,5 +1,7 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1";
+  typeof window === "undefined"
+    ? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1"
+    : "/api/v1";
 
 export function num(value: unknown): number {
   if (value === null || value === undefined) return 0;

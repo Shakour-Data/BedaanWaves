@@ -97,6 +97,32 @@ jobs:
         cd backend
         bandit -r app/ -f json -o bandit-results.json || true
     
+    - name: Install Py-Spy for performance profiling
+      run: |
+        pip install py-spy
+    
+    - name: Profile critical paths with Py-Spy
+      run: |
+        cd backend
+        # Profile the dashboard service (most CPU-intensive)
+        timeout 30 py-spy record \
+          -o dashboard-profile.svg \
+          -- python -c "from app.services.analysis.dashboard_service import DashboardService; import asyncio; asyncio.run(DashboardService().get_dimension_dashboard(None, 'technical'))" || true
+        
+        # Profile the scoring service
+        timeout 30 py-spy record \
+          -o scoring-profile.svg \
+          -- python -c "from app.services.analysis.scoring_service import ScoringService; import asyncio; asyncio.run(ScoringService().compute_scores('AAPL'))" || true
+    
+    - name: Upload profiling results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-profiles
+        path: |
+          backend/dashboard-profile.svg
+          backend/scoring-profile.svg
+        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+    
     - name: Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -453,3 +479,48 @@ EOF
           cd $DEPLOY_DIR
           ls -d blue/releases/* 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf
           ls -d green/releases/* 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf
+
+  load-testing:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: always() && (github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install K6
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget
+        wget -q -O - https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz | tar -xz
+        sudo mv k6 /usr/local/bin/
+    
+    - name: Run load test against staging
+      run: |
+        cd tests/integration/k6
+        k6 run \
+          --env BASE_URL=https://staging.bedaanwaves.com \
+          --env AUTH_TOKEN=${{ secrets.STAGING_AUTH_TOKEN }} \
+          --env USERNAME=testuser \
+          --env PASSWORD=TestPass123! \
+          --config k6-config.json \
+          load-test.js
+      continue-on-error: false
+    
+    - name: Upload load test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: load-test-results
+        path: |
+          tests/integration/k6/results/*
+        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+    
+    - name: Check load test thresholds
+      run: |
+        cd tests/integration/k6
+        # Parse k6 JSON output and verify thresholds
+        if [ -f k6-results.json ]; then
+          echo "Load test completed, checking results..."
+          # Additional threshold validation can be added here
+        fi

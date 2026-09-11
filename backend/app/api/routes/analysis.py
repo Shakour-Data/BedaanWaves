@@ -245,11 +245,12 @@ async def get_risk_analysis(
     prices = np.array([float(c.close) for c in candles])
     returns = np.diff(prices) / prices[:-1]
 
-    # Calculate metrics
-    volatility = np.std(returns) * np.sqrt(252)  # Annualized
-    sharpe_ratio = (np.mean(returns) * 252) / volatility if volatility > 0 else 0
+    # Calculate metrics (sample std for statistical consistency)
+    volatility = np.std(returns, ddof=1) * np.sqrt(252)  # Annualized, sample std
+    risk_free_rate = 0.02
+    sharpe_ratio = ((np.mean(returns) * 252) - risk_free_rate) / volatility if volatility > 0 else 0
 
-    # VaR (95%)
+    # VaR (95%) - historical simulation
     var_95 = np.percentile(returns, 5)
 
     # Max drawdown

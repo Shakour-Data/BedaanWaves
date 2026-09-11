@@ -117,10 +117,40 @@ function prettify(key: string): string {
  * views stay numerically identical (parity contract).
  */
 export function classifyLevelKey(key: string): LevelKey {
-  if (!key.includes("_")) return "dimension";
-  if (key.includes("_aspect_") && key.includes("_detail_")) return "sub_aspect";
-  if (key.includes("_aspect_")) return "aspect";
-  return "sub_dimension";
+  // Known L1 dimension keys (canonical 6)
+  const DIMENSION_KEYS = new Set([
+    "fundamental",
+    "technical",
+    "sentiment",
+    "risk",
+    "macro",
+    "ai",
+  ]);
+  if (DIMENSION_KEYS.has(key)) return "dimension";
+
+  // Known L2 sub-dimension keys
+  const SUB_DIMENSION_KEYS = new Set([
+    "valuation",
+    "profitability",
+    "growth",
+    "liquidity",
+    "trend",
+    "momentum",
+    "volatility",
+    "volume",
+    "news",
+    "market_risk",
+    "rates",
+    "commodity",
+    "ml_signal",
+  ]);
+  if (SUB_DIMENSION_KEYS.has(key)) return "sub_dimension";
+
+  // L3 aspect keys all end with _band or _block
+  if (key.endsWith("_band") || key.endsWith("_block")) return "aspect";
+
+  // Everything else is L4 sub-aspect
+  return "sub_aspect";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

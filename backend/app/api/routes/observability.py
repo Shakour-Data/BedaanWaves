@@ -16,6 +16,9 @@ async def receive_frontend_metrics(request: Request):
     except Exception:
         return {"status": "error", "message": "Invalid JSON"}
 
+    if not isinstance(payload, dict):
+        return {"status": "error", "message": "Invalid payload"}
+
     logger.info(
         "frontend_metric type=%s name=%s value=%s",
         payload.get("type"),

@@ -19,10 +19,10 @@ class MovingAverageEngine:
         if not prices or len(prices) < period:
             return 0.0
 
-        alpha = 2 / (period + 1)
-        ema = prices[0]
-        for price in prices[1:]:
-            ema = (price * alpha) + (ema * (1 - alpha))
+        multiplier = 2 / (period + 1)
+        ema = sum(prices[:period]) / period
+        for price in prices[period:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
         return round(ema, 2)
 
     def calculate_wma(self, prices: list[float], period: int, source: str = "unknown") -> float:

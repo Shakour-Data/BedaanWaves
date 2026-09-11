@@ -23,7 +23,9 @@ class Candle:
 def compute_rsi(closes: list[float], period: int = 14) -> float | None:
     """
     Compute Relative Strength Index (RSI) using Wilder's smoothing.
-    Standard 14-period RSI as defined by J. Welles Wilder Jr.
+
+    Reference: Wilder, J. W. (1978). New Concepts in Technical Trading Systems.
+    Chapter 6: Relative Strength Index. p. 63-70.
     """
     if len(closes) < period + 1:
         return None
@@ -81,6 +83,10 @@ def compute_macd(
 ) -> dict[str, float] | None:
     """
     Compute MACD (Moving Average Convergence Divergence).
+
+    Reference: Appel, G. (1979). The Moving Average Convergence-Divergence Method.
+    Signal line: EMA(9) of MACD line. Histogram: MACD - Signal.
+
     Returns macd_line, signal_line, and histogram.
     """
     if len(closes) < slow_period + signal_period:

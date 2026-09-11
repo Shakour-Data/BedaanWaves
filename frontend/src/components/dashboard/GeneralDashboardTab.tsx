@@ -6,6 +6,7 @@ import { RefreshCw, BarChart3, CheckCircle, AlertCircle, ExternalLink } from "lu
 import { SpiderChart } from "@/components/charts/SpiderChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 import { ColumnChart } from "@/components/charts/ColumnChart";
+import { BarChart } from "@/components/charts/BarChart";
 import { CoefficientChart } from "@/components/charts/CoefficientChart";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -295,11 +296,11 @@ export function GeneralDashboardTab({ symbol }: GeneralDashboardTabProps) {
 
       {/* 20 chart views = 4 levels x 5 families, all from one snapshot */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {LEVELS.map((level) => {
+        {LEVELS.map((level, idx) => {
           const L = model.levels.find((l) => l.key === level);
           if (!L) return null;
           return (
-            <LevelSection key={level} level={L} />
+            <LevelSection key={level} level={L} levelIndex={idx} />
           );
         })}
       </div>
@@ -319,7 +320,7 @@ export function GeneralDashboardTab({ symbol }: GeneralDashboardTabProps) {
   );
 }
 
-function LevelSection({ level }: { level: LevelModel }) {
+function LevelSection({ level, levelIndex }: { level: LevelModel; levelIndex: number }) {
   const palette = LEVEL_COLORS[level.key] ?? LEVEL_COLORS.dimension;
   const meta = LEVEL_META[level.key];
   const chartHeight = LEVEL_CHART_HEIGHT[level.key] ?? 280;
@@ -367,6 +368,7 @@ function LevelSection({ level }: { level: LevelModel }) {
           data={positiveNegativeColumns(level.scoreDelta, "score")}
           height={160}
           valueFormatter={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)}
+          ariaLabel={`◈ ${meta.label} — Score Changes`}
         />
       </ChartShell>
 
@@ -388,11 +390,21 @@ function LevelSection({ level }: { level: LevelModel }) {
         emptyLabel="No coefficient-change data"
         emptyGuidance={guidance}
       >
-        <ColumnChart
-          data={positiveNegativeColumns(level.weightDelta, "score")}
-          height={160}
-          valueFormatter={(v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%"}
-        />
+        {levelIndex % 2 === 0 ? (
+          <BarChart
+            data={positiveNegativeColumns(level.weightDelta, "score")}
+            height={160}
+            valueFormatter={(v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%"}
+            ariaLabel={`◈ ${meta.label} — Coefficient Changes (Bar)`}
+          />
+        ) : (
+          <ColumnChart
+            data={positiveNegativeColumns(level.weightDelta, "score")}
+            height={160}
+            valueFormatter={(v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%"}
+            ariaLabel={`◈ ${meta.label} — Coefficient Changes (Column)`}
+          />
+        )}
       </ChartShell>
     </section>
   );
