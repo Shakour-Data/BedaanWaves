@@ -5,11 +5,12 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import desc, func, select
 
+from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, News
 from app.schemas.schemas import (
-    NewsCategoryResponse,
     NewsCategoriesResponse,
+    NewsCategoryResponse,
     NewsMarketMovingResponse,
     NewsMarketResponse,
     NewsRegionsResponse,
@@ -53,24 +54,7 @@ async def get_market_news(
         "status": "success",
         "count": len(news),
         "data": news,
-    }
-
-
-@router.get("/{ticker}", response_model=NewsTickerResponse)
-async def get_stock_news(
-    ticker: str,
-    limit: int = Query(10, ge=1, le=100),
-) -> dict:
-    """Get news for a specific stock."""
-    from app.services.data.news_service import NewsService
-    service = NewsService()
-    await service.initialize()
-    news = await service.get_stock_news(ticker, limit)
-    return {
-        "status": "success",
-        "ticker": ticker.upper(),
-        "count": len(news),
-        "data": news,
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -89,6 +73,7 @@ async def search_news(
         "query": q,
         "count": len(results),
         "data": results,
+        "timestamp": utc_now_iso(),
     }
 
 
@@ -127,6 +112,7 @@ async def get_news_by_category(
             "category": category.upper(),
             "count": len(items),
             "data": [_news_to_dict(n) for n in items],
+            "timestamp": utc_now_iso(),
         }
 
 
@@ -137,8 +123,12 @@ async def get_news_categories():
         result = await session.execute(
             select(News.category, func.count(News.id)).group_by(News.category)
         )
-        counts = {row[0]: row[1] for row in result.all()}
-        return {"status": "success", "categories": list(counts.keys()), "count": len(counts)}
+        counts = {row[0] or "UNKNOWN": row[1] for row in result.all()}
+        return {
+            "status": "success",
+            "data": counts,
+            "timestamp": utc_now_iso(),
+        }
 
 
 @router.get("/regions", response_model=NewsRegionsResponse)
@@ -149,7 +139,11 @@ async def get_news_regions():
             select(News.region, func.count(News.id)).group_by(News.region)
         )
         counts = {row[0] or "GLOBAL": row[1] for row in result.all()}
-        return {"status": "success", "regions": list(counts.keys()), "count": len(counts)}
+        return {
+            "status": "success",
+            "data": counts,
+            "timestamp": utc_now_iso(),
+        }
 
 
 @router.get("/market-moving", response_model=NewsMarketMovingResponse)
@@ -167,4 +161,24 @@ async def get_market_moving_news(
             "status": "success",
             "count": len(items),
             "data": [_news_to_dict(n) for n in items],
+            "timestamp": utc_now_iso(),
         }
+
+
+@router.get("/{ticker}", response_model=NewsTickerResponse)
+async def get_stock_news(
+    ticker: str,
+    limit: int = Query(10, ge=1, le=100),
+) -> dict:
+    """Get news for a specific stock."""
+    from app.services.data.news_service import NewsService
+    service = NewsService()
+    await service.initialize()
+    news = await service.get_stock_news(ticker, limit)
+    return {
+        "status": "success",
+        "symbol": ticker.upper(),
+        "count": len(news),
+        "data": news,
+        "timestamp": utc_now_iso(),
+    }

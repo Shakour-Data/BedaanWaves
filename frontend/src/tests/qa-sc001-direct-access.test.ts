@@ -1,39 +1,53 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/store/useAuthStore", () => {
+  const state = {
+    isAuthenticated: false,
+    loading: false,
+    token: null,
+    user: null,
+  };
+  const listeners = new Set<() => void>();
+
+  const mockStore = {
+    getState: () => state,
+    setState: (partial: Record<string, unknown>) => {
+      Object.assign(state, partial);
+      listeners.forEach((l) => l());
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+
+  return {
+    useAuthStore: Object.assign(vi.fn(() => mockStore.getState()), {
+      getState: () => mockStore.getState(),
+      setState: mockStore.setState,
+      subscribe: mockStore.subscribe,
+    }),
+  };
+});
+
 import { useAuthStore } from "@/store/useAuthStore";
 
 describe("QA Priority 1 - SC-001: Direct Access Prevention (Auth Disabled)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      isAuthenticated: false,
+      loading: false,
+      token: null,
+      user: null,
+    });
   });
 
   describe("Authentication guard (NewDashboardShell) - DISABLED", () => {
     it("allows access without authentication in development mode", () => {
-      const replaceMock = vi.fn();
-      const pushMock = vi.fn();
-
-      vi.mock("@/store/useAuthStore", () => ({
-        useAuthStore: Object.assign(vi.fn(), {
-          getState: () => ({
-            isAuthenticated: false,
-            loading: false,
-            token: null,
-            user: null,
-          }),
-        }),
-      }));
-
-      useAuthStore.setState({
-        isAuthenticated: false,
-        loading: false,
-        token: null,
-        user: null,
-      });
-
       const state = useAuthStore.getState();
       expect(state.isAuthenticated).toBe(false);
       expect(state.loading).toBe(false);
-      expect(replaceMock).not.toHaveBeenCalled();
-      expect(pushMock).not.toHaveBeenCalled();
     });
 
     it("allows authenticated users through without redirect", () => {

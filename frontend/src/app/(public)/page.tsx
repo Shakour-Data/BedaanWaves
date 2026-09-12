@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { ArrowRight, TrendingUp, Brain, BarChart3, Shield, Zap, Globe, Sparkles } from "lucide-react";
 
@@ -102,8 +101,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <PublicLayout>
-      <PageTransition>
+    <PageTransition>
         {/* Hero Section */}
         <section className="relative overflow-hidden pt-28 pb-20 lg:pt-40 lg:pb-32">
           <div className="absolute inset-0 overflow-hidden">
@@ -137,17 +135,17 @@ export default function HomePage() {
 
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
-                  href="/"
-                  className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[var(--color-primary)]/25 transition-all hover:shadow-2xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 cursor-not-allowed opacity-80"
+                  href="/dashboard"
+                  className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[var(--color-primary)]/25 transition-all hover:shadow-2xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5"
                 >
-                  Coming Soon
+                  Application
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
-                  href="/"
-                  className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-4 text-base font-semibold text-[var(--color-text-primary)] transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] hover:shadow-lg cursor-not-allowed opacity-80"
+                  href="/leaderboard"
+                  className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-4 text-base font-semibold text-[var(--color-text-primary)] transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] hover:shadow-lg"
                 >
-                  Coming Soon
+                  Leaderboard
                 </Link>
               </div>
             </div>
@@ -236,10 +234,10 @@ export default function HomePage() {
 
             <div className="mt-16 text-center">
               <Link
-                href="/"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 cursor-not-allowed opacity-80"
+                href="/dashboard"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5"
               >
-                Create Free Account
+                Application
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -339,17 +337,17 @@ export default function HomePage() {
                 </p>
                 <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
-                    href="/"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5 cursor-not-allowed opacity-80"
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5"
                   >
-                    Create Free Account
+                    Application
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
-                    href="/"
-                    className="inline-flex items-center gap-2 rounded-xl border-2 border-white px-8 py-4 text-base font-semibold text-white transition-all hover:bg-white/10 hover:shadow-lg cursor-not-allowed opacity-80"
+                    href="/stocks"
+                    className="inline-flex items-center gap-2 rounded-xl border-2 border-white px-8 py-4 text-base font-semibold text-white transition-all hover:bg-white/10 hover:shadow-lg"
                   >
-                    Sign In
+                    Stocks
                   </Link>
                 </div>
               </div>
@@ -357,6 +355,5 @@ export default function HomePage() {
           </div>
         </section>
       </PageTransition>
-    </PublicLayout>
   );
 }

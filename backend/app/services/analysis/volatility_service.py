@@ -151,6 +151,67 @@ class VolatilityService(AnalysisService):
         if not returns:
             return clusters
 
+    async def sensitivity_analysis(
+        self,
+        returns: list[float],
+        parameter: str = "window",
+        window_sizes: list[int] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Perform sensitivity analysis on volatility estimates.
+
+        Measures how volatility estimates vary with the lookback window,
+        providing confidence intervals for the volatility estimate.
+        Reference: Mandelbrot, B. (1963). "The Variation of Certain
+        Speculative Prices."
+
+        Args:
+            returns: Return series
+            parameter: Parameter to vary ('window' or 'ddof')
+            window_sizes: List of window sizes to test
+
+        Returns:
+            Dictionary with sensitivity results including mean, std, min, max,
+            and confidence intervals for each parameter value.
+        """
+        if not returns or len(returns) < 2:
+            return {"status": "insufficient_data", "results": {}}
+
+        if window_sizes is None:
+            window_sizes = [5, 10, 20, 30, 60, min(126, len(returns))]
+
+        window_sizes = [w for w in window_sizes if 2 <= w <= len(returns)]
+        results = {}
+        vol_values = []
+
+        for w in window_sizes:
+            window_returns = returns[-w:]
+            vol = self._calculate_historical_volatility(window_returns)
+            vol_annualized = vol * math.sqrt(252)
+            vol_values.append(vol_annualized)
+            results[w] = {
+                "volatility": round(vol_annualized, 6),
+                "window_size": w,
+            }
+
+        if len(vol_values) >= 2:
+            mean_vol = sum(vol_values) / len(vol_values)
+            std_vol = math.sqrt(sum((v - mean_vol) ** 2 for v in vol_values) / (len(vol_values) - 1))
+            z_95 = 1.96
+            results["summary"] = {
+                "mean": round(mean_vol, 6),
+                "std": round(std_vol, 6),
+                "min": round(min(vol_values), 6),
+                "max": round(max(vol_values), 6),
+                "ci_95_lower": round(mean_vol - z_95 * std_vol, 6),
+                "ci_95_upper": round(mean_vol + z_95 * std_vol, 6),
+                "parameter_tested": parameter,
+            }
+        else:
+            results["summary"] = {"error": "Not enough data for sensitivity analysis"}
+
+        return {"status": "success", "results": results}
+
         mean = sum(returns) / len(returns)
         std = self._calculate_historical_volatility(returns)
 

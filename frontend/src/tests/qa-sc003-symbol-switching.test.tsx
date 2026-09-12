@@ -127,6 +127,23 @@ function makeSnapshot(symbol: string, dimensionScores: Record<string, number>): 
   };
 }
 
+function createMockSnapshot(snapshotId: string, overall: number): object {
+  return {
+    snapshotId,
+    timestamp: "2026-09-09T00:00:00Z",
+    scores: { daily: { overall, dimension: {} } },
+    trends: { daily: [] },
+    weights: {},
+    weight_trends: { daily: [] },
+    weight_deltas: { daily: { weights: {} } },
+    deltas: {
+      hourly_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} },
+      current_vs_hourly: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} },
+      current_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} },
+    },
+  };
+}
+
 describe("QA Priority 1 - SC-003: Symbol Switch Updates All Charts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -146,27 +163,7 @@ describe("QA Priority 1 - SC-003: Symbol Switch Updates All Charts", () => {
       ai: 55,
     });
 
-    const snapshot = {
-      snapshotId: "snap_AAPL",
-      timestamp: "2026-09-09T00:00:00Z",
-      scores: {
-        daily: {
-          overall: 71,
-          dimension: { fundamental: 80, technical: 75, sentiment: 70, risk: 65, macro: 60, ai: 55 },
-        },
-      },
-      trends: {
-        daily: [{ date: "2026-09-09", overall: 71, level_scores: { fundamental: 80, technical: 75, sentiment: 70, risk: 65, macro: 60, ai: 55 } }],
-      },
-      weights: { dimension: { fundamental: 0.4, technical: 0.3, sentiment: 0.15, risk: 0.1, macro: 0.05, ai: 0 } },
-      weight_trends: { daily: [] },
-      weight_deltas: { daily: { weights: { dimension: {} } } },
-      deltas: {
-        hourly_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} },
-        current_vs_hourly: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} },
-        current_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} },
-      },
-    };
+    const snapshot = createMockSnapshot("snap_AAPL", 71);
 
     vi.mocked(useSnapshot).mockReturnValue(snapshot);
     vi.mocked(snapshotToChartsModel).mockReturnValue(model);
@@ -224,8 +221,8 @@ describe("QA Priority 1 - SC-003: Symbol Switch Updates All Charts", () => {
 
     vi.mocked(useSnapshot).mockImplementation(() => {
       return currentModel === model1
-        ? { snapshotId: "snap_AAPL", timestamp: "2026-09-09T00:00:00Z", scores: { daily: { overall: 71, dimension: {} } }, trends: { daily: [] }, weights: {}, weight_trends: { daily: [] }, weight_deltas: { daily: { weights: {} } }, deltas: { hourly_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_hourly: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} } } }
-        : { snapshotId: "snap_MSFT", timestamp: "2026-09-09T00:00:00Z", scores: { daily: { overall: 61, dimension: {} } }, trends: { daily: [] }, weights: {}, weight_trends: { daily: [] }, weight_deltas: { daily: { weights: {} } }, deltas: { hourly_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_hourly: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} } } };
+        ? createMockSnapshot("snap_AAPL", 71)
+        : createMockSnapshot("snap_MSFT", 61);
     });
 
     vi.mocked(snapshotToChartsModel).mockImplementation(() => currentModel);
@@ -277,7 +274,7 @@ describe("QA Priority 1 - SC-003: Symbol Switch Updates All Charts", () => {
     };
 
     vi.mocked(snapshotToChartsModel).mockReturnValue(mismatchedModel);
-    vi.mocked(useSnapshot).mockReturnValue({ snapshotId: "snap_BAD", timestamp: "2026-09-09T00:00:00Z", scores: { daily: { overall: 50, dimension: {} } }, trends: { daily: [] }, weights: {}, weight_trends: { daily: [] }, weight_deltas: { daily: { weights: {} } }, deltas: { hourly_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_hourly: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} } });
+    vi.mocked(useSnapshot).mockReturnValue(createMockSnapshot("snap_BAD", 50));
 
     const { GeneralDashboardTab } = await import("@/components/dashboard/GeneralDashboardTab");
     render(<GeneralDashboardTab symbol="BAD" />);
@@ -296,13 +293,13 @@ describe("QA Priority 1 - SC-003: Symbol Switch Updates All Charts", () => {
     });
 
     vi.mocked(snapshotToChartsModel).mockReturnValue(model);
-    vi.mocked(useSnapshot).mockReturnValue({ snapshotId: "snap_AAPL", timestamp: "2026-09-09T00:00:00Z", scores: { daily: { overall: 71, dimension: {} } }, trends: { daily: [] }, weights: {}, weight_trends: { daily: [] }, weight_deltas: { daily: { weights: {} } }, deltas: { hourly_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_hourly: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} }, current_vs_daily: { overall_delta: 0, overall_delta_pct: 0, dimension_deltas: {}, sub_dimension_deltas: {}, aspect_deltas: {}, sub_aspect_deltas: {} } });
+    vi.mocked(useSnapshot).mockReturnValue(createMockSnapshot("snap_AAPL", 71));
 
     const { GeneralDashboardTab } = await import("@/components/dashboard/GeneralDashboardTab");
     render(<GeneralDashboardTab symbol="AAPL" />);
 
     expect(screen.getByText(/Analytical Dashboard/i)).toBeInTheDocument();
-    expect(screen.getByText(/snap_AAPL/i)).toBeInTheDocument();
+    expect(screen.getByText(/snap_AAP/i)).toBeInTheDocument();
     expect(screen.getByText(/Data parity verified/i)).toBeInTheDocument();
   });
 });

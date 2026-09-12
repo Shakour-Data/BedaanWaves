@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import { ArrowRight, Target, Lightbulb, Lock, Globe } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -56,8 +55,7 @@ const team = [
 
 export default function AboutPage() {
   return (
-    <PublicLayout>
-      <div className="page-transition-enter">
+    <div className="page-transition-enter">
         {/* Hero */}
         <section className="relative overflow-hidden py-20 lg:py-32">
           <div className="absolute inset-0 overflow-hidden">
@@ -165,12 +163,12 @@ export default function AboutPage() {
                 <p className="mx-auto mt-6 max-w-2xl text-lg text-white/90">
                   Join thousands of traders who use BedaanWaves for professional-grade analysis and AI-powered insights.
                 </p>
-                <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+<div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
-                    href="/"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5 cursor-not-allowed opacity-80"
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[var(--color-primary)] shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl hover:-translate-y-0.5"
                   >
-                    Start Free Trial
+                    Application
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
@@ -185,6 +183,5 @@ export default function AboutPage() {
           </div>
         </section>
       </div>
-    </PublicLayout>
   );
 }

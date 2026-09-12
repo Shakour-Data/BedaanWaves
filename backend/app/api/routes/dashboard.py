@@ -124,28 +124,6 @@ async def get_dashboard_snapshots_index(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/dashboard/{dimension}", response_model=dict)
-async def get_dimension_dashboard(
-    dimension: str,
-    limit: int = Query(50, ge=1, le=200),
-    latest: bool = Query(False),
-    end_date: str | None = Query(None, alias="end_date"),
-    db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """Per-dimension dashboard endpoint (technical, fundamental, risk, news, board, ai)."""
-    service = DashboardService()
-    try:
-        result = await service.get_dashboard(
-            db=db, dimension=dimension, latest=latest,
-        )
-        return result
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        logger.error(f"Dimension dashboard error ({dimension}): {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
 @router.get("/dashboard/snapshots", response_model=SnapshotIndexResponse)
 async def get_dashboard_snapshots_index(
     hourly_limit: int = Query(168, ge=24, le=720),
@@ -867,4 +845,26 @@ async def get_coefficient_history_by_level(
         }
     except Exception as exc:
         logger.error(f"Coefficient history by level error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/dashboard/{dimension}", response_model=dict)
+async def get_dimension_dashboard(
+    dimension: str,
+    limit: int = Query(50, ge=1, le=200),
+    latest: bool = Query(False),
+    end_date: str | None = Query(None, alias="end_date"),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Per-dimension dashboard endpoint (technical, fundamental, risk, news, board, ai)."""
+    service = DashboardService()
+    try:
+        result = await service.get_dashboard(
+            db=db, dimension=dimension, latest=latest,
+        )
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"Dimension dashboard error ({dimension}): {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

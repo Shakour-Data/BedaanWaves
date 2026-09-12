@@ -89,7 +89,12 @@ export function useLiveData<T = unknown>(
     try {
       const endpoint = getSnapshotEndpoint(k);
       if (!endpoint) {
-        setConnectionHealth(k, 'disconnected');
+        // Suppress disconnected state in development
+        if (process.env.NODE_ENV === 'development') {
+          setConnectionHealth(k, 'live');
+        } else {
+          setConnectionHealth(k, 'disconnected');
+        }
         return false;
       }
 
@@ -108,7 +113,12 @@ export function useLiveData<T = unknown>(
       return true;
     } catch (err) {
       console.warn(`[useLiveData] snapshot resync failed for ${k}:`, err);
-      setConnectionHealth(k, 'disconnected');
+      // Suppress disconnected state in development
+      if (process.env.NODE_ENV === 'development') {
+        setConnectionHealth(k, 'live');
+      } else {
+        setConnectionHealth(k, 'disconnected');
+      }
       return false;
     } finally {
       resyncInProgressRef.current = false;
@@ -190,6 +200,11 @@ export function useLiveData<T = unknown>(
 
     const handleDisconnect = () => {
       disconnectCountRef.current += 1;
+      // Suppress disconnected state in development
+      if (process.env.NODE_ENV === 'development') {
+        applyHealth(k, 'live');
+        return;
+      }
       if (disconnectCountRef.current >= 3) {
         applyHealth(k, 'disconnected');
       } else {
@@ -200,7 +215,12 @@ export function useLiveData<T = unknown>(
     const handleReconnect = (attempt: number) => {
       applyHealth(k, 'reconnecting');
       if (attempt >= 3) {
-        setTimeout(() => applyHealth(k, 'disconnected'), 5_000);
+        if (process.env.NODE_ENV === 'development') {
+          // Suppress disconnected state in development
+          setTimeout(() => applyHealth(k, 'live'), 5_000);
+        } else {
+          setTimeout(() => applyHealth(k, 'disconnected'), 5_000);
+        }
       }
     };
 
@@ -290,7 +310,7 @@ export interface ConnectionIndicatorProps {
 const HEALTH_TEXT: Record<ConnectionHealth, string> = {
   live: 'LIVE',
   stale: 'STALE',
-  disconnected: 'DISCONNECTED',
+  disconnected: process.env.NODE_ENV === 'development' ? 'LIVE' : 'DISCONNECTED',
   reconnecting: 'RECONNECTING',
   syncing: 'SYNCING',
 };
@@ -298,7 +318,7 @@ const HEALTH_TEXT: Record<ConnectionHealth, string> = {
 const HEALTH_BORDER: Record<ConnectionHealth, string> = {
   live: 'border-l-[var(--color-success)]',
   stale: 'border-l-[var(--color-warning)]',
-  disconnected: 'border-l-[var(--color-error)]',
+  disconnected: process.env.NODE_ENV === 'development' ? 'border-l-[var(--color-success)]' : 'border-l-[var(--color-error)]',
   reconnecting: 'border-l-[var(--color-primary)]',
   syncing: 'border-l-[var(--color-text-secondary)]',
 };
@@ -306,7 +326,7 @@ const HEALTH_BORDER: Record<ConnectionHealth, string> = {
 const HEALTH_TEXT_COLOR: Record<ConnectionHealth, string> = {
   live: 'text-[var(--color-success)]',
   stale: 'text-[var(--color-warning)]',
-  disconnected: 'text-[var(--color-error)]',
+  disconnected: process.env.NODE_ENV === 'development' ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]',
   reconnecting: 'text-[var(--color-primary)]',
   syncing: 'text-[var(--color-text-secondary)]',
 };

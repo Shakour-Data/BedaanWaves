@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
+import { useEffect, useRef, useState, useCallback, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -11,7 +11,6 @@ import {
   Newspaper,
   Sparkles,
   RefreshCw,
-  BarChart3,
   Globe,
   ArrowUpRight,
   Zap,
@@ -72,10 +71,9 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-function DashboardOverview({ data, load, maxDimAvg }: {
+function DashboardOverview({ data, load }: {
   data: DashboardSnapshot;
-  load: (mode: "initial" | "refresh") => void;
-  maxDimAvg: number;
+  load: (mode: "initial" | "refresh") => Promise<void>;
 }) {
   return (
     <>
@@ -141,62 +139,7 @@ function DashboardOverview({ data, load, maxDimAvg }: {
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-[var(--color-primary)]" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                Dimension scores
-              </h2>
-            </div>
-            <Link
-              href="/scoring"
-              className="text-xs font-medium text-[var(--color-primary)] hover:underline"
-            >
-              View details →
-            </Link>
-          </div>
-          <ul className="flex flex-col gap-3">
-            {data.dimensions.map((d) => {
-              const avg = d.data?.avg_score ?? 0;
-              const pct = Math.max(0, Math.min(100, (avg / maxDimAvg) * 100));
-              const { grade, tone } = gradeLabel(avg);
-              return (
-                <li key={d.key} className="flex items-center gap-3">
-                  <span className="w-28 text-sm font-medium text-[var(--color-text-primary)]">{d.label}</span>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--color-muted)]">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        tone === "success" && "bg-[var(--color-success)]",
-                        tone === "primary" && "bg-[var(--color-primary)]",
-                        tone === "warning" && "bg-[var(--color-warning)]",
-                        tone === "error" && "bg-[var(--color-error)]"
-                      )}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <span className="w-16 text-right text-sm font-semibold text-[var(--color-text-primary)]">
-                    {fmtScore(avg)}
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
-                      tone === "success" && "bg-[var(--color-success)]/15 text-[var(--color-success)]",
-                      tone === "primary" && "bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
-                      tone === "warning" && "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
-                      tone === "error" && "bg-[var(--color-error)]/15 text-[var(--color-error)]"
-                    )}
-                  >
-                    {grade}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-
-        <Card className="p-6">
+        <Card className="lg:col-span-3 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Newspaper className="h-4 w-4 text-[var(--color-primary)]" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
@@ -536,17 +479,6 @@ export default function DashboardPage() {
     }
   }, [load]);
 
-  const maxDimAvg = useMemo(() => {
-    if (!data) return 100;
-    const vals = data.dimensions
-      .map((d) => d.data?.avg_score ?? 0)
-      .filter((v) => v > 0);
-    if (vals.length === 0) return 100;
-    // Scale to the true max so bars fill proportionally (avoids a misleading
-    // "all bars at 60%" look when the population is naturally centred).
-    return Math.max(100, Math.ceil(Math.max(...vals)));
-  }, [data]);
-
   if (loading) {
     return (
       <NewDashboardShell title="Dashboard">
@@ -596,12 +528,12 @@ export default function DashboardPage() {
         <Suspense fallback={<div className="h-10 w-full" />}>
           <DashboardTabState onTabChange={setActiveTab} />
         </Suspense>
-        {activeTab === "general" ? (
+{activeTab === "general" ? (
           <Suspense fallback={<div className="h-64 w-full" />}>
             <GeneralDashboardTab />
           </Suspense>
         ) : (
-          <DashboardOverview data={data} load={load} maxDimAvg={maxDimAvg} />
+          <DashboardOverview data={data} load={load} />
         )}
       </div>
     </NewDashboardShell>

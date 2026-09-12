@@ -22,7 +22,7 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utils import utc_now_iso
-from app.models.models import Asset, RawPerformanceScore, ScoreHistory
+from app.models.models import Asset, ScoreHistory
 from app.models.scoring_snapshot import ScoringSnapshot, SnapshotTier
 from app.services.analysis.coefficient_history_service import (
     DIMENSION_KEYS,
@@ -204,29 +204,21 @@ class TemporalSnapshotService:
                 return None
             asset_id = row
 
-        # Query 1: Latest ScoringSnapshot row for the tier
-        filters: list = [ScoringSnapshot.snapshot_tier == tier.value]
-        if asset_id is not None:
-            filters.append(ScoringSnapshot.asset_id == asset_id)
-
-        base_q = (
+        snap_row = None
+        snap_q = (
             select(ScoringSnapshot)
-            .where(and_(*filters))
+            .where(ScoringSnapshot.snapshot_tier == tier.value)
             .order_by(desc(ScoringSnapshot.effective_at))
-            .limit(1)
         )
-        res = await db.execute(base_q)
-        snap_row = res.scalar_one_or_none()
+        if asset_id is not None:
+            snap_q = snap_q.where(ScoringSnapshot.asset_id == asset_id)
+        snap_row = (await db.execute(snap_q.limit(1))).scalar_one_or_none()
 
-        # Construct effective_at + build aggregated scores from ScoreHistory
-        effective_at: datetime | None = None
-        if snap_row and snap_row.effective_at:
-            effective_at = snap_row.effective_at
-
-        # Aggregate from ScoreHistory (last matching date)
-        sh_effective_date = None
-        sh_q = (
-            select(ScoreHistory, Asset)
+        # Resolve the latest ScoreHistory date for the requested universe. This
+        # is the authoritative fallback when partitioned ScoringSnapshot rows
+        # have not been materialized yet.
+        sh_date_q = (
+            select(func.max(ScoreHistory.date))
             .join(Asset, Asset.id == ScoreHistory.asset_id)
             .where(
                 and_(
@@ -235,144 +227,109 @@ class TemporalSnapshotService:
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 )
             )
-            .order_by(desc(ScoreHistory.date))
         )
-        if symbol:
-            sh_q = sh_q.where(func.lower(Asset.symbol) == func.lower(symbol)).limit(1)
-        else:
-            # take top 500 most recent to compute market median/mean
-            sh_q = sh_q.limit(500)
+        if asset_id is not None:
+            sh_date_q = sh_date_q.where(ScoreHistory.asset_id == asset_id)
+        sh_date_res = await db.execute(sh_date_q)
+        sh_effective_date = sh_date_res.scalar_one_or_none()
 
-        sh_res = await db.execute(sh_q)
-        sh_rows = sh_res.all()
+        if sh_effective_date is None:
+            if not snap_row or not snap_row.effective_at:
+                return None
+            effective_at = snap_row.effective_at
+            scores: dict[str, Any] = {
+                "overall": _to_float(snap_row.score),
+                "dimension": {},
+                "dimensions": {},
+                "sub_dimension": {},
+                "sub_dimensions": {},
+                "aspect": {},
+                "aspects": {},
+                "sub_aspect": {},
+                "sub_aspects": {},
+            }
+            return TierRoot(tier=tier.value, effective_at=effective_at, scores=scores)
 
-        # Aggregate from RawPerformanceScore for sub-dimension / aspect / sub-aspect
-        # First get the latest captured_at per asset, then get the JSON columns
-        rps_effective_date = None
-        rps_subq = (
-            select(
-                RawPerformanceScore.asset_id,
-                func.max(func.date(RawPerformanceScore.captured_at)).label("max_date"),
-            )
-            .join(Asset, Asset.id == RawPerformanceScore.asset_id, isouter=True)
+        sh_q = (
+            select(ScoreHistory, Asset)
+            .join(Asset, Asset.id == ScoreHistory.asset_id)
             .where(
                 and_(
                     Asset.active,
                     Asset.market == "NASDAQ",
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
-                    RawPerformanceScore.data_quality.in_(("VALIDATED", "CLEANED")),
+                    ScoreHistory.date == sh_effective_date,
                 )
             )
-            .group_by(RawPerformanceScore.asset_id)
-            .subquery()
         )
-        
-        rps_q = (
-            select(
-                rps_subq.c.max_date,
-                RawPerformanceScore.sub_dimension_scores,
-                RawPerformanceScore.aspect_scores,
-                RawPerformanceScore.sub_aspect_scores,
-            )
-            .join(
-                rps_subq,
-                and_(
-                    RawPerformanceScore.asset_id == rps_subq.c.asset_id,
-                    func.date(RawPerformanceScore.captured_at) == rps_subq.c.max_date,
-                )
-            )
-            .where(RawPerformanceScore.data_quality.in_(("VALIDATED", "CLEANED")))
-        )
-        if symbol:
-            asset_q = select(Asset.id).where(func.lower(Asset.symbol) == func.lower(symbol))
-            asset_res = await db.execute(asset_q)
-            asset_id = asset_res.scalar_one_or_none()
-            if asset_id:
-                rps_q = rps_q.where(RawPerformanceScore.asset_id == asset_id).limit(1)
-        else:
-            rps_q = rps_q.limit(500)
+        if asset_id is not None:
+            sh_q = sh_q.where(ScoreHistory.asset_id == asset_id)
+        sh_res = await db.execute(sh_q)
+        sh_rows = sh_res.all()
 
-        rps_res = await db.execute(rps_q)
-        rps_rows = rps_res.all()
+        effective_at = datetime.combine(sh_effective_date, datetime.min.time(), tzinfo=UTC)
+        if snap_row and snap_row.effective_at:
+            effective_at = snap_row.effective_at
 
-        # Aggregate RawPerformanceScore JSON columns into market means
-        def _avg_jsonb(rows: list, col_name: str) -> dict[str, float]:
-            sums: dict[str, list[float]] = {}
-            for row in rows:
-                col_val = getattr(row, col_name, None) or {}
-                if not isinstance(col_val, dict):
-                    col_val = getattr(row, "_mapping", {}).get(col_name, {}) or {}
-                for k, v in col_val.items():
-                    try:
-                        sums.setdefault(k, []).append(float(v))
-                    except (TypeError, ValueError):
-                        continue
-            return {k: round(sum(vs) / len(vs), 4) for k, vs in sums.items() if vs}
+        scores: dict[str, Any] = {
+            "overall": None,
+            "dimension": {},
+            "dimensions": {},
+            "sub_dimension": {},
+            "sub_dimensions": {},
+            "aspect": {},
+            "aspects": {},
+            "sub_aspect": {},
+            "sub_aspects": {},
+        }
+        overall_values: list[float] = []
+        level_values: dict[str, dict[str, list[float]]] = {
+            "dimension": {},
+            "sub_dimension": {},
+            "aspect": {},
+            "sub_aspect": {},
+        }
+        level_columns = {
+            "dimension": "dimension_scores",
+            "sub_dimension": "sub_dimension_scores",
+            "aspect": "aspect_scores",
+            "sub_aspect": "sub_aspect_scores",
+        }
 
-        sub_dimension_scores = _avg_jsonb(rps_rows, "sub_dimension_scores")
-        aspect_scores = _avg_jsonb(rps_rows, "aspect_scores")
-        sub_aspect_scores = _avg_jsonb(rps_rows, "sub_aspect_scores")
-
-        if rps_rows and rps_rows[0].max_date:
-            rps_effective_date = rps_rows[0].max_date
-
-        scores: dict[str, Any] = {"dimension": {}, "dimensions": {}}
-        overall_list: list[float] = []
-        dim_map: dict[str, list[float]] = {d: [] for d in CANONICAL_DIMS}
-
+        symbol_map: dict[str, dict[str, Any]] = {}
         for sh, asset in sh_rows:
-            if not sh_effective_date:
-                sh_effective_date = sh.date
-            if isinstance(sh.overall_score, (int, float)):
-                overall_list.append(float(sh.overall_score))
-            if sh.dimension_scores and isinstance(sh.dimension_scores, dict):
-                for d, v in sh.dimension_scores.items():
-                    if d in dim_map and isinstance(v, (int, float)):
-                        dim_map[d].append(float(v))
+            overall = _to_float(sh.overall_score)
+            if overall is not None:
+                overall_values.append(overall)
+            for level, column in level_columns.items():
+                values = getattr(sh, column, None) or {}
+                if not isinstance(values, dict):
+                    continue
+                target = level_values[level]
+                for key, value in values.items():
+                    numeric = _to_float(value)
+                    if numeric is None:
+                        continue
+                    target.setdefault(str(key), []).append(numeric)
 
-        if snap_row and not effective_at and sh_effective_date:
-            # derive effective_at from ScoreHistory.date if missing
-            effective_at = datetime(
-                year=sh_effective_date.year,
-                month=sh_effective_date.month,
-                day=sh_effective_date.day,
-                hour=0 if tier == SnapshotTier.DAILY else 0,
-                tzinfo=UTC,
-            )
+            symbol_map[asset.symbol] = {
+                "overall": overall,
+                "grade": sh.grade,
+                "dimension": dict(sh.dimension_scores) if sh.dimension_scores else {},
+            }
 
-        # Market-level aggregation: use mean
-        if overall_list:
-            scores["overall"] = round(sum(overall_list) / len(overall_list), 4)
-        for d, vs in dim_map.items():
-            if vs:
-                dim_val = round(sum(vs) / len(vs), 4)
-                scores["dimension"][d] = dim_val
-                scores["dimensions"][d] = dim_val
+        if overall_values:
+            scores["overall"] = round(sum(overall_values) / len(overall_values), 4)
+        for level, values_by_key in level_values.items():
+            averages = {
+                key: round(sum(values) / len(values), 4)
+                for key, values in values_by_key.items()
+                if values
+            }
+            scores[level] = averages
+            scores[f"{level}s"] = averages
 
-        # (Optional) Pull sub-dim / aspect / sub-aspect from snap_row.extra_fields
-        # if present; otherwise keep empty dict so UI renders — never None.
-        # Use RawPerformanceScore aggregation as the authoritative source.
-        if snap_row and snap_row.extra_fields:
-            ef = snap_row.extra_fields if isinstance(snap_row.extra_fields, dict) else {}
-            for level in ("sub_dimensions", "aspects", "sub_aspects",
-                          "sub_dimension", "aspect", "sub_aspect"):
-                val = ef.get(level)
-                if isinstance(val, dict) and val:
-                    scores.setdefault(level, {}).update({k: round(float(v), 4) for k, v in val.items()})
-
-        scores.setdefault("sub_dimension", sub_dimension_scores)
-        scores.setdefault("sub_dimensions", sub_dimension_scores)
-        scores.setdefault("aspect", aspect_scores)
-        scores.setdefault("aspects", aspect_scores)
-        scores.setdefault("sub_aspect", sub_aspect_scores)
-        scores.setdefault("sub_aspects", sub_aspect_scores)
-
-        if not scores.get("overall") and snap_row:
-            scores["overall"] = float(snap_row.score) if snap_row.score else None
-
-        if not effective_at:
-            return None
-
+        scores["symbol_map"] = symbol_map
         return TierRoot(tier=tier.value, effective_at=effective_at, scores=scores)
 
     async def _resolve_current(
@@ -665,7 +622,22 @@ class TemporalSnapshotService:
                 sub_aspect_scores=tr.scores.get("sub_aspects") or tr.scores.get("sub_aspect") or {},
             )
             result["overall"] = tr.scores.get("overall")
+            result["symbol_map"] = tr.scores.get("symbol_map", {})
             return result
+
+        # Compute best/worst symbols from daily tier's symbol_map
+        daily_symbol_map = daily.scores.get("symbol_map", {})
+        best_symbol = None
+        worst_symbol = None
+        if daily_symbol_map:
+            sorted_symbols = sorted(
+                [(sym, data.get("overall")) for sym, data in daily_symbol_map.items() if data.get("overall") is not None],
+                key=lambda x: x[1],
+                reverse=True
+            )
+            if sorted_symbols:
+                best_symbol = sorted_symbols[0][0]
+                worst_symbol = sorted_symbols[-1][0]
 
         payload: dict[str, Any] = {
             "snapshotId": snapshot_id_val,
@@ -683,6 +655,8 @@ class TemporalSnapshotService:
             "weightDeltas": weight_deltas,
             "trends": trends,
             "universe": {"total": universe_total, "market": "NASDAQ"},
+            "best_symbol": best_symbol,
+            "worst_symbol": worst_symbol,
         }
         if symbol:
             payload["symbol"] = symbol.upper()

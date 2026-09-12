@@ -117,13 +117,6 @@ describe('DashboardPage (new)', () => {
     expect(screen.getByText('1234')).toBeInTheDocument();
   });
 
-  it('renders the dimension scores card with bars', async () => {
-    render(<DashboardPage />);
-    await waitFor(() => expect(screen.getByText('Fundamental')).toBeInTheDocument());
-    expect(screen.getByText('Technical')).toBeInTheDocument();
-    expect(screen.getByText('Sentiment')).toBeInTheDocument();
-  });
-
   it('renders the top performers and underperformers', async () => {
     render(<DashboardPage />);
     await waitFor(() => expect(screen.getByText('AAPL')).toBeInTheDocument());

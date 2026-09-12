@@ -14,15 +14,17 @@ class MomentumEngine:
             return 50.0
 
         deltas = [prices[i + 1] - prices[i] for i in range(len(prices) - 1)]
-        gains = [d for d in deltas if d > 0]
-        losses = [-d for d in deltas if d < 0]
+        gains = [max(d, 0.0) for d in deltas]
+        losses = [max(-d, 0.0) for d in deltas]
 
-        avg_gain = sum(gains[:period]) / period if len(gains) >= period else (sum(gains) / len(gains) if gains else 0)
-        avg_loss = sum(losses[:period]) / period if len(losses) >= period else (sum(losses) / len(losses) if losses else 0)
+        if len(gains) < period:
+            return 50.0
+
+        avg_gain = sum(gains[:period]) / period
+        avg_loss = sum(losses[:period]) / period
 
         for i in range(period, len(gains)):
             avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-        for i in range(period, len(losses)):
             avg_loss = (avg_loss * (period - 1) + losses[i]) / period
 
         if avg_loss == 0:
@@ -55,8 +57,8 @@ class MomentumEngine:
 
     def _calculate_ema(self, prices: list[float], period: int, source: str = "unknown") -> float:
         AdjustedPriceValidator.validate_price_array(prices, source)
-        alpha = 2 / (period + 1)
-        ema = prices[0]
-        for price in prices[1:]:
-            ema = (price * alpha) + (ema * (1 - alpha))
+        multiplier = 2 / (period + 1)
+        ema = sum(prices[:period]) / period
+        for price in prices[period:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
         return ema

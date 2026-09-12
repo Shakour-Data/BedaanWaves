@@ -6,10 +6,13 @@ type Theme = "light" | "dark";
 interface AppState {
   theme: Theme;
   sidebarOpen: boolean;
+  rightSidebarOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  setRightSidebarOpen: (open: boolean) => void;
+  toggleRightSidebar: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -17,18 +20,23 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       theme: "dark",
       sidebarOpen: false,
+      rightSidebarOpen: false,
       setTheme: (theme) => set({ theme }),
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === "light" ? "dark" : "light" })),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
+      toggleRightSidebar: () =>
+        set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
     }),
     {
       name: "app-storage",
       partialize: (state) => ({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
+        rightSidebarOpen: state.rightSidebarOpen,
       }),
     }
   )

@@ -3,6 +3,10 @@
 Market anomaly detection and unusual activity spotting.
 Uses z-score based statistical anomaly detection with configurable
 parameters. Can optionally integrate with sklearn for enhanced detection.
+
+Reproducibility: Uses deterministic statistical methods (z-score) and
+fixed thresholds. No stochastic sampling involved (Nolan & Speed, 2000,
+"Probability and Statistics").
 """
 import asyncio
 import math

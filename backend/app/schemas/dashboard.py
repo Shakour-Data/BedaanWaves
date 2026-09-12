@@ -166,6 +166,8 @@ class SnapshotResponse(BaseModel):
     weightDeltas: list[WeightDeltaPoint]
     trends: dict  # {daily: [...], intraday: [...]}
     universe: dict  # {total, market: "NASDAQ"}
+    best_symbol: str | None = None
+    worst_symbol: str | None = None
     symbol: str | None = None
 
     class Config:

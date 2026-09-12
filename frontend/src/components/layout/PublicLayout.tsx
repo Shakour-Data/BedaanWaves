@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { cn } from "@/lib/cn";
+import { useAppStore } from "@/store/useAppStore";
+import { NewSidebar } from "@/components/layout/NewSidebar";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -15,8 +17,9 @@ const navLinks = [
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -26,17 +29,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-background)]">
-      {/* Navigation */}
+      <NewSidebar />
+
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          "fixed top-0 left-0 right-0 z-30 h-16 shrink-0 transition-all duration-300 lg:left-64",
           scrolled
             ? "glass-strong shadow-md border-b border-[var(--color-border)]"
             : "bg-transparent"
         )}
       >
         <div className="container-grid">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-full items-center justify-between">
             <Link href="/" className="flex items-center gap-3 group">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/25 transition-transform group-hover:scale-105">
                 <span className="text-white font-bold text-lg">B</span>
@@ -74,71 +78,32 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="hidden md:flex items-center gap-3">
-              <Link
-                href="/"
-                className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors px-4 py-2"
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className={cn(
+                  "flex items-center justify-center h-11 w-11 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors md:hidden",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
+                )}
+                aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                aria-expanded={sidebarOpen}
               >
-                Home
-              </Link>
-            </div>
-
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden flex items-center justify-center h-11 w-11 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? (
-                <span className="text-xl font-mono">\u00D7</span>
-              ) : (
-                <span className="text-xl font-mono">\u2261</span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        <div
-          key={pathname}
-          className={cn(
-            "md:hidden absolute top-full left-0 right-0 border-b border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl transition-all duration-300 origin-top",
-            mobileOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
-          )}
-        >
-          <div className="container-grid py-4 space-y-1">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "block px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "text-[var(--color-primary)] bg-[var(--color-primary-light)]"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)]"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-            <div className="pt-4 border-t border-[var(--color-border)]">
-              <Link
-                href="/"
-                className="block text-center px-4 py-3 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
-              >
-                Home
-              </Link>
+                {sidebarOpen ? (
+                  <span className="text-xl font-mono">&times;</span>
+                ) : (
+                  <span className="text-xl font-mono">&#9776;</span>
+                )}
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 pt-16">{children}</main>
+      <main className="flex-1 pt-16 lg:ml-64">
+        {children}
+      </main>
 
-      {/* Footer */}
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="container-grid py-16">
           <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
@@ -229,7 +194,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-[var(--color-border)] pt-8 md:flex-row">
             <p className="text-sm text-[var(--color-text-muted)]">
-              © 2026 BedaanWaves. All rights reserved.
+              &copy; 2026 BedaanWaves. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <span className="text-sm text-[var(--color-text-muted)]">
@@ -241,8 +206,4 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       </footer>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

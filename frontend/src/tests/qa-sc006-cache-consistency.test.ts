@@ -14,6 +14,7 @@ function buildSnapshot(overrides: {
   dates: string[];
   weights: Record<string, number>;
   weightTrends?: Array<Record<string, number>>;
+  weightDeltas?: Array<{ key: string; delta: number; delta_pct: number; value: number }>;
   snapshotId?: string;
   alignTrend?: boolean;
 }): ChartsModel {
@@ -23,6 +24,7 @@ function buildSnapshot(overrides: {
     dates,
     weights,
     weightTrends,
+    weightDeltas,
     snapshotId = "snap_test",
     alignTrend = true,
   } = overrides;
@@ -70,15 +72,17 @@ function buildSnapshot(overrides: {
           }))
         : [],
     },
-    weight_deltas: {
-      daily: {
-        weights: {
-          dimension: Object.fromEntries(
-            Object.entries(weights).map(([k, v]) => [k, { delta: 0, delta_pct: 0, value: v }]),
-          ),
-        },
-      },
-    },
+    weight_deltas: weightDeltas
+      ? {
+          daily: {
+            weights: {
+              dimension: Object.fromEntries(
+                weightDeltas.map((d) => [d.key, { delta: d.delta, delta_pct: d.delta_pct, value: d.value }]),
+              ),
+            },
+          },
+        }
+      : undefined,
     deltas: {
       hourly_vs_daily: {
         overall_delta: 0,
@@ -201,8 +205,8 @@ describe("QA Priority 1 - SC-006: Cache Invalidation / Change Bar Delta Consiste
         alignTrend: true,
       });
 
+      expect(model.parity.ok).toBe(true);
       const dimLevel = model.levels[0];
-      expect(dimLevel.parity.ok).toBe(true);
       expect(dimLevel.scoreDelta[0]).toMatchObject({ key: "fundamental", score: 7 });
       expect(dimLevel.scoreDelta[1]).toMatchObject({ key: "technical", score: 8 });
     });
@@ -295,12 +299,15 @@ describe("QA Priority 1 - SC-006: Cache Invalidation / Change Bar Delta Consiste
           { fundamental: 0.4, technical: 0.3 },
           { fundamental: 0.45, technical: 0.25 },
         ],
+        // Omit weight_deltas to force fallback to trend series calculation
       });
 
       const dimLevel = model.levels[0];
       expect(dimLevel.weightDelta).toHaveLength(2);
-      expect(dimLevel.weightDelta[0]).toMatchObject({ key: "fundamental", score: 0.05 });
-      expect(dimLevel.weightDelta[1]).toMatchObject({ key: "technical", score: -0.05 });
+      expect(dimLevel.weightDelta[0]).toMatchObject({ key: "fundamental" });
+      expect(dimLevel.weightDelta[0].score).toBeCloseTo(0.05, 5);
+      expect(dimLevel.weightDelta[1]).toMatchObject({ key: "technical" });
+      expect(dimLevel.weightDelta[1].score).toBeCloseTo(-0.05, 5);
     });
   });
 });

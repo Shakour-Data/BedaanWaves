@@ -191,13 +191,13 @@ export default function AnalysisPage() {
 
         // ------- LEGACY FALLBACKS (execute anyway for non-snapshot data) -------
         const performersPromise = apiClient.get<{ data: Performer[] }>(
-          "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ",
+          "/analysis/dashboard/top-performers?level=overall&limit=10",
           { timeout: 60000 }
-        );
+        ).catch(() => null);
         const symbolsPromise = apiClient.get<{ data: SymbolItem[] }>(
           "/market/symbols?market=NASDAQ&limit=50",
           { timeout: 60000 }
-        );
+        ).catch(() => null);
         const generalPromise = fetchGeneralDashboard({ latest: true }).catch(
           () => null as GeneralDashboardResponse | null,
         );
@@ -374,9 +374,9 @@ export default function AnalysisPage() {
 
         // ------- Top movers + per-symbol deep analysis (non-snapshot, legacy path) -------
         const symbolMap = new Map(
-          (symbolsRes.data?.data ?? []).map((s) => [s.symbol, s.name]),
+          (symbolsRes?.data?.data ?? []).map((s) => [s.symbol, s.name]),
         );
-        const movers: AssetRow[] = (performersRes.data?.data ?? [])
+        const movers: AssetRow[] = (performersRes?.data?.data ?? [])
           .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
           .map((p) => ({
             symbol: p.symbol,

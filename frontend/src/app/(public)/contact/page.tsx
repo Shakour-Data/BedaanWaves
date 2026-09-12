@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Mail, MessageCircle, Phone, MapPin, Send } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -45,8 +44,7 @@ const offices = [
 
 export default function ContactPage() {
   return (
-    <PublicLayout>
-      <div className="page-transition-enter">
+    <div className="page-transition-enter">
         {/* Hero */}
         <section className="relative overflow-hidden py-20 lg:py-32">
           <div className="absolute inset-0 overflow-hidden">
@@ -238,6 +236,5 @@ export default function ContactPage() {
           </div>
         </section>
       </div>
-    </PublicLayout>
   );
 }

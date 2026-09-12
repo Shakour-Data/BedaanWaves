@@ -3,6 +3,10 @@
 Time series forecasting for prices, volumes, and indicators.
 Uses sklearn for regression-based forecasting with configurable
 parameters for model behavior.
+
+Reproducibility: ``random_state=42`` in train_test_split ensures
+deterministic model training (Peng, 2011, "Reproducible Research
+in Computational Science").
 """
 
 from typing import Any

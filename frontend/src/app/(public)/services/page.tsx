@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { PublicLayout } from "@/components/layout/PublicLayout";
+import { cn } from "@/lib/cn";
 import { ArrowRight, Check, Zap, BarChart3, Globe, Bell, Newspaper, TrendingUp } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -60,8 +60,8 @@ const pricingPlans = [
     period: "/month",
     description: "Perfect for getting started with market analysis.",
     features: ["Basic market data", "5 watchlists", "3 technical indicators", "Email alerts"],
-    cta: "Coming Soon",
-    href: "/",
+    cta: "Explore Dashboard",
+    href: "/dashboard",
   },
   {
     name: "Pro",
@@ -69,8 +69,8 @@ const pricingPlans = [
     period: "/month",
     description: "For serious traders who need advanced tools.",
     features: ["Real-time data", "Unlimited watchlists", "All technical indicators", "AI scoring", "Portfolio tracking", "Priority support"],
-    cta: "Coming Soon",
-    href: "/",
+    cta: "Explore Dashboard",
+    href: "/dashboard",
     popular: true,
   },
   {
@@ -86,8 +86,7 @@ const pricingPlans = [
 
 export default function ServicesPage() {
   return (
-    <PublicLayout>
-      <div className="page-transition-enter">
+    <div className="page-transition-enter">
         {/* Hero */}
         <section className="relative overflow-hidden py-20 lg:py-32">
           <div className="absolute inset-0 overflow-hidden">
@@ -207,12 +206,11 @@ export default function ServicesPage() {
                       "mt-8 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all",
                       plan.popular
                         ? "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                        : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:shadow-md",
-                      plan.cta === "Coming Soon" && "cursor-not-allowed opacity-60 hover:shadow-none hover:-translate-y-0"
+                        : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:shadow-md"
                     )}
                   >
                     {plan.cta}
-                    {plan.popular && plan.cta !== "Coming Soon" && <ArrowRight className="h-4 w-4" />}
+                    {plan.popular && <ArrowRight className="h-4 w-4" />}
                   </Link>
                 </div>
               ))}
@@ -249,10 +247,5 @@ export default function ServicesPage() {
           </div>
         </section>
       </div>
-    </PublicLayout>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

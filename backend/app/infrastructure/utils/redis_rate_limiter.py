@@ -51,8 +51,13 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
         self.fail_closed = fail_closed
         self._client: Any | None = None
         self._connected = False
-        self._client_lock = asyncio.Lock()
+        self._client_lock = None
         self._unavailable_until = 0.0
+
+    def _get_lock(self):
+        if self._client_lock is None:
+            self._client_lock = asyncio.Lock()
+        return self._client_lock
 
     async def _get_client(self) -> Any | None:
         if self._client is not None:
@@ -60,7 +65,8 @@ return {1, minute_count, hour_count, minute_reset, hour_reset}
         if time.monotonic() < self._unavailable_until:
             return None
 
-        async with self._client_lock:
+        lock = self._get_lock()
+        async with lock:
             if self._client is not None:
                 return self._client
             if time.monotonic() < self._unavailable_until:

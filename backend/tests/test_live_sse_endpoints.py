@@ -9,6 +9,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from pydantic_settings import SettingsConfigDict
 
 from app.core.config import Settings
 from app.api.routes.live_sse import (
@@ -55,9 +56,7 @@ def test_tr4_2_auth_disabled_dev_mode_returns_payload():
     original = lsm.settings
 
     class _NoAuthSettings(Settings):
-        class Config:
-            env_file = None
-            extra = "ignore"
+        model_config = SettingsConfigDict(env_file=None, extra="ignore")
         REQUIRE_AUTH: bool = False
         SECRET_KEY: str = "x" * 32
         JWT_SECRET: str = "y" * 32
@@ -97,24 +96,24 @@ def test_tr4_2_auth_enabled_no_token_raises_401():
     import app.api.routes.live_sse as lsm
     original = lsm.settings
 
-    class _AuthSettings(Settings):
-        class Config:
-            env_file = None
-            extra = "ignore"
-        REQUIRE_AUTH: bool = True
-        SECRET_KEY: str = "x" * 32
-        JWT_SECRET: str = "y" * 32
-        DEV_USER_ID: str = "dev-user-123"
-        LIVE_POLL_INTERVAL_OPEN_S: int = 4
-        LIVE_PING_INTERVAL_S: int = 10
-        LIVE_IDLE_UNSUBSCRIBE_S: int = 60
-        LIVE_CIRCUIT_BREAKER_HALFOPEN_S: int = 30
-        LIVE_MAX_QUOTE_AGE_OPEN_S: int = 120
-        LIVE_BACKOFF_MAX_S: float = 60.0
-
+    # Create a settings instance with REQUIRE_AUTH=True
+    auth_settings = Settings(
+        REQUIRE_AUTH=True,
+        SECRET_KEY="x" * 32,
+        JWT_SECRET="y" * 32,
+        DEV_USER_ID="dev-user-123",
+        LIVE_POLL_INTERVAL_OPEN_S=4,
+        LIVE_PING_INTERVAL_S=10,
+        LIVE_IDLE_UNSUBSCRIBE_S=60,
+        LIVE_CIRCUIT_BREAKER_HALFOPEN_S=30,
+        LIVE_MAX_QUOTE_AGE_OPEN_S=120,
+        LIVE_BACKOFF_MAX_S=60.0,
+        _env_file=None,  # Don't load from .env
+    )
+    print(f"DEBUG: REQUIRE_AUTH = {auth_settings.REQUIRE_AUTH}")
+    lsm.settings = auth_settings
+    fake_req = _FakeReq2()
     try:
-        lsm.settings = _AuthSettings()
-        fake_req = _FakeReq2()
         with pytest.raises(HTTPException) as exc_info:
             _authenticate(fake_req)
         assert exc_info.value.status_code == 401
@@ -133,9 +132,7 @@ async def test_tr4_1_five_sse_routes_registered_and_respond(fake_yfinance_provid
     from app.api.routes import live_sse, data_health
 
     class _TestSettings(Settings):
-        class Config:
-            env_file = None
-            extra = "ignore"
+        model_config = SettingsConfigDict(env_file=None, extra="ignore")
         LIVE_POLL_INTERVAL_OPEN_S: int = 1
         LIVE_PING_INTERVAL_S: int = 2
         LIVE_IDLE_UNSUBSCRIBE_S: int = 2

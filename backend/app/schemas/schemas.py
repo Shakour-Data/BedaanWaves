@@ -827,25 +827,32 @@ class LatestPricesResponse(BaseModel):
 class MarketOverviewResponse(BaseModel):
     status: str = "success"
     market: str
-    data: dict[str, Any]
+    total_assets: int
+    sectors: dict[str, int]
     timestamp: str
 
 
 class NasdaqDashboardResponse(BaseModel):
     status: str = "success"
-    data: dict[str, Any]
+    market: str
+    total_symbols: int
+    average_change_pct: float
+    top_gainers: list[dict[str, Any]]
+    top_losers: list[dict[str, Any]]
     timestamp: str
 
 
 class IndicesResponse(BaseModel):
     status: str = "success"
-    data: dict[str, Any]
+    data: list[dict[str, Any]]
     timestamp: str
 
 
 class IndustryRankingResponse(BaseModel):
     status: str = "success"
-    data: dict[str, Any]
+    market: str
+    ranked_industries: int
+    ranking: list[dict[str, Any]]
     timestamp: str
 
 
@@ -938,14 +945,14 @@ class NewsCategoryResponse(BaseModel):
 
 class NewsCategoriesResponse(BaseModel):
     status: str = "success"
-    categories: list[str]
-    count: int
+    data: dict[str, int]
+    timestamp: str
 
 
 class NewsRegionsResponse(BaseModel):
     status: str = "success"
-    regions: list[str]
-    count: int
+    data: dict[str, int]
+    timestamp: str
 
 
 class NewsMarketMovingResponse(BaseModel):

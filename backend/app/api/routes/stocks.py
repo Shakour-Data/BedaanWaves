@@ -175,11 +175,12 @@ async def get_multiple_stocks_v2(
                     results[ticker]["history"] = []
 
     successful = sum(1 for v in results.values() if "error" not in v)
+    failed = len(tickers) - successful
     return {
         "status": "success",
         "total": len(tickers),
         "successful": successful,
-        "failed_count": len(tickers) - successful,
+        "failed": failed,
         "data": results,
         "api_version": "v2",
         "features": ["batch", "historical_inclusion"] if include_history else ["batch"],

@@ -1,16 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, lazy, useMemo, Suspense, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { ChangeBadge } from "@/components/shared/StatCard";
 import { StatBox } from "@/components/shared/StatBox";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { OrderBook } from "@/components/market/OrderBook";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
+const GeneralDashboardTab = lazy(() =>
+  import("@/components/dashboard/GeneralDashboardTab").then((mod) => ({
+    default: mod.GeneralDashboardTab,
+  })),
+);
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -31,7 +37,7 @@ import {
   type LiveStreamKey,
 } from "@/hooks/useLiveData";
 
-   type Tab = "overview" | "risk" | "history" | "orderbook";
+   type Tab = "overview" | "risk" | "history" | "orderbook" | "dashboard";
 
 interface QuotePayload {
   symbol?: string;
@@ -281,6 +287,7 @@ export default function StockDetailPage() {
     { key: "risk", label: "Risk" },
     { key: "history", label: "Historical Data" },
     { key: "orderbook", label: "Order Book" },
+    { key: "dashboard", label: "Analytical Dashboard" },
   ];
 
   function fmt(n: number, digits = 0): string {
@@ -617,6 +624,14 @@ export default function StockDetailPage() {
           <div className="relative">
             <OrderBook symbol={symbol} maxDepth={5} />
           </div>
+        </div>
+      )}
+
+      {activeTab === "dashboard" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <Suspense fallback={<PageLoading />}>
+            <GeneralDashboardTab symbol={symbol} />
+          </Suspense>
         </div>
       )}
     </div>

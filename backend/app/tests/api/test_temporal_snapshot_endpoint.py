@@ -70,6 +70,8 @@ FAKE_SNAPSHOT = {
             {"date": "2026-09-09T12:00:00Z", "effective_at": "2026-09-09T12:00:00Z", "overall": 82.3, "level_scores": {}},
         ],
     },
+    "best_symbol": "AAPL",
+    "worst_symbol": "XYZ",
 }
 
 
@@ -105,6 +107,8 @@ class TestTemporalSnapshotEndpoint:
         assert response["status"] == "success"
         assert response["timestamp"] == "2026-09-09T12:00:00Z"
         assert response["snapshotId"] == "snap_abc123"
+        assert response["best_symbol"] == "AAPL"
+        assert response["worst_symbol"] == "XYZ"
 
     def test_snapshot_includes_three_tiers(self):
         with _patch_snapshot_service():
