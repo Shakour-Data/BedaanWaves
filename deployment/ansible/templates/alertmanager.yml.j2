@@ -1,6 +1,6 @@
 global:
   resolve_timeout: 5m
-  slack_api_url: 'https://hooks.slack.com/services/REPLACE_WITH_SLACK_WEBHOOK_URL'
+  slack_api_url: '{{ slack_webhook_url | default("https://hooks.slack.com/services/REPLACE_WITH_SLACK_WEBHOOK_URL") }}'
 
 route:
   group_by: ['alertname', 'cluster', 'service']
