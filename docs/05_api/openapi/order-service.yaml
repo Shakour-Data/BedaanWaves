@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: BedaanWaves Order Service API
+  description: |
+    Order management service for BedaanWaves platform.
+    Handles order creation, confirmation, cancellation, and status queries.
+    
+    **Saga Integration:** This service participates in distributed transactions
+    via the Saga pattern. Order creation triggers a saga that coordinates
+    with Payment and Inventory services.
+  version: "1.0.0"
+  contact:
+    name: BedaanWaves Team
+    email: api@bedaanwaves.com
+    url: https://bedaanwaves.com
+  license:
+    name: Proprietary
+    url: https://bedaanwaves.com/license
+
+servers:
+  - url: /api/v1
+    description: Relative to current host
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      description: |
+        Creates a new order and initiates the Saga pattern for distributed
+        transaction management. The saga will coordinate with Payment and
+        Inventory services.
+      operationId: createOrder
+      tags:
+        - orders
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+            examples:
+              standard:
+                summary: Standard order
+                value:
+                  user_id: "user-123"
+                  items:
+                    - symbol: "AAPL"
+                      quantity: 10
+                      price: 175.50
+                  total_amount: 1755.00
+      responses:
+        "201":
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /orders/{order_id}:
+    get:
+      summary: Get order by ID
+      description: Retrieves order details including saga execution status
+      operationId: getOrder
+      tags:
+        - orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Order UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    put:
+      summary: Confirm order
+      description: |
+        Confirms an order after all saga steps complete.
+        This is typically called by the Saga Orchestrator.
+      operationId: confirmOrder
+      tags:
+        - orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Order confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      summary: Cancel order
+      description: Cancels an order and triggers compensation actions
+      operationId: cancelOrder
+      tags:
+        - orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reason
+          in: query
+          description: Cancellation reason
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /orders/{order_id}/saga:
+    get:
+      summary: Get saga execution status
+      description: Returns the current state and step details of the saga
+      operationId: getSagaStatus
+      tags:
+        - orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Saga status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SagaStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateOrderRequest:
+      type: object
+      required:
+        - user_id
+        - items
+        - total_amount
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        total_amount:
+          type: number
+          format: float
+          minimum: 0
+          description: Total order amount
+        metadata:
+          type: object
+          description: Additional order metadata
+          additionalProperties: true
+
+    OrderItem:
+      type: object
+      required:
+        - symbol
+        - quantity
+        - price
+      properties:
+        symbol:
+          type: string
+          description: Stock symbol
+        quantity:
+          type: integer
+          minimum: 1
+        price:
+          type: number
+          format: float
+          minimum: 0
+
+    OrderResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created, confirmed, cancelled]
+        message:
+          type: string
+
+    OrderDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/OrderResponse"
+        - type: object
+          properties:
+            user_id:
+              type: string
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrderItem"
+            total_amount:
+              type: number
+              format: float
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            saga_status:
+              $ref: "#/components/schemas/SagaStatusResponse"
+
+    SagaStatusResponse:
+      type: object
+      properties:
+        saga_id:
+          type: string
+        saga_type:
+          type: string
+        state:
+          type: string
+          enum: [pending, running, completed, failed, compensating, compensated]
+        current_step_index:
+          type: integer
+        total_steps:
+          type: integer
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+              error:
+                type: string
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error_code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

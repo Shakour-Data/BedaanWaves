@@ -1,0 +1,192 @@
+# Integration Test Configuration for BedaanWaves
+# End-to-end tests for multi-service scenarios
+
+version: "1.0"
+test_scenarios:
+  - name: "Order Flow with Saga"
+    description: "Full order lifecycle with saga coordination"
+    services: ["order", "payment", "inventory", "notification"]
+    steps:
+      - name: "Create Order"
+        request:
+          method: POST
+          url: "/api/v1/orders"
+          body:
+            user_id: "test-user-001"
+            items:
+              - symbol: "AAPL"
+                quantity: 10
+                price: 175.50
+            total_amount: 1755.00
+        expectations:
+          - status: 201
+          - body.status: "created"
+          - body.order_id: present
+      
+      - name: "Check Saga Status"
+        request:
+          method: GET
+          url: "/api/v1/orders/{order_id}/saga"
+        expectations:
+          - status: 200
+          - body.state: "completed"
+          - body.steps[0].status: "completed"
+          - body.steps[1].status: "completed"
+          - body.steps[2].status: "completed"
+
+  - name: "Payment Failure Compensation"
+    description: "Test saga compensation when payment fails"
+    services: ["order", "payment", "inventory"]
+    steps:
+      - name: "Create Order with Invalid Payment"
+        request:
+          method: POST
+          url: "/api/v1/orders"
+          body:
+            user_id: "test-user-002"
+            items:
+              - symbol: "MSFT"
+                quantity: 5
+                price: 450.00
+            total_amount: 2250.00
+            payment_method: invalid_card
+        expectations:
+          - status: 201
+          - body.order_id: present
+      
+      - name: "Verify Compensation"
+        request:
+          method: GET
+          url: "/api/v1/orders/{order_id}/saga"
+        expectations:
+          - status: 200
+          - body.state: "compensated"
+          - body.steps[1].status: "compensated"  # Stock released
+
+  - name: "API Gateway Rate Limiting"
+    description: "Test that API Gateway enforces rate limits"
+    services: ["gateway"]
+    steps:
+      - name: "Make Rapid Requests"
+        request:
+          method: GET
+          url: "/api/v1/market/summary"
+          count: 150  # Exceeds 100/min limit
+        expectations:
+          - status: 200 (first 100)
+          - status: 429 (remaining 50)
+
+  - name: "Circuit Breaker Behavior"
+    description: "Test circuit breaker opens on external service failure"
+    services: ["order", "payment"]
+    steps:
+      - name: "Simulate Payment Gateway Failure"
+        request:
+          method: POST
+          url: "/api/v1/payments/test-failure"
+        expectations:
+          - status: 503
+          - body.error_code: "CIRCUIT_BREAKER_OPEN"
+
+  - name: "Distributed Tracing"
+    description: "Verify trace IDs propagate across services"
+    services: ["gateway", "order", "payment"]
+    steps:
+      - name: "Make Request with Trace ID"
+        request:
+          method: POST
+          url: "/api/v1/orders"
+          headers:
+            X-Correlation-ID: "test-trace-12345"
+          body:
+            user_id: "test-user-003"
+            items:
+              - symbol: "GOOGL"
+                quantity: 2
+                price: 1750.00
+            total_amount: 3500.00
+        expectations:
+          - status: 201
+          - headers.X-Correlation-ID: "test-trace-12345"
+
+  - name: "DLQ Message Handling"
+    description: "Test that failed messages go to DLQ"
+    services: ["notification"]
+    steps:
+      - name: "Send Invalid Notification"
+        request:
+          method: POST
+          url: "/api/v1/notifications/send"
+          body:
+            type: invalid_type
+            to: "invalid-email"
+        expectations:
+          - status: 202
+          - body.message_id: present
+          - dlq_topic: "bedaanwaves.dlq.notifications"
+
+  - name: "Bulkhead Isolation"
+    description: "Test that bulkhead prevents resource exhaustion"
+    services: ["market-data"]
+    steps:
+      - name: "Concurrent Market Data Requests"
+        request:
+          method: GET
+          url: "/api/v1/market-data/batch"
+          concurrent: 15  # Exceeds bulkhead limit of 10
+        expectations:
+          - success: 10
+          - rejected: 5
+          - rejection_reason: "bulkhead saturated"
+
+  - name: "Eventual Consistency"
+    description: "Test that data eventually converges after saga"
+    services: ["order", "inventory"]
+    steps:
+      - name: "Create Order"
+        request:
+          method: POST
+          url: "/api/v1/orders"
+          body:
+            user_id: "test-user-004"
+            items:
+              - symbol: "TSLA"
+                quantity: 3
+                price: 350.00
+            total_amount: 1050.00
+        expectations:
+          - status: 201
+      
+      - name: "Verify Stock Reservation"
+        request:
+          method: GET
+          url: "/api/v1/inventory/AAPL/availability"
+        expectations:
+          - status: 200
+          - body.reserved_quantity: 3
+          - body.is_available: false
+
+# --- Test Configuration ---
+config:
+  timeout: 30000  # 30 seconds per test
+  retries: 2
+  parallelism: 4
+  
+  # Service endpoints
+  services:
+    gateway: "http://localhost:8080"
+    order: "http://localhost:8000"
+    payment: "http://localhost:8000"
+    inventory: "http://localhost:8000"
+    notification: "http://localhost:8000"
+    market-data: "http://localhost:8000"
+  
+  # Headers
+  headers:
+    Content-Type: application/json
+    X-Correlation-ID: "test-correlation-id"
+  
+  # Data cleanup
+  cleanup:
+    after_test: true
+    preserve_logs: false

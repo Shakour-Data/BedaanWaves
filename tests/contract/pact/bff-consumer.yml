@@ -1,0 +1,110 @@
+# Pact Contract Testing Configuration for BedaanWaves
+# Defines consumer-driven contracts for all inter-service communication
+
+# --- Consumer: Order Service ---
+# Order Service consumes: Payment Service, Inventory Service
+- consumer: order-service
+  provider: payment-service
+  pact_specification_version: "3.0.0"
+  consumer_version: "1.0.0"
+  
+  # Expected interactions
+  interactions:
+    - description: "Process payment for order"
+      request:
+        method: POST
+        path: /api/v1/payments
+        headers:
+          Content-Type: application/json
+          Authorization: Bearer <token>
+        body:
+          order_id: "123e4567-e89b-12d3-a456-426614174000"
+          amount: 1755.00
+          payment_method: credit_card
+      response:
+        status: 200
+        headers:
+          Content-Type: application/json
+        body:
+          payment_id: "123e4567-e89b-12d3-a456-426614174001"
+          status: processed
+          message: "Payment processed successfully"
+
+- consumer: order-service
+  provider: inventory-service
+  pact_specification_version: "3.0.0"
+  consumer_version: "1.0.0"
+  
+  interactions:
+    - description: "Reserve stock for order"
+      request:
+        method: POST
+        path: /api/v1/inventory/reserve
+        headers:
+          Content-Type: application/json
+          Authorization: Bearer <token>
+        body:
+          order_id: "123e4567-e89b-12d3-a456-426614174000"
+          items:
+            - symbol: "AAPL"
+              quantity: 10
+      response:
+        status: 200
+        headers:
+          Content-Type: application/json
+        body:
+          reservation_id: "123e4567-e89b-12d3-a456-426614174002"
+          order_id: "123e4567-e89b-12d3-a456-426614174000"
+          status: reserved
+
+# --- Consumer: Notification Service ---
+- consumer: notification-service
+  provider: email-service
+  pact_specification_version: "3.0.0"
+  consumer_version: "1.0.0"
+  
+  interactions:
+    - description: "Send order confirmation email"
+      request:
+        method: POST
+        path: /api/v1/emails/send
+        headers:
+          Content-Type: application/json
+        body:
+          to: "user@example.com"
+          template: order_confirmation
+          data:
+            order_id: "123e4567-e89b-12d3-a456-426614174000"
+            total_amount: 1755.00
+      response:
+        status: 200
+        headers:
+          Content-Type: application/json
+        body:
+          message_id: "123e4567-e89b-12d3-a456-426614174003"
+          status: sent
+
+# --- Consumer: Analytics Service ---
+- consumer: analytics-service
+  provider: order-service
+  pact_specification_version: "3.0.0"
+  consumer_version: "1.0.0"
+  
+  interactions:
+    - description: "Get order statistics"
+      request:
+        method: GET
+        path: /api/v1/orders/statistics
+        headers:
+          Authorization: Bearer <token>
+        query:
+          from: "2026-09-01"
+          to: "2026-09-10"
+      response:
+        status: 200
+        headers:
+          Content-Type: application/json
+        body:
+          total_orders: 1000
+          total_volume: 1755000.00
+          average_order_value: 1755.00

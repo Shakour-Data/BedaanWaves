@@ -1,0 +1,171 @@
+---
+- name: Configure Monitoring Stack
+  hosts: all
+  become: yes
+  vars:
+    prometheus_version: "2.48.0"
+    grafana_version: "10.2.2"
+    node_exporter_version: "1.7.0"
+    alertmanager_version: "0.26.0"
+
+  tasks:
+    - name: Create monitoring directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+      loop:
+        - /opt/monitoring/prometheus
+        - /opt/monitoring/prometheus/data
+        - /opt/monitoring/alertmanager
+        - /opt/monitoring/alertmanager/data
+        - /opt/monitoring/grafana
+        - /opt/monitoring/grafana/data
+        - /opt/monitoring/node_exporter
+
+    - name: Download and install Prometheus
+      unarchive:
+        src: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: /tmp/
+        remote_src: yes
+      register: prometheus_download
+
+    - name: Copy Prometheus binaries
+      copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        mode: '0755'
+        remote_src: yes
+      loop:
+        - prometheus
+        - promtool
+
+    - name: Copy Prometheus configuration
+      template:
+        src: ../templates/prometheus.yml.j2
+        dest: /opt/monitoring/prometheus/prometheus.yml
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: restart prometheus
+
+    - name: Create Prometheus systemd service
+      template:
+        src: ../templates/prometheus.service.j2
+        dest: /etc/systemd/system/prometheus.service
+        mode: '0644'
+      notify: restart prometheus
+
+    - name: Download and install Node Exporter
+      unarchive:
+        src: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/
+        remote_src: yes
+      register: node_exporter_download
+
+    - name: Copy Node Exporter binary
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create Node Exporter systemd service
+      template:
+        src: ../templates/node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        mode: '0644'
+      notify: restart node_exporter
+
+    - name: Download and install Alertmanager
+      unarchive:
+        src: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
+        dest: /tmp/
+        remote_src: yes
+      register: alertmanager_download
+
+    - name: Copy Alertmanager binaries
+      copy:
+        src: "/tmp/alertmanager-{{ alertmanager_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        mode: '0755'
+        remote_src: yes
+      loop:
+        - alertmanager
+        - amtool
+
+    - name: Copy Alertmanager configuration
+      template:
+        src: ../templates/alertmanager.yml.j2
+        dest: /opt/monitoring/alertmanager/alertmanager.yml
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: restart alertmanager
+
+    - name: Create Alertmanager systemd service
+      template:
+        src: ../templates/alertmanager.service.j2
+        dest: /etc/systemd/system/alertmanager.service
+        mode: '0644'
+      notify: restart alertmanager
+
+    - name: Download and install Grafana
+      apt:
+        deb: "https://dl.grafana.com/oss/release/grafana_{{ grafana_version }}_amd64.deb"
+        state: present
+
+    - name: Ensure Grafana is started and enabled
+      systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+
+    - name: Import Grafana dashboard
+      uri:
+        url: "http://localhost:3000/api/dashboards/db"
+        method: POST
+        body_format: json
+        body:
+          dashboard:
+            id: null
+            title: "BedaanWaves Monitoring"
+            panels: []
+          overwrite: true
+        status_code: 200,400
+        user: "admin"
+        password: "admin"
+      register: grafana_dashboard
+      failed_when: false
+
+    - name: Start and enable services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      loop:
+        - prometheus
+        - node_exporter
+        - alertmanager
+
+  handlers:
+    - name: restart prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+        daemon_reload: yes
+
+    - name: restart alertmanager
+      systemd:
+        name: alertmanager
+        state: restarted
+        daemon_reload: yes
+
+    - name: restart node_exporter
+      systemd:
+        name: node_exporter
+        state: restarted
+        daemon_reload: yes

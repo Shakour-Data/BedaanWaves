@@ -1,0 +1,229 @@
+# ============================================================
+# BedaanWaves Kafka Topics Configuration
+# ============================================================
+# Defines all Kafka topics with DLQ, retention, and partition settings
+# ============================================================
+
+# --- Core Topics ---
+- topic: bedaanwaves.orders.created
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    cleanup.policy: delete
+    max.message.bytes: 1048576  # 1MB
+    message.timestamp.type: CreateTime
+
+- topic: bedaanwaves.orders.confirmed
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.orders.cancelled
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.payments.processed
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+- topic: bedaanpayments.payments.refunded
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.inventory.stock_reserved
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.inventory.stock_released
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.notifications.email
+  partitions: 6
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000  # 30 days
+    cleanup.policy: delete
+
+- topic: bedaanwaves.notifications.sms
+  partitions: 6
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.notifications.push
+  partitions: 6
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+# --- Market Data Topics ---
+- topic: bedaanwaves.market-data.ticks
+  partitions: 24
+  replication_factor: 1
+  config:
+    retention.ms: 86400000  # 1 day
+    cleanup.policy: delete
+    compression.type: lz4
+    max.message.bytes: 2097152  # 2MB
+
+- topic: bedaanwaves.market-data.aggregated
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000  # 30 days
+    cleanup.policy: delete
+    compression.type: lz4
+
+- topic: bedaanwaves.news.published
+  partitions: 6
+  replication_factor: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    cleanup.policy: delete
+
+# --- Saga Events ---
+- topic: bedaanwaves.saga.events
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete
+
+# --- Dead Letter Queues (DLQ) ---
+- topic: bedaanwaves.dlq.orders
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000  # 30 days
+    cleanup.policy: delete
+    retention.bytes: 1073741824  # 1GB
+
+- topic: bedaanwaves.dlq.payments
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.dlq.inventory
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.dlq.notifications
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.dlq.market-data
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.dlq.saga
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+- topic: bedaanwaves.dlq.default
+  partitions: 3
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+# --- Compacted Topics for State Stores ---
+- topic: bedaanwaves.state.orders
+  partitions: 6
+  replication_factor: 1
+  config:
+    cleanup.policy: compact
+    retention.ms: -1
+    min.compaction.lag.ms: 86400000
+
+- topic: bedaanwaves.state.payments
+  partitions: 6
+  replication_factor: 1
+  config:
+    cleanup.policy: compact
+    retention.ms: -1
+    min.compaction.lag.ms: 86400000
+
+- topic: bedaanwaves.state.inventory
+  partitions: 6
+  replication_factor: 1
+  config:
+    cleanup.policy: compact
+    retention.ms: -1
+    min.compaction.lag.ms: 86400000
+
+- topic: bedaanwaves.state.users
+  partitions: 6
+  replication_factor: 1
+  config:
+    cleanup.policy: compact
+    retention.ms: -1
+    min.compaction.lag.ms: 86400000
+
+# --- Analytics Topics ---
+- topic: bedaanwaves.analytics.events
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000  # 30 days
+    cleanup.policy: delete
+    compression.type: snappy
+
+- topic: bedaanwaves.analytics.user_behavior
+  partitions: 12
+  replication_factor: 1
+  config:
+    retention.ms: 2592000000
+    cleanup.policy: delete
+
+# --- Audit Trail ---
+- topic: bedaanwaves.audit.log
+  partitions: 6
+  replication_factor: 1
+  config:
+    retention.ms: 31536000000  # 1 year
+    cleanup.policy: delete
+    compression.type: gzip
+    min.insync.replicas: 1
+
+# --- Schema Registry Topic ---
+- topic: bedaanwaves.schema.registry
+  partitions: 1
+  replication_factor: 1
+  config:
+    retention.ms: -1
+    cleanup.policy: compact

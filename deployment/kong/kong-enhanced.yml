@@ -1,0 +1,280 @@
+_format_version: "3.0"
+
+# ============================================================
+# BedaanWaves API Gateway Configuration (Kong)
+# Enhanced with Gateway Aggregation, Security, and Monitoring
+# ============================================================
+
+# --- Services ---
+
+# Main API service
+- name: bedaanwaves-api
+  url: http://localhost:8000
+  routes:
+    - name: api-v1
+      paths:
+        - /api/v1
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+      preserve_host: true
+  plugins:
+    # CORS configuration
+    - name: cors
+      config:
+        origins:
+          - http://localhost:3005
+          - http://127.0.0.1:3005
+          - https://bedaanwaves.com
+          - https://www.bedaanwaves.com
+        credentials: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        headers:
+          - Authorization
+          - Content-Type
+          - X-Correlation-ID
+          - X-Request-ID
+          - Accept
+          - X-Requested-With
+
+    # Rate limiting with multiple tiers
+    - name: rate-limiting
+      config:
+        minute: 100
+        hour: 5000
+        day: 50000
+        policy: local
+        fault_tolerant: true
+
+    # Request size limiting
+    - name: request-size-limiting
+      config:
+        allowed_payload_size: 10
+
+    # Request transformation
+    - name: request-transformer
+      config:
+        add:
+          headers:
+            - "X-Forwarded-By:Kong"
+            - "X-Gateway: bedaanwaves-gateway"
+
+    # Prometheus metrics
+    - name: prometheus
+      config:
+        status_code_metrics: true
+        latency_metrics: true
+        bandwidth_metrics: true
+        per_consumer: true
+
+    # Correlation ID generation
+    - name: correlation-id
+      config:
+        header_name: X-Correlation-ID
+        generator: uuid
+        echo_header_name: X-Correlation-ID
+
+    # JWT Authentication
+    - name: jwt
+      config:
+        claims_to_verify:
+          - exp
+          - nbf
+        key_claim_name: kid
+        secret_is_base64: false
+        algorithm: HS256
+        run_on_pre: true
+
+    # ACL for role-based access
+    - name: acl
+      config:
+        allow:
+          - user
+          - moderator
+          - admin
+        deny:
+          - anonymous
+
+    # OpenTelemetry tracing
+    - name: opentelemetry
+      config:
+        tracing_endpoint: http://localhost:4318/v1/traces
+        tracing_headers:
+          - X-Correlation-ID
+        tracing_attributes:
+          - request_id
+          - correlation_id
+
+# --- Gateway Aggregation Service ---
+# Combines multiple backend requests into a single client request
+- name: bedaanwaves-aggregator
+  url: http://localhost:8001
+  routes:
+    - name: dashboard-aggregation
+      paths:
+        - /api/v1/dashboard/aggregate
+      methods:
+        - GET
+      strip_path: true
+    - name: portfolio-aggregation
+      paths:
+        - /api/v1/portfolio/aggregate
+      methods:
+        - GET
+      strip_path: true
+    - name: market-overview-aggregation
+      paths:
+        - /api/v1/market/overview
+      methods:
+        - GET
+      strip_path: true
+  plugins:
+    - name: request-transformer
+      config:
+        add:
+          headers:
+            - "X-Aggregation-Mode: gateway"
+
+# --- Backend for Frontend (BFF) Service ---
+- name: bedaanwaves-bff
+  url: http://localhost:8002
+  routes:
+    - name: bff-mobile
+      paths:
+        - /api/v1/bff
+      methods:
+        - GET
+        - POST
+      strip_path: true
+    - name: bff-dashboard
+      paths:
+        - /api/v1/bff/dashboard
+      methods:
+        - GET
+      strip_path: true
+  plugins:
+    - name: request-transformer
+      config:
+        add:
+          headers:
+            - "X-BFF-Mode: mobile-optimized"
+
+# --- Health Check Route ---
+- name: health-check
+  paths:
+    - /health
+    - /health/live
+    - /health/ready
+  strip_path: true
+  methods:
+    - GET
+
+# --- WebSocket Route ---
+- name: websocket-route
+  paths:
+    - /ws
+    - /ws/live
+  protocols:
+    - ws
+    - wss
+
+# --- Consumers ---
+- name: bedaanwaves-consumer
+  consumer: bedaanwaves-user
+  key: bedaanwaves-user-key
+
+# --- Upstreams for load balancing ---
+- name: bedaanwaves-upstream
+  targets:
+    - target: localhost:8000
+      weight: 100
+    - target: localhost:8001
+      weight: 50
+    - target: localhost:8002
+      weight: 50
+
+# --- Plugins Configuration ---
+
+# Health check endpoint bypasses auth
+- name: health-check-route
+  paths:
+    - /health
+  methods:
+    - GET
+  strip_path: true
+
+# --- Security Headers ---
+# Applied globally via request-transformer
+
+# --- Cache Configuration ---
+# Cache frequently accessed endpoints
+- name: bedaanwaves-cache
+  routes:
+    - name: cached-static
+      paths:
+        - /api/v1/market/summary
+        - /api/v1/stocks/trending
+        - /api/v1/analysis/summary
+      methods:
+        - GET
+  plugins:
+    - name: proxy-cache-enabled
+      config:
+        cache_method: GET
+        cache TTL: 60
+        content_type:
+          - application/json
+        content_encoding: gzip
+
+# --- Admin Routes (separate auth) ---
+- name: admin-api
+  url: http://localhost:8000
+  routes:
+    - name: admin-v1
+      paths:
+        - /api/v1/admin
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      strip_path: true
+  plugins:
+    - name: acl
+      config:
+        allow:
+          - admin
+        deny:
+          - user
+          - moderator
+          - anonymous
+    - name: rate-limiting
+      config:
+        minute: 50
+        hour: 1000
+        policy: local
+
+# --- API Versioning ---
+# Supports version negotiation via URL path and Accept header
+- name: version-negotiation
+  config:
+    versions:
+      - v1
+      - v2
+    default_version: v1
+
+# --- Logging Configuration ---
+# Structured JSON logging for all requests
+- name: file-logger
+  config:
+    path: /var/log/kong/bedaanwaves.log
+    reopen: true

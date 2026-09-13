@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bedaanwaves-zap-config
+  namespace: default
+data:
+  zap-baseline-policy.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <policy>
+      <name>BedaanWaves Baseline Policy</name>
+      <version>1.0</version>
+      <description>
+        OWASP ZAP baseline active scan policy for BedaanWaves API.
+        Covers OWASP Top 10 and common API vulnerabilities.
+      </description>
+      <rules>
+        <rule id="1" name="SQL Injection">
+          <description>Detect SQL injection vulnerabilities</description>
+          <threshold>high</threshold>
+        </rule>
+        <rule id="2" name="Cross Site Scripting">
+          <description>Detect XSS vulnerabilities</description>
+          <threshold>high</threshold>
+        </rule>
+        <rule id="3" name="Path Traversal">
+          <description>Detect path traversal vulnerabilities</description>
+          <threshold>high</threshold>
+        </rule>
+        <rule id="4" name="Remote File Inclusion">
+          <description>Detect RFI vulnerabilities</description>
+          <threshold>high</threshold>
+        </rule>
+        <rule id="5" name="Server Side Request Forgery">
+          <description>Detect SSRF vulnerabilities</description>
+          <threshold>medium</threshold>
+        </rule>
+        <rule id="6" name="Broken Authentication">
+          <description>Detect authentication bypasses</description>
+          <threshold>high</threshold>
+        </rule>
+        <rule id="7" name="Sensitive Data Exposure">
+          <description>Detect sensitive data in responses</description>
+          <threshold>medium</threshold>
+        </rule>
+        <rule id="8" name="Security Misconfiguration">
+          <description>Detect security misconfigurations</description>
+          <threshold>medium</threshold>
+        </rule>
+      </rules>
+    </policy>
