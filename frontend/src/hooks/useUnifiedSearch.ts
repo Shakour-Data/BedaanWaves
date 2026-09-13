@@ -253,17 +253,25 @@ export function useUnifiedSearch(options: UseUnifiedSearchOptions = {}) {
       try {
         const items = await searchNews(trimmed, newsLimit);
         if (controller.signal.aborted) return;
+        const seen = new Set<string>();
         setNews(
-          items.slice(0, newsLimit).map((it) => ({
-            kind: "news" as const,
-            id: it.url || `${it.title}-${it.published_at}`,
-            title: it.title,
-            source: it.source || "Unknown",
-            url: it.url || "",
-            publishedAt: it.published_at || "",
-            category: it.category ?? null,
-            isMarketMoving: Boolean(it.is_market_moving),
-          }))
+          items
+            .slice(0, newsLimit)
+            .map((it) => ({
+              kind: "news" as const,
+              id: it.url || `${it.title}-${it.published_at}`,
+              title: it.title,
+              source: it.source || "Unknown",
+              url: it.url || "",
+              publishedAt: it.published_at || "",
+              category: it.category ?? null,
+              isMarketMoving: Boolean(it.is_market_moving),
+            }))
+            .filter((it) => {
+              if (seen.has(it.id)) return false;
+              seen.add(it.id);
+              return true;
+            })
         );
         setNewsStatus(items.length === 0 ? "empty" : "success");
       } catch (err) {

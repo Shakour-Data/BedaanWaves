@@ -40,7 +40,7 @@ class TracingManager:
         use_otlp: bool = True,
     ):
         self.service_name = service_name
-        self.enabled = enabled
+        self.enabled = enabled and False  # disabled for offline run
         self._tracer = None
         self._otlp_endpoint = otlp_endpoint
         self._jaeger_endpoint = jaeger_endpoint

@@ -9,13 +9,11 @@ Provides endpoints for:
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, IntlPriceCandle
 from app.schemas.schemas import (
@@ -110,7 +108,6 @@ async def get_nerk_price_history(
     period: str = Query("1y", description="Period: 1m, 3m, 6m, 1y, 2y, 5y"),
 ) -> NearkPriceHistoryResponse:
     """Get price history for a Neark constituent symbol."""
-    service = get_nerk_service()
     try:
         period_days = {
             "1m": 30, "3m": 90, "6m": 180,
@@ -121,7 +118,7 @@ async def get_nerk_price_history(
 
         async with async_session_maker() as session:
             result = await session.execute(
-                select(Asset).where(Asset.symbol == symbol).where(Asset.is_nerk_constituent == True)
+                select(Asset).where(Asset.symbol == symbol).where(Asset.is_nerk_constituent)
             )
             asset = result.scalar_one_or_none()
             if not asset:

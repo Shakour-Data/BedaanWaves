@@ -75,7 +75,7 @@ export interface NerkPriceHistoryResponse {
 
 export async function fetchNerkConstituents(): Promise<NerkConstituent[]> {
   const { data } = await apiClient.get("/api/v1/nerk/constituents");
-  return data.data ?? [];
+  return data ?? [];
 }
 
 export async function fetchNerkOverview(): Promise<NerkOverviewResponse> {

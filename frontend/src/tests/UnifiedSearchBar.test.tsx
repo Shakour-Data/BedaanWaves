@@ -138,6 +138,28 @@ describe('UnifiedSearchBar', () => {
     expect(screen.getByText(/Bloomberg/)).toBeInTheDocument();
   });
 
+  it('deduplicates news results that share an id', () => {
+    const duplicateNewsResults = [
+      newsResults[0],
+      { ...newsResults[0], title: 'A duplicate headline' },
+    ];
+
+    vi.mocked(useUnifiedSearch).mockReturnValue({
+      ...baseHook,
+      query: 'apple',
+      debouncedQuery: 'apple',
+      status: 'success',
+      groups: [{ label: 'News', items: duplicateNewsResults }],
+      total: duplicateNewsResults.length,
+    });
+
+    render(<UnifiedSearchBar />);
+    focusInput();
+
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(screen.getByText('1 result')).toBeInTheDocument();
+  });
+
   it('renders page results with category and description', () => {
     vi.mocked(useUnifiedSearch).mockReturnValue({
       ...baseHook,

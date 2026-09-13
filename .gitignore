@@ -77,6 +77,10 @@ htmlcov/
 pginst*.exe
 pginst_extracted/
 
+# Generated OpenAPI specs (regenerable)
+openapi.json
+openapi_full.json
+
 # Generated docs (regenerable)
 docs/openapi.yaml
 docs/openapi_report.md
@@ -114,6 +118,7 @@ test_fix.py
 create_index.py
 check_*.py
 verify_*.py
+validate_*.py
 count_*.py
 inspect_*.py
 db_quality_audit.py
@@ -155,6 +160,10 @@ backend/find_port.py
 backend/kill*.py
 backend/quality_audit.py
 backend/schema_audit.py
+
+# Junk / stray files
+Continue
+null
 
 # Git internal temp directories
 .git-rewrite/

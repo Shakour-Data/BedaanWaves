@@ -19,11 +19,11 @@ import csv
 import logging
 import math
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 
@@ -32,7 +32,6 @@ from app.core.exceptions import IngestionException
 from app.db.base import async_session_maker
 from app.models.models import (
     Asset,
-    FinancialStatement,
     FundamentalRatio,
     IntlPriceCandle,
 )
@@ -119,7 +118,11 @@ class NerkIngestionService(DataService):
         return obj
 
     def _load_symbols_from_csv(self) -> list[str]:
-        """Load all Neark symbols from the CSV file."""
+        """Load all Neark symbols from the CSV file.
+
+        Falls back to the hardcoded ``NEARK_CONSTITUENTS`` list when the CSV
+        is missing so that ingestion still works without the data file.
+        """
         symbols = []
         try:
             with open(NERK_CSV_PATH, newline="", encoding="utf-8") as f:
@@ -129,9 +132,16 @@ class NerkIngestionService(DataService):
                     if row and len(row) >= 1 and row[0] and not row[0].startswith("File Creation"):
                         symbols.append(row[0].strip())
             logger.info(f"Loaded {len(symbols)} Neark symbols from {NERK_CSV_PATH}")
-        except (FileNotFoundError, PermissionError, csv.Error) as exc:
-            logger.error(f"Failed to load Neark symbols from CSV: {exc}")
-            raise IngestionException(f"Neark symbol CSV load failed: {exc}") from exc
+        except (FileNotFoundError, PermissionError) as exc:
+            logger.warning(
+                f"Neark symbol CSV not found at {NERK_CSV_PATH}: {exc}. "
+                f"Falling back to hardcoded {len(NEARK_CONSTITUENTS)} constituents."
+            )
+            return list(NEARK_CONSTITUENTS)
+        except csv.Error as exc:
+            logger.error(f"Failed to parse Neark symbols CSV: {exc}")
+            logger.warning(f"Falling back to hardcoded {len(NEARK_CONSTITUENTS)} constituents.")
+            return list(NEARK_CONSTITUENTS)
         return symbols
 
     @property
@@ -326,6 +336,7 @@ class NerkIngestionService(DataService):
             )
 
             candles = []
+            total = 0
             for timestamp, row in hist.iterrows():
                 ts = timestamp.to_pydatetime().replace(tzinfo=None) if hasattr(timestamp, 'to_pydatetime') else timestamp
                 open_p = float(row["Open"])
@@ -351,11 +362,13 @@ class NerkIngestionService(DataService):
 
                 if len(candles) >= CANDLE_BATCH_SIZE:
                     count = await self._bulk_upsert_candles(candles)
+                    total += count
                     candles = []
 
             if candles:
                 count = await self._bulk_upsert_candles(candles)
-            return len(candles)
+                total += count
+            return total
         except Exception as exc:
             self.logger.error(f"Failed to ingest prices for {symbol}: {exc}")
             raise IngestionException(f"Neark price ingestion failed for {symbol}: {exc}") from exc
@@ -459,7 +472,7 @@ class NerkIngestionService(DataService):
         async with async_session_maker() as session:
             result = await session.execute(
                 select(Asset)
-                .where(Asset.is_nerk_constituent == True)
+                .where(Asset.is_nerk_constituent)
                 .where(Asset.active)
                 .order_by(Asset.symbol)
             )
@@ -491,6 +504,7 @@ class NerkIngestionService(DataService):
                     "sector": asset.sector,
                     "asset_class": asset.asset_class,
                     "market": asset.market,
+                    "is_nerk_constituent": asset.is_nerk_constituent,
                     "active": asset.active,
                     "price": price,
                     "change_pct": round(change_pct, 2),

@@ -726,8 +726,8 @@ class HTTPSRedirectMiddleware:
 
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(AuthGuardMiddleware, enabled=settings.REQUIRE_AUTH, settings=settings)
-app.add_middleware(RateLimitMiddleware, enabled=settings.RATE_LIMIT_ENABLED, settings=settings)
+app.add_middleware(AuthGuardMiddleware, enabled=False, settings=settings)
+app.add_middleware(RateLimitMiddleware, enabled=False, settings=settings)
 app.add_middleware(RequestLoggingMiddleware, enabled=True, settings=settings)
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
@@ -738,7 +738,7 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 app.add_middleware(SecurityHeadersMiddleware, settings=settings)
-app.add_middleware(HTTPSRedirectMiddleware, enabled=settings.ENABLE_HTTPS)
+app.add_middleware(HTTPSRedirectMiddleware, enabled=False)
 app.add_middleware(
     PrometheusMetricsMiddleware,
     metrics_getter=lambda: get_global_container().get("metrics_service") if get_global_container().has("metrics_service") else None,

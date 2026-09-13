@@ -777,8 +777,8 @@ class ScoringRankResponse(BaseModel):
 class ScoringResponse(BaseModel):
     status: str = "success"
     symbol: str
-    scoring: dict[str, Any]
-    hierarchy: dict[str, Any]
+    scoring: dict[str, Any] | None = None
+    hierarchy: dict[str, Any] | None = None
     timestamp: str
 
 

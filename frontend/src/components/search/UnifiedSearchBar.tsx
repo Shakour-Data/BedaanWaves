@@ -113,6 +113,28 @@ const VARIANT_DROPDOWN_WIDTH: Record<NonNullable<UnifiedSearchBarProps["variant"
   modal: "w-[40rem] max-w-[calc(100vw-1rem)]",
 };
 
+function getSearchItemKey(item: UnifiedSearchItem): string {
+  if (item.kind === "stock") return `stock-${item.symbol}`;
+  if (item.kind === "news") return `news-${item.id}`;
+  return `page-${item.id}`;
+}
+
+function dedupeSearchGroups(groups: SearchGroup[]): SearchGroup[] {
+  const seen = new Set<string>();
+  return groups
+    .map((group) => {
+      const items = group.items.filter((item) => {
+        const key = getSearchItemKey(item);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      return { ...group, items };
+    })
+    .filter((group) => group.items.length > 0);
+}
+
 function StockResult({ item, query, active }: { item: Extract<UnifiedSearchItem, { kind: "stock" }>; query: string; active: boolean }) {
   const isPositive = item.change >= 0;
   const changePct = item.price > 0 ? (item.change / item.price) * 100 : 0;
@@ -216,25 +238,20 @@ export function UnifiedSearchBar({
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const search = useUnifiedSearch();
+  const groups = useMemo(() => dedupeSearchGroups(search.groups), [search.groups]);
 
   const flatItems = useMemo<UnifiedSearchItem[]>(() => {
     const out: UnifiedSearchItem[] = [];
-    for (const g of search.groups) {
+    for (const g of groups) {
       for (const it of g.items) out.push(it);
     }
     return out;
-  }, [search.groups]);
+  }, [groups]);
 
   const indexByKey = useMemo(() => {
     const map = new Map<string, number>();
     flatItems.forEach((it, idx) => {
-      const key =
-        it.kind === "stock"
-          ? `stock-${it.symbol}`
-          : it.kind === "news"
-          ? `news-${it.id}`
-          : `page-${it.id}`;
-      map.set(key, idx);
+      map.set(getSearchItemKey(it), idx);
     });
     return map;
   }, [flatItems]);
@@ -242,7 +259,8 @@ export function UnifiedSearchBar({
   const isLoading = search.status === "loading";
   const isEmpty = search.status === "empty";
   const hasError = search.status === "error";
-  const showDropdown = isOpen && (isLoading || isEmpty || hasError || flatItems.length > 0);
+  const total = flatItems.length;
+  const showDropdown = isOpen && (isLoading || isEmpty || hasError || total > 0);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -410,9 +428,9 @@ export function UnifiedSearchBar({
               </div>
             )}
 
-            {!isLoading && !hasError && search.groups.length > 0 && (
+            {!isLoading && !hasError && groups.length > 0 && (
               <SearchResultsList
-                groups={search.groups}
+                groups={groups}
                 query={search.query}
                 indexByKey={indexByKey}
                 activeIndex={activeIndex}
@@ -421,9 +439,9 @@ export function UnifiedSearchBar({
             )}
           </div>
 
-          {!isLoading && !hasError && search.total > 0 && (
+          {!isLoading && !hasError && total > 0 && (
             <div className="border-t border-border px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-              <span>{search.total} result{search.total === 1 ? "" : "s"}</span>
+              <span>{total} result{total === 1 ? "" : "s"}</span>
               <span>↑↓ navigate · ↵ open · esc close</span>
             </div>
           )}
@@ -455,12 +473,7 @@ function SearchResultsList({
           </div>
           <ul aria-label={`${group.label} results`}>
             {group.items.map((item) => {
-              const key =
-                item.kind === "stock"
-                  ? `stock-${item.symbol}`
-                  : item.kind === "news"
-                  ? `news-${item.id}`
-                  : `page-${item.id}`;
+              const key = getSearchItemKey(item);
               const idx = indexByKey.get(key) ?? -1;
               const active = idx === activeIndex;
               const content =

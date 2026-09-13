@@ -23,6 +23,7 @@ import math
 import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.request import Request, urlopen
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -50,6 +51,12 @@ logger = logging.getLogger(__name__)
 NASDAQ_CSV_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "nasdaq_symbols.csv"
 )
+NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
+
+DEFAULT_FALLBACK_SYMBOLS = [
+    "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "META", "NVDA", "TSLA",
+    "AMD", "INTC", "CSCO", "ADBE", "NFLX", "PEP", "COST", "AVGO",
+]
 
 # Macro tickers to track
 MACRO_TICKERS = {
@@ -110,6 +117,38 @@ class NasdaqIngestionService(DataService):
             return [NasdaqIngestionService._clean_nan(v) for v in obj]
         return obj
 
+    @staticmethod
+    def _safe_float(value: Any, default: float = 0.0) -> float:
+        try:
+            if value is None:
+                return default
+            number = float(value)
+            if math.isnan(number) or math.isinf(number):
+                return default
+            return number
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _safe_int(value: Any, default: int = 0) -> int:
+        number = NasdaqIngestionService._safe_float(value, float(default))
+        return int(number)
+
+    @staticmethod
+    def _safe_timestamp(value: Any) -> datetime | None:
+        if value is None:
+            return None
+        if hasattr(value, "to_pydatetime"):
+            return value.to_pydatetime().replace(tzinfo=None)
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None)
+        if hasattr(value, "date") and not isinstance(value, datetime):
+            return datetime.combine(value.date(), datetime.min.time())
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).replace(tzinfo=None)
+        except (TypeError, ValueError):
+            return None
+
     def _load_symbols_from_csv(self) -> list[str]:
         """Load all Nasdaq symbols from the CSV file."""
         symbols = []
@@ -122,8 +161,8 @@ class NasdaqIngestionService(DataService):
                         symbols.append(row[0].strip())
             logger.info(f"Loaded {len(symbols)} symbols from {NASDAQ_CSV_PATH}")
         except (FileNotFoundError, PermissionError, csv.Error) as exc:
-            logger.error(f"Failed to load Nasdaq symbols from CSV: {exc}")
-            raise IngestionException(f"Nasdaq symbol CSV load failed: {exc}") from exc
+            logger.warning(f"Failed to load Nasdaq symbols from CSV: {exc}")
+            return []
         return symbols
 
     @property

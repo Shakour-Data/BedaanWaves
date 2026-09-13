@@ -22,8 +22,6 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
 
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
-  const rightSidebarOpen = useAppStore((state) => state.rightSidebarOpen);
-  const setRightSidebarOpen = useAppStore((state) => state.setRightSidebarOpen);
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const { confirm } = useConfirmDialog();
@@ -87,25 +85,14 @@ export function NewTopbar({ title = "Dashboard", breadcrumbs }: NewTopbarProps) 
           </div>
 
           <div className="flex items-center gap-1">
-<Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSearch(true)}
-                className="md:hidden"
-                aria-label="Open search"
-              >
-               <span className="text-xs font-bold">S</span>
-             </Button>
-
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-              className="hidden lg:inline-flex"
-              aria-label="Toggle quick access"
-              aria-expanded={rightSidebarOpen}
+              onClick={() => setShowSearch(true)}
+              className="md:hidden"
+              aria-label="Open search"
             >
-              <span className="text-xs font-semibold">Quick</span>
+              <span className="text-xs font-bold">S</span>
             </Button>
 
             <div className="relative">
