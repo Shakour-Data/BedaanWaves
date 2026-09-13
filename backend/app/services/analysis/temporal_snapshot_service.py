@@ -461,13 +461,16 @@ class TemporalSnapshotService:
         daily_points: list[dict[str, Any]] = []
         intraday_points: list[dict[str, Any]] = []
 
-        # Fetch all hierarchical trends in parallel
+        # Fetch all hierarchical trends using independent sessions so a
+        # failure in one sub-service (e.g. a slow/timeout query against the
+        # 3.5M-row raw_performance_scores table) does not poison the shared
+        # request-scoped session and cascade into every subsequent query.
         hierarchical_trends: dict[str, list[dict[str, Any]]] = {}
         for level in ("sub_dimension", "aspect", "sub_aspect"):
             try:
                 svc = HierarchicalScoreTrendService()
                 result = await svc.get_trend(
-                    level=level, days=window_daily, market="NASDAQ", latest=True, db=db
+                    level=level, days=window_daily, market="NASDAQ", latest=True,
                 )
                 hierarchical_trends[level] = result.get("series", [])
             except Exception as exc:
@@ -483,10 +486,11 @@ class TemporalSnapshotService:
                     hierarchical_by_date[date_str] = {}
                 hierarchical_by_date[date_str][level] = pt.get("metrics", {})
 
-        # Daily - from MarketScoreTrendService (dimension level) + hierarchical trends
+        # Daily - from MarketScoreTrendService (dimension level) + hierarchical trends.
+        # Use an independent session so a failure here does not poison ``db``.
         try:
             svc = MarketScoreTrendService()
-            data = await svc.get_trend(days=window_daily, market="NASDAQ", db=db)
+            data = await svc.get_trend(days=window_daily, market="NASDAQ")
             for pt in data or []:
                 date_str = str(pt.get("date"))
                 level_scores: dict[str, float] = dict(pt.get("avg_dimensions") or {})
@@ -604,6 +608,15 @@ class TemporalSnapshotService:
             )
         current = await self._resolve_current(db, symbol=symbol)
 
+        # Defensive rollback: sub-services may have left the shared request
+        # session in a PendingRollback state (e.g. a timeout inside
+        # HierarchicalScoreTrendService). Recover so subsequent queries
+        # (weights, trends, universe count) do not cascade-fail.
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+
         snapshot_id_val = snapshot_id or str(uuid.uuid4())
         deltas = self._build_deltas(daily, hourly, current)
 
@@ -611,6 +624,13 @@ class TemporalSnapshotService:
         trends = await self._build_trends(
             db, window_daily=window_daily, window_intraday=window_intraday, symbol=symbol
         )
+
+        # Defensive rollback again: _build_trends may have poisoned the
+        # session via its sub-service calls.
+        try:
+            await db.rollback()
+        except Exception:
+            pass
 
         universe_total = await self._active_assets_count(db)
 

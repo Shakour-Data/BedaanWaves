@@ -39,7 +39,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/cn";
 import { UnifiedSearchBar } from "@/components/search/UnifiedSearchBar";
-import { sidebarCategories, sidebarBottomItems, type NavItem, type NavCategory } from "@/lib/sidebar-config";
+import { sidebarCategories, sidebarBottomItems, type NavItem } from "@/lib/sidebar-config";
 
 type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -83,7 +83,13 @@ interface SidebarIconProps {
 
 const SidebarIcon = memo(({ name, className }: SidebarIconProps) => {
   const Icon = ICON_MAP[name] ?? Search;
-  return <Icon className={cn("h-5 w-5 shrink-0", className)} />;
+  return (
+    <Icon
+      className={cn("h-5 w-5 shrink-0", className)}
+      data-testid={`icon-${name}`}
+      aria-hidden="true"
+    />
+  );
 });
 SidebarIcon.displayName = "SidebarIcon";
 
@@ -94,7 +100,25 @@ const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boole
 
 const SIDEBAR_WIDTH = "16rem";
 
-const SidebarComponent = () => {
+interface SidebarComponentProps {
+  side?: "left" | "right";
+  title?: string;
+  subtitle?: string;
+  showSearch?: boolean;
+  showFooter?: boolean;
+  showUserInfo?: boolean;
+  onLogout?: () => void;
+}
+
+const SidebarComponent = ({
+  side = "left",
+  title = "BedaanWaves",
+  subtitle = "Analytics",
+  showSearch = true,
+  showFooter = true,
+  showUserInfo = true,
+  onLogout,
+}: SidebarComponentProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
@@ -236,12 +260,13 @@ const SidebarComponent = () => {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 border-r bg-[var(--color-surface)] transition-transform duration-200 ease-in-out",
-          "lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-          "lg:border-l-0 lg:border-r"
+          "fixed inset-y-0 z-50 w-64 bg-[var(--color-surface)] transition-transform duration-200 ease-in-out",
+          side === "left"
+            ? "left-0 border-r lg:translate-x-0"
+            : "right-0 border-l lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : side === "left" ? "-translate-x-full" : "translate-x-full"
         )}
-        aria-label="Main navigation"
+        aria-label={side === "left" ? "Main navigation" : "Quick access navigation"}
         style={{ width: SIDEBAR_WIDTH }}
       >
         <div className="flex h-screen flex-col">
@@ -252,21 +277,23 @@ const SidebarComponent = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-base font-bold text-[var(--color-text-primary)] leading-tight tracking-tight">
-                  BedaanWaves
+                  {title}
                 </span>
                 <span className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider leading-tight">
-                  Analytics
+                  {subtitle}
                 </span>
               </div>
             </Link>
           </div>
 
           <div className="flex-1 overflow-y-auto py-4">
-            <div className="px-3 pb-3">
-              <UnifiedSearchBar variant="sidebar" placeholder="Search stocks, news, pages..." />
-            </div>
+            {showSearch && (
+              <div className="px-3 pb-3">
+                <UnifiedSearchBar variant="sidebar" placeholder="Search stocks, news, pages..." />
+              </div>
+            )}
 
-            <nav className="flex flex-col gap-1 px-3">
+            <nav className="flex flex-col gap-1 px-3" aria-label="Main navigation">
               {sidebarCategories.map((cat) => {
                 const isExpanded = allExpanded.has(cat.label);
                 const hasActive = isCategoryActive(cat.items, isActive);
@@ -327,54 +354,56 @@ const SidebarComponent = () => {
             </nav>
           </div>
 
-          <div className="border-t border-[var(--color-border)] p-3 shrink-0">
-            <div className="mb-3 px-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                Account
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {sidebarBottomItems.map((item) => renderNavItem(item, true))}
-            </div>
-
-            {user && (
-              <div className="mt-3 border-t border-[var(--color-border)] pt-2">
-                <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white">
-                    {user.full_name?.[0] || user.username?.[0] || "U"}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                      {user.full_name || user.username || "User"}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)] truncate">
-                      {user.email || ""}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className={cn(
-                    "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)]",
-                    "transition-all duration-200 hover:bg-[var(--color-error)]/10 hover:text-[var(--color-error)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)]/30 min-h-[44px]"
-                  )}
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-error)]/10 text-[var(--color-error)]">
-                    <LogOut className="h-4 w-4" />
-                  </span>
-                  <span>Sign Out</span>
-                </button>
+          {showFooter && (
+            <div className="border-t border-[var(--color-border)] p-3 shrink-0">
+              <div className="mb-3 px-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Account
+                </span>
               </div>
-            )}
+              <div className="flex flex-col gap-0.5">
+                {sidebarBottomItems.map((item) => renderNavItem(item, true))}
+              </div>
 
-            <div className="mt-3 px-3 text-center">
-              <p className="text-[10px] text-[var(--color-text-muted)]">
-                <span className="font-mono">Cmd</span> + <span className="font-mono">K</span> — Quick search
-              </p>
+              {showUserInfo && user && (
+                <div className="mt-3 border-t border-[var(--color-border)] pt-2">
+                  <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white">
+                      {user.full_name?.[0] || user.username?.[0] || "U"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                        {user.full_name || user.username || "User"}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)] truncate">
+                        {user.email || ""}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onLogout ?? logout}
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)]",
+                      "transition-all duration-200 hover:bg-[var(--color-error)]/10 hover:text-[var(--color-error)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)]/30 min-h-[44px]"
+                    )}
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-error)]/10 text-[var(--color-error)]">
+                      <LogOut className="h-4 w-4" />
+                    </span>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-3 px-3 text-center">
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  <span className="font-mono">Cmd</span> + <span className="font-mono">K</span> — Quick search
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </aside>
     </>
@@ -382,3 +411,4 @@ const SidebarComponent = () => {
 };
 
 export const NewSidebar = memo(SidebarComponent);
+export type { SidebarComponentProps };

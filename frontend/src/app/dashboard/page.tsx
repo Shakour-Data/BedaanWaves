@@ -413,19 +413,9 @@ export default function DashboardPage() {
         if (existing) existing.weight = c.weight;
       }
 
-      // Compute the true market-wide average across ALL dimension scores
-      // (not just the first dimension — the old code picked an arbitrary one).
-      const allDimScores = Object.values(g?.dimensions ?? {})
-        .map((d) => (d && typeof d.avg_score === "number" ? d.avg_score : 0))
-        .filter((v) => v > 0);
-      const marketAvgScore = allDimScores.length > 0
-        ? allDimScores.reduce((a, b) => a + b, 0) / allDimScores.length
-        : 0;
-
       const merged: DashboardSnapshot = {
         stats: [
           { label: "Universe", value: String(g?.summary?.total_symbols ?? l?.marketStats?.[0]?.value ?? "—") },
-          { label: "Avg Score", value: marketAvgScore > 0 ? fmtScore(marketAvgScore) : "—" },
           {
             label: "Top Scorer",
             value: g?.top_performers?.[0]

@@ -11,6 +11,8 @@ import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
+import { DonutChart } from "@/components/charts/DonutChart";
+import { BarChart } from "@/components/charts/BarChart";
 import {
   useLiveData,
   LiveConnectionIndicator,
@@ -135,6 +137,36 @@ export default function PortfolioPage() {
       { label: t("app.portfolio.symbols_count"), value: String(liveHoldings.length), changePct: 0 },
       { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
     ];
+  }, [liveHoldings]);
+
+  // Real performance series: current value vs. cost basis per holding.
+  const performanceSeries = useMemo(() => {
+    if (liveHoldings.length === 0) return [];
+    return liveHoldings.map((h) => {
+      const qty = h.quantity ?? 0;
+      const currentValue = h.price * qty;
+      const costBasis = (h.avg_price ?? h.price) * qty;
+      const pnl = currentValue - costBasis;
+      return {
+        time: h.symbol,
+        value: Number(pnl.toFixed(2)),
+        color: pnl >= 0 ? "#10B981" : "#EF4444",
+      };
+    });
+  }, [liveHoldings]);
+
+  // Real distribution: portfolio weight per holding (by market value).
+  const distributionData = useMemo(() => {
+    if (liveHoldings.length === 0) return [];
+    const palette = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
+    return liveHoldings
+      .map((h, i) => {
+        const qty = h.quantity ?? 0;
+        const value = h.price * qty;
+        return { label: h.symbol, value, color: palette[i % palette.length] };
+      })
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
   }, [liveHoldings]);
 
   const loadPortfolio = useCallback(async () => {
@@ -290,37 +322,48 @@ export default function PortfolioPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-lg">📈</span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance")}</h3>
-                <p className="text-xs text-[var(--color-text-muted)]">Portfolio performance over time</p>
-              </div>
+<div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+              <span className="text-lg">📈</span>
             </div>
-            <div className="h-64 flex flex-col items-center justify-center text-[var(--color-text-muted)] bg-[var(--color-background)]/50 rounded-xl border border-dashed border-[var(--color-border)]">
-              <p className="text-sm font-medium">Coming Soon</p>
-              <p className="text-xs mt-1">Performance chart under development</p>
+            <div>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance")}</h3>
+              <p className="text-xs text-[var(--color-text-muted)]">Realized P&L per holding (current value − cost basis)</p>
             </div>
           </div>
+          {performanceSeries.length > 0 ? (
+            <BarChart
+              data={performanceSeries}
+              height={240}
+              valueFormatter={(v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}
+              ariaLabel="Portfolio performance by holding"
+            />
+          ) : (
+            <div className="h-64 flex items-center justify-center text-[var(--color-text-muted)] text-sm">
+              No holdings to chart
+            </div>
+          )}
+        </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                <span className="text-lg">🥧</span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution")}</h3>
-                <p className="text-xs text-[var(--color-text-muted)]">Asset allocation breakdown</p>
-              </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+              <span className="text-lg">🥧</span>
             </div>
-            <div className="h-64 flex flex-col items-center justify-center text-[var(--color-text-muted)] bg-[var(--color-background)]/50 rounded-xl border border-dashed border-[var(--color-border)]">
-              <p className="text-sm font-medium">Coming Soon</p>
-              <p className="text-xs mt-1">Distribution chart under development</p>
+            <div>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution")}</h3>
+              <p className="text-xs text-[var(--color-text-muted)]">Asset allocation breakdown by market value</p>
             </div>
           </div>
+          {distributionData.length > 0 ? (
+            <DonutChart data={distributionData} size={240} thickness={36} />
+          ) : (
+            <div className="h-64 flex items-center justify-center text-[var(--color-text-muted)] text-sm">
+              No holdings to chart
+            </div>
+          )}
+        </div>
         </div>
       </div>
     </NewDashboardShell>

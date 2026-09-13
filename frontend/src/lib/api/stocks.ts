@@ -192,9 +192,12 @@ export interface FundamentalResponse {
   [key: string]: unknown;
 }
 
-export interface TechnicalResponse {
+export interface TechnicalResponseBase {
   indicators?: Record<string, unknown>;
 }
+
+/** Technical analysis of a symbol. Backward-compatible with `Record<string, unknown>` consumers. */
+export type TechnicalResponse = TechnicalResponseBase & Record<string, unknown>;
 
 export interface RiskResponse {
   [key: string]: unknown;

@@ -90,7 +90,7 @@ export default function AnalysisPage() {
   const [scoreTrend, setScoreTrend] = useState<Array<{ time: string; value: number }>>([]);
   const [analysisData, setAnalysisData] = useState<{
     fundamental?: Record<string, unknown>;
-    technical?: unknown;
+    technical?: Record<string, unknown> | null;
     sentiment?: {
       label?: string;
       confidence?: number;
@@ -666,56 +666,43 @@ export default function AnalysisPage() {
                   {t("app.analysis.technical_charts")}
                 </h3>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  Technical indicators for top movers
+                  Technical indicators for {analysisData?.symbol || "top movers"}
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {topMovers.slice(0, 3).map((mover, i) => (
-                <div
-                  key={i}
-                  className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-5 transition-all hover:border-[var(--color-primary)]/30 hover:shadow-md"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <div className="font-bold text-lg text-[var(--color-text-primary)]">
-                        {mover.symbol}
+            {analysisData?.technical && Object.keys(analysisData.technical).length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Object.entries(analysisData.technical).map(([key, value]) => {
+                  const numeric = typeof value === "number" ? value : null;
+                  const isPct = /pct|ratio|position|change/i.test(key);
+                  const display = numeric === null ? "—" : isPct ? `${numeric.toFixed(2)}%` : numeric.toFixed(2);
+                  const tone = numeric === null
+                    ? "text-[var(--color-text-muted)]"
+                    : numeric > 0
+                      ? "text-[var(--color-success)]"
+                      : numeric < 0
+                        ? "text-[var(--color-error)]"
+                        : "text-[var(--color-text-primary)]";
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4 text-center"
+                    >
+                      <div className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
+                        {key.replace(/_/g, " ")}
                       </div>
-                      <div className="text-xs text-[var(--color-text-muted)]">
-                        {mover.name}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
-                        ${mover.price > 0 ? mover.price.toFixed(2) : "—"}
-                      </div>
-                      <div
-                        className={cn(
-                          "text-sm font-semibold",
-                          mover.changePct >= 0
-                            ? "text-[var(--color-success)]"
-                            : "text-[var(--color-error)]"
-                        )}
-                      >
-                        {mover.changePct >= 0 ? "+" : ""}
-                        {mover.changePct.toFixed(2)}%
+                      <div className={`text-lg font-bold mt-1 ${tone}`}>
+                        {display}
                       </div>
                     </div>
-                  </div>
-                  <div className="h-16 rounded-lg bg-[var(--color-border)]/30 flex items-end gap-1 p-2">
-                    {Array.from({ length: 12 }).map((_, j) => (
-                      <div
-                        key={j}
-                        className="flex-1 rounded bg-[var(--color-primary)]/60 hover:bg-[var(--color-primary)] transition-colors"
-                        style={{
-                          height: `${30 + ((i * 7 + j * 11) % 70)}%`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-[var(--color-text-muted)] text-sm">
+                {t("app.analysis.technical_not_found")}
+              </div>
+            )}
           </section>
         )}
 

@@ -1,104 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import {
-  LayoutDashboard,
-  BarChart3,
-  TrendingUpDown,
-  Briefcase,
-  PieChart,
-  Brain,
-  Filter,
-  Wallet,
-  Trophy,
-  AreaChart,
-  GitCompare,
-  Palette,
-  Activity,
-  Globe,
-  Newspaper,
-  Bell,
-  Search,
-  Eye,
-  BookOpen,
-  HelpCircle,
-  Settings,
-  User,
-  House,
-  Info,
-  Sparkles,
-  Book,
-  Mail,
-  ChevronDown,
-  ChevronUp,
-  LogOut,
-} from "lucide-react";
-import { useAppStore } from "@/store/useAppStore";
-import { useAuthStore } from "@/store/useAuthStore";
-import { cn } from "@/lib/cn";
-import {
-  sidebarCategories,
-  sidebarBottomItems,
-  type NavItem,
-  type NavCategory,
-} from "@/lib/sidebar-config";
-
-type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-
-const ICON_MAP: Record<string, IconComponent> = {
-  LayoutDashboard,
-  BarChart3,
-  TrendingUpDown,
-  Briefcase,
-  PieChart,
-  Brain,
-  Filter,
-  Wallet,
-  Trophy,
-  AreaChart,
-  GitCompare,
-  Palette,
-  Activity,
-  Globe,
-  Newspaper,
-  Bell,
-  Search,
-  Eye,
-  BookOpen,
-  HelpCircle,
-  Settings,
-  User,
-  House,
-  Info,
-  Sparkles,
-  Book,
-  Mail,
-  ChevronDown,
-  ChevronUp,
-  LogOut,
-};
-
-const cleanPath = (p: string) => p.split("?")[0];
-
-const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boolean) =>
-  items.some((item) => checkActive(item.href));
-
-const SidebarIcon = memo(({ name, className }: { name: string; className?: string }) => {
-  const Icon = ICON_MAP[name] ?? Search;
-  return <Icon className={cn("h-5 w-5 shrink-0", className)} />;
-});
-SidebarIcon.displayName = "SidebarIcon";
+import { Sidebar, type SidebarComponentProps } from "./Sidebar";
 
 const SIDEBAR_WIDTH = "16rem";
 
 const RightSidebarComponent = () => {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const sidebarOpen = useAppStore((state) => state.rightSidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setRightSidebarOpen);
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
     const initial = new Set<string>();
@@ -222,3 +131,165 @@ const RightSidebarComponent = () => {
       </Link>
     );
   };
+
+  return (
+    <>
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 w-72 bg-[var(--color-surface)] border-l border-[var(--color-border)] transition-transform duration-300 ease-in-out shadow-[0_0_40px_rgba(0,0,0,0.08)]",
+          "lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "translate-x-full"
+        )}
+        aria-label="Quick access navigation"
+        style={{ width: SIDEBAR_WIDTH }}
+      >
+        <div className="flex h-screen flex-col">
+          <div className="flex h-16 items-center justify-between border-b border-[var(--color-border)] px-5 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
+                <span className="font-bold text-lg">B</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-base font-bold text-[var(--color-text-primary)] leading-tight tracking-tight">Quick Access</span>
+                <span className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider leading-tight">Navigation</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
+              aria-label="Close sidebar"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            <nav className="flex flex-col gap-1 px-3">
+              {sidebarCategories.map((cat) => {
+                const isExpanded = allExpanded.has(cat.label);
+                const hasActive = isCategoryActive(cat.items, isActive);
+
+                return (
+                  <div key={cat.label} className="mb-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(cat.label)}
+                      aria-expanded={isExpanded}
+                      aria-controls={`right-nav-category-${cat.label.replace(/\s+/g, "-").toLowerCase()}`}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30 min-h-[44px]",
+                        hasActive
+                          ? "text-[var(--color-primary)]"
+                          : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)]"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                          hasActive
+                            ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                            : "text-[var(--color-text-muted)]"
+                        )}
+                        aria-hidden="true"
+                      >
+                        <SidebarIcon name={cat.icon} className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="flex-1 text-left">{cat.label}</span>
+                      <span
+                        className={cn(
+                          "text-xs text-[var(--color-text-muted)] transition-transform duration-200 font-mono flex-shrink-0",
+                          isExpanded && "rotate-180"
+                        )}
+                        aria-hidden="true"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </span>
+                    </button>
+
+                    {isExpanded && (
+                      <div
+                        id={`right-nav-category-${cat.label.replace(/\s+/g, "-").toLowerCase()}`}
+                        className="ml-3 mt-1 flex flex-col gap-0.5"
+                      >
+                        {cat.items.map((item) => renderNavItem(item))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="border-t border-[var(--color-border)] p-3 shrink-0">
+            <div className="mb-3 px-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Account
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {sidebarBottomItems.map((item) => renderNavItem(item, true))}
+            </div>
+
+            {user && (
+              <div className="mt-3 border-t border-[var(--color-border)] pt-2">
+                <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white">
+                    {user.full_name?.[0] || user.username?.[0] || "U"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {user.full_name || user.username || "User"}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)] truncate">
+                      {user.email || ""}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const { logout } = useAuthStore.getState();
+                    logout();
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)]",
+                    "transition-all duration-200 hover:bg-[var(--color-error)]/10 hover:text-[var(--color-error)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)]/30 min-h-[44px]"
+                  )}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-error)]/10 text-[var(--color-error)]">
+                    <LogOut className="h-4 w-4" />
+                  </span>
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            )}
+
+            <div className="mt-3 px-3 text-center">
+              <p className="text-[10px] text-[var(--color-text-muted)]">
+                <span className="font-mono">Cmd</span> + <span className="font-mono">K</span> — Quick search
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+export const RightSidebar = memo(RightSidebarComponent);

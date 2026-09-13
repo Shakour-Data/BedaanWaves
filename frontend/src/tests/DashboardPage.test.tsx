@@ -112,7 +112,6 @@ describe('DashboardPage (new)', () => {
   it('shows KPI cards once data is loaded', async () => {
     render(<DashboardPage />);
     await waitFor(() => expect(screen.getByText('Universe')).toBeInTheDocument());
-    expect(screen.getByText('Avg Score')).toBeInTheDocument();
     expect(screen.getByText('Top Scorer')).toBeInTheDocument();
     expect(screen.getByText('1234')).toBeInTheDocument();
   });

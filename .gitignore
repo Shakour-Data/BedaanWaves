@@ -110,6 +110,7 @@ backend/logs/*.log
 # Temp / debug scripts
 *.pyc
 fix_*.py
+test_fix.py
 check_*.py
 verify_*.py
 count_*.py

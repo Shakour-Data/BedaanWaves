@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import { NewSidebar } from "./NewSidebar";
+import { NewSidebar } from "./Sidebar";
+import { RightSidebar } from "./RightSidebar";
 import { NewTopbar } from "./NewTopbar";
 
 interface NewDashboardShellProps {
@@ -54,7 +55,7 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
       </a>
       <NewSidebar />
 
-      <div className="flex flex-1 flex-col min-w-0 lg:ml-64">
+      <div className="flex flex-1 flex-col min-w-0 lg:mr-72">
         <NewTopbar title={title} />
 
         <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6" tabIndex={-1}>
@@ -63,6 +64,8 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
           </div>
         </main>
       </div>
+
+      <RightSidebar />
     </div>
   );
 }

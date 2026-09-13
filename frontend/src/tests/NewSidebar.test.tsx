@@ -8,14 +8,41 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+const mockSetSidebarOpen = vi.fn();
+const mockLogout = vi.fn();
+
+const mockAppStore = {
+  sidebarOpen: false,
+  setSidebarOpen: mockSetSidebarOpen,
+  toggleSidebar: vi.fn(),
+  theme: 'dark' as const,
+  setTheme: vi.fn(),
+  toggleTheme: vi.fn(),
+};
+
+const mockAuthStore = {
+  user: null,
+  logout: mockLogout,
+  isAuthenticated: false,
+  loading: false,
+  token: null,
+  refreshToken: null,
+  login: vi.fn(),
+  register: vi.fn(),
+};
+
 vi.mock('@/store/useAppStore', () => ({
-  useAppStore: (selector: (state: { sidebarOpen: boolean; setSidebarOpen: (open: boolean) => void }) => unknown) =>
-    selector({ sidebarOpen: false, setSidebarOpen: vi.fn() }),
+  useAppStore: (selector?: (state: typeof mockAppStore) => unknown) => {
+    if (selector) return selector(mockAppStore);
+    return mockAppStore;
+  },
 }));
 
 vi.mock('@/store/useAuthStore', () => ({
-  useAuthStore: (selector: (state: { user: null; logout: () => void }) => unknown) =>
-    selector({ user: null, logout: vi.fn() }),
+  useAuthStore: (selector?: (state: typeof mockAuthStore) => unknown) => {
+    if (selector) return selector(mockAuthStore);
+    return mockAuthStore;
+  },
 }));
 
 vi.mock('@/components/search/UnifiedSearchBar', () => ({
@@ -25,6 +52,15 @@ vi.mock('@/components/search/UnifiedSearchBar', () => ({
     </div>
   ),
 }));
+
+function expandAllCategories() {
+  const toggleButtons = screen.getAllByRole('button');
+  toggleButtons.forEach((btn) => {
+    if (btn.getAttribute('aria-expanded') === 'false') {
+      fireEvent.click(btn);
+    }
+  });
+}
 
 describe('sidebar-config', () => {
   it('exports categories and bottom items with icon fields', () => {
@@ -114,6 +150,20 @@ describe('sidebar-config', () => {
     const compareItem = allItems.find((item) => item.href === '/compare');
     expect(compareItem).toBeDefined();
   });
+
+  it('all categories have an icon field', () => {
+    sidebarCategories.forEach((cat) => {
+      expect(cat.icon).toBeTruthy();
+    });
+  });
+
+  it('all items have an icon field', () => {
+    const allItems = [...sidebarBottomItems];
+    sidebarCategories.forEach((cat) => allItems.push(...cat.items));
+    allItems.forEach((item) => {
+      expect(item.icon).toBeTruthy();
+    });
+  });
 });
 
 describe('NewSidebar component', () => {
@@ -124,7 +174,6 @@ describe('NewSidebar component', () => {
   it('renders the sidebar with brand logo', () => {
     render(<NewSidebar />);
     expect(screen.getByText('BedaanWaves')).toBeInTheDocument();
-    expect(screen.getByText('Analytics')).toBeInTheDocument();
   });
 
   it('renders the unified search bar', () => {
@@ -132,22 +181,12 @@ describe('NewSidebar component', () => {
     expect(screen.getByTestId('unified-search-bar')).toBeInTheDocument();
   });
 
-  it('renders category headers with icons', () => {
+  it('renders all category headers', () => {
     render(<NewSidebar />);
 
-    const categoryHeaders = sidebarCategories.map((cat) => cat.label);
-    categoryHeaders.forEach((header) => {
-      const headerEl = screen.getByText(header);
-      expect(headerEl).toBeInTheDocument();
-    });
-  });
-
-  it('renders all nav items from all categories', () => {
-    render(<NewSidebar />);
-
-    const allItems = sidebarCategories.flatMap((cat) => cat.items);
-    allItems.forEach((item) => {
-      expect(screen.getByText(item.label)).toBeInTheDocument();
+    sidebarCategories.forEach((cat) => {
+      const headerEls = screen.getAllByText(cat.label);
+      expect(headerEls.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -155,43 +194,45 @@ describe('NewSidebar component', () => {
     render(<NewSidebar />);
 
     sidebarBottomItems.forEach((item) => {
-      expect(screen.getByText(item.label)).toBeInTheDocument();
+      expect(screen.getAllByText(item.label).length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  it('highlights the active nav item based on current pathname', () => {
+  it('renders items from expanded categories', () => {
     render(<NewSidebar />);
+    expandAllCategories();
 
-    const dashboardLink = screen.getByRole('link', { name: /Dashboard/i });
-    expect(dashboardLink).toBeInTheDocument();
+    const allItems = sidebarCategories.flatMap((cat) => cat.items);
+    allItems.forEach((item) => {
+      const linkEls = screen.getAllByRole('link', { name: item.label });
+      expect(linkEls.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
-  it('auto-expands the category containing the active page', () => {
+  it('renders nav items from the auto-expanded category on initial load', () => {
     render(<NewSidebar />);
 
-    const analyticsHeader = screen.getByText('Analytics');
-    expect(analyticsHeader).toBeInTheDocument();
-
-    const analyticsItems = sidebarCategories.find((cat) => cat.label === 'Analytics')?.items || [];
-    const dashboardItem = analyticsItems.find((item) => item.href === '/dashboard');
-    if (dashboardItem) {
-      expect(screen.getByText(dashboardItem.label)).toBeInTheDocument();
-    }
+    const dashboardLinks = screen.getAllByRole('link', { name: 'Dashboard' });
+    expect(dashboardLinks.length).toBeGreaterThanOrEqual(1);
   });
 
   it('toggles category expand/collapse when header is clicked', () => {
     render(<NewSidebar />);
 
-    const expandButtons = screen.getAllByRole('button');
-    const firstCategoryButton = expandButtons.find((btn) =>
-      btn.getAttribute('aria-expanded') !== undefined
-    );
+    const toggleButtons = screen.getAllByRole('button');
+    const categoryToggle = toggleButtons.find((btn) => btn.getAttribute('aria-expanded') === 'false');
 
-    if (firstCategoryButton) {
-      const initialExpanded = firstCategoryButton.getAttribute('aria-expanded');
-      fireEvent.click(firstCategoryButton);
-      const newExpanded = firstCategoryButton.getAttribute('aria-expanded');
-      expect(newExpanded).not.toBe(initialExpanded);
+    expect(categoryToggle).toBeDefined();
+
+    if (categoryToggle) {
+      const initialExpanded = categoryToggle.getAttribute('aria-expanded');
+      fireEvent.click(categoryToggle);
+      const afterFirstClick = categoryToggle.getAttribute('aria-expanded');
+      expect(afterFirstClick).not.toBe(initialExpanded);
+
+      fireEvent.click(categoryToggle);
+      const afterSecondClick = categoryToggle.getAttribute('aria-expanded');
+      expect(afterSecondClick).toBe(initialExpanded);
     }
   });
 
@@ -200,16 +241,52 @@ describe('NewSidebar component', () => {
 
     const nav = screen.getByRole('navigation', { name: /main navigation/i });
     expect(nav).toBeInTheDocument();
+
+    const expandedState = nav.getAttribute('aria-label');
+    expect(expandedState).toBe('Main navigation');
   });
 
-  it('renders icons for all categories and items', () => {
+  it('renders icons for category headers (always visible)', () => {
     render(<NewSidebar />);
 
-    const allItems = sidebarCategories.flatMap((cat) => cat.items);
-    const allIcons = new Set([...sidebarCategories.map((c) => c.icon), ...allItems.map((i) => i.icon)]);
-
-    allIcons.forEach((iconName) => {
-      expect(screen.getByTestId(`icon-${iconName}`) || screen.getByLabelText(`icon-${iconName}`)).toBeDefined();
+    sidebarCategories.forEach((cat) => {
+      expect(screen.getAllByTestId(`icon-${cat.icon}`).length).toBeGreaterThan(0);
     });
+  });
+
+  it('renders icons for items in expanded categories', () => {
+    render(<NewSidebar />);
+    expandAllCategories();
+
+    const allItems = sidebarCategories.flatMap((cat) => cat.items);
+    allItems.forEach((item) => {
+      expect(screen.getAllByTestId(`icon-${item.icon}`).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('renders SVG icon elements', () => {
+    render(<NewSidebar />);
+    const svgElements = document.querySelectorAll('svg');
+    expect(svgElements.length).toBeGreaterThan(0);
+  });
+
+  it('closes sidebar on mobile when a nav item is clicked', () => {
+    render(<NewSidebar />);
+
+    const dashboardLinks = screen.getAllByRole('link', { name: 'Dashboard' });
+    fireEvent.click(dashboardLinks[0]);
+    expect(mockSetSidebarOpen).toHaveBeenCalledWith(false);
+  });
+
+  it('renders the Account section label', () => {
+    render(<NewSidebar />);
+    const accountLabels = screen.getAllByText('Account');
+    expect(accountLabels.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders a quick search hint in the footer', () => {
+    render(<NewSidebar />);
+    const quickSearchText = screen.getByText(/Quick search/i);
+    expect(quickSearchText).toBeInTheDocument();
   });
 });

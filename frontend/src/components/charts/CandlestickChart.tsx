@@ -12,7 +12,6 @@ import {
   type CandlestickData,
   type HistogramData } from "lightweight-charts";
 import { useAppStore } from "@/store/useAppStore";
-import { semanticColors, darkSemanticColors } from "@/styles/design-tokens";
 import type { Candle, Timeframe } from "@/lib/api/stocks";
 import { priceFormatter } from "@/lib/utils";
 
@@ -43,25 +42,25 @@ interface ThemeColors {
 }
 
 const LIGHT: ThemeColors = {
-  background: semanticColors.surface,
-  text: semanticColors.foreground,
-  grid: semanticColors.border,
-  border: semanticColors.border,
-  up: semanticColors.success,
-  down: semanticColors.primary,
-  volUp: `${semanticColors.success}59`,
-  volDown: `${semanticColors.primary}59`,
+  background: "var(--color-surface)",
+  text: "var(--color-foreground)",
+  grid: "var(--color-border)",
+  border: "var(--color-border)",
+  up: "var(--color-success)",
+  down: "var(--color-primary)",
+  volUp: "var(--color-success)59",
+  volDown: "var(--color-primary)59",
 };
 
 const DARK: ThemeColors = {
-  background: darkSemanticColors.surface,
-  text: darkSemanticColors.foreground,
-  grid: darkSemanticColors.border,
-  border: darkSemanticColors.border,
-  up: darkSemanticColors.success,
-  down: darkSemanticColors.error,
-  volUp: `${darkSemanticColors.success}59`,
-  volDown: `${darkSemanticColors.error}59`,
+  background: "var(--color-surface)",
+  text: "var(--color-foreground)",
+  grid: "var(--color-border)",
+  border: "var(--color-border)",
+  up: "var(--color-success)",
+  down: "var(--color-error)",
+  volUp: "var(--color-success)59",
+  volDown: "var(--color-error)59",
 };
 
 export function CandlestickChart({ candles, timeframe = "1d", height = 420 }: CandlestickChartProps) {
