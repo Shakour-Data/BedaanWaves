@@ -12,30 +12,30 @@ whether the email/token exists, so account enumeration is mitigated.
 Error philosophy (spec.yaml): "Never blame user; always suggest next action".
 """
 
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
-from app.api.dependencies import require_auth_rate_limit
 from app.schemas.schemas import (
-    PasswordResetConfirm,
     PasswordResetRequest,
-    PasswordResetResponse,
+    PasswordResetConfirm,
     PasswordResetVerifyRequest,
+    PasswordResetResponse,
     PasswordResetVerifyResponse,
 )
 from app.services.user.password_reset_service import (
     create_password_reset_token,
-    reset_password,
     verify_reset_token,
+    reset_password,
 )
+from app.services.user.auth_service import get_user_by_email
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["password-reset"])
 
 
 @router.post("/password-reset/request", response_model=PasswordResetResponse)
-async def request_password_reset(data: PasswordResetRequest, request: Request = Depends(require_auth_rate_limit)):
+async def request_password_reset(data: PasswordResetRequest):
     """Request a password-reset link.
 
     Always returns a generic ``status: success`` message to prevent account

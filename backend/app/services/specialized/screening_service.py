@@ -13,8 +13,7 @@ Supported criteria (all optional):
 - min_momentum                 : minimum absolute momentum
 """
 
-from typing import Any
-
+from typing import Any, Dict, List, Optional
 from ..core import AnalysisService
 
 
@@ -32,9 +31,9 @@ class ScreeningService(AnalysisService):
 
     async def screen(
         self,
-        universe: list[dict[str, Any]],
-        criteria: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+        universe: List[Dict[str, Any]],
+        criteria: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Screen a universe of stocks against criteria.
 
@@ -46,7 +45,7 @@ class ScreeningService(AnalysisService):
             {total, matched, criteria, results: [...]}
         """
         criteria = criteria or {}
-        results: list[dict[str, Any]] = []
+        results: List[Dict[str, Any]] = []
 
         for stock in universe:
             if self._passes(stock, criteria):
@@ -64,7 +63,7 @@ class ScreeningService(AnalysisService):
             "results": results,
         }
 
-    def _passes(self, stock: dict[str, Any], criteria: dict[str, Any]) -> bool:
+    def _passes(self, stock: Dict[str, Any], criteria: Dict[str, Any]) -> bool:
         """Return True if a stock satisfies all provided criteria."""
         score = stock.get("score")
         if score is not None:
@@ -112,7 +111,7 @@ class ScreeningService(AnalysisService):
 
         return True
 
-    def _match_record(self, stock: dict[str, Any], criteria: dict[str, Any]) -> dict[str, Any]:
+    def _match_record(self, stock: Dict[str, Any], criteria: Dict[str, Any]) -> Dict[str, Any]:
         """Build a result record with a normalized match_score (0-1)."""
         score = stock.get("score")
         score_component = 0.0

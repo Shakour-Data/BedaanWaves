@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 
 def utc_now_iso() -> str:
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()

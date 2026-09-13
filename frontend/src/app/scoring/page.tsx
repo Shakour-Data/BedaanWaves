@@ -68,15 +68,6 @@ export default function ScoringPage() {
             const change = prevCandle && lastCandle ? lastCandle.close - prevCandle.close : 0;
             const changePct = prevCandle && prevCandle.close ? (change / prevCandle.close) * 100 : 0;
 
-            const dim = scoring.dimension_scores || {};
-            const sub = scoring.sub_dimension_scores || {};
-            const num = (o: Record<string, number | string> | undefined, k: string): number | undefined => {
-              const v = o?.[k];
-              if (typeof v === "number") return v;
-              if (typeof v === "string" && !Number.isNaN(Number(v))) return Number(v);
-              return undefined;
-            };
-
             return {
               symbol: asset.symbol,
               name: asset.name || asset.symbol,
@@ -87,11 +78,11 @@ export default function ScoringPage() {
               recommendation,
               sector: asset.sector || "",
               metrics: {
-                value: num(sub, "valuation") ?? num(dim, "fundamental") ?? 50,
-                growth: num(sub, "growth") ?? num(dim, "ai") ?? 50,
-                profitability: num(sub, "profitability") ?? num(sub, "efficiency") ?? 50,
-                momentum: num(sub, "momentum") ?? num(dim, "technical") ?? 50,
-                quality: typeof num(dim, "risk") === "number" ? 100 - (num(dim, "risk") as number) : (num(sub, "efficiency") ?? 50),
+                value: typeof scoring.dimension_scores?.fundamental === "number" ? scoring.dimension_scores.fundamental : 50,
+                growth: typeof scoring.dimension_scores?.ai === "number" ? scoring.dimension_scores.ai : 50,
+                profitability: typeof scoring.dimension_scores?.fundamental === "number" ? scoring.dimension_scores.fundamental : 50,
+                momentum: typeof scoring.dimension_scores?.technical === "number" ? scoring.dimension_scores.technical : 50,
+                quality: typeof scoring.dimension_scores?.risk === "number" ? 100 - scoring.dimension_scores.risk : 50,
               },
               aiAnalysis: grade.includes("BULLISH") || grade.includes("STRONG_BULLISH")
                 ? "Strong AI score indicating favorable market conditions and fundamentals."
@@ -148,7 +139,7 @@ export default function ScoringPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[var(--color-primary)]" />
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[#00d4ff]" />
           <p className="text-[var(--color-text-secondary)]">Loading AI scoring data...</p>
         </div>
       </div>
@@ -195,7 +186,7 @@ export default function ScoringPage() {
             <p className="text-xs text-[var(--color-text-secondary)]">Analyzing 50+ metrics across 5 dimensions</p>
           </div>
         </div>
-
+        
         <div className="grid gap-4 sm:grid-cols-5">
           {[
             { label: "Value", desc: "P/E, P/B, EV/EBITDA" },
@@ -253,9 +244,7 @@ export default function ScoringPage() {
           ))
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-16">
-            <span className="text-4xl text-[var(--color-text-muted)]" role="img" aria-label="No results">
-              Search
-            </span>
+            <span className="text-4xl text-[#334155]">Search</span>
             <h3 className="mt-4 text-lg font-medium text-[var(--color-text-primary)]">No stocks found</h3>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Try adjusting your filters</p>
           </div>
@@ -267,10 +256,10 @@ export default function ScoringPage() {
 
 function ScoreRing({ score }: { score: number }) {
   const getColor = (s: number) => {
-    if (s >= 90) return "var(--color-success)";
-    if (s >= 75) return "var(--color-primary)";
-    if (s >= 60) return "var(--color-warning)";
-    return "var(--color-error)";
+    if (s >= 90) return "#10b981";
+    if (s >= 75) return "#00d4ff";
+    if (s >= 60) return "#f59e0b";
+    return "#ef4444";
   };
 
   return (
@@ -279,7 +268,7 @@ function ScoreRing({ score }: { score: number }) {
         <path
           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
           fill="none"
-          stroke="var(--color-border)"
+          stroke="#1e293b"
           strokeWidth="3"
         />
         <path
@@ -329,13 +318,13 @@ function ScoredStockCard({ stock, index }: { stock: ScoredStock; index: number }
           <div className={cn(
             "flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold",
             index === 0 ? "bg-[var(--color-warning)] text-white" :
-            index === 1 ? "bg-[var(--color-secondary)] text-white" :
-            index === 2 ? "bg-[var(--color-warning)]/80 text-white" :
+            index === 1 ? "bg-gray-400 text-white" :
+            index === 2 ? "bg-amber-700 text-white" :
             "bg-[var(--color-border)] text-[var(--color-text-secondary)]"
           )}>
             {index + 1}
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 text-lg font-bold text-[var(--color-primary)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#00d4ff]/20 to-[#0ea5e9]/20 text-lg font-bold text-[var(--color-primary)]">
             {stock.symbol.slice(0, 2)}
           </div>
         </div>
@@ -344,7 +333,7 @@ function ScoredStockCard({ stock, index }: { stock: ScoredStock; index: number }
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{stock.symbol}</h3>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold text-white shadow-sm ${getRecommendationColor(stock.recommendation)}`}>
+            <span className={`rounded-full bg-gradient-to-r px-2 py-0.5 text-xs font-semibold text-[var(--color-text-primary)] bg-gradient-to-r ${getRecommendationColor(stock.recommendation)}`}>
               {stock.recommendation}
             </span>
           </div>
@@ -395,18 +384,18 @@ function ScoredStockCard({ stock, index }: { stock: ScoredStock; index: number }
           <MetricBar label="Momentum" value={stock.metrics.momentum} />
           <MetricBar label="Quality" value={stock.metrics.quality} />
         </div>
-
+        
         <div className="lg:col-span-2">
           <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">AI Analysis</h4>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#00d4ff]/20 to-[#0ea5e9]/20">
                 <span className="text-[var(--color-primary)]">[AI]</span>
               </div>
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{stock.aiAnalysis}</p>
             </div>
           </div>
-
+          
           <div className="mt-4 flex flex-wrap gap-2">
             {["Technical Analysis", "Fundamental Data", "Market Sentiment", "Earnings Quality", "Risk Assessment"].map((tag) => (
               <span key={tag} className="rounded-full bg-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]">

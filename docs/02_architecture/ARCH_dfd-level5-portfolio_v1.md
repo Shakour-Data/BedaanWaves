@@ -21,7 +21,7 @@ flowchart TD
   FE --> N4[DELETE /notifications/{id}]
 
   subgraph Auth[Auth & User Context]
-    FE --> G[AuthGuard]
+    FE --> G[AuthGuardMiddleware]
     G --> UID[get_route_user_id]
   end
 

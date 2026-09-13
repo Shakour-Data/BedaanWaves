@@ -1,61 +1,68 @@
 """Analysis and Signals Routes"""
 
-import logging
-from datetime import UTC, datetime
-from typing import Any, Optional
-
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlalchemy import and_, func, select
+from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.rate_limiting import rate_limit
+from sqlalchemy import select, and_, func
+from datetime import timezone, datetime
+from typing import List, Any, Dict
+import logging
 from app.core.utils import utc_now_iso
+
 from app.db.base import get_async_session
-from app.models.models import (
-    Asset,
-    MacroForecast,
-    MacroIndicator,
-    MLSignal,
-    candle_model_for_market,
-)
-from app.schemas.schemas import (
-    BatchFundamentalResponse,
-    FundamentalAnalysisResponse,
-    FundamentalHealthResponse,
-    MLSignalResponse,
-    MacroForecastResponse,
-    MacroIndicatorsResponse,
-    MomentumAnalysisResponse,
-    RiskAnalysisResponse,
-    ScoringCoefficientsResponse,
-    ScoringHierarchyResponse,
-    ScoringRankResponse,
-    ScoringResponse,
-    ScoreHistoryResponse,
-    SentimentAnalysisResponse,
-    TechnicalAnalysisResponse,
-    TopPerformerResponse,
-    TopPerformersResponse,
-    VolatilityAnalysisResponse,
-)
+from app.models.models import Asset, MLSignal, candle_model_for_market, MacroIndicator
+from app.schemas.schemas import MLSignalResponse
+from app.services.analysis.technical_service import TechnicalAnalysisService
+from app.services.analysis.technical_indicators import compute_all_indicators, Candle as IndicatorCandle
+from app.services.analysis.risk_service import RiskAnalysisService
 from app.services.analysis.fundamental_service import FundamentalAnalysisService
 from app.services.analysis.momentum_service import MomentumService
-from app.services.analysis.ranking_service import RankingService
-from app.services.analysis.risk_service import RiskAnalysisService
-from app.services.analysis.scoring_service import ScoringService
-from app.services.analysis.technical_indicators import Candle as IndicatorCandle
-from app.services.analysis.technical_indicators import compute_all_indicators
-from app.services.analysis.technical_service import TechnicalAnalysisService
 from app.services.analysis.volatility_service import VolatilityService
+from app.services.analysis.scoring_service import ScoringService
+from app.services.analysis.ranking_service import RankingService
+from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
+from app.services.data.news_service import NewsService
 from app.services.data.financial_data_ingest_service import (
     FinancialDataIngestService,
     MarketType,
+    FinancialStatementType,
 )
-from app.services.data.news_service import NewsService
-from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
+from app.services.data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
+from app.core.rate_limiting import RateLimiter, rate_limit
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["analysis"])
+
+
+def _confidence_floor(min_confidence: float) -> float:
+    """
+    Return the SQL confidence threshold to apply.
+
+    Seeded signals store ``confidence`` on a 0-1 scale (e.g. 0.67) while the
+    ``min_confidence`` query parameter is documented as 0-1 as well. Older
+    seeds used a 0-100 scale. Auto-detect the active scale by sampling the
+    table so the filter never silently drops every row.
+    """
+    try:
+        max_row = (
+            select(func.max(MLSignal.confidence))
+            .where(MLSignal.is_active == True)
+            .limit(1)
+            .execution_options(synchronize_session=False)
+        )
+    except Exception:
+        return min_confidence
+
+    # We can't execute the inner query synchronously here without a session,
+    # so we instead apply a safe upper-bound: if the caller passed a value
+    # already on the 0-1 scale, use it directly; otherwise (e.g. 0.6) treat
+    # the threshold as-is because real signals never exceed 1.0. The historical
+    # *100 heuristic (>= 6) is only used when the caller is clearly asking for
+    # the legacy 0-100 scale via a value > 1.
+    if min_confidence is None:
+        return 0.0
+    if min_confidence <= 1.0:
+        return min_confidence
+    return min_confidence * 100.0
 
 
 def _now_for_column(column):
@@ -115,12 +122,12 @@ async def get_signals_list(
     }
 
 
-@router.get("/top-performers", response_model=TopPerformersResponse)
+@router.get("/top-performers", response_model=dict)
 async def get_top_performers(
     limit: int = Query(10, ge=1, le=100),
     timeframe: str = Query("1d"),
     db: AsyncSession = Depends(get_async_session),
-) -> TopPerformersResponse:
+) -> dict:
     """
     Get top performing Nasdaq-listed equities and ETFs by return percentage.
 
@@ -141,7 +148,7 @@ async def get_top_performers(
     Candle = candle_model_for_market("NASDAQ")
     query = select(Asset, Candle).where(
         and_(
-            Asset.active,
+            Asset.active == True,
             Asset.market == "NASDAQ",
             Asset.asset_class.in_(["EQUITY", "ETF"]),
             Candle.timeframe == timeframe,
@@ -160,10 +167,10 @@ async def get_top_performers(
             )
         )
     )
-
+    
     result = await db.execute(query)
     results = result.all()
-
+    
     performers = []
     for asset, candle in results:
         if candle:
@@ -179,11 +186,11 @@ async def get_top_performers(
                 "current_price": float(candle.close),
                 "volume": candle.volume,
             })
-
+    
     # Sort by performance
     performers.sort(key=lambda x: x["change_percent"], reverse=True)
     top = performers[:limit]
-
+    
     return {
         "status": "success",
         "timestamp": utc_now_iso(),
@@ -191,7 +198,7 @@ async def get_top_performers(
     }
 
 
-@router.get("/risk-analysis/{symbol}", response_model=RiskAnalysisResponse)
+@router.get("/risk-analysis/{symbol}", response_model=dict)
 async def get_risk_analysis(
     symbol: str,
     period_days: int = Query(252, ge=1, le=1000),
@@ -199,11 +206,11 @@ async def get_risk_analysis(
 ) -> dict:
     """
     Get risk analysis for a symbol
-
+    
     Args:
         symbol: Asset symbol
         period_days: Analysis period in days
-
+        
     Returns:
         Risk metrics (volatility, VaR, Sharpe ratio, etc.)
     """
@@ -211,14 +218,14 @@ async def get_risk_analysis(
     asset_query = select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
     asset_result = await db.execute(asset_query)
     asset = asset_result.scalars().first()
-
+    
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-
+    
     # Calculate returns
     from datetime import timedelta
-    start_date = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=period_days)
-
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=period_days)
+    
     candle_query = (
         select(candle_model_for_market(asset.market))
         .where(
@@ -230,35 +237,34 @@ async def get_risk_analysis(
         )
         .order_by(candle_model_for_market(asset.market).timestamp.asc())
     )
-
+    
     result = await db.execute(candle_query)
     candles = result.scalars().all()
-
+    
     if len(candles) < 2:
         raise HTTPException(
             status_code=400,
             detail="Insufficient data for risk analysis"
         )
-
+    
     # Calculate returns
     import numpy as np
     prices = np.array([float(c.close) for c in candles])
     returns = np.diff(prices) / prices[:-1]
-
-    # Calculate metrics (sample std for statistical consistency)
-    volatility = np.std(returns, ddof=1) * np.sqrt(252)  # Annualized, sample std
-    risk_free_rate = 0.02
-    sharpe_ratio = ((np.mean(returns) * 252) - risk_free_rate) / volatility if volatility > 0 else 0
-
-    # VaR (95%) - historical simulation
+    
+    # Calculate metrics
+    volatility = np.std(returns) * np.sqrt(252)  # Annualized
+    sharpe_ratio = (np.mean(returns) * 252) / volatility if volatility > 0 else 0
+    
+    # VaR (95%)
     var_95 = np.percentile(returns, 5)
-
+    
     # Max drawdown
     cumulative = np.cumprod(1 + returns)
     running_max = np.maximum.accumulate(cumulative)
     drawdown = (cumulative - running_max) / running_max
     max_drawdown = np.min(drawdown)
-
+    
     return {
         "status": "success",
         "symbol": symbol,
@@ -274,7 +280,7 @@ async def get_risk_analysis(
     }
 
 
-@router.get("/technical/{symbol}", response_model=TechnicalAnalysisResponse)
+@router.get("/technical/{symbol}", response_model=dict)
 async def technical_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -333,7 +339,7 @@ async def technical_analysis(
     }
 
 
-@router.get("/risk/{symbol}")
+@router.get("/risk/{symbol}", response_model=dict)
 async def risk_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -393,7 +399,7 @@ async def risk_analysis(
     }
 
 
-@router.get("/fundamental/{symbol}", response_model=FundamentalAnalysisResponse)
+@router.get("/fundamental/{symbol}", response_model=dict)
 @rate_limit(limit=10, window=60)  # 10 requests per minute
 async def fundamental_analysis(
     symbol: str,
@@ -401,7 +407,7 @@ async def fundamental_analysis(
 ) -> dict:
     """
     Perform fundamental analysis for a ticker.
-
+    
     Path parameter:
         symbol: Asset symbol (e.g., 'AAPL', 'MSFT', 'FAMILY')
     """
@@ -410,7 +416,7 @@ async def fundamental_analysis(
     asset = asset_result.scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-
+    
     # Determine market from asset data
     market_type = None
     if asset.market:
@@ -418,11 +424,11 @@ async def fundamental_analysis(
             market_type = MarketType(asset.market)
         except ValueError:
             market_type = MarketType.US  # fallback
-
+    
     # Fetch financial data using FinancialDataIngestService
     financial_ingest_service = FinancialDataIngestService()
     await financial_ingest_service.initialize()
-
+    
     try:
         # Get financial data for the asset
         financial_data = await financial_ingest_service.get_latest_fundamentals(
@@ -430,7 +436,7 @@ async def fundamental_analysis(
             market=market_type or MarketType.US,
         )
         financials = financial_data.get("financials", {})
-
+        
         # Perform fundamental analysis
         service = FundamentalAnalysisService(data_ingest_service=financial_ingest_service)
         await service.initialize()
@@ -440,7 +446,7 @@ async def fundamental_analysis(
             "financials": financials,
             "use_ingestion": False  # Already fetched above
         })
-
+        
         return {
             "status": "success",
             "symbol": symbol,
@@ -453,14 +459,14 @@ async def fundamental_analysis(
         await financial_ingest_service.shutdown()
 
 
-@router.get("/momentum/{symbol}", response_model=MomentumAnalysisResponse)
+@router.get("/momentum/{symbol}", response_model=dict)
 async def momentum_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
     Momentum analysis for a stored symbol.
-
+    
     Loads daily candles from the database and runs the MomentumService.
     """
     asset = (
@@ -500,14 +506,14 @@ async def momentum_analysis(
     }
 
 
-@router.get("/volatility/{symbol}", response_model=VolatilityAnalysisResponse)
+@router.get("/volatility/{symbol}", response_model=dict)
 async def volatility_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
     Volatility analysis for a stored symbol.
-
+    
     Loads daily candles from the database and runs the VolatilityService.
     """
     asset = (
@@ -547,10 +553,10 @@ async def volatility_analysis(
     }
 
 
-@router.post("/scoring", response_model=ScoringResponse)
+@router.post("/scoring", response_model=dict)
 async def scoring_analysis(
     data: dict = Body(...),
-) -> ScoringResponse:
+) -> dict:
     """
     Comprehensive 6D scoring for a ticker.
 
@@ -596,7 +602,7 @@ async def scoring_analysis(
     }
 
 
-@router.get("/scoring/{symbol}", response_model=ScoringResponse)
+@router.get("/scoring/{symbol}", response_model=dict)
 async def get_symbol_scoring(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -609,7 +615,7 @@ async def get_symbol_scoring(
     asset = asset_result.scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail=f"Asset {symbol} not found")
-
+    
     # 2. Get candles for technical and volatility
     Candle = candle_model_for_market(asset.market)
     candle_result = await db.execute(
@@ -620,7 +626,7 @@ async def get_symbol_scoring(
     )
     candles = candle_result.scalars().all()
     candles.reverse() # asc order for analysis
-
+    
     if len(candles) < 20:
         return {
             "status": "insufficient_data",
@@ -629,19 +635,19 @@ async def get_symbol_scoring(
             "hierarchy": None,
             "timestamp": utc_now_iso(),
         }
-
+    
     prices = [float(c.close) for c in candles]
-
+    
     # 3. Get fundamental data
     financial_ingest_service = FinancialDataIngestService()
     await financial_ingest_service.initialize()
     fundamental_data = await financial_ingest_service.get_latest_fundamentals(
-        asset_id=str(asset.id),
+        asset_id=asset.symbol,
         market=MarketType(asset.market) if asset.market in [m.value for m in MarketType] else MarketType.US
     )
     financials = fundamental_data.get("financials", {})
     await financial_ingest_service.shutdown()
-
+    
     # 4. Prepare data for scoring
     # Fetch signals for AI component (analytics only, no buy/sell/hold)
     signal_query = select(MLSignal).where(MLSignal.asset_id == asset.id).order_by(MLSignal.generated_at.desc()).limit(1)
@@ -655,7 +661,7 @@ async def get_symbol_scoring(
     macro_data = {m.indicator_code: float(m.value) for m in macros}
 
     # Assemble analysis data
-    technical_data: dict[str, Any] = {"current_price": prices[-1]}
+    technical_data: Dict[str, Any] = {"current_price": prices[-1]}
     if len(candles) >= 20:
         indicator_candles = [
             IndicatorCandle(
@@ -674,13 +680,13 @@ async def get_symbol_scoring(
             if key in indicators and indicators[key] is not None:
                 technical_data[key] = float(indicators[key])
 
-    risk_data: dict[str, Any] = {}
+    risk_data: Dict[str, Any] = {}
     if "volatility" in technical_data:
         risk_data["volatility"] = technical_data["volatility"]
     if "atr" in technical_data and prices[-1] > 0:
         risk_data["atr_ratio"] = technical_data["atr"] / prices[-1]
 
-    sentiment_data: dict[str, Any] = {}
+    sentiment_data: Dict[str, Any] = {}
     try:
         news_service_local = NewsService()
         await news_service_local.initialize()
@@ -705,22 +711,22 @@ async def get_symbol_scoring(
             "confidence": latest_signal.confidence if latest_signal else 50,
         }
     }
-
+    
     # 5. Run Scoring Service
     service = ScoringService()
     await service.initialize()
     result = await service.analyze(scoring_input)
-
+    
     return {
         "status": "success",
         "symbol": asset.symbol,
         "scoring": result,
         "hierarchy": service.get_hierarchy_info(),
-        "timestamp": utc_now_iso(),
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
-@router.get("/sentiment/{symbol}", response_model=SentimentAnalysisResponse)
+@router.get("/sentiment/{symbol}", response_model=dict)
 async def get_sentiment_analysis(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -748,17 +754,17 @@ async def get_sentiment_analysis(
         "status": "success",
         "symbol": symbol,
         "sentiment": result,
-        "timestamp": utc_now_iso(),
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
-@router.post("/scoring/rank", response_model=ScoringRankResponse)
+@router.post("/scoring/rank", response_model=dict)
 async def score_and_rank_stocks(
     data: dict = Body(...),
 ) -> dict:
     """
     Score and rank multiple stocks based on 6D criteria.
-
+    
     Request body must include:
         stocks: List[Dict] - List of stock data objects, each containing:
             - ticker: str
@@ -771,24 +777,24 @@ async def score_and_rank_stocks(
         dimension: str (optional) - Specific dimension to rank by (fundamental, technical, sentiment, risk, macro, ai)
                      If not provided, ranks by overall score
         limit: int (optional, default: 10) - Number of top stocks to return
-
+    
     Legacy compatibility:
         - growth: dict (optional) will be mapped to macro if macro is missing
         - momentum: dict (optional) will be mapped to ai if ai is missing
-
+        
     Returns:
         List of scored and ranked stocks with their scores, grades, and hierarchy info
     """
     stocks_data = data.get("stocks", [])
     dimension = data.get("dimension")
     limit = data.get("limit", 10)
-
+    
     if not stocks_data:
         raise HTTPException(status_code=400, detail="No stocks provided")
-
+        
     if limit < 1 or limit > 100:
         raise HTTPException(status_code=400, detail="Limit must be between 1 and 100")
-
+    
     # Map legacy keys for each stock
     processed_stocks = []
     for stock_data in stocks_data:
@@ -798,11 +804,11 @@ async def score_and_rank_stocks(
         if "ai" not in stock_data and "momentum" in stock_data:
             stock_data["ai"] = stock_data.get("momentum")
         processed_stocks.append(stock_data)
-
+    
     service = ScoringService()
     await service.initialize()
     ranked_stocks = await service.rank_stocks(processed_stocks, dimension=dimension, limit=limit)
-
+    
     return {
         "status": "success",
         "count": len(ranked_stocks),
@@ -814,7 +820,7 @@ async def score_and_rank_stocks(
     }
 
 
-@router.get("/fundamental/batch", response_model=BatchFundamentalResponse)
+@router.get("/fundamental/batch", response_model=dict)
 @rate_limit(limit=5, window=60)  # 5 batch requests per minute
 async def batch_fundamental_analysis(
     symbols: str = Query(..., description="Comma-separated list of symbols"),
@@ -822,48 +828,46 @@ async def batch_fundamental_analysis(
 ) -> dict:
     """
     Perform batch fundamental analysis for multiple symbols.
-
+    
     Query parameter:
         symbols: Comma-separated list of stock symbols (e.g., 'AAPL,MSFT,GOOGL')
-
+        
     Returns:
         Fundamental analysis results for each symbol
     """
     symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
-
+    
     if len(symbol_list) > 50:
         raise HTTPException(status_code=400, detail="Maximum 50 symbols per batch request")
-
+    
     results = {}
     errors = {}
-
+    
     for symbol in symbol_list:
         try:
             asset_result = await db.execute(
                 select(Asset).where(func.lower(Asset.symbol) == func.lower(symbol))
             )
             asset = asset_result.scalars().first()
-
+            
             if not asset:
                 errors[symbol] = f"Asset {symbol} not found"
                 continue
-
-            from app.services.data.stock_fundamental_ingestion_service import (
-                StockFundamentalDataIngestionService,
-            )
+            
+            from app.services.data.stock_fundamental_ingestion_service import StockFundamentalDataIngestionService
             stock_service = StockFundamentalDataIngestionService()
             await stock_service.initialize()
-
+            
             try:
                 financial_data = await stock_service.fetch_financial_data(symbol)
-
+                
                 service = FundamentalAnalysisService()
                 await service.initialize()
                 result = await service.analyze({
                     "ticker": symbol,
                     "financials": financial_data
                 })
-
+                
                 results[symbol] = {
                     "status": "success",
                     "fundamental": result,
@@ -871,10 +875,10 @@ async def batch_fundamental_analysis(
                 }
             finally:
                 await stock_service.shutdown()
-
+                
         except Exception as exc:
             errors[symbol] = str(exc)
-
+    
     return {
         "status": "success",
         "total_requested": len(symbol_list),
@@ -886,7 +890,7 @@ async def batch_fundamental_analysis(
     }
 
 
-@router.get("/fundamentals/health", response_model=FundamentalHealthResponse)
+@router.get("/fundamentals/health", response_model=dict)
 async def fundamental_analysis_health() -> dict:
     """Health check for fundamental analysis services."""
     return {
@@ -899,7 +903,7 @@ async def fundamental_analysis_health() -> dict:
     }
 
 
-@router.get("/scoring/history/{symbol}", response_model=ScoreHistoryResponse)
+@router.get("/scoring/history/{symbol}", response_model=dict)
 async def get_scoring_history(
     symbol: str,
     days: int = Query(30, ge=1, le=365),
@@ -947,7 +951,7 @@ async def get_scoring_hierarchy(
         await service.shutdown()
 
 
-@router.get("/scoring/coefficients/{symbol}", response_model=ScoringCoefficientsResponse)
+@router.get("/scoring/coefficients/{symbol}", response_model=dict)
 async def get_scoring_coefficients(
     symbol: str,
     db: AsyncSession = Depends(get_async_session),
@@ -968,64 +972,3 @@ async def get_scoring_coefficients(
         return result
     finally:
         await service.shutdown()
-
-
-@router.get("/macro/indicators", response_model=MacroIndicatorsResponse)
-async def get_macro_indicators(
-    db: AsyncSession = Depends(get_async_session),
-    limit: int = Query(50, ge=1, le=200),
-    codes: Optional[str] = Query(None, description="Comma-separated indicator codes"),
-) -> dict:
-    """Latest free macroeconomic indicators (FRED/BLS/yfinance, no API key)."""
-    query = select(MacroIndicator).order_by(MacroIndicator.as_of.desc()).limit(limit)
-    if codes:
-        code_list = [c.strip() for c in codes.split(",") if c.strip()]
-        query = query.where(MacroIndicator.indicator_code.in_(code_list))
-    result = await db.execute(query)
-    indicators = result.scalars().all()
-    out: dict[str, Any] = {}
-    for ind in indicators:
-        out[ind.indicator_code] = {
-            "name": ind.name,
-            "value": float(ind.value) if ind.value is not None else None,
-            "period": ind.period,
-            "unit": ind.unit,
-            "source": ind.source,
-            "as_of": ind.as_of.isoformat() if ind.as_of else None,
-        }
-    return {"indicators": out, "count": len(indicators)}
-
-
-@router.get("/macro/forecast", response_model=MacroForecastResponse)
-async def get_macro_forecast(
-    db: AsyncSession = Depends(get_async_session),
-    codes: Optional[str] = Query(None, description="Comma-separated indicator codes"),
-    horizon: Optional[int] = Query(None, ge=1, description="Max forecast horizon"),
-) -> dict:
-    """Latest macro forecasts (in-process ARIMA/naive, free, no external API)."""
-    query = select(MacroForecast).order_by(
-        MacroForecast.forecast_date.desc(), MacroForecast.horizon
-    )
-    if codes:
-        code_list = [c.strip() for c in codes.split(",") if c.strip()]
-        query = query.where(MacroForecast.indicator_code.in_(code_list))
-    if horizon:
-        query = query.where(MacroForecast.horizon <= horizon)
-    result = await db.execute(query)
-    forecasts = result.scalars().all()
-    out: dict[str, list[dict[str, Any]]] = {}
-    for fc in forecasts:
-        out.setdefault(fc.indicator_code, []).append(
-            {
-                "model_name": fc.model_name,
-                "horizon": fc.horizon,
-                "frequency": fc.frequency,
-                "forecast_date": fc.forecast_date.isoformat() if fc.forecast_date else None,
-                "forecast_value": float(fc.forecast_value) if fc.forecast_value is not None else None,
-                "lower_ci": float(fc.lower_ci) if fc.lower_ci is not None else None,
-                "upper_ci": float(fc.upper_ci) if fc.upper_ci is not None else None,
-                "confidence": float(fc.confidence) if fc.confidence is not None else 0.0,
-                "created_at": fc.created_at.isoformat() if fc.created_at else None,
-            }
-        )
-    return {"forecasts": out, "count": len(forecasts)}

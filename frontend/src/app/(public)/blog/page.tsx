@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { ArrowRight, Calendar, Clock, User, Tag } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -72,7 +73,8 @@ const blogPosts = [
 
 export default function BlogPage() {
   return (
-    <div className="page-transition-enter">
+    <PublicLayout>
+      <div className="page-transition-enter">
         {/* Hero */}
         <section className="relative overflow-hidden py-20 lg:py-32">
           <div className="absolute inset-0 overflow-hidden">
@@ -201,5 +203,6 @@ export default function BlogPage() {
           </div>
         </section>
       </div>
+    </PublicLayout>
   );
 }

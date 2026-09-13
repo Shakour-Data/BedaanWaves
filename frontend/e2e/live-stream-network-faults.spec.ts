@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 function sseRoutePatterns() {
   return [
@@ -12,7 +12,7 @@ function matchesAnySse(url: string): boolean {
   return /\/live-sse\//i.test(url) || /live.*sse/i.test(url);
 }
 
-async function getConnectionPillText(page: Page): Promise<string> {
+async function getConnectionPillText(page: any): Promise<string> {
   const pills = page.locator(
     'span.font-bold.tracking-wide, ' +
     '[data-health], ' +
@@ -29,7 +29,7 @@ async function getConnectionPillText(page: Page): Promise<string> {
     try {
       const t = await pills.nth(i).textContent({ timeout: 1_500 });
       if (t && t.trim().length > 0) parts.push(t.trim());
-    } catch { /* ignore */ }
+    } catch (_e) { /* ignore */ }
   }
   return parts.join(' | ');
 }
@@ -52,7 +52,7 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
         await page.route(pattern, async (route) => {
           const url = route.request().url();
           if (!matchesAnySse(url)) {
-            try { await route.fallback(); } catch { /* ignore */ }
+            try { await route.fallback(); } catch (_e) { /* ignore */ }
             return;
           }
           const delay = Math.random() * 5000;
@@ -62,19 +62,19 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
             observedEvents.push({ ts: Date.now(), kind: 'abort', url, aborted: true });
             try {
               await route.abort('timedout');
-            } catch { /* ignore */ }
+            } catch (_e) { /* ignore */ }
             return;
           }
           try {
             await route.continue();
-          } catch {
-            try { await route.fallback(); } catch { /* ignore */ }
+          } catch (_e) {
+            try { await route.fallback(); } catch (_e2) { /* ignore */ }
           }
         });
       }
 
       await page.goto('/analysis', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      try { await page.waitForSelector('body', { timeout: 20_000, state: 'visible' }); } catch { /* ignore */ }
+      try { await page.waitForSelector('body', { timeout: 20_000, state: 'visible' }); } catch (_e) { /* ignore */ }
 
       const scenarioStart = Date.now();
       const DURATION_MS = 20_000;
@@ -105,6 +105,7 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
     test('[Scenario B] Fast 3G throttle + 3× offline toggle (10s) / online (20s) → reconnects counted, final price near server (TR12.1 Scenario B)', async ({
       page,
       context,
+      browser,
     }) => {
       await context.addInitScript(() => {
         localStorage.setItem('token', 'dev-token-e2e-stub');
@@ -113,7 +114,7 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
       const ctx = page.context();
       try {
         ctx.setDefaultNavigationTimeout(60_000);
-      } catch { /* ignore */ }
+      } catch (_e) { /* ignore */ }
 
       try {
         await page.route('**/*', async (route) => {
@@ -122,12 +123,12 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
           if (matchesAnySse(url) || /\/api\//i.test(url)) {
             await new Promise((r) => setTimeout(r, 300 + Math.random() * 500));
           }
-          try { await route.continue(); } catch { /* ignore */ }
+          try { await route.continue(); } catch (_e) { /* ignore */ }
         });
-      } catch { /* ignore */ }
+      } catch (_e) { /* ignore */ }
 
       await page.goto('/stocks/AAPL', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      try { await page.waitForSelector('body', { timeout: 20_000, state: 'visible' }); } catch { /* ignore */ }
+      try { await page.waitForSelector('body', { timeout: 20_000, state: 'visible' }); } catch (_e) { /* ignore */ }
 
       let reconnectCounter = 0;
       ctx.on('requestfailed', (req) => {
@@ -142,19 +143,20 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
       const CYCLES = 3;
       for (let c = 1; c <= CYCLES; c++) {
         console.log(`[ScenarioB] cycle ${c}: setOffline(true) for 10s`);
-        try { await ctx.setOffline(true); } catch { /* ignore */ }
+        try { await ctx.setOffline(true); } catch (_e) { /* ignore */ }
         await page.waitForTimeout(10_000);
         console.log(`[ScenarioB] cycle ${c}: setOffline(false) for 20s`);
-        try { await ctx.setOffline(false); } catch { /* ignore */ }
+        try { await ctx.setOffline(false); } catch (_e) { /* ignore */ }
         await page.waitForTimeout(20_000);
       }
 
       await page.unrouteAll();
-      try { await ctx.setOffline(false); } catch { /* ignore */ }
+      try { await ctx.setOffline(false); } catch (_e) { /* ignore */ }
 
       console.log(`[ScenarioB] reconnectCounter (SSE requests seen) = ${reconnectCounter}`);
       expect(reconnectCounter >= 0).toBe(true);
 
+      let serverPrice: number | null = null;
       let serverPriceText = '';
       try {
         const res = await page.request.get('/api/v1/live/quote/AAPL', { timeout: 15_000 });
@@ -165,13 +167,15 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
             const evData = (nested?.data as Record<string, unknown> | undefined) ?? nested;
             const p = evData?.price ?? evData?.current_price ?? nested?.price ?? nested?.current_price;
             if (typeof p === 'number') {
+              serverPrice = p;
               serverPriceText = p.toFixed(2);
             } else if (typeof p === 'string') {
               serverPriceText = p;
+              serverPrice = parseFloat(p);
             }
-          } catch { /* ignore */ }
+          } catch (_e) { /* ignore */ }
         }
-      } catch { /* ignore */ }
+      } catch (_e) { /* ignore */ }
       console.log(`[ScenarioB] server latest AAPL price = ${serverPriceText || '(unavailable)'}`);
 
       const bodyText = await page.locator('body').textContent({ timeout: 5_000 }) || '';
@@ -198,7 +202,7 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
       });
 
       await page.goto('/ranking', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      try { await page.waitForSelector('body', { timeout: 20_000, state: 'visible' }); } catch { /* ignore */ }
+      try { await page.waitForSelector('body', { timeout: 20_000, state: 'visible' }); } catch (_e) { /* ignore */ }
 
       const initialUrl = page.url();
       const checkbox = page.locator('input[type="checkbox"], [role="checkbox"], label:has-text("LIVE"), label:has-text("Live")');
@@ -213,7 +217,7 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
               liveOnByDefault = true;
               break;
             }
-          } catch { /* ignore */ }
+          } catch (_e) { /* ignore */ }
         }
       }
       console.log(`[ScenarioC] LIVE checkbox default on = ${liveOnByDefault}`);
@@ -259,7 +263,7 @@ test.describe('Live stream network fault injection — Scenarios A, B, C', () =>
             store.setState({ streams });
             return true;
           }
-        } catch { /* ignore */ }
+        } catch (_e) { /* ignore */ }
         return false;
       });
       console.log(`[ScenarioC] score_delta inject via zustand: ${injectOk}`);

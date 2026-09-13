@@ -2,7 +2,6 @@
 
 import { Component, ReactNode } from "react";
 import { useUXStore } from "@/store/useUXStore";
-import { captureFrontendError } from "@/lib/frontend-observability";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -25,7 +24,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
-    captureFrontendError(error, { componentStack: errorInfo.componentStack });
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
   render() {

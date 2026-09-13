@@ -5,14 +5,14 @@ the router is mounted into a throwaway app and ``preference_service`` is mocked,
 so no database or authenticated session is required.
 """
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch, AsyncMock
 from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.routes.settings import RECENT_SEARCHES_KEY, router
+from app.api.routes.settings import router, RECENT_SEARCHES_KEY
 
 
 @pytest.fixture
@@ -49,18 +49,18 @@ class TestRecentSearches:
         assert resp.status_code == 200
         body = resp.json()
         assert body["status"] == "success"
-        assert body["searches"] == []
+        assert body["recent_searches"] == []
 
     def test_get_returns_stored_searches(self, client, mock_prefs):
         mock_prefs["get"].return_value = SimpleNamespace(value=["AAPL", "TSLA", "NVDA"])
         resp = client.get("/api/v1/settings/recent-searches")
         assert resp.status_code == 200
-        assert resp.json()["searches"] == ["AAPL", "TSLA", "NVDA"]
+        assert resp.json()["recent_searches"] == ["AAPL", "TSLA", "NVDA"]
 
     def test_get_ignores_non_string_values(self, client, mock_prefs):
         mock_prefs["get"].return_value = SimpleNamespace(value=["AAPL", 123, None, "MSFT"])
         resp = client.get("/api/v1/settings/recent-searches")
-        assert resp.json()["searches"] == ["AAPL", "MSFT"]
+        assert resp.json()["recent_searches"] == ["AAPL", "MSFT"]
 
     def test_post_adds_new_search(self, client, mock_prefs):
         mock_prefs["get"].return_value = None

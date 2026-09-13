@@ -36,8 +36,6 @@ import {
 } from "@/store/useDateStore";
 import { ScoreTripleBadge } from "@/components/scoring/ScoreTripleBadge";
 import { AsOfStamp } from "@/components/scoring/AsOfStamp";
-import { ChartTimeRangeToggle } from "@/components/dashboard/ChartTimeRangeToggle";
-import { DimensionChartSelector } from "@/components/dashboard/DimensionChartSelector";
 
 interface Performer {
   symbol: string;
@@ -90,7 +88,7 @@ export default function AnalysisPage() {
   const [scoreTrend, setScoreTrend] = useState<Array<{ time: string; value: number }>>([]);
   const [analysisData, setAnalysisData] = useState<{
     fundamental?: Record<string, unknown>;
-    technical?: Record<string, unknown> | null;
+    technical?: unknown;
     sentiment?: {
       label?: string;
       confidence?: number;
@@ -104,11 +102,6 @@ export default function AnalysisPage() {
     symbol?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Chart controls state
-  const [chartTimeRange, setChartTimeRange] = useState<"6h" | "24h" | "7d" | "30d" | "90d" | "1y">("24h");
-  const [chartLevel, setChartLevel] = useState<"dimension" | "sub_dimension" | "aspect" | "sub_aspect">("dimension");
-  const [chartKey, setChartKey] = useState<string>("overall");
 
   // Snapshot Zustand integration
   const setLiveLatestFromStream = useDateStore((s) => s.setLiveLatestFromStream);
@@ -182,34 +175,24 @@ export default function AnalysisPage() {
       setLoading(true);
       try {
         // ------- UNIFIED SNAPSHOT (preferred, parity-first path) -------
-        const intradayRanges = ["6h", "24h", "7d"] as const;
-        const isIntraday = (intradayRanges as readonly string[]).includes(chartTimeRange);
         const snapPromise = loadSnapshot({
-          window_daily: isIntraday ? 30 : parseInt(chartTimeRange.replace("d", "").replace("y", "")) * (chartTimeRange.endsWith("y") ? 365 : 1),
-          ...(isIntraday ? { window_intraday: chartTimeRange as "6h" | "24h" | "7d" } : {}),
+          window_daily: 30,
+          window_intraday: "24h",
         }).catch(() => null);
 
         // ------- LEGACY FALLBACKS (execute anyway for non-snapshot data) -------
         const performersPromise = apiClient.get<{ data: Performer[] }>(
-          "/analysis/dashboard/top-performers?level=overall&limit=10",
+          "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ",
           { timeout: 60000 }
-        ).catch(() => null);
+        );
         const symbolsPromise = apiClient.get<{ data: SymbolItem[] }>(
           "/market/symbols?market=NASDAQ&limit=50",
           { timeout: 60000 }
-        ).catch(() => null);
+        );
         const generalPromise = fetchGeneralDashboard({ latest: true }).catch(
           () => null as GeneralDashboardResponse | null,
         );
-        const trendPromise = fetchScoreTrend(
-          chartTimeRange === "24h" || chartTimeRange === "6h" || chartTimeRange === "7d"
-            ? 1
-            : chartTimeRange.endsWith("y")
-              ? parseInt(chartTimeRange) * 365
-              : parseInt(chartTimeRange),
-          "NASDAQ",
-          { latest: true }
-        ).catch(
+        const trendPromise = fetchScoreTrend(30, "NASDAQ", { latest: true }).catch(
           () => null,
         );
 
@@ -233,26 +216,14 @@ export default function AnalysisPage() {
           if (typeof snap.scores?.current?.overall === "number") {
             setOverallScore(snap.scores.current.overall);
           }
-          // Trend: use daily or intraday series based on selected time range
-          const trendSeries = (() => {
-            const isIntraday = ["6h", "24h", "7d"].includes(chartTimeRange);
-            const raw = isIntraday ? snap.trends?.intraday : snap.trends?.daily;
-            const source = Array.isArray(raw) ? raw as unknown as Array<Record<string, unknown>> : [];
-            if (source.length > 0) {
-              return source.map((p) => {
-                const time = (p.date || p.timestamp || "") as string;
-                const value = typeof p.overall === "number"
-                  ? p.overall as number
-                  : typeof p.avg_score === "number"
-                    ? p.avg_score as number
-                    : NaN;
-                return { time, value };
-              }).filter((p) => Number.isFinite(p.value));
-            }
-            return [];
-          })();
-          if (trendSeries.length > 0) {
-            setScoreTrend(trendSeries);
+          // Trend: use daily series (30-day default from window_daily)
+          if (Array.isArray(snap.trends?.daily) && snap.trends.daily.length > 0) {
+            setScoreTrend(
+              snap.trends.daily.map((p) => ({
+                time: p.date,
+                value: typeof p.overall === "number" ? p.overall : NaN,
+              })).filter((p) => Number.isFinite(p.value)),
+            );
           }
           // Market stats: derive Active Symbols count from snapshot or keep legacy
           const snapshotSymbolCount =
@@ -374,9 +345,9 @@ export default function AnalysisPage() {
 
         // ------- Top movers + per-symbol deep analysis (non-snapshot, legacy path) -------
         const symbolMap = new Map(
-          (symbolsRes?.data?.data ?? []).map((s) => [s.symbol, s.name]),
+          (symbolsRes.data?.data ?? []).map((s) => [s.symbol, s.name]),
         );
-        const movers: AssetRow[] = (performersRes?.data?.data ?? [])
+        const movers: AssetRow[] = (performersRes.data?.data ?? [])
           .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
           .map((p) => ({
             symbol: p.symbol,
@@ -414,10 +385,14 @@ export default function AnalysisPage() {
     return () => {
       active = false;
     };
-  }, [setLiveLatestFromStream, loadSnapshot, chartTimeRange]);
+  }, [setLiveLatestFromStream, loadSnapshot]);
 
-  const lastMarketEventTs = liveMarket.lastEventTimestamp;
-  const lastScoresEventTs = liveScores.lastEventTimestamp;
+  const lastMarketEventTs =
+    liveMarket.data === liveMarket.latest
+      ? null
+      : null;
+  const lastScoresEventTs =
+    liveScores.data === liveScores.latest ? null : null;
 
   if (loading) {
     return (
@@ -439,7 +414,7 @@ export default function AnalysisPage() {
             </h1>
             <div className="mt-2">
               <AsOfStamp
-                effectiveAt={snapshotTs ?? null}
+                timestamp={snapshotTs ?? null}
                 snapshotId={snapshotId ?? null}
                 loading={snapLoading}
                 error={snapError ?? null}
@@ -539,32 +514,6 @@ export default function AnalysisPage() {
           </section>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ChartTimeRangeToggle
-            value={chartTimeRange}
-            onChange={setChartTimeRange}
-          />
-          <DimensionChartSelector
-            level={chartLevel}
-            onLevelChange={setChartLevel}
-            selectedKey={chartKey}
-            onKeyChange={setChartKey}
-            availableKeys={
-              snapshot
-                ? Object.keys(
-                    chartLevel === "dimension"
-                      ? snapshot.scores?.current?.dimension || {}
-                      : chartLevel === "sub_dimension"
-                        ? snapshot.scores?.current?.sub_dimension || {}
-                        : chartLevel === "aspect"
-                          ? snapshot.scores?.current?.aspect || {}
-                          : snapshot.scores?.current?.sub_aspect || {}
-                  )
-                : []
-            }
-          />
-        </div>
-
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {dimensionScores && Object.keys(dimensionScores).length > 0 ? (
             <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm lg:col-span-1">
@@ -592,14 +541,10 @@ export default function AnalysisPage() {
             <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm lg:col-span-2">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-semibold text-[var(--color-text-primary)]">
-                  {chartTimeRange === "24h" || chartTimeRange === "6h" || chartTimeRange === "7d"
-                    ? `${chartTimeRange.toUpperCase()} Market Score Trend`
-                    : `${chartTimeRange}-Day Market Score Trend`}
+                  30-Day Market Score Trend
                 </h3>
                 <span className="text-xs text-[var(--color-text-secondary)]">
-                  {chartTimeRange === "24h" || chartTimeRange === "6h" || chartTimeRange === "7d"
-                    ? "Intraday snapshot"
-                    : "Historical REST · chart kept from initial load"}
+                  Historical REST · chart kept from initial load
                 </span>
               </div>
               <ScoreTrendChart series={[{ key: 'score', label: 'Market Score', color: '#2563EB', data: scoreTrend }]} height={320} />
@@ -666,43 +611,56 @@ export default function AnalysisPage() {
                   {t("app.analysis.technical_charts")}
                 </h3>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  Technical indicators for {analysisData?.symbol || "top movers"}
+                  Technical indicators for top movers
                 </p>
               </div>
             </div>
-            {analysisData?.technical && Object.keys(analysisData.technical).length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Object.entries(analysisData.technical).map(([key, value]) => {
-                  const numeric = typeof value === "number" ? value : null;
-                  const isPct = /pct|ratio|position|change/i.test(key);
-                  const display = numeric === null ? "—" : isPct ? `${numeric.toFixed(2)}%` : numeric.toFixed(2);
-                  const tone = numeric === null
-                    ? "text-[var(--color-text-muted)]"
-                    : numeric > 0
-                      ? "text-[var(--color-success)]"
-                      : numeric < 0
-                        ? "text-[var(--color-error)]"
-                        : "text-[var(--color-text-primary)]";
-                  return (
-                    <div
-                      key={key}
-                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-4 text-center"
-                    >
-                      <div className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                        {key.replace(/_/g, " ")}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {topMovers.slice(0, 3).map((mover, i) => (
+                <div
+                  key={i}
+                  className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/50 p-5 transition-all hover:border-[var(--color-primary)]/30 hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="font-bold text-lg text-[var(--color-text-primary)]">
+                        {mover.symbol}
                       </div>
-                      <div className={`text-lg font-bold mt-1 ${tone}`}>
-                        {display}
+                      <div className="text-xs text-[var(--color-text-muted)]">
+                        {mover.name}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-8 text-center text-[var(--color-text-muted)] text-sm">
-                {t("app.analysis.technical_not_found")}
-              </div>
-            )}
+                    <div className="text-right">
+                      <div className="text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
+                        ${mover.price > 0 ? mover.price.toFixed(2) : "—"}
+                      </div>
+                      <div
+                        className={cn(
+                          "text-sm font-semibold",
+                          mover.changePct >= 0
+                            ? "text-[var(--color-success)]"
+                            : "text-[var(--color-error)]"
+                        )}
+                      >
+                        {mover.changePct >= 0 ? "+" : ""}
+                        {mover.changePct.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-16 rounded-lg bg-[var(--color-border)]/30 flex items-end gap-1 p-2">
+                    {Array.from({ length: 12 }).map((_, j) => (
+                      <div
+                        key={j}
+                        className="flex-1 rounded bg-[var(--color-primary)]/60 hover:bg-[var(--color-primary)] transition-colors"
+                        style={{
+                          height: `${30 + ((i * 7 + j * 11) % 70)}%`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
@@ -819,10 +777,10 @@ export default function AnalysisPage() {
                                 className={cn(
                                   "h-full rounded-full",
                                   numericScore >= 70
-                                    ? "bg-[var(--color-success)]"
+                                    ? "bg-green-600"
                                     : numericScore >= 40
-                                    ? "bg-[var(--color-warning)]"
-                                    : "bg-[var(--color-error)]"
+                                    ? "bg-yellow-500"
+                                    : "bg-red-600"
                                 )}
                                 style={{ width: `${Math.max(0, Math.min(100, numericScore))}%` }}
                               />

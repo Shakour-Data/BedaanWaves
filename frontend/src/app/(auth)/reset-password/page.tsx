@@ -1,133 +1,245 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { apiClient } from "@/lib/api";
-import { getApiErrorMessage } from "@/lib/api";
+import Link from "next/link";
 import { InputField } from "@/components/ui/InputField";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
-function ResetPasswordForm({ token }: { token: string }) {
-  const router = useRouter();
-  const [newPassword, setNewPassword] = useState("");
+import {
+  verifyResetToken,
+  confirmResetPassword,
+  isValidPassword,
+  passwordsMatch } from "@/lib/password-recovery-api";
+
+type ResetPhase = "verifying" | "enter_password" | "confirming" | "success" | "error";
+
+type PwdValidationState = "idle" | "validating" | "valid" | "invalid";
+
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+
+  const token = searchParams?.get("token") ?? "";
+
+  const [phase, setPhase] = useState<ResetPhase>("verifying");
+  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const pwdState: PwdValidationState = useMemo(() => {
+    if (!password) return "idle";
+    if (password.length < 8) return "invalid";
+    if (!confirmPassword) return "idle";
+    return password === confirmPassword ? "valid" : "invalid";
+  }, [password, confirmPassword]);
+
+  const pwdError: string | null = useMemo(() => {
+    if (!password) return null;
+    if (password.length < 8) return "Password must be at least 8 characters.";
+    if (confirmPassword && password !== confirmPassword) return "Passwords do not match.";
+    return null;
+  }, [password, confirmPassword]);
+
+  useEffect(() => {
+    void (async () => {
+      if (!token) {
+        setPhase("error");
+        setErrorMsg("No recovery token was provided. Please open the link from your email.");
+        return;
+      }
+
+      const isValid = await verifyResetToken(token);
+      if (isValid) {
+        setPhase("enter_password");
+      } else {
+        setPhase("error");
+        setErrorMsg(
+          "That recovery link has expired or is no longer valid. Please request a new link.",
+        );
+      }
+    })();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+    if (!passwordsMatch(password, confirmPassword) || !isValidPassword(password)) {
+      setErrorMsg("Please fix the errors above before continuing.");
       return;
     }
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters long");
-      return;
-    }
-    setLoading(true);
+    setErrorMsg(null);
+    setPhase("confirming");
+
     try {
-      await apiClient.post("/auth/password-reset/confirm", {
-        token,
-        new_password: newPassword,
-      });
-      setSuccess(true);
-    } catch (err) {
-      setError(getApiErrorMessage(err));
-    } finally {
-      setLoading(false);
+      const result = await confirmResetPassword(token, password);
+
+      if (result.success) {
+        setPhase("success");
+      } else {
+        setPhase("error");
+        setErrorMsg(result.message ?? "Unable to reset password. Please try again.");
+      }
+    } catch {
+      setPhase("error");
+      setErrorMsg("Network error. Please check your connection and try again.");
     }
   };
 
-  if (success) {
+  if (phase === "verifying") {
     return (
-      <div className="text-center">
-        <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-success-soft)]">
-          <span className="text-3xl font-bold text-[var(--color-success)]">&checkmark;</span>
+      <div className="w-full">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-balance">
+            Verifying your link
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Please wait while we verify your reset link...
+          </p>
         </div>
-        <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-          Password reset complete
-        </h2>
-        <p className="text-[var(--color-text-secondary)] mb-6">
-          Your password has been updated. You can now sign in.
-        </p>
-        <PrimaryButton className="w-full" onClick={() => router.push("/login")}>
-          Go to Sign In
-        </PrimaryButton>
+        <div className="flex items-center justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <div className="w-full">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-error-light)]">
+            <span className="text-xl font-bold text-[var(--color-error)] font-mono">LOCK</span>
+          </div>
+          <h1 className="text-2xl font-bold text-[var(--color-error)]">Error</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">{errorMsg}</p>
+        </div>
+        <div className="flex justify-center gap-3">
+          <Link href="/forgot-password" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+            Request new link
+          </Link>
+          <span className="text-[var(--color-border)]">|</span>
+          <Link href="/login" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+            Back to Sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "success") {
+    return (
+      <div className="w-full text-center">
+        <div className="mb-8">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-light)]">
+            <span className="text-2xl font-bold text-[var(--color-success)]">\u2713</span>
+          </div>
+          <h1 className="text-2xl font-bold text-[var(--color-success)]">Success!</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">Your password has been reset successfully. You can now log in with your new password.</p>
+        </div>
+        <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
+          Sign In
+          <span className="font-mono">\u2192</span>
+        </Link>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <InputField
-        label="New Password"
-        name="new_password"
-        type="password"
-        placeholder="Create a new password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        required
-      />
-      <InputField
-        label="Confirm Password"
-        name="confirm_password"
-        type="password"
-        placeholder="Confirm your new password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        required
-      />
-      {error && (
-        <p className="text-sm text-[var(--color-error)]">{error}</p>
-      )}
-      <PrimaryButton type="submit" className="w-full" disabled={loading}>
-        {loading ? "Resetting..." : "Reset Password"}
-      </PrimaryButton>
-    </form>
-  );
-}
-
-function ResetPasswordDisabled() {
-  const router = useRouter();
-  return (
-    <div className="text-center">
-      <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-error-soft)]">
-        <span className="text-3xl font-bold text-[var(--color-error)]">&times;</span>
-      </div>
-      <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-        Invalid or expired link
-      </h2>
-      <p className="text-[var(--color-text-secondary)] mb-6">
-        This recovery link has expired or is no longer valid. Please request a new link.
-      </p>
-      <PrimaryButton className="w-full" onClick={() => router.push("/forgot-password")}>
-        Request New Link
-      </PrimaryButton>
-    </div>
-  );
-}
-
-export default function ResetPasswordPage() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)]">
-          <span className="text-3xl font-bold text-[var(--color-primary)]">B</span>
-        </div>
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
-          Reset Password
+    <div className="w-full">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-balance">
+          Set new password
         </h1>
-        <p className="text-[var(--color-text-secondary)] mb-6">
-          Enter your new password below.
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Create a strong password for your account
         </p>
-        {token ? <ResetPasswordForm token={token} /> : <ResetPasswordDisabled />}
       </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {errorMsg && (
+          <ErrorMessage className="mt-4" message={errorMsg} />
+        )}
+
+        <div className="space-y-4">
+          <div className="relative">
+            <InputField
+              id="password"
+              label="New Password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter new password"
+              validationState={pwdState === "invalid" ? "invalid" : "idle"}
+              validationMessage={pwdState === "invalid" && pwdError ? pwdError : undefined}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors tracking-wide"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "HIDE" : "SHOW"}
+            </button>
+          </div>
+
+          <InputField
+            id="confirmPassword"
+            label="Confirm Password"
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+            validationState={pwdState === "invalid" && confirmPassword ? "invalid" : "idle"}
+            validationMessage={pwdState === "invalid" && confirmPassword && pwdError ? pwdError : undefined}
+          />
+        </div>
+
+        <div className="flex items-center">
+          <input
+            id="showPassword"
+            type="checkbox"
+            checked={showPassword}
+            onChange={(e) => setShowPassword(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+          />
+          <label htmlFor="showPassword" className="ml-2 text-sm text-[var(--color-text-secondary)]">Show password</label>
+        </div>
+
+        <PrimaryButton
+          type="submit"
+          disabled={phase === "confirming"}
+          className="w-full justify-center h-11 gap-2"
+          size="lg"
+        >
+          {phase === "confirming" ? "Processing..." : "Reset Password"}
+          {phase !== "confirming" && "\u2192"}
+        </PrimaryButton>
+
+        <p className="text-center text-sm text-[var(--color-text-secondary)] pt-2">
+          <Link href="/login" className="text-[var(--color-primary)] hover:underline font-semibold">
+            Back to Sign in
+          </Link>
+        </p>
+      </form>
     </div>
+  );
+}
+
+// Main export with Suspense boundary
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Loading...</h1>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

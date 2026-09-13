@@ -2,8 +2,8 @@
 Dashboard schema definitions for API responses.
 """
 
+from typing import List, Optional
 from datetime import datetime
-
 from pydantic import BaseModel
 
 
@@ -15,7 +15,7 @@ class MarketIndex(BaseModel):
     change: float
     change_percent: float
     is_open: bool
-    updated_at: datetime | None = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -32,8 +32,8 @@ class TopStock(BaseModel):
     market_cap: str
     pe_ratio: float
     sector: str
-    score: int | None = None
-    ai_recommendation: str | None = None
+    score: Optional[int] = None
+    ai_recommendation: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -78,9 +78,9 @@ class MarketSummary(BaseModel):
 
 class DashboardOverview(BaseModel):
     """Complete dashboard overview combining all metrics."""
-    indices: list[MarketIndex]
-    top_stocks: list[TopStock]
-    market_movers: list[MarketMover]
+    indices: List[MarketIndex]
+    top_stocks: List[TopStock]
+    market_movers: List[MarketMover]
     market_summary: MarketSummary
     last_updated: datetime
 
@@ -90,11 +90,11 @@ class DashboardOverview(BaseModel):
 
 class HierarchyScores(BaseModel):
     """Scores at a specific snapshot tier (daily/hourly/current)."""
-    overall: float | None = None
-    dimensions: dict | None = None
-    sub_dimensions: dict | None = None
-    aspects: dict | None = None
-    sub_aspects: dict | None = None
+    overall: Optional[float] = None
+    dimensions: Optional[dict] = None
+    sub_dimensions: Optional[dict] = None
+    aspects: Optional[dict] = None
+    sub_aspects: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -102,12 +102,12 @@ class HierarchyScores(BaseModel):
 
 class DeltaFrame(BaseModel):
     """Deltas between two snapshot tiers."""
-    overall: float | None = None
-    overall_pct: float | None = None
-    dimensions: dict | None = None
-    sub_dimensions: dict | None = None
-    aspects: dict | None = None
-    sub_aspects: dict | None = None
+    overall: Optional[float] = None
+    overall_pct: Optional[float] = None
+    dimensions: Optional[dict] = None
+    sub_dimensions: Optional[dict] = None
+    aspects: Optional[dict] = None
+    sub_aspects: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -115,10 +115,10 @@ class DeltaFrame(BaseModel):
 
 class WeightSnapshot(BaseModel):
     """Current weights across 4 hierarchy levels."""
-    dimension: dict | None = None
-    sub_dimension: dict | None = None
-    aspect: dict | None = None
-    sub_aspect: dict | None = None
+    dimension: Optional[dict] = None
+    sub_dimension: Optional[dict] = None
+    aspect: Optional[dict] = None
+    sub_aspect: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -145,9 +145,9 @@ class WeightDeltaPoint(BaseModel):
 class TrendPoint(BaseModel):
     """Historical trend point (daily or intraday cadence)."""
     timestamp: str
-    avg_score: float | None = None
-    dimensions: dict | None = None
-    symbol_count: int | None = None
+    avg_score: Optional[float] = None
+    dimensions: Optional[dict] = None
+    symbol_count: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -162,13 +162,11 @@ class SnapshotResponse(BaseModel):
     scores: dict  # {daily, hourly, current} -> HierarchyScores
     deltas: dict  # {hourly_vs_daily, current_vs_hourly, current_vs_daily} -> DeltaFrame
     weights: WeightSnapshot
-    weightTrends: list[WeightTrendPoint]
-    weightDeltas: list[WeightDeltaPoint]
+    weightTrends: List[WeightTrendPoint]
+    weightDeltas: List[WeightDeltaPoint]
     trends: dict  # {daily: [...], intraday: [...]}
     universe: dict  # {total, market: "NASDAQ"}
-    best_symbol: str | None = None
-    worst_symbol: str | None = None
-    symbol: str | None = None
+    symbol: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -176,11 +174,11 @@ class SnapshotResponse(BaseModel):
 
 class SnapshotIndexEntry(BaseModel):
     """Enumerated past snapshot entry for time-slider."""
-    snapshotId: str | None = None
+    snapshotId: Optional[str] = None
     tier: str
     effectiveAt: str
     label: str
-    symbolCount: int | None = None
+    symbolCount: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -190,7 +188,7 @@ class SnapshotIndexResponse(BaseModel):
     """Paginated index of snapshots."""
     status: str = "success"
     count: int
-    entries: list[SnapshotIndexEntry]
+    entries: List[SnapshotIndexEntry]
     timestamp: str
 
     class Config:

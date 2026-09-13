@@ -55,10 +55,10 @@ export function LevelSelector({
             type="button"
             onClick={() => onLevelChange(lvl.id)}
             className={cn(
-              "rounded-lg px-4 py-2.5 text-sm font-medium transition-all min-h-[44px]",
+              "rounded-lg px-4 py-2 text-sm font-medium transition-all",
               level === lvl.id
                 ? "bg-[var(--color-primary)] text-white shadow-sm"
-                : "bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] active:bg-[var(--color-border)]/80"
+                : "bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
             )}
           >
             {lvl.label}
@@ -77,10 +77,10 @@ export function LevelSelector({
               type="button"
               onClick={() => handleDimensionClick(dim.id)}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all border min-h-[44px]",
+                "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all border",
                 activeDimension === dim.id
                   ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] active:bg-muted"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
               )}
             >
               <span

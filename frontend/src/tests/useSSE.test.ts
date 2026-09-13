@@ -3,33 +3,15 @@ import { renderHook, act, cleanup } from '@testing-library/react'
 import { useSSE } from '@/hooks/useSSE'
 import { disconnectAllSSE, getActiveConnectionKeys } from '@/lib/sse'
 
-interface MockES {
-  readyState: number
-  url: string
-  mockOpen(): void
-  mockEmit(event: string, payload: Record<string, unknown>): void
-  mockError(): void
-  mockClose(): void
-}
-
-interface TestGlobals {
-  __getMockEventSources: () => MockES[]
-  __clearMockEventSources: () => void
-}
-
-function getTestGlobals(): TestGlobals {
-  return globalThis as unknown as TestGlobals
-}
-
-function getLastMockES(): MockES {
-  const list = getTestGlobals().__getMockEventSources()
+function getLastMockES(): any {
+  const list = (globalThis as any).__getMockEventSources()
   return list[list.length - 1]
 }
 
 describe('hooks/useSSE.ts', () => {
   beforeEach(() => {
     disconnectAllSSE()
-    getTestGlobals().__clearMockEventSources()
+    ;(globalThis as any).__clearMockEventSources()
     cleanup()
   })
 
@@ -153,11 +135,11 @@ describe('hooks/useSSE.ts', () => {
         useSSE<{ v: number }>('useSSE-test:reconnect', '/stream-r', { reconnect: false })
       )
 
-      const countBefore = getTestGlobals().__getMockEventSources().length
+      const countBefore = (globalThis as any).__getMockEventSources().length
       act(() => {
         result.current.reconnect()
       })
-      const countAfter = getTestGlobals().__getMockEventSources().length
+      const countAfter = (globalThis as any).__getMockEventSources().length
       expect(countAfter).toBeGreaterThan(countBefore)
     })
   })

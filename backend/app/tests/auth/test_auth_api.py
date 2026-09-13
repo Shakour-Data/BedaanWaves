@@ -2,21 +2,14 @@
 
 All service-layer functions are mocked — no database or real JWT required.
 """
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch, AsyncMock, MagicMock
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import _auth_rate_limiter
 from app.api.routes.auth import router
-
-
-@pytest.fixture(autouse=True)
-def _reset_auth_rate_limiter():
-    _auth_rate_limiter.reset()
-    yield
-    _auth_rate_limiter.reset()
 
 
 @pytest.fixture
@@ -70,11 +63,7 @@ class TestRegister:
         patch(
             "app.api.routes.auth.create_refresh_token",
             return_value="refresh.jwt.token",
-        ) as mock_refresh, \
-        patch(
-            "app.api.routes.auth.store_refresh_token",
-            new_callable=AsyncMock,
-        ) as mock_store:
+        ) as mock_refresh:
             yield {
                 "username": mock_username,
                 "email": mock_email,
@@ -82,7 +71,6 @@ class TestRegister:
                 "hash": mock_hash,
                 "access": mock_access,
                 "refresh": mock_refresh,
-                "store": mock_store,
             }
 
     def test_success(self, client, mock_service, mock_user):
@@ -92,7 +80,7 @@ class TestRegister:
             json={
                 "username": "newuser",
                 "email": "new@example.com",
-                "password": "SecurePass123!",
+                "password": "securepass123",
                 "full_name": "New User",
             },
         )
@@ -109,7 +97,7 @@ class TestRegister:
             json={
                 "username": "existing",
                 "email": "new@example.com",
-                "password": "SecurePass123!",
+                "password": "securepass123",
                 "full_name": "New User",
             },
         )
@@ -123,7 +111,7 @@ class TestRegister:
             json={
                 "username": "newuser",
                 "email": "existing@example.com",
-                "password": "SecurePass123!",
+                "password": "securepass123",
             },
         )
         assert resp.status_code == 400
@@ -155,16 +143,11 @@ class TestLogin:
         patch(
             "app.api.routes.auth.create_refresh_token",
             return_value="refresh.jwt.token",
-        ) as mock_refresh, \
-        patch(
-            "app.api.routes.auth.store_refresh_token",
-            new_callable=AsyncMock,
-        ) as mock_store:
+        ) as mock_refresh:
             yield {
                 "auth": mock_auth,
                 "access": mock_access,
                 "refresh": mock_refresh,
-                "store": mock_store,
             }
 
     def test_login_success(self, client, mock_service, mock_user):
@@ -235,7 +218,7 @@ class TestRefreshToken:
              patch("app.api.routes.auth.async_session_maker", return_value=mock_sm), \
              patch("app.api.routes.auth.create_access_token", return_value="new.access"), \
              patch("app.api.routes.auth.create_refresh_token", return_value="new.refresh"):
-            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "valid-refresh-token"})
+            resp = client.post("/api/v1/auth/refresh?token=valid-refresh-token")
 
         assert resp.status_code == 200
         body = resp.json()
@@ -245,14 +228,14 @@ class TestRefreshToken:
     def test_refresh_invalid_token(self, client):
         """An invalid (undecodable) refresh token should return 401."""
         with patch("app.api.routes.auth.jwt.decode", side_effect=Exception("Invalid token")):
-            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "garbage"})
+            resp = client.post("/api/v1/auth/refresh?token=garbage")
         assert resp.status_code == 401
         assert "refresh token" in resp.json()["detail"].lower()
 
     def test_refresh_wrong_token_type(self, client):
         """A token with type != 'refresh' should be rejected."""
         with patch("app.api.routes.auth.jwt.decode", return_value={"sub": "testuser", "type": "access"}):
-            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "some-token"})
+            resp = client.post("/api/v1/auth/refresh?token=some-token")
         assert resp.status_code == 401
         assert "refresh token" in resp.json()["detail"].lower()
 
@@ -260,6 +243,6 @@ class TestRefreshToken:
         """Username in token doesn't exist."""
         with patch("app.api.routes.auth.jwt.decode", return_value={"sub": "ghost", "type": "refresh"}), \
              patch("app.api.routes.auth.get_user_by_username", new_callable=AsyncMock, return_value=None):
-            resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "valid-but-ghost"})
+            resp = client.post("/api/v1/auth/refresh?token=valid-but-ghost")
         assert resp.status_code == 401
         assert "User not found" in resp.json()["detail"]

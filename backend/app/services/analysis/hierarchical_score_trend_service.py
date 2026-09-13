@@ -17,26 +17,97 @@ return an empty series (the chart falls back to "No trend data available").
 """
 
 import logging
-from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+from app.core.utils import utc_now_iso
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import Asset, RawPerformanceScore
-from app.services.analysis.hierarchy import (
-    ASPECT_TO_PARENT,
-    SUB_ASPECT_TO_PARENT,
-    SUB_DIMENSION_TO_PARENT,
-    is_aspect_key,
-    is_sub_aspect_key,
-    is_sub_dimension_key,
-)
 from app.services.core import BaseService
 
+
 logger = logging.getLogger(__name__)
+
+
+# Map score-json keys -> (level, parent)
+# The "parent" is the key at the level above (None for sub-dimensions). This is
+# used both for filtering and for the response metadata so the frontend can
+# build chart legends without re-deriving the hierarchy.
+SUB_DIMENSION_TO_PARENT: Dict[str, str] = {
+    "fundamental_price_history": "fundamental",
+    "fundamental_ohlcv": "fundamental",
+    "fundamental_corporate_actions": "fundamental",
+    "technical_moving_averages": "technical",
+    "technical_momentum": "technical",
+    "technical_volatility": "technical",
+    "technical_volume": "technical",
+    "technical_trend": "technical",
+    "sentiment_news_sentiment": "sentiment",
+    "sentiment_social_sentiment": "sentiment",
+    "sentiment_analyst_sentiment": "sentiment",
+    "risk_beta": "risk",
+    "risk_var": "risk",
+    "risk_volatility": "risk",
+    "risk_drawdown": "risk",
+    "macro_interest_rates": "macro",
+    "macro_inflation": "macro",
+    "macro_gdp": "macro",
+    "ai_signal_quality": "ai",
+    "ai_model_confidence": "ai",
+}
+
+
+def _is_sub_dimension_key(key: str) -> bool:
+    return key in SUB_DIMENSION_TO_PARENT
+
+
+def _is_aspect_key(key: str) -> bool:
+    """Aspect keys follow the ``<dimension>_<subdim>_aspect_<n>`` pattern."""
+    parts = key.split("_")
+    if len(parts) < 4 or "aspect" not in parts:
+        return False
+    return key.endswith("_aspect_1") or key.endswith("_aspect_2")
+
+
+def _aspect_parent(key: str) -> Optional[str]:
+    """Return the parent sub-dimension key for an aspect key, or None."""
+    parts = key.split("_")
+    if len(parts) < 4 or "aspect" not in parts:
+        return None
+    idx = parts.index("aspect")
+    if idx < 1:
+        return None
+    return "_".join(parts[:idx])
+
+
+def _is_sub_aspect_key(key: str) -> bool:
+    """Sub-aspect keys are anything that isn't a dimension / sub-dim / aspect."""
+    if _is_sub_dimension_key(key) or _is_aspect_key(key):
+        return False
+    # The known top-level dimension names. Anything else under a known prefix
+    # is treated as a sub-aspect.
+    if not any(key.startswith(f"{d}_") for d in (
+        "fundamental", "technical", "sentiment", "risk", "macro", "ai"
+    )):
+        return False
+    return True
+
+
+def _sub_aspect_parent(key: str) -> Optional[str]:
+    """Return parent aspect key for a sub-aspect, or None.
+
+    We don't have a ground-truth parent map for sub-aspects, so we use the
+    ``<dim>_<subdim>`` prefix as a best-effort parent. The frontend just
+    uses this for filtering by parent aspect, so a slightly loose mapping
+    is acceptable.
+    """
+    parts = key.split("_")
+    if len(parts) < 4:
+        return None
+    return "_".join(parts[:3])
 
 
 class HierarchicalScoreTrendService(BaseService):
@@ -60,7 +131,7 @@ class HierarchicalScoreTrendService(BaseService):
         self,
         market: str,
         db: AsyncSession,
-    ) -> date | None:
+    ) -> Optional[date]:
         """Return the most recent date with a ``RawPerformanceScore`` row."""
         result = await db.execute(
             select(func.max(func.date(RawPerformanceScore.captured_at)))
@@ -80,11 +151,11 @@ class HierarchicalScoreTrendService(BaseService):
         level: str,
         days: int = 30,
         market: str = "NASDAQ",
-        parent: str | None = None,
+        parent: Optional[str] = None,
         latest: bool = False,
-        end_date: date | None = None,
-        db: AsyncSession | None = None,
-    ) -> dict[str, Any]:
+        end_date: Optional[date] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> Dict[str, Any]:
         """Aggregate sub-dim / aspect / sub-aspect scores for a window.
 
         Args:
@@ -124,15 +195,15 @@ class HierarchicalScoreTrendService(BaseService):
         level: str,
         days: int,
         market: str,
-        parent: str | None,
+        parent: Optional[str],
         latest: bool,
-        end_date: date | None,
+        end_date: Optional[date],
         db: AsyncSession,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         if latest:
             effective_end = await self._latest_capture_date(market, db)
         else:
-            effective_end = end_date or datetime.now(UTC).date()
+            effective_end = end_date or datetime.now(timezone.utc).date()
 
         if effective_end is None:
             return self._empty(level, days, market)
@@ -157,7 +228,7 @@ class HierarchicalScoreTrendService(BaseService):
         }
 
     @staticmethod
-    def _empty(level: str, days: int, market: str) -> dict[str, Any]:
+    def _empty(level: str, days: int, market: str) -> Dict[str, Any]:
         return {
             "status": "success",
             "level": level,
@@ -177,8 +248,8 @@ class HierarchicalScoreTrendService(BaseService):
         market: str,
         start_date: date,
         end_date: date,
-        parent: str | None,
-    ) -> list[dict[str, Any]]:
+        parent: Optional[str],
+    ) -> List[Dict[str, Any]]:
         """Read ``RawPerformanceScore`` rows in the window and aggregate.
 
         We pull the raw JSONB columns and average in Python because the keys
@@ -186,8 +257,8 @@ class HierarchicalScoreTrendService(BaseService):
         but adds coupling; the dataset for one window is bounded (≤ 30 days)
         so a Python pass is fine.
         """
-        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
-        end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=UTC)
+        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
+        end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
 
         query = (
             select(
@@ -212,7 +283,7 @@ class HierarchicalScoreTrendService(BaseService):
         rows = result.all()
 
         # Per-date accumulators
-        by_date: dict[str, dict[str, list[float]]] = {}
+        by_date: Dict[date, Dict[str, List[float]]] = {}
 
         column_name = {
             "sub_dimension": "sub_dimension_scores",
@@ -220,31 +291,26 @@ class HierarchicalScoreTrendService(BaseService):
             "sub_aspect": "sub_aspect_scores",
         }[level]
 
-        parent_map = {
-            "aspect": ASPECT_TO_PARENT,
-            "sub_aspect": SUB_ASPECT_TO_PARENT,
-        }.get(level)
-
-        def _parent_filter(key: str) -> bool:
-            if parent is None:
-                return True
-            if parent_map is None:
-                return SUB_DIMENSION_TO_PARENT.get(key) == parent
-            return parent_map.get(key) == parent
-
-        level_filter = {
-            "sub_dimension": is_sub_dimension_key,
-            "aspect": is_aspect_key,
-            "sub_aspect": is_sub_aspect_key,
+        parent_filter = {
+            "sub_dimension": lambda k: parent is None or SUB_DIMENSION_TO_PARENT.get(k) == parent,
+            "aspect": lambda k: parent is None or _aspect_parent(k) == parent,
+            "sub_aspect": lambda k: parent is None or _sub_aspect_parent(k) == parent,
         }[level]
 
-        symbol_counts: dict[str, int] = {}
+        level_filter = {
+            "sub_dimension": _is_sub_dimension_key,
+            "aspect": _is_aspect_key,
+            "sub_aspect": _is_sub_aspect_key,
+        }[level]
+
+        symbol_counts: Dict[date, int] = {}
 
         for row in rows:
-            capture_date = getattr(row, "capture_date", None)
-            if capture_date is None:
-                capture_date = getattr(row, "day", None)
-            if capture_date is None:
+            if hasattr(row, "capture_date"):
+                capture_date = row.capture_date
+            elif hasattr(row, "day"):
+                capture_date = row.day
+            else:
                 continue
             if isinstance(capture_date, datetime):
                 capture_date = capture_date.date()
@@ -263,7 +329,7 @@ class HierarchicalScoreTrendService(BaseService):
             for raw_key, raw_value in scores.items():
                 if not level_filter(raw_key):
                     continue
-                if not _parent_filter(raw_key):
+                if not parent_filter(raw_key):
                     continue
                 try:
                     value = float(raw_value)
@@ -275,7 +341,7 @@ class HierarchicalScoreTrendService(BaseService):
             if has_contributing_score:
                 symbol_counts[capture_date] = symbol_counts.get(capture_date, 0) + 1
 
-        series: list[dict[str, Any]] = []
+        series: List[Dict[str, Any]] = []
         for capture_date in sorted(by_date.keys()):
             metrics = {
                 key: round(sum(values) / len(values), 2)

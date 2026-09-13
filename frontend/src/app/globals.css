@@ -22,8 +22,8 @@
   --color-foreground: #0F172A;
   --color-text-primary: #0F172A;
   --color-text-secondary: #64748B;
-  --color-text-muted: #475569;
-  --color-muted-foreground: #475569;
+  --color-text-muted: #94A3B8;
+  --color-muted-foreground: #64748B;
   --color-border: #E2E8F0;
   --color-border-light: #F8FAFC;
   --color-border-strong: #CBD5E1;
@@ -38,14 +38,6 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
   --radius-full: 9999px;
-
-  --spacing-vxs: 0.25rem;
-  --spacing-vsm: 0.5rem;
-  --spacing-vmd: 0.75rem;
-  --spacing-vlg: 1rem;
-  --spacing-vxl: 1.5rem;
-  --spacing-v2xl: 2rem;
-  --spacing-v3xl: 3rem;
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
@@ -81,11 +73,11 @@
     --color-surface: #1E293B;
     --color-surface-elevated: #334155;
     --color-neutral: #0F172A;
-    --color-muted: #334155;
+    --color-muted: #1E293B;
     --color-foreground: #F8FAFC;
     --color-text-primary: #F8FAFC;
     --color-text-secondary: #94A3B8;
-    --color-text-muted: #CBD5E1;
+    --color-text-muted: #64748B;
     --color-muted-foreground: #94A3B8;
     --color-border: #334155;
     --color-border-light: #1E293B;
@@ -145,17 +137,9 @@
   box-sizing: border-box;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 ::-webkit-scrollbar {
@@ -377,18 +361,6 @@
 
 .animate-border-glow {
   animation: border-glow 2s ease-in-out infinite;
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px) saturate(160%);
-  -webkit-backdrop-filter: blur(8px) saturate(160%);
-}
-
-.dark .glass-card {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(8px) saturate(160%);
-  -webkit-backdrop-filter: blur(8px) saturate(160%);
 }
 
 .glass {

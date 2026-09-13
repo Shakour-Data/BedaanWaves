@@ -25,59 +25,56 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 try:
-    from scipy.stats import norm
+    from scipy.stats import norm, rankdata
     _HAS_SCIPY = True
 except ImportError:  # pragma: no cover
     _HAS_SCIPY = False
-
-from app.core.config import get_settings
-
-DIMENSION_WEIGHTS: dict[str, float] = get_settings().SCORING_WEIGHTS
 
 
 # ---------------------------------------------------------------------------
 # Metric universe — single source of truth for the hierarchy
 # ---------------------------------------------------------------------------
 # Each entry: (dim, sub_dim, aspect, sub_aspect, db_field, lower_is_better)
-METRIC_UNIVERSE: list[tuple[str, str, str, str, str, bool]] = [
+METRIC_UNIVERSE: List[Tuple[str, str, str, str, str, bool]] = [
     # fundamental
-    ("fundamental", "valuation", "pe_band", "pe_ratio", "pe_ratio", True),
-    ("fundamental", "valuation", "pe_band", "pb_ratio", "pb_ratio", True),
-    ("fundamental", "valuation", "pe_band", "ev_ebitda", "ev_ebitda", True),
-    ("fundamental", "profitability", "roe_block", "roe", "roe", False),
-    ("fundamental", "profitability", "roe_block", "roa", "roa", False),
-    ("fundamental", "profitability", "roe_block", "profit_margin", "profit_margin", False),
-    ("fundamental", "growth", "growth_block", "revenue_growth", "revenue_growth", False),
-    ("fundamental", "growth", "growth_block", "eps_growth", "eps_growth", False),
-    ("fundamental", "liquidity", "liquidity_block", "current_ratio", "current_ratio", False),
-    ("fundamental", "liquidity", "liquidity_block", "quick_ratio", "quick_ratio", False),
+    ("fundamental", "valuation",       "pe_band",        "pe_ratio",     "pe_ratio",     True),
+    ("fundamental", "valuation",       "pe_band",        "pb_ratio",     "pb_ratio",     True),
+    ("fundamental", "valuation",       "pe_band",        "ev_ebitda",    "ev_ebitda",    True),
+    ("fundamental", "profitability",   "roe_block",      "roe",          "roe",          False),
+    ("fundamental", "profitability",   "roe_block",      "roa",          "roa",          False),
+    ("fundamental", "profitability",   "roe_block",      "profit_margin","profit_margin",False),
+    ("fundamental", "growth",          "growth_block",   "revenue_growth","revenue_growth",False),
+    ("fundamental", "growth",          "growth_block",   "eps_growth",   "eps_growth",   False),
+    ("fundamental", "liquidity",       "liquidity_block","current_ratio","current_ratio",False),
+    ("fundamental", "liquidity",       "liquidity_block","quick_ratio",  "quick_ratio",  False),
     # technical
-    ("technical", "trend", "trend_block", "macd_histogram", "macd_histogram", False),
-    ("technical", "trend", "trend_block", "bb_width", "bb_width", False),
-    ("technical", "momentum", "momentum_block", "rsi_14", "rsi_14", False),
-    ("technical", "volatility", "volatility_block", "realized_vol_30d", "realized_vol_30d", True),
-    ("technical", "volatility", "volatility_block", "atr_value", "atr_value", True),
-    ("technical", "volume", "volume_block", "volume_ratio", "volume_ratio", False),
+    ("technical",   "trend",           "trend_block",    "macd_histogram","macd_histogram",False),
+    ("technical",   "trend",           "trend_block",    "bb_width",     "bb_width",     False),
+    ("technical",   "momentum",        "momentum_block", "rsi_14",       "rsi_14",       False),
+    ("technical",   "volatility",      "volatility_block","realized_vol_30d","realized_vol_30d", True),
+    ("technical",   "volatility",      "volatility_block","atr_value",   "atr_value",    True),
+    ("technical",   "volume",          "volume_block",   "volume_ratio", "volume_ratio", False),
     # sentiment
-    ("sentiment", "news", "news_block", "news_sentiment_avg", "news_sentiment_avg", False),
-    ("sentiment", "news", "news_block", "news_volume", "news_volume", False),
+    ("sentiment",   "news",            "news_block",     "news_sentiment_avg","news_sentiment_avg", False),
+    ("sentiment",   "news",            "news_block",     "news_volume",  "news_volume",  False),
     # risk
-    ("risk", "market_risk", "risk_block", "volatility_z", "volatility_z", True),
-    ("risk", "market_risk", "risk_block", "max_drawdown", "max_drawdown", True),
+    ("risk",        "market_risk",     "risk_block",     "volatility_z", "volatility_z", True),
+    ("risk",        "market_risk",     "risk_block",     "max_drawdown", "max_drawdown", True),
     # macro
-    ("macro", "rates", "rates_block", "treasury_yield_10y", "treasury_yield_10y", True),
-    ("macro", "rates", "rates_block", "dollar_index", "dollar_index", True),
-    ("macro", "commodity", "commodity_block", "oil_price", "oil_price", True),
-    ("macro", "commodity", "commodity_block", "gold_price", "gold_price", True),
+    ("macro",       "rates",           "rates_block",    "treasury_yield_10y","treasury_yield_10y", True),
+    ("macro",       "rates",           "rates_block",    "dollar_index", "dollar_index", True),
+    ("macro",       "commodity",       "commodity_block","oil_price",    "oil_price",    True),
+    ("macro",       "commodity",       "commodity_block","gold_price",   "gold_price",   True),
     # ai
-    ("ai", "ml_signal", "ml_block", "expected_return", "expected_return", False),
-    ("ai", "ml_signal", "ml_block", "confidence", "confidence", False),
+    ("ai",          "ml_signal",       "ml_block",       "expected_return","expected_return", False),
+    ("ai",          "ml_signal",       "ml_block",       "confidence",   "confidence",   False),
 ]
 
 
-DIMENSION_WEIGHTS: dict[str, float] = {
+DIMENSION_WEIGHTS: Dict[str, float] = {
     "fundamental": 0.25,
     "technical":   0.20,
     "sentiment":   0.15,
@@ -92,10 +89,10 @@ DIMENSION_WEIGHTS: dict[str, float] = {
 # ---------------------------------------------------------------------------
 @dataclass
 class HierarchicalScore:
-    sub_aspect_scores: dict[str, float] = field(default_factory=dict)
-    aspect_scores:     dict[str, float] = field(default_factory=dict)
-    sub_dimension_scores: dict[str, float] = field(default_factory=dict)
-    dimension_scores:  dict[str, float] = field(default_factory=dict)
+    sub_aspect_scores: Dict[str, float] = field(default_factory=dict)
+    aspect_scores:     Dict[str, float] = field(default_factory=dict)
+    sub_dimension_scores: Dict[str, float] = field(default_factory=dict)
+    dimension_scores:  Dict[str, float] = field(default_factory=dict)
     overall_score:     float = 50.0
     coverage:          float = 0.0  # fraction of L4 metrics present
 
@@ -103,8 +100,8 @@ class HierarchicalScore:
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
-def _percentile_to_score(values: list[float | None],
-                          lower_is_better: bool) -> list[float | None]:
+def _percentile_to_score(values: List[Optional[float]],
+                          lower_is_better: bool) -> List[Optional[float]]:
     """Cross-sectional percentile → z-score → rescale to [0, 100].
 
     Missing inputs (None) are passed through as None so they don't
@@ -117,7 +114,7 @@ def _percentile_to_score(values: list[float | None],
 
     sorted_vals = sorted(v for _, v in present)
     # Map each value → its rank (1..n) for ties use the average rank
-    rank_of: dict[int, float] = {}
+    rank_of: Dict[int, float] = {}
     i = 0
     while i < n:
         j = i
@@ -128,7 +125,7 @@ def _percentile_to_score(values: list[float | None],
             rank_of[sorted_vals[k]] = avg_rank
         i = j + 1
 
-    out: list[float | None] = [None] * len(values)
+    out: List[Optional[float]] = [None] * len(values)
     for idx, v in present:
         p = (rank_of[v] - 0.5) / n  # (0, 1)
         if lower_is_better:
@@ -150,8 +147,8 @@ def _percentile_to_score(values: list[float | None],
     return out
 
 
-def _weighted_mean(values: dict[str, float | None],
-                   weights: dict[str, float] | None = None) -> float:
+def _weighted_mean(values: Dict[str, Optional[float]],
+                   weights: Optional[Dict[str, float]] = None) -> float:
     """Coverage-weighted mean. Missing entries are skipped, not zero-filled."""
     items = [(k, v) for k, v in values.items() if v is not None]
     if not items:
@@ -168,8 +165,8 @@ def _weighted_mean(values: dict[str, float | None],
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-def score_market(asset_metrics: dict[str, dict[str, float | None]]
-                 ) -> dict[str, HierarchicalScore]:
+def score_market(asset_metrics: Dict[str, Dict[str, Optional[float]]]
+                 ) -> Dict[str, HierarchicalScore]:
     """Score every asset in a market using cross-sectional ranks.
 
     Args:
@@ -182,7 +179,7 @@ def score_market(asset_metrics: dict[str, dict[str, float | None]]
         return {}
 
     # Group every (db_field → list of values across assets)
-    by_field: dict[str, list[float | None]] = {db: [] for *_, db, _ in METRIC_UNIVERSE}
+    by_field: Dict[str, List[Optional[float]]] = {db: [] for *_, db, _ in METRIC_UNIVERSE}
     asset_ids = list(asset_metrics.keys())
     for aid in asset_ids:
         m = asset_metrics[aid]
@@ -190,12 +187,12 @@ def score_market(asset_metrics: dict[str, dict[str, float | None]]
             by_field[db_field].append(m.get(db_field))
 
     # Per-field rank transform
-    transformed: dict[str, list[float | None]] = {}
+    transformed: Dict[str, List[Optional[float]]] = {}
     for *_, db_field, lower_better in METRIC_UNIVERSE:
         transformed[db_field] = _percentile_to_score(by_field[db_field], lower_better)
 
     # Build per-asset L4 scores
-    results: dict[str, HierarchicalScore] = {}
+    results: Dict[str, HierarchicalScore] = {}
     for idx, aid in enumerate(asset_ids):
         hs = HierarchicalScore()
         for dim, sub, asp, sa, db_field, _ in METRIC_UNIVERSE:
@@ -206,21 +203,21 @@ def score_market(asset_metrics: dict[str, dict[str, float | None]]
         hs.coverage = real / max(1, len(by_field))
 
         # L3: aggregate over the L4s in each aspect
-        aspect_groups: dict[str, list[float]] = {}
+        aspect_groups: Dict[str, List[float]] = {}
         for *_, asp, sa, _, _ in METRIC_UNIVERSE:
             aspect_groups.setdefault(asp, []).append(hs.sub_aspect_scores[sa])
         for asp, vals in aspect_groups.items():
             hs.aspect_scores[asp] = round(sum(vals) / len(vals), 2)
 
         # L2: aggregate aspects in each sub-dim, weighted by aspect count
-        sub_groups: dict[str, dict[str, float]] = {}
+        sub_groups: Dict[str, Dict[str, float]] = {}
         for dim, sub, asp, sa, _, _ in METRIC_UNIVERSE:
             sub_groups.setdefault(sub, {})[asp] = hs.aspect_scores[asp]
         for sub, asp_map in sub_groups.items():
             hs.sub_dimension_scores[sub] = round(_weighted_mean(asp_map), 2)
 
         # L1: aggregate sub-dims in each dimension
-        dim_groups: dict[str, dict[str, float]] = {}
+        dim_groups: Dict[str, Dict[str, float]] = {}
         for dim, sub, *_ in METRIC_UNIVERSE:
             dim_groups.setdefault(dim, {})[sub] = hs.sub_dimension_scores[sub]
         for dim, sub_map in dim_groups.items():

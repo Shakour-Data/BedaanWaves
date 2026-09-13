@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { cn } from "@/lib/cn";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { ArrowRight, Check, Zap, BarChart3, Globe, Bell, Newspaper, TrendingUp } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -60,8 +60,8 @@ const pricingPlans = [
     period: "/month",
     description: "Perfect for getting started with market analysis.",
     features: ["Basic market data", "5 watchlists", "3 technical indicators", "Email alerts"],
-    cta: "Explore Dashboard",
-    href: "/dashboard",
+    cta: "Get Started",
+    href: "/register",
   },
   {
     name: "Pro",
@@ -69,8 +69,8 @@ const pricingPlans = [
     period: "/month",
     description: "For serious traders who need advanced tools.",
     features: ["Real-time data", "Unlimited watchlists", "All technical indicators", "AI scoring", "Portfolio tracking", "Priority support"],
-    cta: "Explore Dashboard",
-    href: "/dashboard",
+    cta: "Start Free Trial",
+    href: "/register",
     popular: true,
   },
   {
@@ -86,7 +86,8 @@ const pricingPlans = [
 
 export default function ServicesPage() {
   return (
-    <div className="page-transition-enter">
+    <PublicLayout>
+      <div className="page-transition-enter">
         {/* Hero */}
         <section className="relative overflow-hidden py-20 lg:py-32">
           <div className="absolute inset-0 overflow-hidden">
@@ -247,5 +248,10 @@ export default function ServicesPage() {
           </div>
         </section>
       </div>
+    </PublicLayout>
   );
+}
+
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }

@@ -1,5 +1,4 @@
 import { API_BASE_URL } from './utils';
-import { useAuthStore } from '@/store/useAuthStore';
 
 export interface SSEEvent<T = unknown> {
   type: string;
@@ -35,7 +34,7 @@ const activeConnections: Map<string, SSEConnection> = new Map();
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return useAuthStore.getState().token;
+  return localStorage.getItem('token');
 }
 
 export function createSSEConnection<T = unknown>(
@@ -233,27 +232,6 @@ export function createSSEConnection<T = unknown>(
       }
     }) as EventListener);
 
-    eventSource.addEventListener('orderbook', ((ev: MessageEvent<string>) => {
-      try {
-        const parsed = JSON.parse(ev.data);
-        const data = parsed.data ?? parsed;
-        const sequence = typeof parsed.sequence === 'number' ? parsed.sequence : null;
-        const data_age_ms = typeof parsed.data_age_ms === 'number' ? parsed.data_age_ms : null;
-        const sseEvent: SSEEvent<T> = {
-          type: 'orderbook',
-          event: parsed.event || 'orderbook',
-          data,
-          timestamp: Date.now(),
-          eventId: ev.lastEventId || undefined,
-          sequence,
-          data_age_ms,
-        };
-        onMessage?.(sseEvent);
-      } catch (err) {
-        console.error('Failed to parse SSE orderbook event:', err, ev.data);
-      }
-    }) as EventListener);
-
     eventSource.addEventListener('health', ((ev: MessageEvent<string>) => {
       try {
         const parsed = JSON.parse(ev.data);
@@ -291,7 +269,7 @@ export function createSSEConnection<T = unknown>(
           data_age_ms,
         };
         onMessage?.(sseEvent);
-      } catch {
+      } catch (err) {
         const sseEvent: SSEEvent<T> = {
           type: 'ping',
           event: 'ping',

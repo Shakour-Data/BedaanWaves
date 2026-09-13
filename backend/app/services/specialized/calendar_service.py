@@ -7,20 +7,19 @@ Trading calendar: Saturday-Thursday, Friday is the weekend. This is a
 lightweight, dependency-free implementation (no external holiday feed).
 """
 
+from typing import Any, Dict, List, Optional
 from datetime import date, datetime, timedelta
-from typing import Any
-
 from ..core import BaseService
 
 
 class CalendarService(BaseService):
     """Trading-day awareness and corporate-event calendar."""
 
-    def __init__(self, service_name: str = "CalendarService", weekend_days: list[int] | None = None):
+    def __init__(self, service_name: str = "CalendarService", weekend_days: Optional[List[int]] = None):
         super().__init__(service_name)
         # 4 = Friday (weekend); allow override for other markets.
         self.weekend_days = set(weekend_days if weekend_days is not None else [4])
-        self._events: dict[str, list[dict[str, Any]]] = {}
+        self._events: Dict[str, List[Dict[str, Any]]] = {}
 
     async def initialize(self) -> None:
         self.logger.info("CalendarService initialized")
@@ -46,9 +45,9 @@ class CalendarService(BaseService):
             candidate -= timedelta(days=1)
         return candidate
 
-    def trading_days_in_range(self, start: date, end: date) -> list[str]:
+    def trading_days_in_range(self, start: date, end: date) -> List[str]:
         """List ISO trading days between start and end (inclusive)."""
-        days: list[str] = []
+        days: List[str] = []
         cursor = start
         while cursor <= end:
             if self.is_trading_day(cursor):
@@ -56,7 +55,7 @@ class CalendarService(BaseService):
             cursor += timedelta(days=1)
         return days
 
-    def get_month_calendar(self, year: int, month: int) -> dict[str, Any]:
+    def get_month_calendar(self, year: int, month: int) -> Dict[str, Any]:
         """Return trading days and weekend days for a given month."""
         first = date(year, month, 1)
         if month == 12:
@@ -65,8 +64,8 @@ class CalendarService(BaseService):
             nxt = date(year, month + 1, 1)
         last = nxt - timedelta(days=1)
 
-        trading: list[str] = []
-        weekends: list[str] = []
+        trading: List[str] = []
+        weekends: List[str] = []
         cursor = first
         while cursor <= last:
             if self.is_trading_day(cursor):
@@ -83,7 +82,7 @@ class CalendarService(BaseService):
             "trading_day_count": len(trading),
         }
 
-    def add_event(self, event: dict[str, Any]) -> dict[str, Any]:
+    def add_event(self, event: Dict[str, Any]) -> Dict[str, Any]:
         """
         Register a corporate/calendar event.
 
@@ -110,7 +109,7 @@ class CalendarService(BaseService):
         self._events.setdefault(key, []).append(record)
         return record
 
-    def get_events(self, day: date | None = None, symbol: str | None = None) -> list[dict[str, Any]]:
+    def get_events(self, day: Optional[date] = None, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
         """Return events, optionally filtered by day and/or symbol."""
         if day is not None:
             key = day.isoformat() if isinstance(day, date) else str(day)
@@ -123,9 +122,9 @@ class CalendarService(BaseService):
             events = [e for e in events if str(e.get("symbol", "")).upper() == sym]
         return events
 
-    def events_in_range(self, start: date, end: date) -> list[dict[str, Any]]:
+    def events_in_range(self, start: date, end: date) -> List[Dict[str, Any]]:
         """Return all events within an inclusive date range."""
-        result: list[dict[str, Any]] = []
+        result: List[Dict[str, Any]] = []
         cursor = start
         while cursor <= end:
             result.extend(self._events.get(cursor.isoformat(), []))

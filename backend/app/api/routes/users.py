@@ -1,18 +1,17 @@
 """User Profile & Preferences Routes (Tier 6)"""
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
 
 from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import (
+    UserResponse,
+    UserProfileUpdate,
     PreferenceResponse,
     PreferenceUpdate,
-    UserProfileUpdate,
-    UserResponse,
 )
-from app.services.user.preference_service import PreferenceService
 from app.services.user.user_profile_service import UserProfileService
+from app.services.user.preference_service import PreferenceService
 
 router = APIRouter(tags=["users"])
 _user_profile_service = UserProfileService()

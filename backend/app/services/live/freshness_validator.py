@@ -10,8 +10,8 @@ data_age_ms / stale flag or a structured error list with rule_violated codes.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.config import Settings, get_settings
 from app.services.data.market_hours_service import MarketHoursService
@@ -29,7 +29,7 @@ RULE_TIMESTAMP = "timestamp_present"
 
 
 def _utc_now() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 class FreshnessValidator:
@@ -43,11 +43,11 @@ class FreshnessValidator:
     def __init__(
         self,
         market_hours: MarketHoursService,
-        settings: Settings | None = None,
+        settings: Optional[Settings] = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._market_hours = market_hours
-        self._last_intraday_ts: dict[str, datetime] = {}
+        self._last_intraday_ts: Dict[str, datetime] = {}
 
     # ------------------------------------------------------------------
     # Public validate methods
@@ -56,8 +56,8 @@ class FreshnessValidator:
     def validate_quote(
         self,
         symbol: str,
-        raw_payload: dict[str, Any],
-    ) -> dict[str, Any]:
+        raw_payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """
         Validate a raw quote payload.
 
@@ -65,7 +65,7 @@ class FreshnessValidator:
             {VALIDATED: True, "data": {...payload tagged with data_age_ms+stale}}
             {VALIDATED: False, ERRORS: [{rule_violated, message, ...}]}
         """
-        errors: list[dict[str, Any]] = []
+        errors: List[Dict[str, Any]] = []
         sym = symbol.upper()
 
         current_price = raw_payload.get("current_price")
@@ -100,7 +100,7 @@ class FreshnessValidator:
             c = float(current_price)
             o = float(open_p)
             h = float(high_p)
-            low_v = float(low_p)
+            l = float(low_p)
             adj = raw_payload.get("adjusted_close")
             reference = adj if adj is not None else c
             ref_f = float(reference)
@@ -112,7 +112,7 @@ class FreshnessValidator:
             })
             return _result(errors=errors)
 
-        if h < max(o, low_v, c, ref_f) - 1e-9:
+        if h < max(o, l, c, ref_f) - 1e-9:
             errors.append({
                 "rule_violated": RULE_OHLC_CONSISTENCY,
                 "message": "high < max(open,low,close,adjusted_close)",
@@ -120,12 +120,12 @@ class FreshnessValidator:
                 "high": h,
             })
             return _result(errors=errors)
-        if low_v > min(o, h, c, ref_f) + 1e-9:
+        if l > min(o, h, c, ref_f) + 1e-9:
             errors.append({
                 "rule_violated": RULE_OHLC_CONSISTENCY,
                 "message": "low > min(open,high,close,adjusted_close)",
                 "symbol": sym,
-                "low": low_v,
+                "low": l,
             })
             return _result(errors=errors)
 
@@ -140,7 +140,7 @@ class FreshnessValidator:
 
         data_age_ms, stale, threshold_s = self._age_and_stale(freshness_ts)
 
-        validated_data: dict[str, Any] = dict(raw_payload)
+        validated_data: Dict[str, Any] = dict(raw_payload)
         validated_data["symbol"] = sym
         validated_data.setdefault("freshness_ts", freshness_ts)
         validated_data["data_age_ms"] = data_age_ms
@@ -152,12 +152,12 @@ class FreshnessValidator:
         self,
         symbol: str,
         interval: str,
-        raw_payload: dict[str, Any],
-    ) -> dict[str, Any]:
+        raw_payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """
         Validate a raw intraday payload including candle monotonicity.
         """
-        errors: list[dict[str, Any]] = []
+        errors: List[Dict[str, Any]] = []
         sym = symbol.upper()
         candles = raw_payload.get("candles") or []
 
@@ -170,7 +170,7 @@ class FreshnessValidator:
             })
             return _result(errors=errors)
 
-        last_ts: datetime | None = None
+        last_ts: Optional[datetime] = None
         for idx, candle in enumerate(candles):
             ts = candle.get("timestamp")
             if ts is None:
@@ -201,18 +201,18 @@ class FreshnessValidator:
                 })
                 return _result(errors=errors)
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=UTC)
+                ts = ts.replace(tzinfo=timezone.utc)
             else:
-                ts = ts.astimezone(UTC)
+                ts = ts.astimezone(timezone.utc)
 
             o = candle.get("open")
             h = candle.get("high")
-            low_v = candle.get("low")
+            l = candle.get("low")
             c = candle.get("close")
             adj = candle.get("adjusted_close", c)
             try:
                 of, hf, lf, cf, af = (
-                    float(o), float(h), float(low_v), float(c), float(adj),
+                    float(o), float(h), float(l), float(c), float(adj),
                 )
             except (TypeError, ValueError):
                 errors.append({
@@ -271,7 +271,7 @@ class FreshnessValidator:
             freshness_ts = last_ts or _utc_now()
         data_age_ms, stale, threshold_s = self._age_and_stale(freshness_ts)
 
-        validated_data: dict[str, Any] = dict(raw_payload)
+        validated_data: Dict[str, Any] = dict(raw_payload)
         validated_data["symbol"] = sym
         validated_data["interval"] = interval
         validated_data.setdefault("freshness_ts", freshness_ts)
@@ -283,15 +283,15 @@ class FreshnessValidator:
     def validate_market_pulse(
         self,
         market: str,
-        raw_payload: dict[str, Any],
-    ) -> dict[str, Any]:
-        errors: list[dict[str, Any]] = []
+        raw_payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        errors: List[Dict[str, Any]] = []
         freshness_ts = _extract_freshness(raw_payload)
         if freshness_ts is None:
             freshness_ts = _utc_now()
         data_age_ms, stale, threshold_s = self._age_and_stale(freshness_ts)
 
-        validated_data: dict[str, Any] = dict(raw_payload)
+        validated_data: Dict[str, Any] = dict(raw_payload)
         validated_data.setdefault("market", market or "NASDAQ")
         validated_data.setdefault("freshness_ts", freshness_ts)
         validated_data["data_age_ms"] = data_age_ms
@@ -303,9 +303,9 @@ class FreshnessValidator:
 
     def validate_news_item(
         self,
-        raw_payload: dict[str, Any],
-    ) -> dict[str, Any]:
-        errors: list[dict[str, Any]] = []
+        raw_payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        errors: List[Dict[str, Any]] = []
         news_id = raw_payload.get("news_id")
         if not news_id:
             errors.append({
@@ -326,13 +326,13 @@ class FreshnessValidator:
         else:
             freshness_ts = _utc_now()
         if freshness_ts.tzinfo is None:
-            freshness_ts = freshness_ts.replace(tzinfo=UTC)
+            freshness_ts = freshness_ts.replace(tzinfo=timezone.utc)
         else:
-            freshness_ts = freshness_ts.astimezone(UTC)
+            freshness_ts = freshness_ts.astimezone(timezone.utc)
 
         data_age_ms, stale, threshold_s = self._age_and_stale(freshness_ts)
 
-        validated_data: dict[str, Any] = dict(raw_payload)
+        validated_data: Dict[str, Any] = dict(raw_payload)
         validated_data.setdefault("freshness_ts", freshness_ts)
         validated_data["data_age_ms"] = data_age_ms
         validated_data["stale"] = stale
@@ -346,12 +346,12 @@ class FreshnessValidator:
     def _age_and_stale(
         self,
         freshness_ts: datetime,
-    ) -> tuple[float, bool, float]:
+    ) -> Tuple[float, bool, float]:
         """Return (data_age_ms, stale_flag, threshold_seconds)."""
         if freshness_ts.tzinfo is None:
-            freshness_ts = freshness_ts.replace(tzinfo=UTC)
+            freshness_ts = freshness_ts.replace(tzinfo=timezone.utc)
         else:
-            freshness_ts = freshness_ts.astimezone(UTC)
+            freshness_ts = freshness_ts.astimezone(timezone.utc)
         now = _utc_now()
         age_s = max(0.0, (now - freshness_ts).total_seconds())
         age_ms = age_s * 1000.0
@@ -372,16 +372,16 @@ class FreshnessValidator:
 # ----------------------------------------------------------------------
 
 def _result(
-    data: dict[str, Any] | None = None,
-    errors: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
+    data: Optional[Dict[str, Any]] = None,
+    errors: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     if errors:
         return {VALIDATED: False, ERRORS: errors}
     assert data is not None
     return {VALIDATED: True, "data": data}
 
 
-def _extract_freshness(raw_payload: dict[str, Any]) -> datetime | None:
+def _extract_freshness(raw_payload: Dict[str, Any]) -> Optional[datetime]:
     for key in ("freshness_ts", "timestamp", "fetched_at", "published_at"):
         value = raw_payload.get(key)
         if value is None:
@@ -390,7 +390,7 @@ def _extract_freshness(raw_payload: dict[str, Any]) -> datetime | None:
             return value
         if isinstance(value, (int, float)):
             try:
-                return datetime.fromtimestamp(float(value), tz=UTC)
+                return datetime.fromtimestamp(float(value), tz=timezone.utc)
             except (ValueError, OSError):
                 continue
         if isinstance(value, str):

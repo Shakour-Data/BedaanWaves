@@ -14,7 +14,6 @@ import { useAppStore } from "@/store/useAppStore";
 interface CoefficientChartProps {
   data: { key: string; label: string; weight: number }[];
   height?: number;
-  ariaLabel?: string;
 }
 
 const LIGHT = {
@@ -31,7 +30,7 @@ const DARK = {
   border: "#333333",
 };
 
-export function CoefficientChart({ data, height = 360, ariaLabel = "Coefficient chart" }: CoefficientChartProps) {
+export function CoefficientChart({ data, height = 360 }: CoefficientChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const { theme } = useAppStore();
@@ -102,5 +101,5 @@ export function CoefficientChart({ data, height = 360, ariaLabel = "Coefficient 
     };
   }, [chartData, colors, height, data]);
 
-  return <div ref={containerRef} className="w-full" style={{ height }} role="img" aria-label={ariaLabel} />;
+  return <div ref={containerRef} className="w-full" style={{ height }} />;
 }

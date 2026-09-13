@@ -1,22 +1,15 @@
 "use client";
 
-import { useEffect, lazy, useMemo, Suspense, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
-import { PageLoading } from "@/components/ui/PageLoading";
 import { ChangeBadge } from "@/components/shared/StatCard";
 import { StatBox } from "@/components/shared/StatBox";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
-import { OrderBook } from "@/components/market/OrderBook";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { useUXStore } from "@/store/useUXStore";
-const GeneralDashboardTab = lazy(() =>
-  import("@/components/dashboard/GeneralDashboardTab").then((mod) => ({
-    default: mod.GeneralDashboardTab,
-  })),
-);
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -37,7 +30,7 @@ import {
   type LiveStreamKey,
 } from "@/hooks/useLiveData";
 
-   type Tab = "overview" | "risk" | "history" | "orderbook" | "dashboard";
+type Tab = "overview" | "risk" | "history";
 
 interface QuotePayload {
   symbol?: string;
@@ -286,8 +279,6 @@ export default function StockDetailPage() {
     { key: "overview", label: "Overview" },
     { key: "risk", label: "Risk" },
     { key: "history", label: "Historical Data" },
-    { key: "orderbook", label: "Order Book" },
-    { key: "dashboard", label: "Analytical Dashboard" },
   ];
 
   function fmt(n: number, digits = 0): string {
@@ -458,11 +449,11 @@ export default function StockDetailPage() {
                       "text-5xl font-black rounded-full h-32 w-32 flex items-center justify-center border-8 shadow-inner",
                       typeof scoring.overall_score === "number" &&
                         scoring.overall_score >= 70
-                        ? "text-[var(--color-success)] border-[var(--color-success)]/20"
+                        ? "text-green-600 border-green-600/20"
                         : typeof scoring.overall_score === "number" &&
                           scoring.overall_score >= 40
-                        ? "text-[var(--color-warning)] border-[var(--color-warning)]/20"
-                        : "text-[var(--color-error)] border-[var(--color-error)]/20"
+                        ? "text-yellow-500 border-yellow-500/20"
+                        : "text-red-600 border-red-600/20"
                     )}
                   >
                     {scoring.overall_score as number}
@@ -491,10 +482,10 @@ export default function StockDetailPage() {
                               className={cn(
                                 "h-full rounded-full",
                                 (score as number) >= 70
-                                  ? "bg-[var(--color-success)]"
+                                  ? "bg-green-600"
                                   : (score as number) >= 40
-                                  ? "bg-[var(--color-warning)]"
-                                  : "bg-[var(--color-error)]"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-600"
                               )}
                               style={{ width: `${score as number}%` }}
                             />
@@ -593,7 +584,7 @@ export default function StockDetailPage() {
                     type="button"
                     onClick={() => setRange(r.key)}
                     className={cn(
-                       "rounded-full px-3 py-1.5 text-sm transition duration-200 ease-out",
+                      "rounded-full px-3 py-1 text-sm transition duration-fast ease-flow",
                       range === r.key
                         ? "bg-primary/10 font-semibold text-primary"
                         : "text-muted-foreground hover:bg-neutral"
@@ -616,22 +607,6 @@ export default function StockDetailPage() {
               />
             )}
           </TarotCard>
-        </div>
-      )}
-
-      {activeTab === "orderbook" && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          <div className="relative">
-            <OrderBook symbol={symbol} maxDepth={5} />
-          </div>
-        </div>
-      )}
-
-      {activeTab === "dashboard" && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          <Suspense fallback={<PageLoading />}>
-            <GeneralDashboardTab symbol={symbol} />
-          </Suspense>
         </div>
       )}
     </div>

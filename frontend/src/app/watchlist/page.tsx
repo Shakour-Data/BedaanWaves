@@ -31,7 +31,16 @@ import { isNasdaqEquityLike } from "@/lib/dashboard-data";
 import {
   useLiveData,
   LiveConnectionIndicator,
+  type LiveStreamKey,
+  type SSEEvent,
 } from "@/hooks/useLiveData";
+
+interface QuotePayload {
+  symbol?: string;
+  price?: number;
+  change_pct?: number;
+  change?: number;
+}
 
 interface MarketStreamPayload {
   top_movers?: Array<{
@@ -65,7 +74,6 @@ export default function WatchlistPage() {
   const [assetMap, setAssetMap] = useState<Map<string, string>>(new Map());
   const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
   const lastQuoteEventRef = useRef<number | null>(null);
-  const [lastQuoteEventTs, setLastQuoteEventTs] = useState<number | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -138,11 +146,10 @@ export default function WatchlistPage() {
       };
     });
     lastQuoteEventRef.current = now;
-    setLastQuoteEventTs(now);
   }, []);
 
   const handleMarketData = useCallback(
-    (payload: MarketStreamPayload) => {
+    (payload: MarketStreamPayload, _event: SSEEvent<MarketStreamPayload>) => {
       if (payload?.top_movers && Array.isArray(payload.top_movers)) {
         for (const m of payload.top_movers) {
           applyQuotePatch(m.symbol, m.price, m.change_pct);
@@ -163,6 +170,18 @@ export default function WatchlistPage() {
       .filter((item) => item.asset && isNasdaqEquityLike(item.asset))
       .map((item) => item.asset!.symbol.toUpperCase());
   }, [selectedWatchlist]);
+
+  const handleQuoteDataFactory = useCallback(
+    (symbol: string) =>
+      (payload: QuotePayload, _event: SSEEvent<QuotePayload>) => {
+        applyQuotePatch(
+          payload?.symbol || symbol,
+          payload?.price,
+          payload?.change_pct
+        );
+      },
+    [applyQuotePatch]
+  );
 
   const marketLive = useLiveData<MarketStreamPayload>("market", {
     enabled: enrichedSymbols.length > 0,
@@ -356,7 +375,7 @@ export default function WatchlistPage() {
             <LiveConnectionIndicator
               health={marketLive.connectionHealth}
               dataAgeMs={marketLive.lastDataAgeMs}
-              lastEventTs={lastQuoteEventTs}
+              lastEventTs={lastQuoteEventRef.current}
               label="Quotes"
             />
             <PrimaryButton onClick={() => setIsCreateModalOpen(true)}>
@@ -368,9 +387,7 @@ export default function WatchlistPage() {
         {watchlists.length === 0 ? (
           <Card>
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/30 py-16">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
-                <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
-              </div>
+              <div className="text-4xl mb-4">📋</div>
               <h3 className="text-lg font-medium text-foreground">
                 {t("app.watchlist.empty_title")}
               </h3>
@@ -462,14 +479,12 @@ export default function WatchlistPage() {
                     </div>
                     <div className="p-5">
                       {enrichedItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
-                            <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
-                          </div>
-                          <p className="text-lg font-bold text-foreground mb-2">
+                        <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
+                          <div className="text-4xl mb-4">📭</div>
+                          <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">
                             {t("app.watchlist.no_items_title")}
                           </p>
-                          <p className="text-sm mb-6 max-w-xs text-center text-muted-foreground">
+                          <p className="text-sm mb-6 max-w-xs text-center">
                             {t("app.watchlist.no_items_desc")}
                           </p>
                           <Button onClick={() => setIsAddItemModalOpen(true)} variant="outline" size="sm">
@@ -526,10 +541,8 @@ export default function WatchlistPage() {
                 </>
               ) : (
                 <Card>
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 py-16">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
-                      <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 15l6 6m-11-4a7 7 0 110-14 7 7 0 010 14z"/></svg>
-                    </div>
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/30 py-16">
+                    <div className="text-4xl mb-4">👈</div>
                     <h3 className="text-lg font-medium text-foreground">
                       {t("app.watchlist.select_title")}
                     </h3>

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { useEffect } from "react";
 import { cn } from "@/lib/cn";
 
-export interface ModalProps {
+interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
@@ -12,7 +11,6 @@ export interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
-  closeOnOverlay?: boolean;
 }
 
 const sizeClasses: Record<string, string> = {
@@ -30,28 +28,16 @@ export function Modal({
   children,
   footer,
   size = "md",
-  closeOnOverlay = true,
 }: ModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-  const previousActiveElement = useRef<HTMLElement | null>(null);
-
   useEffect(() => {
     if (isOpen) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
       document.body.style.overflow = "hidden";
-      const timer = setTimeout(() => {
-        const focusable = modalRef.current?.querySelector<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        focusable?.focus();
-      }, 50);
-      return () => {
-        document.body.style.overflow = "";
-        clearTimeout(timer);
-        previousActiveElement.current?.focus();
-      };
+    } else {
+      document.body.style.overflow = "";
     }
-    document.body.style.overflow = "";
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -64,91 +50,46 @@ export function Modal({
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const modal = modalRef.current;
-    if (!modal) return;
-
-    const focusableElements = modal.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    if (focusableElements.length === 0) return;
-
-    const first = focusableElements[0];
-    const last = focusableElements[focusableElements.length - 1];
-
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    modal.addEventListener("keydown", handleTab);
-    return () => modal.removeEventListener("keydown", handleTab);
-  }, [isOpen]);
-
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (closeOnOverlay && e.target === e.currentTarget) {
-        onClose();
-      }
-    },
-    [closeOnOverlay, onClose]
-  );
-
   if (!isOpen) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={handleOverlayClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={title ? "modal-title" : undefined}
-      aria-describedby={description ? "modal-desc" : undefined}
-    >
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        ref={modalRef}
-        tabIndex={-1}
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
         className={cn(
-          "relative w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl outline-none",
-          "animate-in zoom-in-95 fade-in duration-200",
+          "relative w-full rounded-xl border border-border bg-surface shadow-xl",
+          "animate-in fade-in zoom-in-95 duration-200",
           sizeClasses[size]
         )}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "modal-title" : undefined}
       >
         {(title || description) && (
-          <div className="shrink-0 border-b border-[var(--color-border)] p-6">
+          <div className="border-b border-border px-5 py-4">
             {title && (
-              <h2 id="modal-title" className="text-lg font-semibold text-[var(--color-text-primary)]">
+              <h2 id="modal-title" className="text-lg font-semibold text-foreground">
                 {title}
               </h2>
             )}
             {description && (
-              <p id="modal-desc" className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                {description}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             )}
           </div>
         )}
-        <div className="max-h-[70vh] overflow-y-auto p-6">{children}</div>
+        <div className="px-5 py-4 max-h-[70vh] overflow-y-auto">{children}</div>
         {footer && (
-          <div className="shrink-0 flex items-center justify-end gap-3 border-t border-[var(--color-border)] p-6">
+          <div className="border-t border-border px-5 py-3 flex justify-end gap-2">
             {footer}
           </div>
         )}
         <button
-          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
+          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral transition-colors"
           aria-label="Close modal"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -156,7 +97,6 @@ export function Modal({
           </svg>
         </button>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }

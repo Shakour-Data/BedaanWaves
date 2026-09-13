@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
 import { UXProviders } from "@/providers/UXProviders";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
-import { ErrorBoundary } from "@/components/ux/ErrorBoundary";
-import { FrontendObservabilityInit } from "@/components/FrontendObservabilityInit";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BedaanWaves | Market Analysis Platform",
   description:
     "Comprehensive market analysis platform with real-time data, technical analysis, and fundamentals.",
-  icons: {
-    icon: "/favicon.ico",
-  },
   openGraph: {
     title: "BedaanWaves | Market Analysis Platform",
     description:
@@ -35,12 +30,7 @@ export default function RootLayout({
     <html lang="en" dir="ltr" data-scroll-behavior="smooth">
       <body>
         <ReactQueryProvider>
-          <ErrorBoundary>
-            <UXProviders>
-              <FrontendObservabilityInit />
-              {children}
-            </UXProviders>
-          </ErrorBoundary>
+          <UXProviders>{children}</UXProviders>
         </ReactQueryProvider>
       </body>
     </html>

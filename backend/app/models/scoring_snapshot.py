@@ -8,28 +8,19 @@ Each row represents one score at one hierarchical level for one asset
 on one date.
 """
 
-import enum
-import uuid
-from datetime import UTC, datetime
-
 from sqlalchemy import (
-    Column,
-    Date,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Index,
-    Numeric,
-    String,
-    UniqueConstraint,
+    Column, String, Numeric, DateTime, Date, ForeignKey, Index, Enum, UniqueConstraint
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, validates
+from datetime import datetime, timezone
+import uuid
+import enum
 
 from app.db.base import Base
 
 
-class SnapshotLevel(enum.StrEnum):
+class SnapshotLevel(str, enum.Enum):
     OVERALL = "overall"
     DIMENSION = "dimension"
     SUB_DIMENSION = "sub_dimension"
@@ -37,7 +28,7 @@ class SnapshotLevel(enum.StrEnum):
     SUB_ASPECT = "sub_aspect"
 
 
-class SnapshotTier(enum.StrEnum):
+class SnapshotTier(str, enum.Enum):
     DAILY = "daily"
     HOURLY = "hourly"
 
@@ -51,11 +42,7 @@ class ScoringSnapshot(Base):
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
 
     date = Column(Date, nullable=False, index=True)
-    snapshot_tier = Column(
-        Enum("daily", "hourly", name="snapshot_tier", native_enum=False),
-        nullable=True,
-        default="daily"
-    )
+    snapshot_tier = Column(Enum(SnapshotTier, name="snapshot_tier"), nullable=True, default=SnapshotTier.DAILY)
     effective_at = Column(DateTime(timezone=True), nullable=True, index=True)
     level = Column(Enum(SnapshotLevel, name="snapshot_level"), nullable=False, index=True)
     level_key = Column(String(100), nullable=False, index=True)
@@ -66,7 +53,7 @@ class ScoringSnapshot(Base):
 
     industry = Column(String(100), nullable=True, index=True)
     company_id = Column(String(100), nullable=True, index=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True)
+    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     extra_fields = Column("extra_fields", JSONB, nullable=False, default={})
 
@@ -88,5 +75,7 @@ class ScoringSnapshot(Base):
         return value
 
     @validates("snapshot_tier")
-    def _validate_snapshot_tier(self, key: str, value: str) -> str:
-        return value.lower()
+    def _validate_snapshot_tier(self, key: str, value: SnapshotTier) -> SnapshotTier:
+        if isinstance(value, str):
+            return SnapshotTier(value)
+        return value

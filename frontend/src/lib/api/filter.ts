@@ -9,7 +9,7 @@ export async function fetchAdvancedFilter(
   payload: AdvancedFilterPayload,
 ): Promise<AdvancedFilterResponse> {
   const { data } = await apiClient.post<AdvancedFilterResponse>(
-    "/filter/advanced",
+    "/api/v1/filter/advanced",
     payload,
   );
   return data;

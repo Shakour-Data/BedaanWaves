@@ -1,6 +1,6 @@
+from typing import Any, Dict, List, Optional
 import asyncio
-from typing import Any
-
+from datetime import datetime, timezone
 from app.core.utils import utc_now_iso
 
 from ..core import ExternalAPIService
@@ -43,7 +43,7 @@ class IntelligentIngestionService(ExternalAPIService):
             timeout=timeout,
             max_retries=max_retries,
         )
-        self._session: Any | None = None
+        self._session: Optional[Any] = None
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._limiter = IngestionRateLimiter()
         self.max_concurrent = max_concurrent
@@ -62,8 +62,7 @@ class IntelligentIngestionService(ExternalAPIService):
         self.logger.info("IntelligentIngestionService shutdown")
 
     async def _execute(
-        self, method: str, path: str, params: dict[str, Any] | None = None,
-        _retry_count: int = 0,
+        self, method: str, path: str, params: Optional[Dict[str, Any]] = None
     ) -> Any:
         if not self._session:
             raise RuntimeError("IntelligentIngestionService not initialized")
@@ -77,10 +76,8 @@ class IntelligentIngestionService(ExternalAPIService):
                 timeout=type(self)._session_timeout(self.timeout),
             ) as response:
                 if response.status == 429:
-                    if _retry_count >= self.max_retries:
-                        raise RuntimeError(f"Rate limit exceeded after {_retry_count} retries")
-                    await asyncio.sleep(2 ** min(_retry_count + 2, 4))
-                    return await self._execute(method, path, params, _retry_count + 1)
+                    await asyncio.sleep(2 ** 2)
+                    return await self._execute(method, path, params)
                 if response.status >= 500:
                     raise RuntimeError(f"API Error: {response.status}")
                 return await response.json()
@@ -95,8 +92,8 @@ class IntelligentIngestionService(ExternalAPIService):
     # High-level ingestion methods
     # ------------------------------------------------------------------ #
     async def get_market_data(
-        self, exchange: str, assets: list[str]
-    ) -> dict[str, Any]:
+        self, exchange: str, assets: List[str]
+    ) -> Dict[str, Any]:
         """Concurrently fetch market data from a given exchange."""
         tasks = [
             self._execute("GET", "market-data", {"exchange": exchange, "symbol": s})
@@ -107,8 +104,8 @@ class IntelligentIngestionService(ExternalAPIService):
 
     async def batch_ingest(
         self,
-        requests: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+        requests: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
         """Process a batch of ingestion requests concurrently."""
         tasks = [
             self._execute(
@@ -125,6 +122,6 @@ class IntelligentIngestionService(ExternalAPIService):
             "results": raw,
         }
 
-    def _process_market_data(self, raw_data: Any) -> dict[str, Any]:
+    def _process_market_data(self, raw_data: Any) -> Dict[str, Any]:
         """Normalise and deduplicate raw API responses."""
         return {"raw": raw_data}

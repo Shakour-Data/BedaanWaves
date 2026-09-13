@@ -11,37 +11,37 @@ Services for user management:
 """
 
 from .auth_service import (
-    authenticate_user,
-    create_access_token,
-    create_refresh_token,
-    create_user,
-    decode_token,
-    get_user_by_email,
-    get_user_by_username,
     hash_password,
     verify_password,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_user_by_username,
+    get_user_by_email,
+    create_user,
+    authenticate_user,
 )
 from .authorization_service import AuthorizationService
-from .notification_service import NotificationService
-from .preference_service import PreferenceService
-from .user_market_settings_service import UserMarketSettingsService
 from .user_profile_service import UserProfileService
+from .preference_service import PreferenceService
+from .notification_service import NotificationService
 from .watchlist_service import WatchlistService
+from .user_market_settings_service import UserMarketSettingsService
 
 __all__ = [
-    "AuthorizationService",
-    "NotificationService",
-    "PreferenceService",
-    "UserMarketSettingsService",
-    "UserProfileService",
-    "WatchlistService",
-    "authenticate_user",
-    "create_access_token",
-    "create_refresh_token",
-    "create_user",
-    "decode_token",
-    "get_user_by_email",
-    "get_user_by_username",
     "hash_password",
     "verify_password",
+    "create_access_token",
+    "create_refresh_token",
+    "decode_token",
+    "get_user_by_username",
+    "get_user_by_email",
+    "create_user",
+    "authenticate_user",
+    "AuthorizationService",
+    "UserProfileService",
+    "PreferenceService",
+    "NotificationService",
+    "WatchlistService",
+    "UserMarketSettingsService",
 ]

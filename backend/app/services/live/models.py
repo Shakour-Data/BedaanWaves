@@ -8,15 +8,23 @@ id for tracing, and the typed payload.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any, Literal
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.services.live.constants import (
+    LIVE_EVENT_HEALTH,
+    LIVE_EVENT_INTRADAY,
+    LIVE_EVENT_MARKET_PULSE,
+    LIVE_EVENT_NEWS_ITEM,
+    LIVE_EVENT_PING,
+    LIVE_EVENT_QUOTE,
+    LIVE_EVENT_SCORE_DELTA,
     VALID_LIVE_EVENTS,
     VALID_STREAM_HEALTH,
 )
+
 
 EventType = Literal[
     "quote",
@@ -26,18 +34,17 @@ EventType = Literal[
     "news_item",
     "health",
     "ping",
-    "orderbook",
 ]
 
 
 def _utc_now() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def _ensure_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 class _BasePayload(BaseModel):
@@ -51,7 +58,7 @@ class _BasePayload(BaseModel):
         default_factory=_utc_now,
         description="UTC timestamp captured the moment the server enqueued the event.",
     )
-    data_age_ms: float | None = Field(
+    data_age_ms: Optional[float] = Field(
         default=None,
         ge=0.0,
         description="Age of the payload in milliseconds at time of emission (received - freshness).",
@@ -75,7 +82,7 @@ class _BasePayload(BaseModel):
         raise ValueError(f"Unsupported datetime value type: {type(value).__name__}")
 
     @model_validator(mode="after")
-    def _populate_age(self) -> _BasePayload:
+    def _populate_age(self) -> "_BasePayload":
         if self.data_age_ms is None:
             self.data_age_ms = max(
                 0.0,
@@ -94,7 +101,7 @@ class LiveQuotePayload(_BasePayload):
     low: float
     previous_close: float
     volume: int = Field(..., ge=0)
-    adjusted_close: float | None = None
+    adjusted_close: Optional[float] = None
     market_status: str = "open"
     freshness_label: str = "LIVE"
     is_delayed: bool = False
@@ -114,7 +121,7 @@ class LiveIntradayCandle(BaseModel):
     close: float
     adjusted_close: float
     volume: int = Field(..., ge=0)
-    split_ratio: float | None = None
+    split_ratio: Optional[float] = None
     source: str = "yfinance"
 
     @field_validator("timestamp", mode="before")
@@ -130,7 +137,7 @@ class LiveIntradayCandle(BaseModel):
 class LiveIntradayPayload(_BasePayload):
     symbol: str
     interval: str = "5m"
-    candles: list[LiveIntradayCandle]
+    candles: List[LiveIntradayCandle]
     market_status: str = "open"
     freshness_label: str = "LIVE"
     data_source: str = "yfinance"
@@ -147,24 +154,24 @@ class _DimensionScores(BaseModel):
 
 class LiveMarketPulsePayload(_BasePayload):
     market: str = "NASDAQ"
-    composite_price: float | None = None
-    composite_change_pct: float | None = None
+    composite_price: Optional[float] = None
+    composite_change_pct: Optional[float] = None
     active_symbols: int = Field(..., ge=0)
-    top_gainer_symbol: str | None = None
-    top_gainer_change_pct: float | None = None
-    top_loser_symbol: str | None = None
-    top_loser_change_pct: float | None = None
-    latest_date: str | None = None
-    dimension_avg_scores: dict[str, float] = Field(default_factory=dict)
+    top_gainer_symbol: Optional[str] = None
+    top_gainer_change_pct: Optional[float] = None
+    top_loser_symbol: Optional[str] = None
+    top_loser_change_pct: Optional[float] = None
+    latest_date: Optional[str] = None
+    dimension_avg_scores: Dict[str, float] = Field(default_factory=dict)
     symbol_count: int = Field(..., ge=0)
 
 
 class LiveScoreDeltaPayload(_BasePayload):
     symbol: str
-    overall_score: float | None = None
-    overall_score_delta: float | None = None
-    dimension_scores: dict[str, float] = Field(default_factory=dict)
-    dimension_score_changes: dict[str, float] = Field(default_factory=dict)
+    overall_score: Optional[float] = None
+    overall_score_delta: Optional[float] = None
+    dimension_scores: Dict[str, float] = Field(default_factory=dict)
+    dimension_score_changes: Dict[str, float] = Field(default_factory=dict)
     market: str = "NASDAQ"
 
     @field_validator("symbol")
@@ -176,21 +183,21 @@ class LiveScoreDeltaPayload(_BasePayload):
 class LiveNewsPayload(_BasePayload):
     news_id: str
     title: str
-    summary: str | None = None
+    summary: Optional[str] = None
     source: str
-    url: str | None = None
-    symbols_affected: list[str] = Field(default_factory=list)
-    sentiment: str | None = None
-    published_at: datetime | None = None
+    url: Optional[str] = None
+    symbols_affected: List[str] = Field(default_factory=list)
+    sentiment: Optional[str] = None
+    published_at: Optional[datetime] = None
 
     @field_validator("symbols_affected")
     @classmethod
-    def _symbols_upper(cls, values: list[str]) -> list[str]:
+    def _symbols_upper(cls, values: List[str]) -> List[str]:
         return [v.upper() for v in values]
 
     @field_validator("published_at", mode="before")
     @classmethod
-    def _pub_ts(cls, value: Any) -> datetime | None:
+    def _pub_ts(cls, value: Any) -> Optional[datetime]:
         if value is None:
             return None
         if isinstance(value, datetime):
@@ -203,11 +210,11 @@ class LiveNewsPayload(_BasePayload):
 class LiveHealthPayload(_BasePayload):
     stream_key: str
     state: str
-    retry_after_s: float | None = None
-    last_good_freshness_ts: datetime | None = None
+    retry_after_s: Optional[float] = None
+    last_good_freshness_ts: Optional[datetime] = None
     consecutive_failures: int = Field(..., ge=0)
-    reason_code: str | None = None
-    reason_message: str | None = None
+    reason_code: Optional[str] = None
+    reason_message: Optional[str] = None
 
     @field_validator("state")
     @classmethod
@@ -218,7 +225,7 @@ class LiveHealthPayload(_BasePayload):
 
     @field_validator("last_good_freshness_ts", mode="before")
     @classmethod
-    def _last_ts(cls, value: Any) -> datetime | None:
+    def _last_ts(cls, value: Any) -> Optional[datetime]:
         if value is None:
             return None
         if isinstance(value, datetime):
@@ -233,46 +240,24 @@ class LivePingPayload(_BasePayload):
     subscription_count: int = Field(0, ge=0)
 
 
-class LiveOrderBookLevel(BaseModel):
-    rank: int = Field(..., ge=1, le=5)
-    price: float = Field(..., gt=0)
-    volume: int = Field(..., ge=0)
-    order_count: int = Field(default=0, ge=0)
-
-
-class LiveOrderBookPayload(_BasePayload):
-    symbol: str = Field(..., min_length=1, max_length=16)
-    bids: list[LiveOrderBookLevel] = Field(default_factory=list, max_length=5)
-    asks: list[LiveOrderBookLevel] = Field(default_factory=list, max_length=5)
-    spread: float | None = None
-    spread_pct: float | None = None
-    data_source: str = "itch"
-
-    @field_validator("symbol")
-    @classmethod
-    def _uppercase(cls, value: str) -> str:
-        return value.upper()
-
-
-LivePayload = (
-    LiveQuotePayload
-    | LiveIntradayPayload
-    | LiveMarketPulsePayload
-    | LiveScoreDeltaPayload
-    | LiveNewsPayload
-    | LiveHealthPayload
-    | LivePingPayload
-    | LiveOrderBookPayload
-)
+LivePayload = Union[
+    LiveQuotePayload,
+    LiveIntradayPayload,
+    LiveMarketPulsePayload,
+    LiveScoreDeltaPayload,
+    LiveNewsPayload,
+    LiveHealthPayload,
+    LivePingPayload,
+]
 
 
 class LiveEventEnvelope(BaseModel):
     """Wire envelope for every SSE event."""
 
     event: EventType
-    data: dict[str, Any]
+    data: Dict[str, Any]
     sequence: int = Field(..., ge=0)
-    correlation_id: str | None = None
+    correlation_id: Optional[str] = None
     stream_key: str
 
     @field_validator("event")

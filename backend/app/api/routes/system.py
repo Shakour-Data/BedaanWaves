@@ -1,23 +1,21 @@
 """System Routes - Tier 9 (Scheduler, Metrics, Queue)"""
 
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import timezone, datetime
+from typing import Optional
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import select
-
-from app.api.dependencies import get_current_admin_user, require_mfa
 from app.core.utils import utc_now_iso
-from app.db.base import async_session_maker
-from app.models.models import NewsSource
+
+from app.api.dependencies import get_current_admin_user, get_health_checker
 from app.services.core.dependency_container import get_global_container
-from app.services.system.metrics_service import MetricsService
-from app.services.system.queue_service import QueueService
 from app.services.system.scheduler_service import SchedulerService
+from app.services.system.metrics_service import MetricsService
+from app.services.system.queue_service import QueueService, JobStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
     tags=["system"],
-    dependencies=[Depends(get_current_admin_user), Depends(require_mfa)],
+    dependencies=[Depends(get_current_admin_user)],
 )
 
 health_router = APIRouter(
@@ -37,7 +35,6 @@ def _get_metrics() -> MetricsService:
 def _get_queue() -> QueueService:
     return get_global_container().get("queue")
 
-
 @router.get("/scheduler/jobs")
 async def list_scheduler_jobs() -> dict:
     """List all registered scheduler jobs."""
@@ -50,19 +47,19 @@ async def list_scheduler_jobs() -> dict:
 async def register_scheduler_job(data: dict) -> dict:
     """
     Register a new scheduled job.
-
+    
     Body: {"name": "job_name", "interval_seconds": 3600}
     """
     name = data.get("name")
     interval_seconds = int(data.get("interval_seconds", 3600))
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
-
+    
     async def _noop():
         return {"status": "ok"}
-
+    
     svc = _get_scheduler()
-    svc.register_job(name, _noop, interval_seconds)
+    job = svc.register_job(name, _noop, interval_seconds)
     return {"status": "success", "job": svc.get_job_status(name)}
 
 
@@ -94,14 +91,6 @@ async def get_platform_metrics() -> dict:
     return {"status": "success", "timestamp": utc_now_iso(), **metrics}
 
 
-@router.get("/metrics/prometheus")
-async def get_prometheus_metrics() -> Response:
-    """Expose Prometheus exposition format."""
-    svc = _get_metrics()
-    data = svc.render_prometheus()
-    return Response(content=data, media_type="text/plain; version=0.0.4")
-
-
 @router.get("/metrics/health")
 async def get_health_summary() -> dict:
     """Get health summary for all services."""
@@ -116,20 +105,20 @@ async def get_health_summary() -> dict:
 async def enqueue_job(data: dict) -> dict:
     """
     Enqueue a new job.
-
+    
     Body: {"name": "task_name", "payload": {...}, "priority": 0, "max_retries": 3}
     """
     name = data.get("name")
     payload = data.get("payload", {})
     priority = int(data.get("priority", 0))
     max_retries = int(data.get("max_retries", 3))
-
+    
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
-
+    
     async def default_processor(job):
         return {"processed": job.name, "payload": job.payload}
-
+    
     svc = _get_queue()
     svc.set_processor(default_processor)
     job = await svc.enqueue(name, payload, priority=priority, max_retries=max_retries)
@@ -160,90 +149,3 @@ async def get_dead_letter_jobs() -> dict:
     svc = _get_queue()
     jobs = svc.get_dead_letter_jobs()
     return {"status": "success", "jobs": jobs, "count": len(jobs)}
-
-
-# ---- News Source Registry Endpoints ----
-
-
-@router.get("/news-sources", response_model=dict)
-async def list_news_sources():
-    """List all registered news sources."""
-    async with async_session_maker() as session:
-        result = await session.execute(select(NewsSource))
-        sources = result.scalars().all()
-        return {
-            "status": "success",
-            "data": [
-                {
-                    "id": str(s.id),
-                    "name": s.name,
-                    "display_name": s.display_name,
-                    "category": s.category,
-                    "region": s.region,
-                    "interval_seconds": s.interval_seconds,
-                    "enabled": s.enabled,
-                    "last_success_at": s.last_success_at.isoformat() if s.last_success_at else None,
-                    "last_error_at": s.last_error_at.isoformat() if s.last_error_at else None,
-                    "last_error_message": s.last_error_message,
-                    "failure_count_24h": s.failure_count_24h,
-                    "success_count_24h": s.success_count_24h,
-                }
-                for s in sources
-            ],
-        }
-
-
-@router.post("/news-sources/{source_id}/toggle", response_model=dict)
-async def toggle_news_source(source_id: str):
-    """Enable/disable a news source."""
-    async with async_session_maker() as session:
-        result = await session.execute(select(NewsSource).where(NewsSource.id == source_id))
-        source = result.scalar_one_or_none()
-        if not source:
-            raise HTTPException(404, "Source not found")
-        source.enabled = not source.enabled
-        await session.commit()
-        return {"status": "success", "enabled": source.enabled}
-
-
-# ---- Alertmanager Webhook Endpoint ----
-
-@router.post("/incidents", include_in_schema=False)
-async def alertmanager_webhook(request: Request):
-    """Receive Alertmanager webhook and create an incident."""
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
-    container = get_global_container()
-    incident_svc = container.get("incident_response_service") if container.has("incident_response_service") else None
-    if incident_svc is None:
-        raise HTTPException(status_code=503, detail="Incident response service not available")
-
-    alerts = payload.get("alerts", [])
-    created_incidents = []
-    for alert in alerts:
-        status = alert.get("status", "firing")
-        labels = alert.get("labels", {})
-        annotations = alert.get("annotations", {})
-        runbook = annotations.get("runbook", labels.get("runbook", ""))
-
-        incident = await incident_svc.report_incident(
-            title=labels.get("alertname", "Unknown Alert"),
-            description=annotations.get("description", ""),
-            severity=labels.get("severity", "warning"),
-            source="alertmanager",
-            metadata={
-                "status": status,
-                "runbook": runbook,
-                "labels": labels,
-                "annotations": annotations,
-                "starts_at": alert.get("startsAt"),
-                "ends_at": alert.get("endsAt"),
-                "generator_url": alert.get("generatorURL"),
-            },
-        )
-        created_incidents.append(incident)
-
-    return {"status": "success", "incidents_created": len(created_incidents), "incidents": created_incidents}

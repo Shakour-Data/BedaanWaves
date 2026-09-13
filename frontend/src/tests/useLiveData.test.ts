@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
-import { useLiveData, type LiveStreamKey, type ConnectionHealth } from '@/hooks/useLiveData'
+import { useLiveData, type LiveStreamKey } from '@/hooks/useLiveData'
 import {
   disconnectAllSSE,
   getActiveConnectionKeys,
@@ -9,31 +9,13 @@ import {
 import { useLiveStore, STALE_THRESHOLD_MS } from '@/store/useLiveStore'
 import * as apiModule from '@/lib/api'
 
-interface MockES {
-  readyState: number
-  url: string
-  mockOpen(): void
-  mockEmit(event: string, payload: Record<string, unknown>): void
-  mockError(): void
-  mockClose(): void
-}
-
-interface TestGlobals {
-  __getMockEventSources: () => MockES[]
-  __clearMockEventSources: () => void
-}
-
-function getTestGlobals(): TestGlobals {
-  return globalThis as unknown as TestGlobals
-}
-
-function getLastMockES(): MockES {
-  const list = getTestGlobals().__getMockEventSources()
+function getLastMockES(): any {
+  const list = (globalThis as any).__getMockEventSources()
   return list[list.length - 1]
 }
 
-function getAllMockES(): MockES[] {
-  return getTestGlobals().__getMockEventSources() ?? []
+function getAllMockES(): any[] {
+  return (globalThis as any).__getMockEventSources() ?? []
 }
 
 async function flushAll(ticks = 12, timerMs = 100) {
@@ -55,7 +37,7 @@ describe('hooks/useLiveData.tsx', () => {
 
   beforeEach(() => {
     disconnectAllSSE()
-    getTestGlobals().__clearMockEventSources()
+    ;(globalThis as any).__clearMockEventSources()
     cleanup()
     useLiveStore.setState({ streams: {} })
     vi.useFakeTimers()
@@ -74,7 +56,7 @@ describe('hooks/useLiveData.tsx', () => {
           statusText: 'OK',
           headers: {},
           config: {},
-        } as unknown)
+        } as any)
       })
   })
 
@@ -93,7 +75,7 @@ describe('hooks/useLiveData.tsx', () => {
         await flushAll(8, 200)
 
         const initCalls = apiGetSpy.mock.calls.filter((c) =>
-          String(c[0]).includes('/live/quote/TR71')
+          String(c[0]).includes('/live/quote/TR71/snapshot')
         )
         expect(initCalls.length).toBeGreaterThanOrEqual(1)
         apiGetSpy.mockClear()
@@ -120,7 +102,7 @@ describe('hooks/useLiveData.tsx', () => {
         await flushAll(12, 500)
 
         expect(apiGetSpy).toHaveBeenCalledTimes(1)
-        expect(String(apiGetSpy.mock.calls[0][0])).toContain('/live/quote/TR71')
+        expect(String(apiGetSpy.mock.calls[0][0])).toContain('/live/quote/TR71/snapshot')
 
         const storeState = useLiveStore.getState().streams[key]
         expect(storeState?.lastSequence).toBe(100)
@@ -162,7 +144,7 @@ describe('hooks/useLiveData.tsx', () => {
       { timeout: 30000 },
       async () => {
         const key: LiveStreamKey = 'market'
-        const healthChanges: ConnectionHealth[] = []
+        const healthChanges: any[] = []
 
         const { result } = renderHook(() =>
           useLiveData<{ tick: number }>(key, {

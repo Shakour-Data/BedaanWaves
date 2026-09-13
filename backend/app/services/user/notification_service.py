@@ -3,7 +3,8 @@
 Creates, lists, marks-read and deletes user notifications.
 """
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
+from typing import Dict, List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy import select
@@ -26,7 +27,7 @@ class NotificationService:
         message: str,
         channel: str = "IN_APP",
         priority: str = "NORMAL",
-        metadata: dict | None = None,
+        metadata: Optional[Dict] = None,
         session=None,
     ) -> Notification:
         owns = session is None
@@ -51,7 +52,7 @@ class NotificationService:
 
     async def get_notification(
         self, notification_id: UUID, user_id: UUID, session=None
-    ) -> Notification | None:
+    ) -> Optional[Notification]:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -73,7 +74,7 @@ class NotificationService:
         limit: int = 50,
         offset: int = 0,
         session=None,
-    ) -> tuple[list[Notification], int]:
+    ) -> Tuple[List[Notification], int]:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -109,8 +110,8 @@ class NotificationService:
                 return False
             if not notification.read:
                 notification.read = True
-                from datetime import datetime
-                notification.read_at = datetime.now(UTC)
+                from datetime import timezone, datetime
+                notification.read_at = datetime.now(timezone.utc)
                 await session.commit()
             return True
         finally:
@@ -121,7 +122,7 @@ class NotificationService:
         owns = session is None
         session = session or self.session_factory()
         try:
-            from datetime import datetime
+            from datetime import timezone, datetime
 
             result = await session.execute(
                 select(Notification).where(
@@ -129,7 +130,7 @@ class NotificationService:
                     Notification.read.is_(False),
                 )
             )
-            now = datetime.now(UTC)
+            now = datetime.now(timezone.utc)
             count = 0
             for notification in result.scalars().all():
                 notification.read = True

@@ -1,11 +1,13 @@
-from enum import StrEnum
-from typing import Any
+from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
+from enum import Enum
+import numpy as np
 
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
 
 
-class MetricType(StrEnum):
+class MetricType(str, Enum):
     FLOW = "flow"
     STOCK = "stock"
     NOMINAL = "nominal"
@@ -30,7 +32,7 @@ class SemanticTag:
         self.asset_class = asset_class
         self.temporal_alignment = temporal_alignment
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "type": self.metric_type.value,
             "unit": self.base_unit,
@@ -44,8 +46,8 @@ class UnifiedDataModelService(AnalysisService):
 
     def __init__(self, service_name: str = "UnifiedDataModelService"):
         super().__init__(service_name)
-        self.semantic_tags: dict[str, SemanticTag] = {}
-        self.metric_algebra: dict[str, str] = {}
+        self.semantic_tags: Dict[str, SemanticTag] = {}
+        self.metric_algebra: Dict[str, str] = {}
 
     async def initialize(self) -> None:
         """Initialize semantic tags and metric algebra rules."""
@@ -112,7 +114,7 @@ class UnifiedDataModelService(AnalysisService):
             "velocity_equivalent": "revenue / market_cap",
         }
 
-    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Perform unified data model analysis."""
         return {
             "semantic_tags": {k: v.to_dict() for k, v in self.semantic_tags.items()},
@@ -120,7 +122,7 @@ class UnifiedDataModelService(AnalysisService):
             "temporal_alignment": await self._check_temporal_alignment(data),
         }
 
-    async def _check_temporal_alignment(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def _check_temporal_alignment(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Check if quarterly stock metrics are temporally aligned."""
         stock_quarter = data.get("stock_quarter", "Q1")
         previous_quarter = data.get("previous_quarter", stock_quarter)
@@ -133,7 +135,7 @@ class UnifiedDataModelService(AnalysisService):
             "gap_days": 0 if aligned else 90,
         }
 
-    def get_semantic_tag(self, metric_name: str) -> SemanticTag | None:
+    def get_semantic_tag(self, metric_name: str) -> Optional[SemanticTag]:
         """Get semantic tag for a metric."""
         return self.semantic_tags.get(metric_name)
 

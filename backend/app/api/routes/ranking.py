@@ -1,13 +1,11 @@
 """Ranking API Routes"""
 
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 import math
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db.base import get_async_session
-from app.schemas.schemas import RankingResponse
 from app.services.analysis.ranking_service import RankingService
 
 logger = logging.getLogger(__name__)
@@ -58,7 +56,7 @@ def _risk_score(closes: list[float]) -> float:
     if not returns:
         return 50.0
     mean_return = sum(returns) / len(returns)
-    variance = sum((r - mean_return) ** 2 for r in returns) / (len(returns) - 1)
+    variance = sum((r - mean_return) ** 2 for r in returns) / len(returns)
     volatility = math.sqrt(variance) * math.sqrt(252)
     if volatility >= 1.0:
         return 0.0
@@ -68,14 +66,14 @@ def _risk_score(closes: list[float]) -> float:
         return max(0.0, 100.0 - (volatility * 100))
 
 
-@router.get("/nasdaq", response_model=RankingResponse)
+@router.get("/nasdaq", response_model=dict)
 async def get_nasdaq_rankings(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     sort_by: str = Query("overall_score"),
     order: str = Query("desc"),
     db: AsyncSession = Depends(get_async_session),
-) -> RankingResponse:
+) -> dict:
     """
     Get ranked list of Nasdaq stocks with their 6D scores.
 
@@ -95,6 +93,6 @@ async def get_nasdaq_rankings(
             order=order,
             db=db,
         )
-        return RankingResponse(**result)
+        return result
     finally:
         await service.shutdown()

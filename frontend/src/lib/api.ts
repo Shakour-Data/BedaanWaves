@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_BASE_URL } from './utils';
 
@@ -16,49 +16,25 @@ export function getApiErrorMessage(error: unknown): string {
   return String(error);
 }
 
-interface RetryConfig extends AxiosRequestConfig {
-  _retryCount?: number;
-}
-
-const MAX_RETRY = 3;
-const RETRY_BASE_DELAY = 1000;
-
-function isRetryableError(error: AxiosError): boolean {
-  if (!error.response) return true; // network errors
-  const status = error.response.status;
-  return status >= 500 || status === 429 || status === 408;
-}
-
-function getRetryDelay(attempt: number): number {
-  return RETRY_BASE_DELAY * Math.pow(2, attempt) + Math.random() * 500;
-}
-
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
-  },
-});
+    'Content-Type': 'application/json' } });
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    try {
-      const state = useAuthStore.getState ? useAuthStore.getState() : null;
-      const token = state?.token;
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch {
-      // ignore auth header issues in tests / uninitialized store
+    const token = useAuthStore.getState().token;
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Add response interceptor to handle token refresh and retry logic
+// Add response interceptor to handle token refresh
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 let failedQueue: Array<{
@@ -80,21 +56,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as RetryConfig & { _retry?: boolean };
-
-    // Retry logic for retryable errors
-    if (isRetryableError(error) && !originalRequest._retry) {
-      const retryCount = originalRequest._retryCount || 0;
-      if (retryCount < MAX_RETRY) {
-        originalRequest._retry = true;
-        originalRequest._retryCount = retryCount + 1;
-
-        const delay = getRetryDelay(retryCount);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-
-        return apiClient(originalRequest);
-      }
-    }
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing && refreshPromise) {
@@ -112,40 +74,31 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = useAuthStore.getState ? useAuthStore.getState().refreshToken : null;
+      const refreshToken = useAuthStore.getState().refreshToken;
 
       if (!refreshToken) {
-         try {
-          useAuthStore.getState?.()?.logout?.();
-        } catch {
-          // ignore logout failures in tests
-        }
+        useAuthStore.getState().logout();
         return Promise.reject(error);
       }
 
       refreshPromise = Promise.race([
-        axios.post(`${API_BASE_URL}/auth/refresh`, { refresh_token: refreshToken }).then(
+        axios.post(`${API_BASE_URL}/auth/refresh?token=${encodeURIComponent(refreshToken)}`).then(
           (response) => response.data.access_token
         ),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Refresh token timeout')), 10000)
         ),
       ]).catch((refreshError) => {
-        try {
-          useAuthStore.getState?.()?.logout?.();
-        } catch {
-          // ignore
-        }
+        useAuthStore.getState().logout();
         throw refreshError;
       });
 
       try {
         const token = await refreshPromise;
 
-        const currentRefreshToken = useAuthStore.getState ? useAuthStore.getState().refreshToken : null;
         useAuthStore.setState({
           token,
-          refreshToken: currentRefreshToken,
+          refreshToken: useAuthStore.getState().refreshToken,
         });
 
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;

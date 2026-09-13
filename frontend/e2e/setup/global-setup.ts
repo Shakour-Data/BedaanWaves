@@ -1,4 +1,4 @@
-import type { FullConfig } from '@playwright/test';
+import { chromium, FullConfig } from '@playwright/test';
 
 async function globalSetup(config: FullConfig) {
   console.log('[GlobalSetup] Initializing Playwright E2E test environment...');

@@ -11,11 +11,10 @@ import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AssetRow } from "@/lib/dashboard-data";
 import { isNasdaqEquityLike } from "@/lib/dashboard-data";
-import { DonutChart } from "@/components/charts/DonutChart";
-import { BarChart } from "@/components/charts/BarChart";
 import {
   useLiveData,
   LiveConnectionIndicator,
+  type SSEEvent,
 } from "@/hooks/useLiveData";
 
 import { t } from "@/lib/i18n";
@@ -57,11 +56,11 @@ export default function PortfolioPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [holdings, setHoldings] = useState<AssetRow[]>([]);
+  const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
   const lastQuoteEventRef = useRef<number | null>(null);
-  const [lastQuoteEventTs, setLastQuoteEventTs] = useState<number | null>(null);
 
   const applyQuotePatch = useCallback((symbol: string, price?: number, changePct?: number) => {
     const sym = symbol.toUpperCase();
@@ -83,11 +82,10 @@ export default function PortfolioPage() {
       };
     });
     lastQuoteEventRef.current = now;
-    setLastQuoteEventTs(now);
   }, []);
 
   const handleMarketData = useCallback(
-    (payload: MarketStreamPayload) => {
+    (payload: MarketStreamPayload, _event: SSEEvent<MarketStreamPayload>) => {
       if (payload?.top_movers && Array.isArray(payload.top_movers)) {
         for (const m of payload.top_movers) {
           applyQuotePatch(m.symbol, m.price, m.change_pct);
@@ -125,48 +123,27 @@ export default function PortfolioPage() {
     return anyChange ? next : holdings;
   }, [holdings, liveQuotes]);
 
-  const stats = useMemo(() => {
-    if (liveHoldings.length === 0) return [];
+  useEffect(() => {
+    if (liveHoldings.length === 0) return;
     const totalValue = liveHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
     const totalCost = liveHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
     const totalPnL = totalValue - totalCost;
     const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-    return [
-      { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
-      { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
-      { label: t("app.portfolio.symbols_count"), value: String(liveHoldings.length), changePct: 0 },
-      { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
-    ];
-  }, [liveHoldings]);
-
-  // Real performance series: current value vs. cost basis per holding.
-  const performanceSeries = useMemo(() => {
-    if (liveHoldings.length === 0) return [];
-    return liveHoldings.map((h) => {
-      const qty = h.quantity ?? 0;
-      const currentValue = h.price * qty;
-      const costBasis = (h.avg_price ?? h.price) * qty;
-      const pnl = currentValue - costBasis;
-      return {
-        time: h.symbol,
-        value: Number(pnl.toFixed(2)),
-        color: pnl >= 0 ? "#10B981" : "#EF4444",
-      };
+    setStats((prev) => {
+      const next = [
+        { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+        { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
+        { label: t("app.portfolio.symbols_count"), value: String(liveHoldings.length), changePct: 0 },
+        { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
+      ];
+      if (
+        prev.length === next.length &&
+        prev.every((s, i) => s.label === next[i].label && s.value === next[i].value)
+      ) {
+        return prev;
+      }
+      return next;
     });
-  }, [liveHoldings]);
-
-  // Real distribution: portfolio weight per holding (by market value).
-  const distributionData = useMemo(() => {
-    if (liveHoldings.length === 0) return [];
-    const palette = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
-    return liveHoldings
-      .map((h, i) => {
-        const qty = h.quantity ?? 0;
-        const value = h.price * qty;
-        return { label: h.symbol, value, color: palette[i % palette.length] };
-      })
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value);
   }, [liveHoldings]);
 
   const loadPortfolio = useCallback(async () => {
@@ -216,11 +193,30 @@ export default function PortfolioPage() {
             .filter((h): h is AssetRow => h !== null);
           
           setHoldings(enrichedHoldings);
+          
+          const totalValue = enrichedHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
+          const totalCost = enrichedHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
+          const totalPnL = totalValue - totalCost;
+          const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
+          
+          setStats([
+            { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
+            { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
+            { label: t("app.portfolio.symbols_count"), value: String(enrichedHoldings.length), changePct: 0 },
+            { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
+          ]);
         } else {
           setHoldings([]);
+          setStats([
+            { label: t("app.portfolio.total_value"), value: "$0", changePct: 0 },
+            { label: t("app.portfolio.total_pnl"), value: "$0", changePct: 0 },
+            { label: t("app.portfolio.symbols_count"), value: "0", changePct: 0 },
+            { label: t("app.portfolio.daily_return"), value: "0%", changePct: 0 },
+          ]);
         }
       } else {
         setHoldings([]);
+        setStats([]);
       }
     } catch {
       setError(t("app.portfolio.error_loading"));
@@ -274,7 +270,7 @@ export default function PortfolioPage() {
           <LiveConnectionIndicator
             health={marketLive.connectionHealth}
             dataAgeMs={marketLive.lastDataAgeMs}
-            lastEventTs={lastQuoteEventTs}
+            lastEventTs={lastQuoteEventRef.current}
             label="Quotes"
           />
         </div>
@@ -307,12 +303,10 @@ export default function PortfolioPage() {
             {liveHoldings.length > 0 ? (
               <AssetTable rows={liveHoldings} />
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
-                  <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
-                </div>
-                <p className="text-lg font-bold text-foreground mb-2">{t("app.portfolio.empty_title")}</p>
-                <p className="text-sm mb-6 max-w-xs text-center text-muted-foreground">{t("app.portfolio.empty_desc")}</p>
+              <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
+                <div className="text-4xl mb-4">📭</div>
+                <p className="text-lg font-bold text-[var(--color-text-primary)] mb-2">{t("app.portfolio.empty_title")}</p>
+                <p className="text-sm mb-6 max-w-xs text-center">{t("app.portfolio.empty_desc")}</p>
                 <button onClick={() => router.push("/stocks")} className="rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary)]/25 transition-all hover:shadow-xl hover:-translate-y-0.5">
                   {t("app.portfolio.view_stocks")}
                 </button>
@@ -322,48 +316,37 @@ export default function PortfolioPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-<div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-              <span className="text-lg">📈</span>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">📈</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Portfolio performance over time</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.performance")}</h3>
-              <p className="text-xs text-[var(--color-text-muted)]">Realized P&L per holding (current value − cost basis)</p>
+            <div className="h-64 flex flex-col items-center justify-center text-[var(--color-text-muted)] bg-[var(--color-background)]/50 rounded-xl border border-dashed border-[var(--color-border)]">
+              <p className="text-sm font-medium">Coming Soon</p>
+              <p className="text-xs mt-1">Performance chart under development</p>
             </div>
           </div>
-          {performanceSeries.length > 0 ? (
-            <BarChart
-              data={performanceSeries}
-              height={240}
-              valueFormatter={(v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}
-              ariaLabel="Portfolio performance by holding"
-            />
-          ) : (
-            <div className="h-64 flex items-center justify-center text-[var(--color-text-muted)] text-sm">
-              No holdings to chart
-            </div>
-          )}
-        </div>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-              <span className="text-lg">🥧</span>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                <span className="text-lg">🥧</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution")}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Asset allocation breakdown</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-[var(--color-text-primary)]">{t("app.portfolio.distribution")}</h3>
-              <p className="text-xs text-[var(--color-text-muted)]">Asset allocation breakdown by market value</p>
+            <div className="h-64 flex flex-col items-center justify-center text-[var(--color-text-muted)] bg-[var(--color-background)]/50 rounded-xl border border-dashed border-[var(--color-border)]">
+              <p className="text-sm font-medium">Coming Soon</p>
+              <p className="text-xs mt-1">Distribution chart under development</p>
             </div>
           </div>
-          {distributionData.length > 0 ? (
-            <DonutChart data={distributionData} size={240} thickness={36} />
-          ) : (
-            <div className="h-64 flex items-center justify-center text-[var(--color-text-muted)] text-sm">
-              No holdings to chart
-            </div>
-          )}
-        </div>
         </div>
       </div>
     </NewDashboardShell>

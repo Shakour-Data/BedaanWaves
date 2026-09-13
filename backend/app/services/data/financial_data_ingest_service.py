@@ -7,17 +7,21 @@ in the formation of the Nasdaq index (Nasdaq-listed EQUITY and ETF).
 Optimized with caching, batching, and lazy loading for performance.
 """
 
-import asyncio
-from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
-from typing import Any
+from abc import ABC, abstractmethod
+import asyncio
 
-from app.core.config import get_settings
 from app.services.core.base_service import DataService
-
+from app.core.exceptions import (
+    DataProviderException,
+    DataParsingException,
+    FinancialDataException,
+)
 from .nasdaq_ingestion_service import NasdaqIngestionService
+from app.core.config import get_settings
 
 
 class MarketType(Enum):
@@ -47,27 +51,27 @@ class FinancialStatement:
     statement_type: FinancialStatementType
     period: str
     fiscal_year: int
-    fiscal_quarter: int | None
-    data: dict[str, Any]
+    fiscal_quarter: Optional[int]
+    data: Dict[str, Any]
     source: str
     fetched_at: datetime
-    as_of: datetime | None = None
+    as_of: Optional[datetime] = None
 
 
 class FinancialDataProvider(ABC):
     """Abstract base class for financial data providers"""
-
+    
     @abstractmethod
     async def fetch_financial_statements(
         self,
         symbol: str,
-        statement_types: list[FinancialStatementType],
-        periods: list[str] | None = None
-    ) -> list[FinancialStatement]:
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
         pass
-
+    
     @abstractmethod
-    async def get_supported_markets(self) -> list[MarketType]:
+    async def get_supported_markets(self) -> List[MarketType]:
         pass
 
 
@@ -81,12 +85,12 @@ class YahooFinanceProvider(FinancialDataProvider):
     async def fetch_financial_statements(
         self,
         symbol: str,
-        statement_types: list[FinancialStatementType],
-        periods: list[str] | None = None
-    ) -> list[FinancialStatement]:
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
         return []
 
-    async def get_supported_markets(self) -> list[MarketType]:
+    async def get_supported_markets(self) -> List[MarketType]:
         return [MarketType.US, MarketType.NASDAQ]
 
 
@@ -101,14 +105,14 @@ class AlphaVantageProvider(FinancialDataProvider):
     async def fetch_financial_statements(
         self,
         symbol: str,
-        statement_types: list[FinancialStatementType],
-        periods: list[str] | None = None
-    ) -> list[FinancialStatement]:
+        statement_types: List[FinancialStatementType],
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
         if not self.api_key:
             return []
         return []
 
-    async def get_supported_markets(self) -> list[MarketType]:
+    async def get_supported_markets(self) -> List[MarketType]:
         return [MarketType.US, MarketType.NASDAQ]
 
 
@@ -130,7 +134,7 @@ class FinancialDataIngestService(DataService):
     ):
         super().__init__(service_name)
         self.max_concurrent = max_concurrent_requests
-        self._providers: dict[MarketType, FinancialDataProvider] = {}
+        self._providers: Dict[MarketType, FinancialDataProvider] = {}
         self._provider_cache = {}
         self._result_cache = {}
         self._cache_size_limit = 100
@@ -146,94 +150,55 @@ class FinancialDataIngestService(DataService):
 
     async def initialize(self) -> None:
         self.logger.info("FinancialDataIngestService initialized")
-        from app.services.data.sec_edgar_client import SEDGARFinancialService
-        self._sec_service = SEDGARFinancialService()
-        await self._sec_service.initialize()
 
     async def shutdown(self) -> None:
         self.logger.info("FinancialDataIngestService shutdown")
-        if hasattr(self, "_sec_service") and self._sec_service:
-            await self._sec_service.shutdown()
 
-    _result_cache: dict[str, Any] = {}
+    _result_cache: Dict[str, Any] = {}
 
     async def ingest_financial_statements(
         self,
         symbol: str,
         market: MarketType,
-        statement_types: list[FinancialStatementType] | None = None,
-        periods: list[str] | None = None,
-        min_quarters: int = 20,
-    ) -> list[FinancialStatement]:
+        statement_types: Optional[List[FinancialStatementType]] = None,
+        periods: Optional[List[str]] = None
+    ) -> List[FinancialStatement]:
         """
         Fetch and store financial statements for a symbol.
 
-        Attempts the registered provider first (yfinance / Alpha Vantage).
-        If the provider returns no data, falls back to the free SEC EDGAR
-        API which provides 20+ quarters of historical statements.
-
         Uses caching to avoid redundant fetches.
         """
+        # Check cache first
         cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}:{','.join(periods or [])}"
         cached = self._result_cache.get(cache_key)
         if cached is not None:
             return cached if cached else []
 
+        # Lazy provider registration
         if not self._providers:
             self._register_providers()
 
         provider = self._providers.get(market)
-        statements: list[FinancialStatement] = []
+        if not provider:
+            raise ValueError(f"No provider registered for market: {market}")
 
-        if provider:
-            try:
-                statements = await provider.fetch_financial_statements(
-                    symbol=symbol,
-                    statement_types=statement_types,
-                    periods=periods
-                )
-            except Exception as e:
-                self.logger.debug(f"Provider {provider.__class__.__name__} failed for {symbol}: {e}")
+        statements = await provider.fetch_financial_statements(
+            symbol=symbol,
+            statement_types=statement_types,
+            periods=periods
+        )
 
-        if not statements:
-            self.logger.info(f"Provider returned no data for {symbol}; falling back to SEC EDGAR")
-            try:
-                from sqlalchemy import func as _func
-                from sqlalchemy import select as _select
-
-                from app.db.base import async_session_maker
-                from app.models.models import Asset as DBAsset
-
-                async with async_session_maker() as session:
-                    asset = (
-                        await session.execute(
-                            _select(DBAsset).where(_func.lower(DBAsset.symbol) == _func.lower(symbol))
-                        )
-                    ).scalars().first()
-                    if asset:
-                        await self._sec_service.ingest_sec_financials(
-                            symbol=symbol,
-                            asset_id=str(asset.id),
-                            min_quarters=min_quarters,
-                            skip_if_sufficient=True,
-                        )
-                        statements = await self.get_financial_statements(
-                            asset_id=str(asset.id),
-                            limit=min_quarters,
-                        )
-            except Exception as e:
-                self.logger.warning(f"SEC EDGAR fallback failed for {symbol}: {e}")
-
+        # Cache the result
         if statements:
             self._result_cache[cache_key] = statements
         return statements or []
 
     async def batch_ingest_optimized(
         self,
-        symbols: list[str],
+        symbols: List[str],
         market: MarketType,
-        statement_types: list[FinancialStatementType] | None = None
-    ) -> dict[str, list[FinancialStatement]]:
+        statement_types: Optional[List[FinancialStatementType]] = None
+    ) -> Dict[str, List[FinancialStatement]]:
         """Batch ingest financial statements with concurrent processing."""
         # Check which symbols are already cached
         cached_symbols = set()
@@ -260,7 +225,7 @@ class FinancialDataIngestService(DataService):
 
             for symbol, result in zip(uncached_symbols, results):
                 if isinstance(result, Exception):
-                    self.logger.error(f"Failed to ingest {symbol}: {result!s}")
+                    self.logger.error(f"Failed to ingest {symbol}: {str(result)}")
                 else:
                     # Cache the result
                     cache_key = f"{market.value}:{symbol}:{','.join(statement_types or [])}"
@@ -275,7 +240,7 @@ class FinancialDataIngestService(DataService):
 
         return results
 
-    async def _store_statements(self, statements: list[FinancialStatement]) -> list[FinancialStatement]:
+    async def _store_statements(self, statements: List[FinancialStatement]) -> List[FinancialStatement]:
         """Store statements in database"""
         # Implementation would use database service to store
         # For now, return as-is
@@ -284,64 +249,24 @@ class FinancialDataIngestService(DataService):
     async def get_financial_statements(
         self,
         asset_id: str,
-        statement_type: FinancialStatementType | None = None,
+        statement_type: Optional[FinancialStatementType] = None,
         limit: int = 10
-    ) -> list[FinancialStatement]:
-        """Retrieve stored financial statements for an asset from the database.
-
-        Returns the most recent ``limit`` quarterly periods (default 10, up
-        to 20+ if available), ordered by fiscal year / quarter descending.
-        """
-        from sqlalchemy import desc, select
-
-        from app.db.base import async_session_maker
-        from app.models.models import FinancialStatement as DBStatement
-
-        stmt = (
-            select(DBStatement)
-            .where(DBStatement.asset_id == asset_id)
-            .where(DBStatement.period.like("%Q%"))
-        )
-        if statement_type is not None:
-            stmt = stmt.where(DBStatement.statement_type == statement_type.value)
-        stmt = stmt.order_by(
-            desc(DBStatement.fiscal_year),
-            desc(DBStatement.period),
-        ).limit(limit)
-
-        async with async_session_maker() as session:
-            result = await session.execute(stmt)
-            rows = result.fetchall()
-
-        statements = []
-        for row in rows:
-            stmt_obj = FinancialStatement(
-                asset_id=row.asset_id,
-                symbol="",
-                market=MarketType(row.market),
-                statement_type=FinancialStatementType(row.statement_type),
-                period=row.period,
-                fiscal_year=row.fiscal_year,
-                fiscal_quarter=None,
-                data=row.data or {},
-                source="SEC_EDGAR",
-                fetched_at=row.as_of or datetime.now(),
-                as_of=row.as_of,
-            )
-            statements.append(stmt_obj)
-        return statements
+    ) -> List[FinancialStatement]:
+        """Retrieve stored financial statements for an asset"""
+        # Implementation would query database
+        return []
 
     async def get_latest_fundamentals(
         self,
         asset_id: str,
         market: MarketType
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         Get the latest fundamental data formatted for analysis.
 
         Returns standardized financial data ready for FundamentalAnalysisService.
         """
-        statements = await self.get_financial_statements(asset_id, limit=20)
+        statements = await self.get_financial_statements(asset_id)
 
         # Combine statements into a single financials dict
         financials = {}
@@ -358,10 +283,10 @@ class FinancialDataIngestService(DataService):
 
     async def batch_ingest(
         self,
-        symbols: list[str],
+        symbols: List[str],
         market: MarketType = None,
-        statement_types: list[FinancialStatementType] | None = None
-    ) -> dict[str, list[FinancialStatement]]:
+        statement_types: Optional[List[FinancialStatementType]] = None
+    ) -> Dict[str, List[FinancialStatement]]:
         """Ingest financial statements for multiple symbols"""
         if market in (MarketType.US, MarketType.NASDAQ) or (market is None and symbols):
             nasdaq = NasdaqIngestionService()

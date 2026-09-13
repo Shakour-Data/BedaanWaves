@@ -21,15 +21,15 @@ USAGE:
 - POST /api/v1/alerts/bulk - Create multiple alerts
 """
 
+from typing import List, Optional, Literal
 from datetime import datetime
-from enum import StrEnum
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from enum import Enum
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel, Field, validator
 
-from app.schemas.schemas import AlertHistoryResponse, AlertStatsResponse, BulkCreateAlertsResponse
-from ...services.notifications.alert_service import AlertService
-from ...services.user.auth_service import get_current_user
+from ....core.config import get_settings
+from ....services.user.auth_service import AuthService, get_current_user
+from ....services.notifications.alert_service import AlertService
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/alerts", tags=["Alerts"])
 # Enums and Types
 # =============================================================================
 
-class AlertType(StrEnum):
+class AlertType(str, Enum):
     """Types of alerts supported by the system"""
     PRICE_ABOVE = "price_above"           # Price goes above threshold
     PRICE_BELOW = "price_below"           # Price goes below threshold
@@ -46,7 +46,7 @@ class AlertType(StrEnum):
     VOLUME_SPIKE = "volume_spike"         # Volume spikes above threshold
     SCORE_CHANGE = "score_change"         # Dimension score changes
     RATING_UPGRADE = "rating_upgrade"     # Stock rating upgrades
-    RATING_DOWNGRADE = "rating_downgrade"  # Stock rating downgrades
+    RATING_DOWNGRADE = "rating_downgrade" # Stock rating downgrades
     RSI_OVERBOUGHT = "rsi_overbought"     # RSI indicates overbought
     RSI_OVERSOLD = "rsi_oversold"         # RSI indicates oversold
     MACD_SIGNAL = "macd_signal"           # MACD generates signal
@@ -54,7 +54,7 @@ class AlertType(StrEnum):
     SECTOR_MOMENTUM = "sector_momentum"   # Sector momentum shifts
 
 
-class AlertStatus(StrEnum):
+class AlertStatus(str, Enum):
     """Status of an alert"""
     ACTIVE = "active"           # Alert is enabled and monitoring
     PAUSED = "paused"           # Alert is temporarily disabled
@@ -63,7 +63,7 @@ class AlertStatus(StrEnum):
     DISABLED = "disabled"       # Alert is permanently disabled
 
 
-class DeliveryChannel(StrEnum):
+class DeliveryChannel(str, Enum):
     """Channels for alert delivery"""
     IN_APP = "in_app"           # In-app notification
     EMAIL = "email"             # Email notification
@@ -111,14 +111,14 @@ class TechnicalIndicatorThreshold(BaseModel):
 class AlertCondition(BaseModel):
     """Alert condition configuration"""
     type: AlertType = Field(..., description="Type of alert condition")
-
+    
     # One of these should be provided based on alert type
-    price_threshold: PriceThreshold | None = None
-    percentage_threshold: PercentageThreshold | None = None
-    volume_threshold: VolumeThreshold | None = None
-    score_threshold: ScoreThreshold | None = None
-    technical_threshold: TechnicalIndicatorThreshold | None = None
-
+    price_threshold: Optional[PriceThreshold] = None
+    percentage_threshold: Optional[PercentageThreshold] = None
+    volume_threshold: Optional[VolumeThreshold] = None
+    score_threshold: Optional[ScoreThreshold] = None
+    technical_threshold: Optional[TechnicalIndicatorThreshold] = None
+    
     @validator('*', pre=True)
     def validate_thresholds(cls, v, values):
         """Ensure at least one threshold is provided"""
@@ -130,34 +130,34 @@ class AlertCondition(BaseModel):
 
 class DeliverySettings(BaseModel):
     """Alert delivery configuration"""
-    channels: list[DeliveryChannel] = Field(default=[DeliveryChannel.IN_APP])
-    email_address: str | None = None
-    webhook_url: str | None = None
-    webhook_headers: dict | None = None
+    channels: List[DeliveryChannel] = Field(default=[DeliveryChannel.IN_APP])
+    email_address: Optional[str] = None
+    webhook_url: Optional[str] = None
+    webhook_headers: Optional[dict] = None
 
 
 class CreateAlertRequest(BaseModel):
     """Request to create a new alert"""
     name: str = Field(..., min_length=1, max_length=100, description="Alert name")
-    description: str | None = Field(None, max_length=500)
-    symbols: list[str] = Field(..., min_items=1, max_items=10, description="Symbols to monitor")
+    description: Optional[str] = Field(None, max_length=500)
+    symbols: List[str] = Field(..., min_items=1, max_items=10, description="Symbols to monitor")
     condition: AlertCondition = Field(..., description="Alert condition")
     delivery: DeliverySettings = Field(default_factory=DeliverySettings)
     cooldown_minutes: int = Field(60, ge=0, description="Cooldown between triggers (minutes)")
-    expires_at: datetime | None = None
+    expires_at: Optional[datetime] = None
     is_active: bool = Field(True)
 
 
 class UpdateAlertRequest(BaseModel):
     """Request to update an existing alert"""
-    name: str | None = None
-    description: str | None = None
-    symbols: list[str] | None = None
-    condition: AlertCondition | None = None
-    delivery: DeliverySettings | None = None
-    cooldown_minutes: int | None = None
-    expires_at: datetime | None = None
-    is_active: bool | None = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    symbols: Optional[List[str]] = None
+    condition: Optional[AlertCondition] = None
+    delivery: Optional[DeliverySettings] = None
+    cooldown_minutes: Optional[int] = None
+    expires_at: Optional[datetime] = None
+    is_active: Optional[bool] = None
 
 
 class AlertResponse(BaseModel):
@@ -165,16 +165,16 @@ class AlertResponse(BaseModel):
     id: str
     user_id: str
     name: str
-    description: str | None
-    symbols: list[str]
+    description: Optional[str]
+    symbols: List[str]
     condition: AlertCondition
     delivery: DeliverySettings
     status: AlertStatus
     cooldown_minutes: int
     created_at: datetime
     updated_at: datetime
-    expires_at: datetime | None
-    last_triggered_at: datetime | None
+    expires_at: Optional[datetime]
+    last_triggered_at: Optional[datetime]
     trigger_count: int
 
 
@@ -188,32 +188,32 @@ class AlertHistoryEntry(BaseModel):
     threshold_value: float
     actual_value: float
     message: str
-    delivered_via: list[DeliveryChannel]
+    delivered_via: List[DeliveryChannel]
     delivery_status: str  # success, failed, pending
 
 
-class AlertHistoryResponseLocal(BaseModel):
+class AlertHistoryResponse(BaseModel):
     """Alert history response"""
     status: str
     count: int
     page: int
     per_page: int
     total_pages: int
-    entries: list[AlertHistoryEntry]
+    entries: List[AlertHistoryEntry]
 
 
 class BulkCreateAlertsRequest(BaseModel):
     """Request to create multiple alerts at once"""
-    alerts: list[CreateAlertRequest] = Field(..., min_items=1, max_items=10)
+    alerts: List[CreateAlertRequest] = Field(..., min_items=1, max_items=10)
 
 
-class BulkCreateAlertsResponseLocal(BaseModel):
+class BulkCreateAlertsResponse(BaseModel):
     """Response for bulk alert creation"""
     status: str
     created_count: int
     failed_count: int
-    alerts: list[AlertResponse]
-    errors: list[dict]  # For failed creations
+    alerts: List[AlertResponse]
+    errors: List[dict]  # For failed creations
 
 
 # =============================================================================
@@ -229,8 +229,8 @@ async def create_alert(
 ):
     """
     Create a new alert for monitoring stocks.
-
-    Supports multiple alert types including price thresholds,
+    
+    Supports multiple alert types including price thresholds, 
     score changes, volume spikes, and technical indicators.
     """
     try:
@@ -238,24 +238,24 @@ async def create_alert(
             user_id=current_user["id"],
             request=request,
         )
-
+        
         # Schedule background task for immediate check
         background_tasks.add_task(
             alert_service.check_alert_immediately,
             alert.id
         )
-
+        
         return alert
-
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("", response_model=list[AlertResponse])
+@router.get("", response_model=List[AlertResponse])
 async def list_alerts(
-    status: AlertStatus | None = Query(None, description="Filter by alert status"),
-    symbol: str | None = Query(None, description="Filter by symbol"),
-    alert_type: AlertType | None = Query(None, description="Filter by alert type"),
+    status: Optional[AlertStatus] = Query(None, description="Filter by alert status"),
+    symbol: Optional[str] = Query(None, description="Filter by symbol"),
+    alert_type: Optional[AlertType] = Query(None, description="Filter by alert type"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: dict = Depends(get_current_user),
@@ -263,7 +263,7 @@ async def list_alerts(
 ):
     """
     List all alerts for the current user with optional filtering.
-
+    
     Supports filtering by status, symbol, and alert type.
     """
     try:
@@ -276,7 +276,7 @@ async def list_alerts(
             per_page=per_page,
         )
         return alerts
-
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -293,12 +293,12 @@ async def get_alert(
             alert_id=alert_id,
             user_id=current_user["id"],
         )
-
+        
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-
+            
         return alert
-
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -319,12 +319,12 @@ async def update_alert(
             user_id=current_user["id"],
             request=request,
         )
-
+        
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-
+            
         return alert
-
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -343,10 +343,10 @@ async def delete_alert(
             alert_id=alert_id,
             user_id=current_user["id"],
         )
-
+        
         if not success:
             raise HTTPException(status_code=404, detail="Alert not found")
-
+            
     except HTTPException:
         raise
     except Exception as e:
@@ -365,12 +365,12 @@ async def toggle_alert(
             alert_id=alert_id,
             user_id=current_user["id"],
         )
-
+        
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-
+            
         return alert
-
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -379,16 +379,16 @@ async def toggle_alert(
 
 @router.get("/history", response_model=AlertHistoryResponse)
 async def get_alert_history(
-    symbol: str | None = Query(None, description="Filter by symbol"),
-    alert_type: AlertType | None = Query(None, description="Filter by alert type"),
-    start_date: datetime | None = Query(None, description="Start date filter"),
-    end_date: datetime | None = Query(None, description="End date filter"),
+    symbol: Optional[str] = Query(None, description="Filter by symbol"),
+    alert_type: Optional[AlertType] = Query(None, description="Filter by alert type"),
+    start_date: Optional[datetime] = Query(None, description="Start date filter"),
+    end_date: Optional[datetime] = Query(None, description="End date filter"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: dict = Depends(get_current_user),
     alert_service: AlertService = Depends(),
-) -> AlertHistoryResponse:
-    """Get history of triggered alerts for the current user."""
+):
+    """Get history of triggered alerts"""
     try:
         history = await alert_service.get_alert_history(
             user_id=current_user["id"],
@@ -400,7 +400,7 @@ async def get_alert_history(
             per_page=per_page,
         )
         return history
-
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -411,10 +411,10 @@ async def create_alerts_bulk(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     alert_service: AlertService = Depends(),
-) -> BulkCreateAlertsResponse:
+):
     """
     Create multiple alerts in bulk.
-
+    
     Useful for setting up a complete watchlist with various alert types.
     """
     try:
@@ -422,16 +422,16 @@ async def create_alerts_bulk(
             user_id=current_user["id"],
             alerts=request.alerts,
         )
-
+        
         # Schedule checks for all new alerts
         for alert in result.alerts:
             background_tasks.add_task(
                 alert_service.check_alert_immediately,
                 alert.id
             )
-
+        
         return result
-
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -440,7 +440,7 @@ async def create_alerts_bulk(
 # Utility Endpoints
 # =============================================================================
 
-@router.get("/types", response_model=list[dict])
+@router.get("/types", response_model=List[dict])
 async def get_alert_types():
     """Get list of available alert types with descriptions"""
     return [
@@ -483,17 +483,21 @@ async def get_alert_types():
     ]
 
 
-@router.get("/stats", response_model=AlertStatsResponse)
+@router.get("/stats", response_model=dict)
 async def get_alert_stats(
     current_user: dict = Depends(get_current_user),
     alert_service: AlertService = Depends(),
-) -> AlertStatsResponse:
-    """Get alert statistics for the current user."""
-    from app.core.utils import utc_now_iso
+):
+    """Get alert statistics for the current user"""
     try:
         stats = await alert_service.get_user_alert_stats(
             user_id=current_user["id"]
         )
-        return AlertStatsResponse(**stats)
+        return {
+            "status": "success",
+            "user_id": current_user["id"],
+            "stats": stats,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -3,13 +3,12 @@
 Provides rate limiting decorators and utilities for API endpoints.
 """
 
-import logging
 import time
-from collections import defaultdict
-from collections.abc import Callable
 from functools import wraps
 from threading import Lock
-from typing import Any
+from collections import defaultdict
+from typing import Callable, Dict, Optional, Any
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class RateLimiter:
         self.requests_per_minute = requests_per_minute
         self.requests_per_hour = requests_per_hour
         self.key_prefix = key_prefix
-        self._buckets: dict[str, dict[str, Any]] = defaultdict(
+        self._buckets: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "minute_count": 0,
                 "minute_reset": time.time() + 60,
@@ -81,8 +80,8 @@ def rate_limit(
     requests_per_hour: int = 5000,
     key_prefix: str = "rate_limit",
     # Aliases for backward compatibility
-    limit: int | None = None,
-    window: int | None = None
+    limit: Optional[int] = None,
+    window: Optional[int] = None
 ) -> Callable:
     """
     Rate limiting decorator for FastAPI endpoints.

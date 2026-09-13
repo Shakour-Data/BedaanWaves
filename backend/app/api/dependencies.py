@@ -1,12 +1,7 @@
 """Authentication & Authorization Dependencies"""
 
-import logging
-import time
-from collections import defaultdict
-from threading import Lock
-from typing import Callable
-
 import uuid
+from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -16,71 +11,13 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.db.base import async_session_maker
 from app.models.models import User
-from app.services.core.dependency_container import get_global_container
-from app.services.core.health_checker import HealthChecker
-from app.services.user.auth_service import decode_token
+from app.schemas.schemas import TokenData
 from app.services.user.authorization_service import AuthorizationService
+from app.services.core.health_checker import HealthChecker
+from app.services.core.dependency_container import get_global_container
 
-logger = logging.getLogger(__name__)
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-
-
-class AuthRateLimiter:
-    """Per-identifier rate limiter for authentication endpoints."""
-
-    def __init__(self, requests_per_minute: int = 5, requests_per_hour: int = 20):
-        self.requests_per_minute = max(1, requests_per_minute)
-        self.requests_per_hour = max(1, requests_per_hour)
-        self._buckets: dict[str, dict[str, int]] = defaultdict(
-            lambda: {"minute_count": 0, "hour_count": 0, "minute_reset": time.time() + 60, "hour_reset": time.time() + 3600}
-        )
-        self._lock = Lock()
-
-    def reset(self) -> None:
-        with self._lock:
-            self._buckets.clear()
-
-    def is_allowed(self, identifier: str) -> tuple[bool, int]:
-        with self._lock:
-            bucket = self._buckets[identifier]
-            now = time.time()
-
-            if now >= bucket["minute_reset"]:
-                bucket["minute_count"] = 0
-                bucket["minute_reset"] = now + 60
-
-            if now >= bucket["hour_reset"]:
-                bucket["hour_count"] = 0
-                bucket["hour_reset"] = now + 3600
-
-            if bucket["minute_count"] >= self.requests_per_minute:
-                return False, int(bucket["minute_reset"] - now)
-
-            if bucket["hour_count"] >= self.requests_per_hour:
-                return False, int(bucket["hour_reset"] - now)
-
-            bucket["minute_count"] += 1
-            bucket["hour_count"] += 1
-            return True, 0
-
-
-_auth_rate_limiter = AuthRateLimiter(
-    requests_per_minute=settings.RATE_LIMIT_AUTH_REQUESTS_PER_MINUTE,
-    requests_per_hour=settings.RATE_LIMIT_AUTH_REQUESTS_PER_HOUR,
-)
-
-
-def require_auth_rate_limit(request: Request) -> None:
-    client_ip = request.client.host if request.client else "unknown"
-    identifier = f"auth:{client_ip}"
-    allowed, retry_after = _auth_rate_limiter.is_allowed(identifier)
-    if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many authentication attempts. Please try again later.",
-            headers={"Retry-After": str(max(1, retry_after))},
-        )
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
@@ -90,9 +27,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = decode_token(token)
-        if payload is None:
-            raise credentials_exception
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         username: str = payload.get("sub")
         token_type: str = payload.get("type")
         if username is None or token_type != "access":
@@ -124,23 +59,12 @@ async def get_current_admin_user(current_user: User = Depends(get_current_active
     return current_user
 
 
-async def require_mfa(current_user: User = Depends(get_current_active_user)) -> User:
-    from app.services.user.mfa_service import get_user_mfa_secret
-    secret = await get_user_mfa_secret(int(current_user.id))
-    if not secret:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Multi-factor authentication is required for this operation. Please enable MFA in your security settings.",
-        )
-    return current_user
-
-
 async def get_current_user_id(current_user: User = Depends(get_current_active_user)) -> uuid.UUID:
     """Return the authenticated user's id."""
-    return uuid.UUID(str(current_user.id))
+    return current_user.id
 
 
-def require_permissions(required: list[str]):
+def require_permissions(required: List[str]):
     """Dependency factory enforcing that the user holds ALL ``required`` permissions."""
     _auth_service = AuthorizationService()
 
@@ -156,7 +80,7 @@ def require_permissions(required: list[str]):
     return _checker
 
 
-def require_roles(roles: list[str]):
+def require_roles(roles: List[str]):
     """Dependency factory enforcing that the user matches one of ``roles``.
 
     Supported roles: ``admin`` (``User.is_admin``) and ``user`` (any active user).
@@ -194,3 +118,4 @@ def get_health_checker() -> HealthChecker:
     """Get the global health checker instance."""
     container = get_global_container()
     return container.get("health_checker")
+

@@ -21,7 +21,6 @@ export interface SearchState {
 
 const searchCache = new Map<string, { results: StockSearchResult[]; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const MAX_CACHE_ENTRIES = 100;
 
 // ---------------------------------------------------------------------------
 // Utility: Debounce
@@ -42,11 +41,9 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 // Utility: Debounce
 // ---------------------------------------------------------------------------
 
-async function apiSearch(query: string, signal?: AbortSignal): Promise<StockSearchResult[]> {
+async function apiSearch(query: string): Promise<StockSearchResult[]> {
   const params = new URLSearchParams({ q: query, limit: "20" });
-  const res = await apiClient.get(`/stocks/search?${params.toString()}`, {
-    signal,
-  });
+  const res = await apiClient.get(`/stocks/search?${params.toString()}`);
   const items = res.data?.data ?? [];
   return items.map((item: Record<string, unknown>) => {
     const price = typeof item.price === "number" ? item.price : 0;
@@ -103,10 +100,8 @@ export function useStockSearch(minQueryLength = 1) {
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
 
-    abortControllerRef.current?.abort();
-
     if (trimmed.length < minQueryLength) {
-      setSearchState((prev) => ({ ...prev, results: [], status: "idle" }));
+      setSearchState((prev) => ({ ...prev, results: [], status: trimmed.length === 0 ? "idle" : "idle" }));
       return;
     }
 
@@ -124,6 +119,7 @@ export function useStockSearch(minQueryLength = 1) {
       return;
     }
 
+    // Set loading state
     setSearchState((prev) => ({
       ...prev,
       query: trimmed,
@@ -131,6 +127,8 @@ export function useStockSearch(minQueryLength = 1) {
       error: null,
     }));
 
+    // Abort any in-flight request
+    abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -138,37 +136,48 @@ export function useStockSearch(minQueryLength = 1) {
 
     async function performSearch() {
       try {
-        const apiResults = await apiSearch(trimmed, controller.signal);
-        if (cancelled || controller.signal.aborted) return;
+        let results: StockSearchResult[] = [];
 
-        searchCache.set(cacheKey, { results: apiResults, timestamp: Date.now() });
-        while (searchCache.size > MAX_CACHE_ENTRIES) {
-          const oldestKey = searchCache.keys().next().value;
-          if (oldestKey === undefined) break;
-          searchCache.delete(oldestKey);
+        try {
+          const apiResults = await apiSearch(trimmed);
+          if (!cancelled && !controller.signal.aborted) {
+            results = apiResults;
+          }
+        } catch (err) {
+          if (!cancelled && !controller.signal.aborted) {
+            throw err;
+          }
         }
 
-        if (!isMountedRef.current) return;
-        setSearchState((prev) => ({
-          ...prev,
-          query: trimmed,
-          results: apiResults,
-          status: apiResults.length === 0 ? "empty" : "success",
-          error: null,
-        }));
+        if (cancelled || controller.signal.aborted) return;
+
+        // Cache the result with TTL
+        searchCache.set(cacheKey, { results, timestamp: Date.now() });
+
+        if (isMountedRef.current) {
+          setSearchState((prev) => ({
+            ...prev,
+            query: trimmed,
+            results,
+            status: results.length === 0 ? "empty" : "success",
+            error: null,
+          }));
+        }
       } catch (err) {
-        if (cancelled || controller.signal.aborted || !isMountedRef.current) return;
-        setSearchState((prev) => ({
-          ...prev,
-          query: trimmed,
-          results: [],
-          status: "error",
-          error: getApiErrorMessage(err),
-        }));
+        if (cancelled || controller.signal.aborted) return;
+        if (isMountedRef.current) {
+          setSearchState((prev) => ({
+            ...prev,
+            query: trimmed,
+            results: [],
+            status: "error",
+            error: getApiErrorMessage(err),
+          }));
+        }
       }
     }
 
-    void performSearch();
+    performSearch();
 
     return () => {
       cancelled = true;

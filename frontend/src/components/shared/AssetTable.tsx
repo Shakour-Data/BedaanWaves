@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { cn } from "@/lib/cn";
 import type { AssetRow } from "@/lib/dashboard-data";
 
@@ -11,12 +10,7 @@ interface AssetTableProps {
 
 export function AssetTable({ rows, className }: AssetTableProps) {
   return (
-    <div
-      className={cn(
-        "overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm",
-        className,
-      )}
-    >
+    <div className={cn("overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm", className)}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--color-border)]">
@@ -29,32 +23,14 @@ export function AssetTable({ rows, className }: AssetTableProps) {
         </thead>
         <tbody>
           {rows.length === 0 ? null : rows.map((row) => (
-            <tr
-              key={row.symbol}
-              className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
-            >
-              <td className="px-4 py-3 font-medium">
-                <Link
-                  href={`/stocks/${row.symbol}`}
-                  className="text-[var(--color-primary)] hover:underline"
-                  aria-label={`View ${row.symbol} detail`}
-                >
-                  {row.symbol}
-                </Link>
-              </td>
+            <tr key={row.symbol} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]">
+              <td className="px-4 py-3 font-medium text-[var(--color-text-primary)]">{row.symbol}</td>
               <td className="px-4 py-3 text-[var(--color-text-secondary)]">{row.name}</td>
               <td className="px-4 py-3 text-[var(--color-text-secondary)]">{row.market}</td>
               <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text-primary)]">
                 {row.price > 0 ? `$${row.price.toFixed(2)}` : "—"}
               </td>
-              <td
-                className={cn(
-                  "px-4 py-3 text-right tabular-nums font-medium",
-                  row.changePct >= 0
-                    ? "text-[var(--color-success)]"
-                    : "text-[var(--color-error)]",
-                )}
-              >
+              <td className={cn("px-4 py-3 text-right tabular-nums font-medium", row.changePct >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-error)]")}>
                 {row.changePct !== 0 ? `${row.changePct >= 0 ? "+" : ""}${row.changePct.toFixed(2)}%` : "—"}
               </td>
             </tr>

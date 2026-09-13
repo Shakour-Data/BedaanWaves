@@ -13,35 +13,33 @@ Flow:
 
 import asyncio
 import logging
-from datetime import UTC, date, datetime
-from typing import Any
+from datetime import datetime, date, timezone, timedelta
+from typing import Dict, List, Any, Optional
 
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import select, and_, desc, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import async_session_maker
 from app.models.models import (
     Asset,
-    FundamentalRatio,
-    MacroIndicator,
-    MarketDataSnapshot,
-    MLSignal,
-    NewsSentiment,
-    RawPerformanceScore,
+    IntlPriceCandle,
     ScoreHistory,
+    FundamentalRatio,
+    NewsSentiment,
+    MacroIndicator,
+    MLSignal,
+    MarketDataSnapshot,
+    RawPerformanceScore,
     candle_model_for_market,
 )
-from app.services.analysis.scoring_engine_v2 import (
-    METRIC_UNIVERSE,
-    score_market,
-)
-from app.services.analysis.scoring_engine_v2 import (
-    grade as v2_grade,
-)
 from app.services.analysis.scoring_service import ScoringService
+from app.services.analysis.scoring_engine_v2 import (
+    METRIC_UNIVERSE, score_market, grade as v2_grade,
+)
 from app.services.analysis.technical_indicators import (
-    Candle,
     compute_all_indicators,
+    Candle,
 )
 from app.services.core.dependency_container import get_global_container
 
@@ -54,7 +52,7 @@ class ScoreHistoryPipeline:
     Computes real dimension scores from candle data using technical indicators.
     """
 
-    def __init__(self, scoring_service: ScoringService | None = None):
+    def __init__(self, scoring_service: Optional[ScoringService] = None):
         self._scoring_service = scoring_service
         self._coefficient_service = None
 
@@ -77,10 +75,10 @@ class ScoreHistoryPipeline:
 
     async def compute_and_persist_all(
         self,
-        target_date: date | None = None,
+        target_date: Optional[date] = None,
         market: str = "NASDAQ",
         batch_size: int = 100,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         Compute and persist ScoreHistory for all active assets in a market.
 
@@ -93,7 +91,7 @@ class ScoreHistoryPipeline:
             Summary of processing results
         """
         if target_date is None:
-            target_date = datetime.now(UTC).date()
+            target_date = datetime.now(timezone.utc).date()
 
         result = {
             "status": "started",
@@ -109,7 +107,7 @@ class ScoreHistoryPipeline:
             asset_query = (
                 select(Asset.id, Asset.symbol, Asset.market, Asset.asset_class)
                 .where(and_(
-                    Asset.active,
+                    Asset.active == True,
                     Asset.market == market,
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 ))
@@ -152,7 +150,7 @@ class ScoreHistoryPipeline:
 
     async def _score_asset(
         self, asset_row, target_date: date
-    ) -> dict[str, Any] | None:
+    ) -> Optional[Dict[str, Any]]:
         """
         Compute and persist ScoreHistory for a single asset.
         """
@@ -197,7 +195,7 @@ class ScoreHistoryPipeline:
 
         return {"scored": True, "symbol": symbol, "overall": scored.get("overall_score")}
 
-    async def _fetch_fundamental_data(self, asset_id) -> dict[str, Any]:
+    async def _fetch_fundamental_data(self, asset_id) -> Dict[str, Any]:
         """Fetch fundamental ratios for an asset."""
         async with async_session_maker() as session:
             result = await session.execute(
@@ -231,7 +229,7 @@ class ScoreHistoryPipeline:
 
         return data
 
-    async def _fetch_sentiment_data(self, asset_id) -> dict[str, Any]:
+    async def _fetch_sentiment_data(self, asset_id) -> Dict[str, Any]:
         """Fetch news sentiment for an asset."""
         async with async_session_maker() as session:
             result = await session.execute(
@@ -251,47 +249,39 @@ class ScoreHistoryPipeline:
             "news_count": row.count,
         }
 
-    async def _fetch_macro_data(self) -> dict[str, Any]:
-        """Fetch latest US macro indicators and normalize to 0-100 sub-scores.
-
-        The previous implementation only surfaced market tickers (^VIX/^TNX/
-        Dollar Index/Gold/Oil) with raw, un-normalized values. We now read every
-        tracked ``MacroIndicator`` row, take the latest value per code, and map
-        them to the macro sub-dimension health scores the ScoringService
-        understands: ``gdp``, ``inflation``, ``interest_rates``,
-        ``exchange_rates``, ``commodity_prices`` (all 0-100).
-        """
-        from app.services.analysis.macro_scoring import SUB_DIMENSIONS, compute_macro_scores
-
+    async def _fetch_macro_data(self) -> Dict[str, Any]:
+        """Fetch latest macro indicators."""
         async with async_session_maker() as session:
             result = await session.execute(
-                select(MacroIndicator.indicator_code, MacroIndicator.value)
-                .order_by(desc(MacroIndicator.as_of), MacroIndicator.indicator_code)
+                select(MacroIndicator)
+                .order_by(desc(MacroIndicator.as_of))
+                .limit(10)
             )
-            rows = result.all()
+            rows = result.scalars().all()
 
-        latest: dict[str, float] = {}
-        for code, value in rows:
-            if value is None:
-                continue
-            if code not in latest:
-                try:
-                    latest[code] = float(value)
-                except (TypeError, ValueError):
-                    continue
+        data = {}
+        for row in rows:
+            code = row.indicator_code
+            val = float(row.value) if row.value else 0
+            if code == "^VIX":
+                data["vix"] = val
+            elif code == "^TNX":
+                data["treasury_yield"] = val
+            elif code == "DX-Y.NYB":
+                data["dollar_index"] = val
+            elif code == "GC=F":
+                data["gold_price"] = val
+            elif code == "CL=F":
+                data["oil_price"] = val
 
-        if not latest:
-            return {}
+        return data
 
-        scores = compute_macro_scores(latest)
-        return {k: v for k, v in scores.items() if k in SUB_DIMENSIONS}
-
-    async def _fetch_ai_data(self, asset_id) -> dict[str, Any]:
+    async def _fetch_ai_data(self, asset_id) -> Dict[str, Any]:
         """Fetch latest ML signal for an asset."""
         async with async_session_maker() as session:
             result = await session.execute(
                 select(MLSignal)
-                .where(and_(MLSignal.asset_id == asset_id, MLSignal.is_active))
+                .where(and_(MLSignal.asset_id == asset_id, MLSignal.is_active == True))
                 .order_by(desc(MLSignal.generated_at))
                 .limit(1)
             )
@@ -324,7 +314,7 @@ class ScoreHistoryPipeline:
 
     async def _fetch_candles(
         self, asset_id, market: str, asset_class: str, lookback: int = 100
-    ) -> list[Candle]:
+    ) -> List[Candle]:
         """Fetch candle data for an asset."""
         CandleModel = candle_model_for_market(market)
         if CandleModel is None:
@@ -362,12 +352,12 @@ class ScoreHistoryPipeline:
         self,
         symbol: str,
         market: str,
-        candles: list[Candle],
-        fundamental_data: dict[str, Any] | None = None,
-        sentiment_data: dict[str, Any] | None = None,
-        macro_data: dict[str, Any] | None = None,
-        ai_data: dict[str, Any] | None = None,
-    ) -> dict[str, Any] | None:
+        candles: List[Candle],
+        fundamental_data: Optional[Dict[str, Any]] = None,
+        sentiment_data: Optional[Dict[str, Any]] = None,
+        macro_data: Optional[Dict[str, Any]] = None,
+        ai_data: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
         """Build the scoring input dict from computed indicators and additional data."""
         if not candles:
             return None
@@ -425,9 +415,9 @@ class ScoreHistoryPipeline:
 
     async def compute_and_persist_v2(
         self,
-        target_date: date | None = None,
+        target_date: Optional[date] = None,
         market: str = "NASDAQ",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Score an entire market with the v2 engine in one pass.
 
         1. Load every active equity's latest metrics.
@@ -437,16 +427,18 @@ class ScoreHistoryPipeline:
 
         Returns a summary dict (counts, mean, stdev, grade distribution).
         """
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        from sqlalchemy import literal
         from datetime import datetime as _dt
 
         if target_date is None:
-            target_date = _dt.now(UTC).date()
+            target_date = _dt.now(timezone.utc).date()
 
         async with async_session_maker() as session:
             asset_q = (
                 select(Asset.id, Asset.symbol, Asset.asset_class)
                 .where(and_(
-                    Asset.active,
+                    Asset.active == True,
                     Asset.market == market,
                     Asset.asset_class.in_(["EQUITY", "ETF"]),
                 ))
@@ -456,13 +448,13 @@ class ScoreHistoryPipeline:
             logger.info("compute_and_persist_v2: %d equities in %s", len(equities), market)
 
             # Load latest snapshot per asset (technical)
-            (
+            snap_sub = (
                 select(
                     MarketDataSnapshot.asset_id if False else MarketDataSnapshot.asset_id,  # placeholder
                 )
             ) if False else None  # suppress; we'll inline the query
 
-            metrics: dict[str, dict[str, Any]] = {}
+            metrics: Dict[str, Dict[str, Any]] = {}
             for asset_id, symbol, _ in equities:
                 metrics[str(asset_id)] = {db: None for *_, db, _ in METRIC_UNIVERSE}
 
@@ -478,18 +470,12 @@ class ScoreHistoryPipeline:
             )
             for row in (await session.execute(tech_q)).scalars():
                 m = metrics.get(str(row.asset_id))
-                if not m:
-                    continue
-                if row.rsi is not None:
-                    m["rsi_14"] = float(row.rsi)
-                if row.macd_histogram is not None:
-                    m["macd_histogram"] = float(row.macd_histogram)
-                if row.volatility is not None:
-                    m["realized_vol_30d"] = float(row.volatility)
-                if row.volume_ratio is not None:
-                    m["volume_ratio"] = float(row.volume_ratio)
-                if row.atr is not None:
-                    m["atr_value"] = float(row.atr)
+                if not m: continue
+                if row.rsi is not None:           m["rsi_14"]           = float(row.rsi)
+                if row.macd_histogram is not None: m["macd_histogram"]   = float(row.macd_histogram)
+                if row.volatility is not None:    m["realized_vol_30d"] = float(row.volatility)
+                if row.volume_ratio is not None:   m["volume_ratio"]     = float(row.volume_ratio)
+                if row.atr is not None:           m["atr_value"]        = float(row.atr)
                 if row.bb_upper is not None and row.bb_lower is not None and row.bb_middle not in (None, 0):
                     m["bb_width"] = float((row.bb_upper - row.bb_lower) / row.bb_middle)
 
@@ -504,16 +490,11 @@ class ScoreHistoryPipeline:
             )
             for aid, pe, pb, roe, pm, _ in (await session.execute(fr_q)):
                 m = metrics.get(str(aid))
-                if not m:
-                    continue
-                if pe is not None:
-                    m["pe_ratio"] = float(pe)
-                if pb is not None:
-                    m["pb_ratio"] = float(pb)
-                if roe is not None:
-                    m["roe"] = float(roe)
-                if pm is not None:
-                    m["profit_margin"] = float(pm)
+                if not m: continue
+                if pe is not None: m["pe_ratio"]      = float(pe)
+                if pb is not None: m["pb_ratio"]      = float(pb)
+                if roe is not None: m["roe"]          = float(roe)
+                if pm is not None:  m["profit_margin"]= float(pm)
 
             # News sentiment aggregate
             ns_q = select(
@@ -523,8 +504,7 @@ class ScoreHistoryPipeline:
             ).group_by(NewsSentiment.asset_id)
             for aid, avg_s, cnt in (await session.execute(ns_q)):
                 m = metrics.get(str(aid))
-                if not m:
-                    continue
+                if not m: continue
                 if avg_s is not None:
                     m["news_sentiment_avg"] = (float(avg_s) + 1.0) / 2.0
                 m["news_volume"] = float(cnt) if cnt else None
@@ -535,16 +515,12 @@ class ScoreHistoryPipeline:
                 .order_by(MacroIndicator.as_of.desc())
                 .limit(20)
             )
-            macro_vals: dict[str, float] = {}
+            macro_vals: Dict[str, float] = {}
             for row in (await session.execute(macro_q)).scalars():
-                if row.value is None:
-                    continue
+                if row.value is None: continue
                 code = row.indicator_code
                 val = float(row.value)
-                # Market-based macro tickers (existing behaviour, preserved).
                 if code == "^TNX" and "treasury_yield_10y" not in macro_vals:
-                    macro_vals["treasury_yield_10y"] = val
-                elif code == "DGS10" and "treasury_yield_10y" not in macro_vals:
                     macro_vals["treasury_yield_10y"] = val
                 elif code == "DX-Y.NYB" and "dollar_index" not in macro_vals:
                     macro_vals["dollar_index"] = val
@@ -552,26 +528,6 @@ class ScoreHistoryPipeline:
                     macro_vals["oil_price"] = val
                 elif code == "GC=F" and "gold_price" not in macro_vals:
                     macro_vals["gold_price"] = val
-                # Real US economic releases (free FRED/BLS data) – additive, so
-                # the cross-sectional engine simply ignores keys it does not
-                # have registered in METRIC_UNIVERSE (no score change), while
-                # making the latest readings available to downstream consumers.
-                elif code == "INFLATION" and "inflation_rate" not in macro_vals:
-                    macro_vals["inflation_rate"] = val
-                elif code == "CORE_INFLATION" and "core_inflation_rate" not in macro_vals:
-                    macro_vals["core_inflation_rate"] = val
-                elif code == "UNRATE" and "unemployment" not in macro_vals:
-                    macro_vals["unemployment"] = val
-                elif code in ("FEDFUNDS", "US_FED_RATE") and "fed_funds" not in macro_vals:
-                    macro_vals["fed_funds"] = val
-                elif code == "GDPC1" and "real_gdp" not in macro_vals:
-                    macro_vals["real_gdp"] = val
-                elif code == "GDP_QOQ" and "gdp_growth" not in macro_vals:
-                    macro_vals["gdp_growth"] = val
-                elif code == "UMCSENT" and "consumer_sentiment" not in macro_vals:
-                    macro_vals["consumer_sentiment"] = val
-                elif code == "T10Y2Y" and "yield_curve_spread" not in macro_vals:
-                    macro_vals["yield_curve_spread"] = val
             for m in metrics.values():
                 for k, v in macro_vals.items():
                     m[k] = v
@@ -579,18 +535,15 @@ class ScoreHistoryPipeline:
             # ML signals (latest active)
             ml_q = (
                 select(MLSignal)
-                .where(MLSignal.is_active)
+                .where(MLSignal.is_active == True)
                 .distinct(MLSignal.asset_id)
                 .order_by(MLSignal.asset_id, MLSignal.generated_at.desc())
             )
             for row in (await session.execute(ml_q)).scalars():
                 m = metrics.get(str(row.asset_id))
-                if not m:
-                    continue
-                if row.expected_return is not None:
-                    m["expected_return"] = float(row.expected_return)
-                if row.confidence is not None:
-                    m["confidence"] = float(row.confidence)
+                if not m: continue
+                if row.expected_return is not None: m["expected_return"] = float(row.expected_return)
+                if row.confidence is not None:      m["confidence"]      = float(row.confidence)
 
         # Score in one pass
         results = score_market(metrics)
@@ -599,8 +552,7 @@ class ScoreHistoryPipeline:
         written = 0
         for asset_id, symbol, _ in equities:
             hs = results.get(str(asset_id))
-            if hs is None:
-                continue
+            if hs is None: continue
             sh_payload = {
                 "dimension_scores": hs.dimension_scores,
                 "overall_score": hs.overall_score,
@@ -641,9 +593,9 @@ class ScoreHistoryPipeline:
         self,
         asset_id,
         target_date: date,
-        scored: dict[str, Any],
+        scored: Dict[str, Any],
         market: str,
-        hierarchy: dict[str, Any] | None = None,
+        hierarchy: Optional[Dict[str, Any]] = None,
     ):
         """Persist scored results to ScoreHistory and RawPerformanceScore.
 
@@ -680,7 +632,7 @@ class ScoreHistoryPipeline:
                 sub_aspect_scores=sub_aspect_scores,
                 overall_score=overall_score,
                 grade=grade,
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
             stmt = stmt.on_conflict_do_update(
                 index_elements=["asset_id", "date"],
@@ -711,7 +663,7 @@ class ScoreHistoryPipeline:
                 asset_id=asset_id,
                 market=market,
                 exchange=market,
-                captured_at=datetime.now(UTC),
+                captured_at=datetime.now(timezone.utc),
                 dimension_scores=dimension_scores,
                 sub_dimension_scores=sub_dim,
                 aspect_scores=aspects,

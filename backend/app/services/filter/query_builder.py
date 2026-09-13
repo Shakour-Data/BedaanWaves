@@ -4,14 +4,14 @@ Converts the parsed IR into safe, parameterized SQLAlchemy expressions.
 Never interpolates raw user input into SQL strings.
 """
 
-from datetime import date, datetime, timedelta
-from typing import Any
-
-from sqlalchemy import Date, and_, cast, not_, or_
+from typing import Any, Union, List, Optional
+from datetime import datetime, timedelta, date
+from sqlalchemy import and_, or_, not_, func, cast, String, Date, DateTime
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.orm import Query
 
 from app.models.scoring_snapshot import ScoringSnapshot, SnapshotLevel
-from app.services.filter.filter_parser import ParsedCondition, ParsedGroup
+from app.services.filter.filter_parser import ParsedGroup, ParsedCondition, FilterParseError
 
 
 class QueryBuildError(Exception):
@@ -101,7 +101,8 @@ def _apply_date_filter(column: Any, operator: str, value: Any) -> ClauseElement:
 
 
 def _column_for_field(field_name: str, registry) -> Any:
-    from app.services.filter.config import EXTRA_FILTERABLE_FIELDS, FILTERABLE_FIELDS
+    from app.models.scoring_snapshot import ScoringSnapshot
+    from app.services.filter.config import FILTERABLE_FIELDS, EXTRA_FILTERABLE_FIELDS
 
     all_fields = {**FILTERABLE_FIELDS, **EXTRA_FILTERABLE_FIELDS}
     meta = all_fields.get(field_name)
@@ -109,7 +110,7 @@ def _column_for_field(field_name: str, registry) -> Any:
         raise QueryBuildError(f"Unknown field: {field_name}")
 
     db_col = meta["db_column"]
-    meta["type"]
+    field_type = meta["type"]
 
     model = ScoringSnapshot
     if db_col == "score":
@@ -144,11 +145,11 @@ def _apply_filter(column: Any, operator: str, value: Any, field_type: str) -> Cl
 
 
 def build_query_from_tree(
-    root: ParsedGroup | ParsedCondition,
+    root: Union[ParsedGroup, ParsedCondition],
     registry,
 ) -> ClauseElement:
     """Recursively convert the parsed filter tree into a SQLAlchemy clause."""
-    from app.services.filter.config import EXTRA_FILTERABLE_FIELDS, FILTERABLE_FIELDS
+    from app.services.filter.config import FILTERABLE_FIELDS, EXTRA_FILTERABLE_FIELDS
 
     if isinstance(root, ParsedCondition):
         column = _column_for_field(root.field, registry)
@@ -173,7 +174,7 @@ def build_query_from_tree(
 
 def apply_filter_to_query(
     query: Any,
-    root: ParsedGroup | ParsedCondition,
+    root: Union[ParsedGroup, ParsedCondition],
     registry,
 ) -> Any:
     """Apply a parsed filter tree to an existing SQLAlchemy query."""

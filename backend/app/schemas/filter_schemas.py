@@ -1,18 +1,18 @@
 """Pydantic schemas for the advanced hierarchical filter API."""
 
-from enum import StrEnum
-from typing import Any, Union
-
 from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List, Union, Dict, Any
+from datetime import date
+from enum import Enum
 
 
-class LogicOperator(StrEnum):
+class LogicOperator(str, Enum):
     AND = "AND"
     OR = "OR"
     NOT = "NOT"
 
 
-class NumericOperator(StrEnum):
+class NumericOperator(str, Enum):
     EQ = "=="
     NE = "!="
     GT = ">"
@@ -24,7 +24,7 @@ class NumericOperator(StrEnum):
     IS_NOT_NULL = "is_not_null"
 
 
-class TextOperator(StrEnum):
+class TextOperator(str, Enum):
     EQ = "=="
     NE = "!="
     CONTAINS = "contains"
@@ -35,7 +35,7 @@ class TextOperator(StrEnum):
     NOT_IN_LIST = "not_in_list"
 
 
-class DateOperator(StrEnum):
+class DateOperator(str, Enum):
     EQ = "=="
     BEFORE = "before"
     AFTER = "after"
@@ -45,7 +45,7 @@ class DateOperator(StrEnum):
     YEAR_TO_DATE = "year_to_date"
 
 
-class FilterLevel(StrEnum):
+class FilterLevel(str, Enum):
     OVERALL = "overall"
     DIMENSION = "dimension"
     SUB_DIMENSION = "sub_dimension"
@@ -57,15 +57,15 @@ class FilterCondition(BaseModel):
     """Leaf node in the filter tree."""
     field: str
     operator: str
-    value: str | int | float | list[Any] | dict[str, Any] | None = None
+    value: Optional[Union[str, int, float, List[Any], Dict[str, Any]]] = None
     level: FilterLevel
-    label: str | None = None
+    label: Optional[str] = None
 
 
 class FilterGroup(BaseModel):
     """Internal node in the filter tree."""
     logic: LogicOperator
-    conditions: list[Union["FilterGroup", FilterCondition]]
+    conditions: List[Union["FilterGroup", FilterCondition]]
 
 
 # Allow forward reference
@@ -77,8 +77,8 @@ class AdvancedFilterRequest(BaseModel):
     query: FilterGroup
     limit: int = Field(100, ge=1, le=500)
     offset: int = Field(0, ge=0)
-    sort_by: str | None = "score"
-    sort_dir: str | None = Field("desc", pattern="^(asc|desc)$")
+    sort_by: Optional[str] = "score"
+    sort_dir: Optional[str] = Field("desc", pattern="^(asc|desc)$")
 
     @field_validator("query")
     @classmethod
@@ -93,6 +93,6 @@ class AdvancedFilterResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    results: list[dict[str, Any]]
-    applied_filters: list[dict[str, Any]]
+    results: List[Dict[str, Any]]
+    applied_filters: List[Dict[str, Any]]
     execution_time_ms: float

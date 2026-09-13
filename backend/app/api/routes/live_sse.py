@@ -8,10 +8,9 @@ Provides 5 server-sent event streaming endpoints:
     GET /api/v1/live-sse/scores/stream?scope=NASDAQ
     GET /api/v1/live-sse/news/stream
 
-Authentication requires the `Authorization: Bearer <token>` header or a
-`?token=<token>` query parameter (the latter is needed for browser SSE clients
-which cannot set custom headers). Token fragments are scrubbed from all log
-output.
+Authentication accepts both `Authorization: Bearer <token>` header and
+the `?token=<token>` query parameter (needed for native EventSource clients
+that cannot set custom headers).
 
 SSE response headers disable all intermediate buffering so that pings and
 events arrive at the client with minimal added latency. Provider errors
@@ -21,13 +20,12 @@ or internal exception messages leak).
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
+import time
 import uuid
-from collections.abc import AsyncGenerator
-from typing import Any
+from typing import AsyncGenerator, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -35,6 +33,7 @@ from starlette import status as http_status
 
 from app.core.config import get_settings
 from app.services.core.dependency_container import get_global_container
+from app.services.live.constants import VALID_INTRADAY_INTERVALS
 from app.services.live.endpoint_validators import (
     validate_interval,
     validate_scope,
@@ -49,7 +48,7 @@ router = APIRouter(tags=["market-live-sse"])
 
 settings = get_settings()
 
-_SSE_HEADERS: dict[str, str] = {
+_SSE_HEADERS: Dict[str, str] = {
     "Cache-Control": "no-cache, no-store, must-revalidate",
     "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
@@ -78,23 +77,18 @@ def _safe_log(level: int, fmt: str, *args: object) -> None:
     logger.log(level, cleaned_fmt, *cleaned_args)
 
 
-def _extract_token(request: Request) -> str | None:
-    """Extract token from Authorization header or ?token= query parameter.
-
-    The Authorization header is preferred. The query parameter is a fallback
-    for SSE clients (EventSource) which cannot send custom headers.
-    """
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract token from Authorization header or ?token= query string."""
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         return auth_header.split(" ", 1)[1].strip()
+    qp_token = request.query_params.get("token")
+    if qp_token:
+        return str(qp_token).strip()
+    return None
 
-    token = request.query_params.get("token")
-    if token:
-        token = token.strip()
-    return token
 
-
-def _authenticate(request: Request) -> dict[str, object]:
+def _authenticate(request: Request) -> Dict[str, object]:
     """
     Pre-streaming authentication check.
 
@@ -135,7 +129,7 @@ def _authenticate(request: Request) -> dict[str, object]:
     return payload
 
 
-def _format_sse(event: str, data_obj: dict[str, object]) -> str:
+def _format_sse(event: str, data_obj: Dict[str, object]) -> str:
     """Format a single SSE `event:` / `data:` block."""
     try:
         payload = json.dumps(data_obj, ensure_ascii=False, default=str)
@@ -173,18 +167,13 @@ async def _stream_generator(
             if not isinstance(envelope, LiveEventEnvelope):
                 continue
             event_type = envelope.event
-            raw_data = dict(envelope.data or {})
-            wire_data = {
-                **raw_data,
-                "sequence": envelope.sequence,
-                "data_age_ms": raw_data.get("data_age_ms"),
-            }
+            raw_data = envelope.data or {}
             # Sanitize any provider errors before sending over the wire.
             if event_type == "health":
                 reason = raw_data.get("reason_message")
                 code = raw_data.get("reason_code")
                 if code in ("provider_error", "circuit_open"):
-                    sanitized = dict(wire_data)
+                    sanitized = dict(raw_data)
                     sanitized["error_code"] = "provider_error"
                     if reason and any(needle in str(reason) for needle in (
                         "ValueError", "KeyError", "Traceback", "yfinance",
@@ -196,14 +185,15 @@ async def _stream_generator(
                         )
                     frame = _format_sse(event_type, sanitized)
                 else:
-                    frame = _format_sse(event_type, wire_data)
+                    frame = _format_sse(event_type, raw_data)
             else:
-                frame = _format_sse(event_type, wire_data)
+                frame = _format_sse(event_type, raw_data)
             if first_event:
                 first_event = False
                 # FastAPI StreamingResponse will already have sent the
                 # headers by the time we yield the first byte; we rely on
                 # _authenticate() having returned before headers went out.
+                pass
             yield frame
 
             if metrics is not None:
@@ -317,7 +307,7 @@ async def live_quote_stream(
 async def live_intraday_stream(
     request: Request,
     symbol: str,
-    interval: str | None = Query(default=None),
+    interval: Optional[str] = Query(default=None),
 ) -> StreamingResponse:
     """
     Stream intraday OHLCV bars for a single ticker + interval.
@@ -348,13 +338,7 @@ async def live_intraday_stream(
 async def live_market_stream(
     request: Request,
 ) -> StreamingResponse:
-    """
-    Stream aggregate market-pulse composite events for the NASDAQ market.
-
-    Dispatches periodic composites including breadth, volatility, and
-    momentum aggregates. Requires authentication unless the server is
-    running in development mode.
-    """
+    """Stream aggregate market-pulse composite events."""
     _authenticate(request)
     stream_key = "market"
     orch, metrics = _get_orchestrator_and_metrics()
@@ -376,7 +360,7 @@ async def live_market_stream(
 @router.get("/scores/stream", summary="Live 6D score delta SSE stream")
 async def live_scores_stream(
     request: Request,
-    scope: str | None = Query(default="NASDAQ"),
+    scope: Optional[str] = Query(default="NASDAQ"),
 ) -> StreamingResponse:
     """
     Stream per-market or per-symbol score delta events.
@@ -406,46 +390,9 @@ async def live_scores_stream(
 async def live_news_stream(
     request: Request,
 ) -> StreamingResponse:
-    """
-    Stream news items as they are detected by the periodic news poller.
-
-    Each event carries the headline, source, timestamp, and relevance
-    score. Requires authentication unless the server is running in
-    development mode.
-    """
+    """Stream news items as they are detected by the periodic news poller."""
     _authenticate(request)
     stream_key = "news"
-    orch, metrics = _get_orchestrator_and_metrics()
-
-    connection_id = getattr(request.state, "correlation_id", None) or uuid.uuid4().hex
-    if metrics is not None and hasattr(metrics, "increment_active_subscriptions"):
-        try:
-            metrics.increment_active_subscriptions(1)
-        except Exception:
-            pass
-
-    return StreamingResponse(
-        _stream_generator(orch, stream_key, metrics, connection_id),
-        headers=_SSE_HEADERS,
-        media_type="text/event-stream",
-    )
-
-
-@router.get("/orderbook/{symbol}/stream", summary="Live per-symbol order book SSE stream")
-async def live_orderbook_stream(
-    request: Request,
-    symbol: str,
-) -> StreamingResponse:
-    """
-    Stream top-5 order book snapshots (bids/asks) for a single ticker.
-
-    Accepts auth via `Authorization: Bearer <JWT>` header or `?token=<JWT>`.
-    Disallowed symbols or charset violations return HTTP 422 before
-    opening the SSE stream.
-    """
-    safe_symbol = validate_symbol(symbol, param_name="symbol")
-    _authenticate(request)
-    stream_key = f"orderbook:{safe_symbol}"
     orch, metrics = _get_orchestrator_and_metrics()
 
     connection_id = getattr(request.state, "correlation_id", None) or uuid.uuid4().hex

@@ -9,7 +9,6 @@ import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useUXStore } from "@/store/useUXStore";
-import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 
 const LEVEL_LABELS: Record<Level, string> = {
   overall: "Overall Top Performers",
@@ -86,8 +85,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <NewDashboardShell title="Leaderboard">
-      <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
         <div className="mb-6 flex items-start justify-between">
           <div>
@@ -109,7 +107,7 @@ export default function LeaderboardPage() {
             <select
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
             >
               <option value={5}>Top 5</option>
               <option value={10}>Top 10</option>
@@ -210,7 +208,6 @@ export default function LeaderboardPage() {
           </div>
         </div>
       </div>
-      </div>
-    </NewDashboardShell>
+    </div>
   );
 }

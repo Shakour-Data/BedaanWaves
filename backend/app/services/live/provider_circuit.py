@@ -9,10 +9,11 @@ to prevent thundering herd on provider recovery.
 from __future__ import annotations
 
 import logging
+import math
 import random
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +54,16 @@ def exponential_backoff_with_jitter(
         Sleep time in seconds, within [raw*(1-jitter), raw*(1+jitter)],
         never exceeding cap_s.
     """
-    attempt = max(attempt, 0)
+    if attempt < 0:
+        attempt = 0
     if base_s <= 0:
         base_s = 0.001
     if cap_s <= 0:
         cap_s = 60.0
     if jitter_ratio < 0:
         jitter_ratio = 0.0
-    jitter_ratio = min(jitter_ratio, 1.0)
+    if jitter_ratio > 1.0:
+        jitter_ratio = 1.0
 
     raw = base_s * (2 ** attempt)
     raw = min(raw, cap_s)
@@ -87,15 +90,16 @@ class PerSymbolCircuitBreaker:
         self,
         failure_threshold: int = 5,
         halfopen_s: float = 30.0,
-        on_state_change: StateChangeCallback | None = None,
+        on_state_change: Optional[StateChangeCallback] = None,
     ) -> None:
-        failure_threshold = max(failure_threshold, 1)
+        if failure_threshold < 1:
+            failure_threshold = 1
         if halfopen_s <= 0:
             halfopen_s = 30.0
         self._failure_threshold = failure_threshold
         self._halfopen_s = float(halfopen_s)
         self._on_state_change = on_state_change
-        self._states: dict[str, _CircuitState] = {}
+        self._states: Dict[str, _CircuitState] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -156,9 +160,9 @@ class PerSymbolCircuitBreaker:
         remaining = state.open_until_ts - time.monotonic()
         return max(0.0, remaining)
 
-    def snapshot(self) -> dict[str, dict[str, object]]:
+    def snapshot(self) -> Dict[str, Dict[str, object]]:
         """Return a serializable snapshot of all tracked keys."""
-        out: dict[str, dict[str, object]] = {}
+        out: Dict[str, Dict[str, object]] = {}
         for key, st in list(self._states.items()):
             out[key] = {
                 "state": st.state,

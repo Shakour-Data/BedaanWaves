@@ -18,85 +18,6 @@ import type {
   TrendPoint,
 } from "@/store/useDateStore";
 
-type RawScoreOverall = number | { score?: number; grade?: string } | null;
-
-interface RawHierarchyScoreShape {
-  overall?: RawScoreOverall;
-  overallScore?: number;
-  OVERALL?: { score?: number; grade?: string };
-  dimension?: Record<string, number>;
-  sub_dimension?: Record<string, number>;
-  aspect?: Record<string, number>;
-  sub_aspect?: Record<string, number>;
-  level1?: ScoreItemEntry[] | null;
-  level2?: ScoreItemEntry[] | null;
-  level3?: ScoreItemEntry[] | null;
-  level4?: ScoreItemEntry[] | null;
-  dimensions?: ScoreItemEntry[] | null;
-  sub_dimensions?: ScoreItemEntry[] | null;
-  aspects?: ScoreItemEntry[] | null;
-  sub_aspects?: ScoreItemEntry[] | null;
-  [key: string]: unknown;
-}
-
-interface ScoreItemEntry {
-  key?: string;
-  label?: string;
-  score?: number;
-  value?: number;
-  level_key?: string;
-  name?: string;
-  level_score?: number;
-  weight?: number;
-  coefficient?: number;
-  w?: number;
-}
-
-interface RawWeightShape {
-  level1?: ScoreItemEntry[];
-  level2?: ScoreItemEntry[];
-  level3?: ScoreItemEntry[];
-  level4?: ScoreItemEntry[];
-  dimension?: Record<string, number>;
-  sub_dimension?: Record<string, number>;
-  aspect?: Record<string, number>;
-  sub_aspect?: Record<string, number>;
-  overall?: number;
-  [key: string]: unknown;
-}
-
-interface RawTrendPointShape {
-  date?: string;
-  effective_at?: string;
-  time?: string;
-  overall?: number | null;
-  level_scores?: Record<string, number>;
-  scores?: Record<string, number>;
-  dimension_scores?: Record<string, number | string>;
-  sub_dimension_scores?: Record<string, number | string>;
-  aspect_scores?: Record<string, number | string>;
-  sub_aspect_scores?: Record<string, number | string>;
-  value?: number;
-  weights?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-interface RawWeightDeltaEntry {
-  delta?: number;
-  delta_pct?: number;
-  change?: number;
-  weight?: number;
-  value?: number;
-}
-
-interface RawWeightDeltaShape {
-  delta?: number | null;
-  delta_pct?: number | null;
-  overall?: { delta?: number; delta_pct?: number };
-  weights?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
 export type ScoringLevel = 0 | 1 | 2 | 3 | 4;
 
 export const LEVEL_META: Record<ScoringLevel, { label: string; short: string; key: string }> = {
@@ -105,18 +26,6 @@ export const LEVEL_META: Record<ScoringLevel, { label: string; short: string; ke
   2: { label: "Sub-Dimensions", short: "SUB-DIM", key: "level2" },
   3: { label: "Aspects", short: "ASP", key: "level3" },
   4: { label: "Sub-Aspects", short: "SUB-ASP", key: "level4" },
-};
-
-export const LEVEL_ALIASES: Record<string, ScoringLevel> = {
-  overall: 0,
-  dimension: 1,
-  dimensions: 1,
-  sub_dimension: 2,
-  sub_dimensions: 2,
-  aspect: 3,
-  aspects: 3,
-  sub_aspect: 4,
-  sub_aspects: 4,
 };
 
 const PALETTE = [
@@ -131,42 +40,29 @@ const PALETTE = [
 ];
 
 function pickOverall(h: HierarchyScores): number {
-  const raw = h as unknown as RawHierarchyScoreShape;
-  const overallVal = raw.overall;
-  const objScore = typeof overallVal === 'object' && overallVal !== null ? overallVal.score : undefined;
-  const numScore = typeof overallVal === 'number' ? overallVal : undefined;
-  const v = objScore ?? raw.overallScore ?? raw.OVERALL?.score ?? numScore ?? 0;
+  const v = (h as any).overall ?? (h as any).overallScore ?? (h as any).OVERALL?.score ?? 0;
   return num(v);
 }
 
 export function levelItemsFromHierarchy(
   hierarchy: HierarchyScores | null | undefined,
-  level: ScoringLevel | string,
+  level: ScoringLevel,
   parentKey: string | null = null
-): Array<{ key: string; label: string; score: number; value: number; weight: number }> {
-  const numericLevel: ScoringLevel = typeof level === "number"
-    ? level
-    : LEVEL_ALIASES[level] ?? 0;
-
+): Array<{ key: string; label: string; score: number; weight: number }> {
   if (!hierarchy) return [];
-  let all: Array<{ key: string; label: string; score: number; value: number; weight: number }> = [];
-  if (numericLevel === 0) {
-    all = [{ key: "overall", label: "Overall", score: pickOverall(hierarchy), value: pickOverall(hierarchy), weight: 1.0 }];
+  let all: Array<{ key: string; label: string; score: number; weight: number }> = [];
+  if (level === 0) {
+    all = [{ key: "overall", label: "Overall", score: pickOverall(hierarchy), weight: 1.0 }];
   } else {
-    const k = LEVEL_META[numericLevel].key as "level1" | "level2" | "level3" | "level4";
-    const raw = hierarchy as unknown as RawHierarchyScoreShape;
-    const arr = raw[k];
+    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
+    const arr = (hierarchy as any)[k];
     if (Array.isArray(arr)) {
-      all = arr.map((it) => {
-        const s = num(it.score ?? it.value ?? it.level_score ?? 0);
-        return {
-          key: it.key ?? it.level_key ?? it.label ?? String(Math.random()).slice(2),
-          label: it.label ?? it.name ?? it.key ?? "Item",
-          score: s,
-          value: s,
-          weight: num(it.weight ?? it.coefficient ?? it.w ?? 0),
-        };
-      });
+      all = arr.map((it: any) => ({
+        key: it.key ?? it.level_key ?? it.label ?? String(Math.random()).slice(2),
+        label: it.label ?? it.name ?? it.key ?? "Item",
+        score: num(it.score ?? it.value ?? it.level_score ?? 0),
+        weight: num(it.weight ?? it.coefficient ?? it.w ?? 0),
+      }));
     } else {
       const dimKeyMap: Record<ScoringLevel, string> = {
         0: "overall",
@@ -175,23 +71,18 @@ export function levelItemsFromHierarchy(
         3: "aspect",
         4: "sub_aspect",
       };
-      const singular = dimKeyMap[numericLevel];
-      const bucket = (raw[singular] ?? raw[singular + "s"]) as Record<string, number> | undefined;
+      const bucket = (hierarchy as any)[dimKeyMap[level]] as Record<string, number> | undefined;
       if (bucket && typeof bucket === "object") {
-        all = Object.entries(bucket).map(([k2, v]) => {
-          const s = num(v);
-          return {
-            key: k2,
-            label: k2.replace(/_/g, " "),
-            score: s,
-            value: s,
-            weight: 0,
-          };
-        });
+        all = Object.entries(bucket).map(([k2, v]) => ({
+          key: k2,
+          label: k2.replace(/_/g, " "),
+          score: num(v),
+          weight: 0,
+        }));
       }
     }
   }
-  if (parentKey && numericLevel >= 2) {
+  if (parentKey && level >= 2) {
     return all.filter((it) => it.key.startsWith(parentKey) || it.label.toLowerCase().includes(parentKey.toLowerCase()));
   }
   return all;
@@ -295,10 +186,7 @@ export function ScoreTrendWrapper({
         key: "overall",
         label: "Overall",
         color: PALETTE[0],
-        data: series.map((pt) => {
-          const rawPt = pt as unknown as RawTrendPointShape;
-          return { time: pt.date ?? pt.effective_at, value: num(pt.overall ?? rawPt.value ?? 0) };
-        }),
+        data: series.map((pt) => ({ time: pt.date ?? pt.effective_at, value: num(pt.overall ?? (pt as any).value ?? 0) })),
       }];
     }
     const scoreKeyMap: Record<ScoringLevel, string> = {
@@ -313,11 +201,10 @@ export function ScoreTrendWrapper({
       key: item.key,
       label: item.label,
       color: PALETTE[i % PALETTE.length],
-         data: series.map((pt) => {
-           const rawPt = pt as unknown as RawTrendPointShape;
-           const bucket = rawPt[sk] ?? rawPt.level_scores ?? rawPt.scores ?? {};
-           const val = bucket && typeof bucket === "object" ? (bucket as Record<string, number>)[item.key] : undefined;
-           return { time: pt.date ?? pt.effective_at, value: num(val ?? pt.overall ?? rawPt.value ?? 0) };
+      data: series.map((pt) => {
+        const bucket = (pt as any)[sk] ?? (pt as any).level_scores ?? (pt as any).scores ?? {};
+        const val = bucket && typeof bucket === "object" ? bucket[item.key] : undefined;
+        return { time: pt.date ?? pt.effective_at, value: num(val ?? pt.overall ?? (pt as any).value ?? 0) };
       }),
     }));
   }, [series, items, level]);
@@ -471,9 +358,10 @@ export function WeightCurrentWrapper({
     if (level === 0) {
       return [{ key: "overall", label: "Overall", weight: 1.0 }];
     }
-    const raw = weights as unknown as RawWeightShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = raw[k] as ScoreItemEntry[] | undefined;
+    const rawLevel = (weights as any)[k] as
+      | Array<{ key?: string; label?: string; weight?: number; level_key?: string; name?: string; value?: number }>
+      | undefined;
     let normalized: Array<{ key: string; label: string; weight: number }> = [];
     if (Array.isArray(rawLevel)) {
       normalized = rawLevel.map((it) => ({
@@ -488,7 +376,9 @@ export function WeightCurrentWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = raw[weightShortKey[level as Exclude<ScoringLevel, 0>]] as Record<string, number> | undefined;
+      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
+        | Record<string, number>
+        | undefined;
       if (bucket && typeof bucket === "object") {
         normalized = Object.entries(bucket).map(([wk, wv]) => ({
           key: wk,
@@ -549,9 +439,10 @@ export function WeightTrendWrapper({
   const weightArr = useMemo(() => {
     if (!weights) return [];
     if (level === 0) return [{ key: "overall", label: "Overall", weight: 1.0 }];
-    const raw = weights as unknown as RawWeightShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = raw[k] as ScoreItemEntry[] | undefined;
+    const rawLevel = (weights as any)[k] as
+      | Array<{ key?: string; label?: string; weight?: number; level_key?: string }>
+      | undefined;
     let norm: Array<{ key: string; label: string; weight: number }> = [];
     if (Array.isArray(rawLevel)) {
       norm = rawLevel.map((it) => ({
@@ -566,7 +457,9 @@ export function WeightTrendWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = raw[weightShortKey[level as Exclude<ScoringLevel, 0>]] as Record<string, number> | undefined;
+      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
+        | Record<string, number>
+        | undefined;
       if (bucket && typeof bucket === "object") {
         norm = Object.entries(bucket).map(([wk, wv]) => ({
           key: wk,
@@ -585,14 +478,10 @@ export function WeightTrendWrapper({
         key: "overall",
         label: "Overall",
         color: PALETTE[0],
-        data: weightTrends.map((pt) => {
-          const rawPt = pt as unknown as RawTrendPointShape;
-          const rawWeights = weights as unknown as RawWeightShape;
-          return {
-            time: pt.date ?? pt.effective_at,
-            value: num(rawWeights?.overall ?? rawPt.weights?.overall ?? 0),
-          };
-        }),
+        data: weightTrends.map((pt) => ({
+          time: pt.date ?? pt.effective_at,
+          value: num((weights as any)?.overall ?? (pt.weights as any)?.overall ?? 0),
+        })),
       }];
     }
     return weightArr.map((w, i) => ({
@@ -600,14 +489,13 @@ export function WeightTrendWrapper({
       label: w.label,
       color: PALETTE[i % PALETTE.length],
       data: weightTrends.map((pt) => {
-        const rawPt = pt as unknown as RawTrendPointShape;
         const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-        const bucket = (rawPt.weights as Record<string, unknown>)[k];
-        let entry: unknown;
+        const bucket = (pt.weights as any)?.[k];
+        let entry: any;
         if (Array.isArray(bucket)) {
-          entry = (bucket as ScoreItemEntry[]).find((b) => (b.key ?? b.level_key) === w.key);
+          entry = bucket.find((b: any) => (b.key ?? b.level_key) === w.key);
         } else if (bucket && typeof bucket === "object") {
-          entry = (bucket as Record<string, unknown>)[w.key];
+          entry = bucket[w.key];
         }
         const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
           1: "dimension",
@@ -615,17 +503,14 @@ export function WeightTrendWrapper({
           3: "aspect",
           4: "sub_aspect",
         };
-        const altKey = weightShortKey[level as Exclude<ScoringLevel, 0>];
-        const rawWeights = rawPt.weights as Record<string, unknown> | undefined;
-        const altBucket = rawWeights?.[altKey];
+        const altBucket = (pt.weights as any)?.[weightShortKey[level as Exclude<ScoringLevel, 0>]];
         let v = 0;
         if (entry && typeof entry === "object") {
-          const e = entry as RawWeightDeltaEntry;
-          v = num(e.weight ?? e.value ?? 0);
+          v = num(entry.weight ?? entry.value ?? 0);
         } else if (typeof entry === "number") {
           v = entry;
-        } else if (altBucket && typeof altBucket === "object" && typeof (altBucket as Record<string, unknown>)[w.key] === "number") {
-          v = (altBucket as Record<string, number>)[w.key];
+        } else if (altBucket && typeof altBucket === "object" && typeof altBucket[w.key] === "number") {
+          v = altBucket[w.key];
         }
         return { time: pt.date ?? pt.effective_at, value: v };
       }),
@@ -672,9 +557,10 @@ export function WeightDeltaWrapper({
   const weightArr = useMemo(() => {
     if (!weights) return [];
     if (level === 0) return [{ key: "overall", label: "Overall", weight: 1.0 }];
-    const raw = weights as unknown as RawWeightShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = raw[k] as ScoreItemEntry[] | undefined;
+    const rawLevel = (weights as any)[k] as
+      | Array<{ key?: string; label?: string; weight?: number; level_key?: string }>
+      | undefined;
     let norm: Array<{ key: string; label: string; weight: number }> = [];
     if (Array.isArray(rawLevel)) {
       norm = rawLevel.map((it) => ({
@@ -689,7 +575,9 @@ export function WeightDeltaWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      const bucket = raw[weightShortKey[level as Exclude<ScoringLevel, 0>]] as Record<string, number> | undefined;
+      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
+        | Record<string, number>
+        | undefined;
       if (bucket && typeof bucket === "object") {
         norm = Object.entries(bucket).map(([wk, wv]) => ({
           key: wk,
@@ -703,10 +591,9 @@ export function WeightDeltaWrapper({
 
   const flatSeries = useMemo(() => {
     if (!weightDeltas) return [];
-    const rawWD = weightDeltas as unknown as RawWeightDeltaShape;
     const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    type DeltaBucket = Record<string, { delta?: number; delta_pct?: number; change?: number }>;
-    let bucket: DeltaBucket | undefined = rawWD.weights?.[k] as DeltaBucket | undefined;
+    let bucket: Record<string, { delta?: number; delta_pct?: number; change?: number }> | undefined =
+      (weightDeltas.weights as any)?.[k];
     if (!bucket) {
       const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
         1: "dimension",
@@ -714,20 +601,20 @@ export function WeightDeltaWrapper({
         3: "aspect",
         4: "sub_aspect",
       };
-      bucket = rawWD[`${weightShortKey[level as Exclude<ScoringLevel, 0>]}_deltas`] as DeltaBucket | undefined;
+      bucket = (weightDeltas as any)?.[`${weightShortKey[level as Exclude<ScoringLevel, 0>]}_deltas`];
     }
     if (!bucket && level !== 0) return [];
     if (level === 0) {
-      const delta = num(weightDeltas.delta ?? rawWD.overall?.delta ?? 0);
+      const delta = num(weightDeltas.delta ?? (weightDeltas as any).overall?.delta ?? 0);
       return delta !== 0 ? [{ time: "Overall", value: delta, color: delta >= 0 ? "#10b981" : "#ef4444" }] : [];
     }
     return weightArr
       .map((w) => {
-        const e = bucket?.[w.key] as RawWeightDeltaEntry | undefined;
+        const e = bucket?.[w.key];
         const v = num(e?.delta ?? e?.change ?? 0);
         return { time: w.label, value: v, color: v >= 0 ? "#10b981" : "#ef4444" };
       })
-      .filter(() => true);
+      .filter((pt) => true);
   }, [weightDeltas, weightArr, level]);
 
   const meta = LEVEL_META[level];
@@ -877,59 +764,35 @@ export function ViewHeaderControls({
 }
 
 interface ScoringLevelSelectorProps {
-  level?: ScoringLevel;
-  value?: string;
-  onLevelChange?: (l: ScoringLevel) => void;
-  onChange?: (level: string) => void;
+  level: ScoringLevel;
+  onLevelChange: (l: ScoringLevel) => void;
   className?: string;
   includeOverall?: boolean;
 }
 
-const LEVEL_SHORT_TO_NUM: Record<string, ScoringLevel> = {
-  overall: 0,
-  dimension: 1,
-  sub_dimension: 2,
-  aspect: 3,
-  sub_aspect: 4,
-};
-
 export function ScoringLevelSelector({
   level,
-  value,
   onLevelChange,
-  onChange,
   className,
   includeOverall = true,
 }: ScoringLevelSelectorProps) {
-  const currentLevel: ScoringLevel = level ?? (value ? LEVEL_SHORT_TO_NUM[value] ?? 0 : 0);
   const levels: ScoringLevel[] = includeOverall ? [0, 1, 2, 3, 4] : [1, 2, 3, 4];
-  const handleChange = (lvl: ScoringLevel) => {
-    onLevelChange?.(lvl);
-    if (onChange) onChange(LEVEL_META[lvl].key);
-  };
   return (
-    <div
-      className={cn(
-        "flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap",
-        className,
-      )}
-      role="group"
-      aria-label="Hierarchy level"
-    >
+    <div className={cn("flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap", className)} role="group" aria-label="Hierarchy level">
       {levels.map((lvl) => {
         const meta = LEVEL_META[lvl];
         return (
           <button
             key={lvl}
             type="button"
-            onClick={() => handleChange(lvl)}
+            onClick={() => onLevelChange(lvl)}
             className={cn(
               "rounded-md px-3 py-1 text-xs font-semibold transition whitespace-nowrap",
-              currentLevel === lvl
+              level === lvl
                 ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+                : "text-muted-foreground hover:text-foreground"
             )}
-            aria-pressed={currentLevel === lvl}
+            aria-pressed={level === lvl}
           >
             {meta.short}
           </button>
@@ -940,85 +803,63 @@ export function ScoringLevelSelector({
 }
 
 interface ParentSelectorProps {
-  hierarchy?: HierarchyScores | null | undefined;
-  level?: ScoringLevel;
-  parentLevel?: Exclude<ScoringLevel, 0 | 4>;
-  parentKey?: string | null;
-  onParentChange?: (parentKey: string | null) => void;
-  options?: string[];
-  value?: string | null;
-  onChange?: (key: string) => void;
+  hierarchy: HierarchyScores | null | undefined;
+  level: ScoringLevel;
+  parentLevel: Exclude<ScoringLevel, 0 | 4>;
+  parentKey: string | null;
+  onParentChange: (parentKey: string | null) => void;
   className?: string;
 }
 
 export function ParentSelector({
   hierarchy,
-  level: _level,
-  parentLevel: _parentLevel,
+  level,
+  parentLevel,
   parentKey,
   onParentChange,
-  options,
-  value,
-  onChange,
   className,
 }: ParentSelectorProps) {
   const parents = useMemo(
-    () => (_parentLevel && hierarchy ? levelItemsFromHierarchy(hierarchy, _parentLevel) : []),
-    [hierarchy, _parentLevel],
+    () => levelItemsFromHierarchy(hierarchy, parentLevel),
+    [hierarchy, parentLevel]
   );
-  const showOptions = options !== undefined;
-  const items = showOptions ? options! : parents.map((p) => p.key);
-
-  if (!showOptions && (!_level || !_parentLevel || _level <= _parentLevel)) return null;
-  const label = _parentLevel ? LEVEL_META[_parentLevel].label : "Parent";
+  if (level <= parentLevel) return null;
+  const label = LEVEL_META[parentLevel].label;
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         Parent {label}:
       </span>
-      <div
-        className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap"
-        role="group"
-        aria-label={`Parent ${label}`}
-      >
-        {!showOptions && (
+      <div className="flex items-center gap-1 rounded-lg bg-[var(--color-neutral)] p-1 flex-wrap" role="group" aria-label={`Parent ${label}`}>
+        <button
+          type="button"
+          onClick={() => onParentChange(null)}
+          className={cn(
+            "rounded-md px-3 py-1 text-xs font-semibold transition",
+            parentKey === null
+              ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          aria-pressed={parentKey === null}
+        >
+          ALL
+        </button>
+        {parents.map((p) => (
           <button
+            key={p.key}
             type="button"
-            onClick={() => onParentChange?.(null)}
+            onClick={() => onParentChange(p.key)}
             className={cn(
-              "rounded-md px-3 py-1 text-xs font-semibold transition",
-              parentKey === null
+              "rounded-md px-3 py-1 text-xs font-semibold transition whitespace-nowrap",
+              parentKey === p.key
                 ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+                : "text-muted-foreground hover:text-foreground"
             )}
-            aria-pressed={parentKey === null}
+            aria-pressed={parentKey === p.key}
           >
-            ALL
+            {p.label}
           </button>
-        )}
-        {items.map((p) => {
-          const key = p;
-          const isActive = showOptions ? value === p : parentKey === p;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                if (showOptions) onChange?.(p);
-                else onParentChange?.(p);
-              }}
-              className={cn(
-                "rounded-md px-3 py-1 text-xs font-semibold transition whitespace-nowrap",
-                isActive
-                  ? "bg-[var(--color-background)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              aria-pressed={isActive}
-            >
-              {p}
-            </button>
-          );
-        })}
+        ))}
       </div>
     </div>
   );

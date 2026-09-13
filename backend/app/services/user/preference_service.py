@@ -3,6 +3,7 @@
 Stores arbitrary key/value user preferences as JSONB values.
 """
 
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -19,7 +20,7 @@ class PreferenceService:
 
     async def get_preference(
         self, user_id: UUID, key: str, session=None
-    ) -> UserPreference | None:
+    ) -> Optional[UserPreference]:
         owns = session is None
         session = session or self.session_factory()
         try:
@@ -61,7 +62,7 @@ class PreferenceService:
 
     async def list_preferences(
         self, user_id: UUID, session=None
-    ) -> list[UserPreference]:
+    ) -> List[UserPreference]:
         owns = session is None
         session = session or self.session_factory()
         try:

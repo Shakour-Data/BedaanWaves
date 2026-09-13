@@ -1,17 +1,16 @@
 """Watchlist Routes (Tier 6)"""
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
 
 from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import (
-    WatchlistCreate,
-    WatchlistItemCreate,
-    WatchlistItemResponse,
-    WatchlistItemUpdate,
     WatchlistResponse,
+    WatchlistCreate,
     WatchlistUpdate,
+    WatchlistItemResponse,
+    WatchlistItemCreate,
+    WatchlistItemUpdate,
 )
 from app.services.user.watchlist_service import WatchlistService
 
@@ -92,7 +91,7 @@ async def add_item(
         user_id=user_id,
         asset_id=data.asset_id,
         note=data.note,
-        alert_threshold_pct=float(data.alert_threshold_pct) if data.alert_threshold_pct is not None else None,
+        alert_threshold_pct=data.alert_threshold_pct,
     )
     if item is None:
         raise HTTPException(status_code=404, detail="Watchlist not found")
@@ -129,7 +128,7 @@ async def update_item(
         item_id=item_id,
         user_id=user_id,
         note=data.note,
-        alert_threshold_pct=float(data.alert_threshold_pct) if data.alert_threshold_pct is not None else None,
+        alert_threshold_pct=data.alert_threshold_pct,
     )
     if item is None:
         raise HTTPException(status_code=404, detail="Watchlist item not found")

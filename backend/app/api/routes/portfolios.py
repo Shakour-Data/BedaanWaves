@@ -1,21 +1,18 @@
 """Portfolio Routes"""
 
-import logging
-from datetime import UTC, datetime
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import and_, select
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete, and_
+from typing import List
+import logging
+from datetime import datetime, timezone
 
-from app.api.dependencies import get_route_user_id
 from app.db.base import get_async_session
-from app.models.models import Asset, Portfolio, Position
+from app.api.dependencies import get_route_user_id
+from app.models.models import Portfolio, Position, Asset
 from app.schemas.schemas import (
-    PortfolioCreate,
-    PortfolioResponse,
-    PortfolioUpdate,
-    PositionCreate,
-    PositionResponse,
+    PortfolioCreate, PortfolioUpdate, PortfolioResponse,
+    PositionCreate, PositionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,13 +40,13 @@ async def create_portfolio(
     return new_portfolio
 
 
-@router.get("/", response_model=list[PortfolioResponse])
+@router.get("/", response_model=List[PortfolioResponse])
 async def get_portfolios(
     request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_session),
-) -> list[PortfolioResponse]:
+) -> List[PortfolioResponse]:
     """Get all portfolios for a user."""
     user_id = await get_route_user_id(request)
     query = (
@@ -106,19 +103,19 @@ async def update_portfolio(
     if portfolio_update.portfolio_type is not None:
         portfolio.portfolio_type = portfolio_update.portfolio_type
 
-    portfolio.updated_at = datetime.now(UTC)
+    portfolio.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(portfolio)
     return portfolio
 
 
-@router.delete("/{portfolio_id}", status_code=204)
+@router.delete("/{portfolio_id}")
 async def delete_portfolio(
     portfolio_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-) -> None:
-    """Delete a portfolio."""
+) -> dict:
+    """Delete portfolio."""
     user_id = await get_route_user_id(request)
     query = select(Portfolio).where(
         Portfolio.id == portfolio_id,
@@ -131,7 +128,7 @@ async def delete_portfolio(
 
     await db.delete(portfolio)
     await db.commit()
-    return None
+    return {"status": "success", "message": "Portfolio deleted"}
 
 
 @router.post("/{portfolio_id}/holdings", response_model=PositionResponse)
@@ -190,12 +187,12 @@ async def add_holding(
     return new_position
 
 
-@router.get("/{portfolio_id}/holdings", response_model=list[PositionResponse])
+@router.get("/{portfolio_id}/holdings", response_model=List[PositionResponse])
 async def get_holdings(
     portfolio_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-) -> list[PositionResponse]:
+) -> List[PositionResponse]:
     """Get portfolio holdings."""
     user_id = await get_route_user_id(request)
     # Verify ownership first
@@ -212,14 +209,14 @@ async def get_holdings(
     return result.scalars().all()
 
 
-@router.delete("/{portfolio_id}/holdings/{holding_id}", status_code=204)
+@router.delete("/{portfolio_id}/holdings/{holding_id}")
 async def remove_holding(
     portfolio_id: str,
     holding_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-) -> None:
-    """Remove a holding from portfolio."""
+) -> dict:
+    """Remove holding from portfolio."""
     user_id = await get_route_user_id(request)
     # Verify portfolio ownership before allowing position removal
     portfolio_query = select(Portfolio).where(
@@ -243,4 +240,4 @@ async def remove_holding(
 
     await db.delete(position)
     await db.commit()
-    return None
+    return {"status": "success", "message": "Holding removed"}

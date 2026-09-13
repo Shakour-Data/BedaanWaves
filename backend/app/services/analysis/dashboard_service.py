@@ -11,25 +11,25 @@ Provides real data from:
 - Anomaly (risk anomalies)
 """
 
+from datetime import datetime, timedelta, timezone, date
+from typing import Any, Dict, List, Optional
 import logging
-from datetime import UTC, date, datetime, timedelta
-from typing import Any
-
-from sqlalchemy import and_, case, desc, func, select
+from sqlalchemy import select, func, and_, desc, case
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.sql import literal_column
 from app.core.utils import utc_now_iso
+
 from app.models.models import (
     Asset,
-    CompanyLeadership,
-    FundamentalRatio,
-    MacroIndicator,
-    MarketDataSnapshot,
-    MLSignal,
-    News,
-    NewsSentiment,
-    RawPerformanceScore,
     ScoreHistory,
+    RawPerformanceScore,
+    NewsSentiment,
+    News,
+    CompanyLeadership,
+    MLSignal,
+    MarketDataSnapshot,
+    Anomaly,
+    FundamentalRatio,
 )
 from app.services.data.news_service import NewsService
 from app.services.nlp.sentiment_analysis_service import SentimentAnalysisService
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 # written by the scoring service. The labels in the scoring service are
 # historically misaligned with the metrics they contain, so we use the
 # metric-name pattern to compute a sensible per-label average.
-BROAD_SUB_DIMENSION_METRIC_PATTERNS: dict[str, dict[str, list[str]]] = {
+BROAD_SUB_DIMENSION_METRIC_PATTERNS: Dict[str, Dict[str, List[str]]] = {
     "fundamental": {
         "valuation": ["pe_ratio", "pb_ratio", "peg_ratio", "ev_ebitda"],
         "profitability": ["roe", "roa", "roic", "gross_margin", "net_margin", "profit_margin"],
@@ -55,8 +55,8 @@ BROAD_SUB_DIMENSION_METRIC_PATTERNS: dict[str, dict[str, list[str]]] = {
 
 
 def _aggregate_broad_sub_dimensions(
-    sub_dim_scores: dict[str, float], dimension: str
-) -> dict[str, float]:
+    sub_dim_scores: Dict[str, float], dimension: str
+) -> Dict[str, float]:
     """Roll per-metric sub-dimension scores up to broad labels.
 
     Returns keys like `valuation`, `profitability`, ... (the labels the
@@ -68,13 +68,15 @@ def _aggregate_broad_sub_dimensions(
     if not mapping or not sub_dim_scores:
         return {}
 
-    result: dict[str, float] = {}
+    result: Dict[str, float] = {}
     normalized = {_strip_dimension_prefix(k, dimension): float(v) for k, v in sub_dim_scores.items()}
     for label, patterns in mapping.items():
-        matched: list[float] = []
+        matched: List[float] = []
         for bare_key, value in normalized.items():
             bk = bare_key.lower()
-            if bk == label.lower() or any(pat in bk for pat in patterns):
+            if bk == label.lower():
+                matched.append(value)
+            elif any(pat in bk for pat in patterns):
                 matched.append(value)
         if matched:
             result[label] = round(sum(matched) / len(matched), 4)
@@ -132,7 +134,7 @@ def _derive_fundamental_score_from_ratios(fr: Any) -> float:
     asset (e.g. scoring hasn't run yet but SEC ratios are present). Values are
     real, sourced from the `fundamental_ratios` table.
     """
-    components: list[float] = []
+    components: List[float] = []
 
     pe = float(fr.pe) if fr.pe is not None else None
     pb = float(fr.pb) if fr.pb is not None else None
@@ -210,7 +212,7 @@ async def _compute_technical_score(db: AsyncSession, asset_id: Any) -> float:
         return 0.0
 
     indicators = dict(row)
-    scores: list[float] = []
+    scores: List[float] = []
 
     rsi = indicators.get("rsi")
     if rsi is not None:
@@ -276,49 +278,37 @@ async def _compute_sentiment_score(db: AsyncSession, asset_id: Any) -> float:
 
 
 async def _compute_macro_score(db: AsyncSession, asset_id: Any) -> float:
-    """Compute a real macro score (0-100) from ``MacroIndicator``.
-
-    Uses the centralized ``macro_scoring`` normalizer over the latest value of
-    every tracked indicator: real US releases (CPI, unemployment, GDP, Fed
-    funds, yield curve, sentiment, ...) plus market tickers (VIX, Treasury,
-    Dollar Index, Gold, Oil). Missing indicators are neutral (50), never zero.
-    Elevated volatility (VIX) applies a regime stress so fear still weighs on
-    the score, preserving the signal the previous ticker-only path carried.
-    """
-    from app.services.analysis.macro_scoring import compute_macro_scores
-
+    """Compute a real macro score (0-100) from MacroIndicator."""
     query = (
-        select(MacroIndicator.indicator_code, MacroIndicator.value)
-        .order_by(MacroIndicator.as_of.desc(), MacroIndicator.indicator_code)
+        select(MacroIndicator.value, MacroIndicator.indicator_code)
+        .order_by(desc(MacroIndicator.as_of))
+        .limit(10)
     )
     result = await db.execute(query)
     rows = result.all()
     if not rows:
         return 0.0
 
-    latest: dict[str, float] = {}
-    for code, value in rows:
-        if value is None:
+    scores: List[float] = []
+    for row in rows:
+        code = row.indicator_code
+        val = float(row.value) if row.value is not None else None
+        if val is None:
             continue
-        if code not in latest:
-            try:
-                latest[code] = float(value)
-            except (TypeError, ValueError):
-                continue
+        if code == "^VIX":
+            scores.append(min(100.0, max(0.0, val * 3.0)))
+        elif code == "^TNX":
+            scores.append(min(100.0, max(0.0, 100.0 - (val - 2.0) * 20.0)))
+        elif code == "DX-Y.NYB":
+            scores.append(min(100.0, max(0.0, 50.0 + (val - 100.0) * 2.0)))
+        elif code in ("GC=F", "CL=F"):
+            scores.append(min(100.0, max(0.0, val / 100.0)))
+        else:
+            scores.append(min(100.0, max(0.0, val)))
 
-    if not latest:
+    if not scores:
         return 0.0
-
-    scores = compute_macro_scores(latest)
-    overall = float(scores.get("overall", 50.0))
-
-    # Regime stress from elevated volatility (preserves the prior VIX signal).
-    vix = latest.get("^VIX")
-    if vix is not None:
-        vix_score = min(100.0, max(0.0, 100.0 - (vix - 15.0) * 2.0))
-        overall = overall * 0.8 + vix_score * 0.2
-
-    return round(overall, 2)
+    return round(sum(scores) / len(scores), 2)
 
 
 async def _compute_ai_score(db: AsyncSession, asset_id: Any) -> float:
@@ -328,7 +318,7 @@ async def _compute_ai_score(db: AsyncSession, asset_id: Any) -> float:
         .where(
             and_(
                 MLSignal.asset_id == asset_id,
-                MLSignal.is_active,
+                MLSignal.is_active == True,
             )
         )
         .order_by(desc(MLSignal.generated_at))
@@ -339,7 +329,7 @@ async def _compute_ai_score(db: AsyncSession, asset_id: Any) -> float:
     if not row:
         return 0.0
 
-    scores: list[float] = []
+    scores: List[float] = []
     if row.confidence is not None:
         conf = float(row.confidence)
         scores.append(min(100.0, max(0.0, conf * 100.0)))
@@ -390,7 +380,7 @@ class DashboardService:
     def __init__(self):
         pass
 
-    async def _get_latest_score_date(self, db: AsyncSession) -> str | None:
+    async def _get_latest_score_date(self, db: AsyncSession) -> Optional[str]:
         """Return the max ScoreHistory.date across active NASDAQ assets as ISO string.
 
         Returns None if there is no score history for any active NASDAQ asset.
@@ -451,15 +441,15 @@ class DashboardService:
         dimension: str,
         limit: int = 50,
         latest: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         Get dashboard data for a specific dimension (technical, fundamental, risk, ai, sentiment).
-
+        
         Args:
             db: Database session
             dimension: One of technical, fundamental, risk, ai, sentiment
             limit: Max symbols to return in detailed list
-
+            
         Returns:
             Dashboard data with summary, distribution, and symbol breakdown
         """
@@ -471,7 +461,7 @@ class DashboardService:
         # Get all active NASDAQ assets
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector, Asset.industry)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -490,7 +480,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -619,9 +609,9 @@ class DashboardService:
             # Collect the raw per-metric scores from the DB (any of the three
             # supported key shapes), then roll them up to the broad labels the
             # frontend expects (`valuation`, `profitability`, ...).
-            raw_sub_dim: dict[str, float] = {}
-            raw_aspect: dict[str, float] = {}
-            raw_sub_aspect: dict[str, float] = {}
+            raw_sub_dim: Dict[str, float] = {}
+            raw_aspect: Dict[str, float] = {}
+            raw_sub_aspect: Dict[str, float] = {}
 
             if rps:
                 if rps.sub_dimension_scores:
@@ -706,7 +696,7 @@ class DashboardService:
             idx = min(int(s["score"] / 10), 9)
             bins[idx] += 1
         distribution = [
-            {"range": f"{i * 10}-{(i + 1) * 10}", "count": bins[i]}
+            {"range": f"{i*10}-{(i+1)*10}", "count": bins[i]}
             for i in range(10)
         ]
 
@@ -741,12 +731,12 @@ class DashboardService:
         db: AsyncSession,
         limit: int = 50,
         latest: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get news sentiment dashboard for all symbols."""
         # Get all active assets
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -764,7 +754,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -814,7 +804,7 @@ class DashboardService:
         # Get general market news (no specific asset) for distribution
         general_news_result = await db.execute(
             select(News.title, News.source, News.published_at)
-            .where(News.asset_id is None)
+            .where(News.asset_id == None)
             .order_by(desc(News.published_at))
             .limit(100)
         )
@@ -980,11 +970,11 @@ class DashboardService:
         db: AsyncSession,
         limit: int = 50,
         latest: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get board/governance dashboard for all symbols."""
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -1002,7 +992,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -1104,11 +1094,11 @@ class DashboardService:
         db: AsyncSession,
         limit: int = 50,
         latest: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get AI/ML dashboard for all symbols."""
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -1126,7 +1116,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -1242,12 +1232,12 @@ class DashboardService:
         self,
         db: AsyncSession,
         latest: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get general/overall dashboard data."""
         # Get all active assets with latest scores
         assets_query = (
             select(Asset.id, Asset.symbol, Asset.name, Asset.sector, Asset.industry, Asset.market)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .order_by(Asset.symbol.asc())
         )
         assets_result = await db.execute(assets_query)
@@ -1266,7 +1256,7 @@ class DashboardService:
         # Get latest ScoreHistory per asset using subquery to avoid parameter limits
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
         latest_sh_subq = (
@@ -1289,7 +1279,7 @@ class DashboardService:
         # Get latest signals count
         signals_query = (
             select(func.count(MLSignal.id))
-            .where(and_(MLSignal.is_active, MLSignal.valid_until >= datetime.now(UTC).replace(tzinfo=None)))
+            .where(and_(MLSignal.is_active == True, MLSignal.valid_until >= datetime.now(timezone.utc).replace(tzinfo=None)))
         )
         signals_result = await db.execute(signals_query)
         total_signals = signals_result.scalar() or 0
@@ -1322,7 +1312,7 @@ class DashboardService:
             overall = float(sh.overall_score) if sh.overall_score is not None else 0.0
             dims = dict(sh.dimension_scores) if sh.dimension_scores else {}
 
-            for dim in dimension_scores:
+            for dim in dimension_scores.keys():
                 if dim in dims and dims[dim] is not None:
                     dimension_scores[dim].append(float(dims[dim]))
 
@@ -1369,11 +1359,11 @@ class DashboardService:
         # chart per the dashboard spec.
         coefficients = [
             {"key": "fundamental", "label": "Fundamental", "weight": 0.25},
-            {"key": "technical", "label": "Technical", "weight": 0.20},
-            {"key": "sentiment", "label": "Sentiment", "weight": 0.15},
-            {"key": "risk", "label": "Risk", "weight": 0.20},
-            {"key": "macro", "label": "Macro", "weight": 0.10},
-            {"key": "ai", "label": "AI", "weight": 0.10},
+            {"key": "technical",   "label": "Technical",   "weight": 0.20},
+            {"key": "sentiment",   "label": "Sentiment",   "weight": 0.15},
+            {"key": "risk",        "label": "Risk",        "weight": 0.20},
+            {"key": "macro",       "label": "Macro",       "weight": 0.10},
+            {"key": "ai",          "label": "AI",          "weight": 0.10},
         ]
 
         latest_date = await self._get_latest_score_date(db)
@@ -1399,7 +1389,7 @@ class DashboardService:
         db: AsyncSession,
         dimension: str = "general",
         latest: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get dashboard data by dimension."""
         if dimension == "general":
             return await self.get_general_dashboard(db, latest=latest)
@@ -1416,9 +1406,9 @@ class DashboardService:
         self,
         db: AsyncSession,
         level: str = "overall",
-        dimension: str | None = None,
+        dimension: Optional[str] = None,
         limit: int = 10,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Return top assets by score at the specified level."""
         level = level.lower().strip()
         valid_levels = {"overall", "dimension", "sub_dimension", "aspect", "sub_aspect"}
@@ -1430,7 +1420,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -1609,10 +1599,10 @@ class DashboardService:
         self,
         db: AsyncSession,
         level: str = "overall",
-        dimension: str | None = None,
+        dimension: Optional[str] = None,
         limit: int = 10,
         days: int = 1,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Return top assets by score change over the last `days` trading days."""
         level = level.lower().strip()
         valid_levels = {"overall", "dimension", "sub_dimension", "aspect", "sub_aspect"}
@@ -1624,7 +1614,7 @@ class DashboardService:
 
         active_assets_subq = (
             select(Asset.id)
-            .where(and_(Asset.active, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
+            .where(and_(Asset.active == True, Asset.market == "NASDAQ", Asset.asset_class.in_(["EQUITY", "ETF"])))
             .subquery()
         )
 
@@ -1897,14 +1887,12 @@ async def _aggregate_score_trend_on_the_fly(db: AsyncSession, days: int) -> list
     for the requested window. Kept as a module-level function so the
     response shape stays identical to the precomputed path.
     """
-    from datetime import datetime, timedelta
-
-    from sqlalchemy import Numeric, and_, case, func, select
-
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import select, func, and_, case, Numeric
     from app.models.models import Asset, ScoreHistory
 
     DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
-    cutoff = datetime.now(UTC).date() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
 
     market_filter = and_(
         Asset.market == "NASDAQ",

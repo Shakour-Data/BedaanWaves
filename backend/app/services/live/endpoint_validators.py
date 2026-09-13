@@ -8,6 +8,7 @@ invalid symbols, intervals, or other query parameters.
 from __future__ import annotations
 
 import re
+from typing import Optional
 
 from fastapi import HTTPException
 
@@ -76,7 +77,7 @@ def validate_symbol(symbol: str, param_name: str = "symbol") -> str:
     return sym
 
 
-def validate_interval(interval: str | None) -> str:
+def validate_interval(interval: Optional[str]) -> str:
     """
     Validate intraday interval against VALID_INTRADAY_INTERVALS.
 
@@ -101,7 +102,7 @@ def validate_interval(interval: str | None) -> str:
     return iv
 
 
-def validate_scope(scope: str | None, allowed: set, default: str) -> str:
+def validate_scope(scope: Optional[str], allowed: set, default: str) -> str:
     """Validate a scope query parameter against an allow-list."""
     if scope is None:
         return default

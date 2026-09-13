@@ -1,23 +1,15 @@
 """Symbol Data Routes"""
 
+from fastapi import APIRouter, Depends, Query, HTTPException
+from typing import List, Optional
+from datetime import timezone, datetime
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, Query
-
-from app.core.config import get_settings
 from app.core.utils import utc_now_iso
-from app.schemas.schemas import (
-    ExchangeCountResponse,
-    ExchangesResponse,
-    MarketTypesResponse,
-    MarketTypeCountResponse,
-    StatsResponse,
-    SymbolDetailResponse,
-    SymbolSearchResponse,
-)
-from app.services.core.dependency_container import get_global_container
-from app.services.data.stock_service import StockService
+
 from app.services.data.symbol_service import SymbolService
+from app.services.data.stock_service import StockService
+from app.core.config import get_settings
+from app.services.core.dependency_container import get_global_container
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -40,15 +32,15 @@ def get_stock_service() -> StockService:
     return StockService()
 
 
-@router.get("/search", response_model=SymbolSearchResponse)
+@router.get("/search", response_model=dict)
 async def search_symbols(
     q: str = Query(..., min_length=1, description="Search query (symbol or company name)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
-    exchange: str | None = Query(None, description="Filter by exchange"),
-    market_type: str | None = Query(None, description="Filter by market type"),
+    exchange: Optional[str] = Query(None, description="Filter by exchange"),
+    market_type: Optional[str] = Query(None, description="Filter by market type"),
     active_only: bool = Query(True, description="Only active symbols"),
     service: SymbolService = Depends(get_symbol_service),
-) -> SymbolSearchResponse:
+) -> dict:
     """Search symbols by query string."""
     results = await service.search(
         query=q,
@@ -57,7 +49,7 @@ async def search_symbols(
         market_type=market_type,
         active_only=active_only,
     )
-
+    
     return {
         "status": "success",
         "query": q,
@@ -67,13 +59,13 @@ async def search_symbols(
     }
 
 
-@router.get("/exchanges", response_model=ExchangesResponse)
+@router.get("/exchanges", response_model=dict)
 async def get_exchanges(
     service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get list of all available exchanges."""
     exchanges = await service.get_exchanges()
-
+    
     return {
         "status": "success",
         "exchanges": exchanges,
@@ -82,13 +74,13 @@ async def get_exchanges(
     }
 
 
-@router.get("/market-types", response_model=MarketTypesResponse)
+@router.get("/market-types", response_model=dict)
 async def get_market_types(
     service: SymbolService = Depends(get_symbol_service),
-) -> MarketTypesResponse:
+) -> dict:
     """Get list of all available market types."""
     market_types = await service.get_market_types()
-
+    
     return {
         "status": "success",
         "market_types": market_types,
@@ -103,7 +95,7 @@ async def get_countries(
 ) -> dict:
     """Get list of all available country codes."""
     countries = await service.get_countries()
-
+    
     return {
         "status": "success",
         "countries": countries,
@@ -112,13 +104,13 @@ async def get_countries(
     }
 
 
-@router.get("/stats", response_model=StatsResponse)
+@router.get("/stats", response_model=dict)
 async def get_symbol_stats(
     service: SymbolService = Depends(get_symbol_service),
 ) -> dict:
     """Get symbol statistics."""
     stats = await service.get_stats()
-
+    
     return {
         "status": "success",
         "stats": stats,
@@ -126,7 +118,7 @@ async def get_symbol_stats(
     }
 
 
-@router.get("/exchanges/{exchange}/count", response_model=ExchangeCountResponse)
+@router.get("/exchanges/{exchange}/count", response_model=dict)
 async def get_symbols_by_exchange(
     exchange: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -141,7 +133,7 @@ async def get_symbols_by_exchange(
         offset=offset,
         active_only=active_only,
     )
-
+    
     return {
         "status": "success",
         "exchange": exchange,
@@ -153,7 +145,7 @@ async def get_symbols_by_exchange(
     }
 
 
-@router.get("/market-types/{market_type}/count", response_model=MarketTypeCountResponse)
+@router.get("/market-types/{market_type}/count", response_model=dict)
 async def get_symbols_by_market_type(
     market_type: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -168,7 +160,7 @@ async def get_symbols_by_market_type(
         offset=offset,
         active_only=active_only,
     )
-
+    
     return {
         "status": "success",
         "market_type": market_type,
@@ -180,7 +172,7 @@ async def get_symbols_by_market_type(
     }
 
 
-@router.get("/{symbol}", response_model=SymbolDetailResponse)
+@router.get("/{symbol}", response_model=dict)
 async def get_symbol(
     symbol: str,
     service: SymbolService = Depends(get_symbol_service),
@@ -192,7 +184,7 @@ async def get_symbol(
             status_code=404,
             detail=f"Symbol '{symbol}' not found"
         )
-
+    
     return {
         "status": "success",
         "symbol": symbol,

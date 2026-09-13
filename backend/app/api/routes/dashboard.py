@@ -1,66 +1,48 @@
 """Dashboard API Routes - Leaderboard & Biggest Movers"""
 
-import logging
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import datetime, timezone, timedelta, date
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy import select, func, and_, case, Numeric
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from typing import List, Optional
+import logging
 from app.core.utils import utc_now_iso
+
 from app.db.base import get_async_session
-from app.schemas.dashboard import (
-    SnapshotIndexEntry,
-    SnapshotIndexResponse,
-    SnapshotResponse,
-)
+from app.models.models import Asset, ScoreHistory
 from app.services.analysis.dashboard_service import DashboardService
-from app.services.analysis.coefficient_history_service import DIMENSION_KEYS
-from app.services.analysis.hierarchical_score_trend_service import (
-    HierarchicalScoreTrendService,
-)
-from app.services.analysis.hierarchy import ALL_TREND_KEYS
+from app.services.analysis.hierarchical_score_trend_service import SUB_DIMENSION_TO_PARENT
 from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 from app.services.analysis.temporal_snapshot_service import TemporalSnapshotService
+from app.schemas.dashboard import SnapshotResponse, SnapshotIndexResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
 
-SUB_DIMENSION_TREND_KEYS = ALL_TREND_KEYS["sub_dimension"]
-ASPECT_TREND_KEYS = ALL_TREND_KEYS["aspect"]
-SUB_ASPECT_TREND_KEYS = ALL_TREND_KEYS["sub_aspect"]
+SUB_DIMENSION_TREND_KEYS = tuple(SUB_DIMENSION_TO_PARENT.keys())
+ASPECT_TREND_KEYS = tuple(
+    f"{k.rsplit('_', 1)[0]}_aspect_{i}"
+    for k in SUB_DIMENSION_TREND_KEYS
+    for i in (1, 2)
+)
+SUB_ASPECT_TREND_KEYS = tuple(
+    f"{k}_detail_{i}"
+    for k in ASPECT_TREND_KEYS
+    for i in range(1, 5)
+)
 
 VALID_LEVELS = ("overall", "dimension", "sub_dimension", "aspect", "sub_aspect")
 CANONICAL_DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
 
 
-@router.get("/dashboard/general", response_model=dict)
-async def get_general_dashboard(
-    latest: bool = Query(False),
-    end_date: str | None = Query(None, alias="end_date"),
-    db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """General/overall dashboard endpoint.
-
-    Aggregates per-dimension summaries, canonical coefficients, top/bottom
-    performers, and the latest score date across the active NASDAQ universe.
-    """
-    service = DashboardService()
-    try:
-        result = await service.get_general_dashboard(db, latest=latest)
-        return result
-    except Exception as exc:
-        logger.error(f"General dashboard error: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.get("/dashboard/snapshot", response_model=SnapshotResponse)
+@router.get("/dashboard/snapshot", response_model=dict)
 async def get_dashboard_snapshot(
-    symbol: str | None = Query(None, min_length=1, max_length=16),
-    snapshotId: str | None = Query(None),
+    symbol: Optional[str] = Query(None, min_length=1, max_length=16),
+    snapshotId: Optional[str] = Query(None),
     window_daily: int = Query(30, ge=1, le=365),
     window_intraday: str = Query("24h", pattern="^(6h|24h|7d)$"),
     db: AsyncSession = Depends(get_async_session),
-) -> SnapshotResponse:
+) -> dict:
     """Unified 3-tier snapshot endpoint (FR1).
 
     Returns daily / hourly / current scores, deltas, weights, weight trends/deltas,
@@ -90,12 +72,12 @@ async def get_dashboard_snapshot(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/dashboard/snapshots", response_model=SnapshotIndexResponse)
+@router.get("/dashboard/snapshots", response_model=dict)
 async def get_dashboard_snapshots_index(
     hourly_limit: int = Query(168, ge=24, le=720),
     daily_limit: int = Query(365, ge=30, le=1095),
     db: AsyncSession = Depends(get_async_session),
-) -> SnapshotIndexResponse:
+) -> dict:
     """Enumerate recent hourly + daily snapshots for time-slider (FR1, FR8).
 
     Frontend TypeScript contract expects shape:
@@ -127,7 +109,7 @@ async def get_dashboard_snapshots_index(
 @router.get("/dashboard/top-performers", response_model=dict)
 async def get_top_performers(
     level: str = Query("overall", pattern="^(overall|dimension|sub_dimension|aspect|sub_aspect)$"),
-    dimension: str | None = Query(None, pattern="^(fundamental|technical|sentiment|risk|macro|ai)$"),
+    dimension: Optional[str] = Query(None, pattern="^(fundamental|technical|sentiment|risk|macro|ai)$"),
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
@@ -154,7 +136,7 @@ async def get_top_performers(
 @router.get("/dashboard/biggest-movers", response_model=dict)
 async def get_biggest_movers(
     level: str = Query("overall", pattern="^(overall|dimension|sub_dimension|aspect|sub_aspect)$"),
-    dimension: str | None = Query(None, pattern="^(fundamental|technical|sentiment|risk|macro|ai)$"),
+    dimension: Optional[str] = Query(None, pattern="^(fundamental|technical|sentiment|risk|macro|ai)$"),
     limit: int = Query(10, ge=1, le=50),
     days: int = Query(1, ge=1, le=30),
     db: AsyncSession = Depends(get_async_session),
@@ -182,7 +164,7 @@ async def get_biggest_movers(
 @router.get("/dashboard/score-trend", response_model=dict)
 async def get_score_trend(
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Portfolio-level score trend endpoint (preserved for compatibility).
@@ -192,6 +174,7 @@ async def get_score_trend(
     the legacy MarketScoreTrendService path only when temporal snapshot rows
     are insufficient.
     """
+    from app.services.analysis.market_score_trend_service import MarketScoreTrendService
 
     DIMENSIONS = ("fundamental", "technical", "sentiment", "risk", "macro", "ai")
     if market is None or market.upper() != "NASDAQ":
@@ -200,7 +183,7 @@ async def get_score_trend(
             detail="Only the NASDAQ market is supported by /dashboard/score-trend.",
         )
     try:
-        series: list[dict] = []
+        series: List[dict] = []
         source: str = ""
 
         # ---- TemporalSnapshotService parity-first path ----
@@ -242,9 +225,7 @@ async def get_score_trend(
             series = await trend_service.get_trend(days=days, market=market, db=db)
             source = "precomputed"
             if not series:
-                from app.services.analysis.dashboard_service import (
-                    _aggregate_score_trend_on_the_fly,
-                )
+                from app.services.analysis.dashboard_service import _aggregate_score_trend_on_the_fly
                 series = await _aggregate_score_trend_on_the_fly(db, days=days)
                 source = "on_the_fly_fallback"
 
@@ -292,9 +273,9 @@ async def get_score_trend(
 @router.get("/dashboard/coefficient-history", response_model=dict)
 async def get_coefficient_history(
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     latest: bool = Query(False),
-    end_date: str | None = Query(None),
+    end_date: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Coefficient history endpoint (preserved for compatibility).
@@ -304,14 +285,14 @@ async def get_coefficient_history(
     CoefficientHistoryService otherwise.
     """
     from app.services.analysis.coefficient_history_service import (
-        DIMENSION_KEYS,
         CoefficientHistoryService,
+        DIMENSION_KEYS,
     )
 
     try:
-        series: list[dict] = []
+        series: List[dict] = []
         source_count: int = 0
-        latest_date: str | None = None
+        latest_date: Optional[str] = None
 
         # ---- TemporalSnapshotService parity-first path ----
         snap_service = TemporalSnapshotService()
@@ -397,10 +378,10 @@ async def get_coefficient_history(
 async def get_hierarchical_trend(
     level: str = Query("sub_dimension"),
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     latest: bool = Query(False),
-    end_date: str | None = Query(None),
-    parent: str | None = Query(None),
+    end_date: Optional[str] = Query(None),
+    parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Hierarchical trend endpoint (preserved for compatibility).
@@ -412,12 +393,17 @@ async def get_hierarchical_trend(
     but not multi-day series; in those cases we transparently fall back to
     HierarchicalScoreTrendService which reads the same up-to-date DB tables.
     """
+    from app.services.analysis.hierarchical_score_trend_service import (
+        HierarchicalScoreTrendService,
+        SUB_DIMENSION_TO_PARENT,
+    )
+
     if level not in ("sub_dimension", "aspect", "sub_aspect", "dimension"):
         raise HTTPException(status_code=400, detail="level must be dimension, sub_dimension, aspect, or sub_aspect")
     try:
-        derived_series: list[dict] = []
+        derived_series: List[dict] = []
         derived_count: int = 0
-        derived_latest: str | None = None
+        derived_latest: Optional[str] = None
 
         # ---- TemporalSnapshotService parity-first path ----
         snap_service = TemporalSnapshotService()
@@ -496,19 +482,24 @@ async def get_hierarchical_trend(
 @router.get("/dashboard/sub-dimension-trend", response_model=dict)
 async def get_sub_dimension_trend(
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     latest: bool = Query(False),
-    end_date: str | None = Query(None),
+    end_date: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Sub-dimension trend endpoint (preserved for compatibility).
 
     Calls TemporalSnapshotService first to warm/validate latest tier snapshots,
     then derives from HierarchicalScoreTrendService (same underlying DB tables
-    the snapshot composer materializes tier roots from). L2 series are not yet materialized inside
+    the snapshot composer reads). L2 series are not yet materialized inside
     snapshot.trends.daily; fallback path is always authoritative until trends
     builder is extended.
     """
+    from app.services.analysis.hierarchical_score_trend_service import (
+        HierarchicalScoreTrendService,
+        SUB_DIMENSION_TO_PARENT,
+    )
+
     if market is None or market.upper() != "NASDAQ":
         raise HTTPException(
             status_code=400,
@@ -567,10 +558,10 @@ async def get_sub_dimension_trend(
 @router.get("/dashboard/aspect-trend", response_model=dict)
 async def get_aspect_trend(
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     latest: bool = Query(False),
-    end_date: str | None = Query(None),
-    parent: str | None = Query(None),
+    end_date: Optional[str] = Query(None),
+    parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Aspect trend endpoint (preserved for compatibility).
@@ -579,6 +570,8 @@ async def get_aspect_trend(
     HierarchicalScoreTrendService for the authoritative L3 series (same DB
     tables the snapshot composer materializes tier roots from).
     """
+    from app.services.analysis.hierarchical_score_trend_service import HierarchicalScoreTrendService
+
     if market is None or market.upper() != "NASDAQ":
         raise HTTPException(
             status_code=400,
@@ -639,10 +632,10 @@ async def get_aspect_trend(
 @router.get("/dashboard/sub-aspect-trend", response_model=dict)
 async def get_sub_aspect_trend(
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     latest: bool = Query(False),
-    end_date: str | None = Query(None),
-    parent: str | None = Query(None),
+    end_date: Optional[str] = Query(None),
+    parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Sub-aspect trend endpoint (preserved for compatibility).
@@ -650,6 +643,8 @@ async def get_sub_aspect_trend(
     Calls TemporalSnapshotService as parity warm-up hook, then delegates to
     HierarchicalScoreTrendService for the authoritative L4 series.
     """
+    from app.services.analysis.hierarchical_score_trend_service import HierarchicalScoreTrendService
+
     if market is None or market.upper() != "NASDAQ":
         raise HTTPException(
             status_code=400,
@@ -711,10 +706,10 @@ async def get_sub_aspect_trend(
 async def get_coefficient_history_by_level(
     level: str = Query("dimension"),
     days: int = Query(30, ge=1, le=365),
-    market: str | None = Query("NASDAQ"),
+    market: Optional[str] = Query("NASDAQ"),
     latest: bool = Query(False),
-    end_date: str | None = Query(None),
-    parent: str | None = Query(None),
+    end_date: Optional[str] = Query(None),
+    parent: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """Coefficient history by level endpoint (preserved for compatibility).
@@ -723,7 +718,7 @@ async def get_coefficient_history_by_level(
     derivation when level=dimension (sourced from snapshot.weightTrends /
     weightDeltas). For deeper levels (sub_dimension / aspect / sub_aspect)
     transparently delegates to CoefficientHistoryService which reads the
-    same underlying tables the snapshot composer materializes tier roots from.
+    same underlying tables the snapshot composer uses.
     """
     from app.services.analysis.coefficient_history_service import (
         CoefficientHistoryService,
@@ -736,9 +731,9 @@ async def get_coefficient_history_by_level(
             detail="level must be dimension, sub_dimension, aspect, or sub_aspect",
         )
     try:
-        series: list[dict] = []
+        series: List[dict] = []
         source_count: int = 0
-        latest_date: str | None = None
+        latest_date: Optional[str] = None
 
         # ---- TemporalSnapshotService parity-first path (only dimension) ----
         if level == "dimension":
@@ -811,26 +806,4 @@ async def get_coefficient_history_by_level(
         }
     except Exception as exc:
         logger.error(f"Coefficient history by level error: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.get("/dashboard/{dimension}", response_model=dict)
-async def get_dimension_dashboard(
-    dimension: str,
-    limit: int = Query(50, ge=1, le=200),
-    latest: bool = Query(False),
-    end_date: str | None = Query(None, alias="end_date"),
-    db: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """Per-dimension dashboard endpoint (technical, fundamental, risk, news, board, ai)."""
-    service = DashboardService()
-    try:
-        result = await service.get_dashboard(
-            db=db, dimension=dimension, latest=latest,
-        )
-        return result
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        logger.error(f"Dimension dashboard error ({dimension}): {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

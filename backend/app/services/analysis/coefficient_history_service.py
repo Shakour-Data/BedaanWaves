@@ -12,16 +12,17 @@ filter by key-prefix at the right level.
 """
 
 import logging
-from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+from app.core.utils import utc_now_iso
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.utils import utc_now_iso
 from app.db.base import async_session_maker
 from app.models.models import CoefficientHistory
 from app.services.core import BaseService
+
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +65,10 @@ class CoefficientHistoryService(BaseService):
         days: int = 30,
         market: str = "NASDAQ",
         level: str = "dimension",
-        parent: str | None = None,
+        parent: Optional[str] = None,
         latest: bool = False,
-        end_date: date | None = None,
-    ) -> dict[str, Any]:
+        end_date: Optional[date] = None,
+    ) -> Dict[str, Any]:
         """Return per-day coefficient snapshots filtered by ``level``.
 
         Args:
@@ -89,7 +90,7 @@ class CoefficientHistoryService(BaseService):
             if latest:
                 effective_end = await self._latest_date(market, session)
             else:
-                effective_end = end_date or datetime.now(UTC).date()
+                effective_end = end_date or datetime.now(timezone.utc).date()
 
             if effective_end is None:
                 return self._empty(level, days, market)
@@ -114,7 +115,7 @@ class CoefficientHistoryService(BaseService):
         }
 
     @staticmethod
-    def _empty(level: str, days: int, market: str) -> dict[str, Any]:
+    def _empty(level: str, days: int, market: str) -> Dict[str, Any]:
         return {
             "status": "success",
             "level": level,
@@ -131,7 +132,7 @@ class CoefficientHistoryService(BaseService):
         self,
         market: str,
         db: AsyncSession,
-    ) -> date | None:
+    ) -> Optional[date]:
         result = await db.execute(
             select(func.max(func.date(CoefficientHistory.effective_at)))
             .where(CoefficientHistory.market == market)
@@ -145,9 +146,9 @@ class CoefficientHistoryService(BaseService):
         market: str,
         start_date: date,
         end_date: date,
-    ) -> list[dict[str, Any]]:
-        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
-        end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=UTC)
+    ) -> List[Dict[str, Any]]:
+        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
+        end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         query = (
             select(
                 func.date(CoefficientHistory.effective_at).label("effective_date"),
@@ -164,7 +165,7 @@ class CoefficientHistoryService(BaseService):
         )
         result = await db.execute(query)
         rows = result.all()
-        out: list[dict[str, Any]] = []
+        out: List[Dict[str, Any]] = []
         for row in rows:
             eff = row.effective_date
             if isinstance(eff, datetime):
@@ -177,10 +178,10 @@ class CoefficientHistoryService(BaseService):
 
     def _shape_series(
         self,
-        rows: list[dict[str, Any]],
+        rows: List[Dict[str, Any]],
         level: str,
-        parent: str | None,
-    ) -> list[dict[str, Any]]:
+        parent: Optional[str],
+    ) -> List[Dict[str, Any]]:
         if level == "dimension":
             keys = DIMENSION_KEYS
         elif level == "sub_dimension":
@@ -190,7 +191,7 @@ class CoefficientHistoryService(BaseService):
         else:
             keys = None
 
-        series: list[dict[str, Any]] = []
+        series: List[Dict[str, Any]] = []
         for row in rows:
             metrics = self._filter_metrics(
                 row["coefficients"], level=level, parent=parent, known_keys=keys,
@@ -213,15 +214,15 @@ class CoefficientHistoryService(BaseService):
 
     @staticmethod
     def _filter_metrics(
-        coeffs: dict[str, Any],
+        coeffs: Dict[str, Any],
         level: str,
-        parent: str | None,
-        known_keys: tuple | None,
-    ) -> dict[str, float]:
+        parent: Optional[str],
+        known_keys: Optional[tuple],
+    ) -> Dict[str, float]:
         if level == "dimension":
             return {k: float(coeffs.get(k, 0.0)) for k in (known_keys or DIMENSION_KEYS)}
 
-        result: dict[str, float] = {}
+        result: Dict[str, float] = {}
         for key, value in coeffs.items():
             if level == "sub_dimension" and not _is_sub_dimension_key(key):
                 continue

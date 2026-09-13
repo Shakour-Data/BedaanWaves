@@ -17,8 +17,8 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Deque, Dict, Optional, Tuple
 
 from app.core.config import Settings, get_settings
 from app.services.core.base_service import BaseService
@@ -39,23 +39,20 @@ CATEGORY_SYSTEM = "system"
 
 
 def _utc_now() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 @dataclass
 class _StreamState:
-    samples: deque[tuple[float, float]] = field(
+    samples: Deque[Tuple[float, float]] = field(
         default_factory=lambda: deque(maxlen=4096)
     )
-    current_severity: str | None = None
-    last_alert_ts: dict[str, float] = field(default_factory=dict)
+    current_severity: Optional[str] = None
+    last_alert_ts: Dict[str, float] = field(default_factory=dict)
     consecutive_good: int = 0
-    last_good_freshness_ts: float | None = None
+    last_good_freshness_ts: Optional[float] = None
     last_seen_ts: float = 0.0
-    known_threshold_s: float | None = None
-    error_budget_total: float = 100.0
-    error_budget_remaining: float = 100.0
-    error_budget_start: float = field(default_factory=lambda: time.monotonic())
+    known_threshold_s: Optional[float] = None
 
 
 class SLOMonitor(BaseService):
@@ -67,14 +64,14 @@ class SLOMonitor(BaseService):
     def __init__(
         self,
         notification_dispatcher: Any,
-        settings: Settings | None = None,
+        settings: Optional[Settings] = None,
     ) -> None:
         super().__init__("SLOMonitor")
         self._settings = settings or get_settings()
         self._dispatcher = notification_dispatcher
-        self._states: dict[str, _StreamState] = {}
-        self._shutdown_event: asyncio.Event | None = None
-        self._monitor_task: asyncio.Task | None = None
+        self._states: Dict[str, _StreamState] = {}
+        self._shutdown_event: Optional[asyncio.Event] = None
+        self._monitor_task: Optional[asyncio.Task] = None
         self._orchestrator: Any = None
 
     # ------------------------------------------------------------------
@@ -109,8 +106,8 @@ class SLOMonitor(BaseService):
         self,
         envelope: LiveEventEnvelope,
         *,
-        data_age_ms: float | None = None,
-        threshold_s: float | None = None,
+        data_age_ms: Optional[float] = None,
+        threshold_s: Optional[float] = None,
     ) -> None:
         """Register a single emitted envelope for SLO evaluation."""
         key = envelope.stream_key
@@ -146,7 +143,7 @@ class SLOMonitor(BaseService):
                 await asyncio.sleep(5.0)
                 keys = list(self._states.keys())
                 if self._orchestrator is not None:
-                    for extra in getattr(self._orchestrator, "list_active_streams", list)():
+                    for extra in getattr(self._orchestrator, "list_active_streams", lambda: [])():
                         if extra not in self._states:
                             self._states[extra] = _StreamState()
                     keys = list(self._states.keys())
@@ -205,10 +202,6 @@ class SLOMonitor(BaseService):
 
         duration_s = min(_WINDOW_S, now - state.samples[0][0]) if state.samples else 0.0
 
-        error_rate = error_count / total if total > 0 else 0.0
-        budget_consumed = error_rate * 100.0
-        state.error_budget_remaining = max(0.0, state.error_budget_remaining - budget_consumed)
-
         if error_count > 0:
             if state.current_severity == SEVERITY_ERROR:
                 if state.consecutive_good >= _GOOD_TICKS_RECOVERY:
@@ -257,8 +250,8 @@ class SLOMonitor(BaseService):
         severity: str,
         *,
         reason: str,
-        data_age_ms: float | None,
-        threshold_s: float | None,
+        data_age_ms: Optional[float],
+        threshold_s: Optional[float],
         duration_s: float,
     ) -> None:
         last = state.last_alert_ts.get(severity, 0.0)
@@ -271,7 +264,7 @@ class SLOMonitor(BaseService):
         if threshold_s is not None:
             body_parts.append(f"Configured SLO threshold: {threshold_s:.0f}s.")
         if data_age_ms is not None:
-            body_parts.append(f"Current observed data age: {data_age_ms / 1000.0:.1f}s.")
+            body_parts.append(f"Current observed data age: {data_age_ms/1000.0:.1f}s.")
         if duration_s > 0:
             body_parts.append(f"Condition sustained for {duration_s:.0f}s.")
         body_parts.append("Please investigate upstream provider health and circuit state.")
@@ -329,17 +322,3 @@ class SLOMonitor(BaseService):
                 )
         except Exception as exc:
             self.logger.warning("SLOMonitor notification dispatch failed: %s", exc)
-
-    def get_error_budget_summary(self) -> dict[str, Any]:
-        """Return error budget status for all monitored streams."""
-        return {
-            key: {
-                "error_budget_remaining": state.error_budget_remaining,
-                "error_budget_total": state.error_budget_total,
-                "current_severity": state.current_severity,
-                "budget_consumed_pct": round(
-                    100.0 - state.error_budget_remaining, 2
-                ),
-            }
-            for key, state in self._states.items()
-        }

@@ -53,7 +53,7 @@ Routes under the following prefixes are **public** (no auth required):
 - `/` — root welcome
 
 All other routes require a valid Bearer token. Auth is controlled by the
-`AuthGuard` (enabled when `REQUIRE_AUTH=True`, which is the default).
+`AuthGuardMiddleware` (enabled when `REQUIRE_AUTH=True`, which is the default).
 
 ### Language Parameter (`lang`)
 

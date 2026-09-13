@@ -51,52 +51,6 @@ type ViewMode = "SIMPLE" | "EXPERT";
 type IntradayWindow = "6h" | "24h" | "7d";
 type DailyWindow = 30 | 90 | 365;
 
-interface ScoreItemShape {
-  key?: string;
-  level_key?: string;
-  label?: string;
-  name?: string;
-  score?: number;
-  value?: number;
-  level_score?: number;
-  weight?: number;
-  coefficient?: number;
-  w?: number;
-}
-
-interface RawOverallShape {
-  score?: number;
-  grade?: string;
-}
-
-interface RawHierarchyScores {
-  overall?: number | RawOverallShape | null;
-  overallScore?: number;
-  OVERALL?: RawOverallShape;
-  grade?: string;
-  level1?: ScoreItemShape[] | null;
-  level2?: ScoreItemShape[] | null;
-  level3?: ScoreItemShape[] | null;
-  level4?: ScoreItemShape[] | null;
-  dimensions?: ScoreItemShape[] | null;
-  sub_dimensions?: ScoreItemShape[] | null;
-  aspects?: ScoreItemShape[] | null;
-  sub_aspects?: ScoreItemShape[] | null;
-  [key: string]: unknown;
-}
-
-interface RawWeightShape {
-  level1?: ScoreItemShape[];
-  level2?: ScoreItemShape[];
-  level3?: ScoreItemShape[];
-  level4?: ScoreItemShape[];
-  dimension?: Record<string, number>;
-  sub_dimension?: Record<string, number>;
-  aspect?: Record<string, number>;
-  sub_aspect?: Record<string, number>;
-  [key: string]: unknown;
-}
-
 interface DrillState {
   level: Level;
   selectedKey: string | null;
@@ -125,76 +79,64 @@ const DAILY_WINDOW_OPTIONS: DailyWindow[] = [30, 90, 365];
 const INTRADAY_WINDOW_OPTIONS: IntradayWindow[] = ["6h", "24h", "7d"];
 
 function snapshotHierarchyToLegacy(snap: SnapshotResponse, tab: ScoringTab): HierarchyScores | null {
-  const scores = (tab === "HISTORICAL" ? snap.scores.daily : snap.scores.current) as unknown as RawHierarchyScores;
+  const scores = tab === "HISTORICAL" ? snap.scores.daily : snap.scores.current;
   if (!scores) return null;
-  const overallVal = scores.overall;
-  const overallObj = typeof overallVal === 'object' && overallVal !== null ? overallVal : undefined;
-  const resolvedOverall = num(
-    overallObj?.score ?? scores.overallScore ?? scores.OVERALL?.score ?? 0
-  );
-  const resolvedGrade = overallObj?.grade ?? scores.grade ?? null;
-
-  const toArray = (dict: object | undefined | null): ScoreItemShape[] => {
-    if (!dict) return [];
-    return Object.entries(dict).map(([key, value]) => ({
-      key,
-      label: key,
-      name: key,
-      score: typeof value === 'number' ? value : num(value),
-      value: typeof value === 'number' ? value : num(value),
-    }));
-  };
-
+  const overall =
+    (scores as any).overall?.score ??
+    (scores as any).overallScore ??
+    (scores as any).OVERALL?.score ??
+    0;
+  const grade =
+    (scores as any).overall?.grade ??
+    (scores as any).grade ??
+    (overall >= 70 ? "STRONG_BUY" : overall >= 40 ? "HOLD" : "STRONG_SELL");
   return {
-    overallScore: resolvedOverall,
-    grade: resolvedGrade ?? (resolvedOverall >= 70 ? "STRONG_BUY" : resolvedOverall >= 40 ? "HOLD" : "STRONG_SELL"),
+    overallScore: num(overall),
+    grade,
     timestamp: snap.timestamp,
-    level1: scores.level1 ?? toArray(scores.dimension ?? scores.dimensions),
-    level2: scores.level2 ?? toArray(scores.sub_dimension ?? scores.sub_dimensions),
-    level3: scores.level3 ?? toArray(scores.aspect ?? scores.aspects),
-    level4: scores.level4 ?? toArray(scores.sub_aspect ?? scores.sub_aspects),
+    level1: (scores as any).level1 ?? (scores as any).dimensions ?? [],
+    level2: (scores as any).level2 ?? (scores as any).sub_dimensions ?? [],
+    level3: (scores as any).level3 ?? (scores as any).aspects ?? [],
+    level4: (scores as any).level4 ?? (scores as any).sub_aspects ?? [],
   } as HierarchyScores;
 }
 
 function snapshotTrendsToLegacy(snap: SnapshotResponse, tab: ScoringTab): ScoreHistoryPoint[] {
   const series = tab === "HISTORICAL" ? snap.trends?.daily ?? [] : snap.trends?.intraday ?? [];
   return series.map((pt) => {
-    const dateStr = pt.date ?? pt.effective_at;
-    const levelScores = pt.level_scores ?? {};
+    const levelScores = (pt as any).level_scores ?? (pt as any).scores ?? {};
     const dimScores: Record<string, number> = {};
     const subDimScores: Record<string, number> = {};
     const aspectScores: Record<string, number> = {};
     const subAspectScores: Record<string, number> = {};
     Object.entries(levelScores).forEach(([k, v]) => {
-      const val = typeof v === 'number' ? v : num(v);
-      if (!k.includes('_')) {
-        dimScores[k] = val;
-      } else if (k.includes('_aspect_') && k.includes('_detail_')) {
-        subAspectScores[k] = val;
-      } else if (k.includes('_aspect_')) {
-        aspectScores[k] = val;
-      } else {
-        subDimScores[k] = val;
-      }
+      const val = typeof v === "number" ? v : num(v);
+      if (k.startsWith("L1_") || k.startsWith("dim_") || !/^(L2|L3|L4|sd_|asp|sa_)/.test(k)) dimScores[k] = val;
+      if (k.startsWith("L2_") || k.startsWith("sd_")) subDimScores[k] = val;
+      if (k.startsWith("L3_") || k.startsWith("asp_") || /^aspect_/.test(k)) aspectScores[k] = val;
+      if (k.startsWith("L4_") || k.startsWith("sa_") || /^sub_aspect_/.test(k)) subAspectScores[k] = val;
     });
+    const legacy = snap as unknown as { trends?: { daily?: any[]; intraday?: any[] } };
+    const rawSeries = tab === "HISTORICAL" ? legacy.trends?.daily ?? [] : legacy.trends?.intraday ?? [];
+    const rawPt = rawSeries.find((r: any) => (r.date ?? r.effective_at ?? r.time) === (pt.date ?? pt.effective_at)) ?? {};
     return {
-      date: dateStr,
+      date: pt.date ?? pt.effective_at,
       overall: num(pt.overall ?? 0),
-      dimension_scores: dimScores,
-      sub_dimension_scores: subDimScores,
-      aspect_scores: aspectScores,
-      sub_aspect_scores: subAspectScores,
+      dimension_scores: (rawPt as any).dimension_scores ?? Object.keys(dimScores).length > 0 ? dimScores : {},
+      sub_dimension_scores: (rawPt as any).sub_dimension_scores ?? subDimScores,
+      aspect_scores: (rawPt as any).aspect_scores ?? aspectScores,
+      sub_aspect_scores: (rawPt as any).sub_aspect_scores ?? subAspectScores,
     } as ScoreHistoryPoint;
   });
 }
 
 function snapshotWeightsToLegacy(snap: SnapshotResponse): CoefficientItem[] {
-  const weights = snap.weights as unknown as RawWeightShape;
+  const weights = snap.weights;
   if (!weights) return [];
   const result: CoefficientItem[] = [];
   const levels = ["level1", "level2", "level3", "level4"] as const;
   levels.forEach((lvlKey, lvlIdx) => {
-    const arr = weights[lvlKey] as ScoreItemShape[] | undefined;
+    const arr = (weights as any)[lvlKey] as Array<{ key?: string; label?: string; weight?: number; level_key?: string; name?: string; value?: number }> | undefined;
     if (Array.isArray(arr)) {
       arr.forEach((it) => {
         result.push({
@@ -519,6 +461,8 @@ export default function StockScoringPage() {
 
   const trendWindowLabel = scoringTab === "HISTORICAL" ? `${windowDaily}-Day` : windowIntraday;
 
+  const showSimpleL1Only = viewMode === "SIMPLE";
+
   if (loading || snapshotLoading) {
     return <PageLoading />;
   }
@@ -545,7 +489,7 @@ export default function StockScoringPage() {
           <span className="text-foreground">{t("app.scoring.title")}</span>
         </div>
         <AsOfStamp
-          effectiveAt={snapshotTimestamp ?? hierarchy.timestamp ?? null}
+          timestamp={snapshotTimestamp ?? hierarchy.timestamp ?? null}
           snapshotId={snapshotId ?? null}
           variant="compact"
         />

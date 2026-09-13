@@ -1,14 +1,14 @@
-from typing import Any
-
+from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
+from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from app.core.config import get_settings
-
 from ..core import AnalysisService
 from ..core.dependency_container import get_global_container
+from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -25,10 +25,10 @@ class MulticollinearityMitigationService(AnalysisService):
         super().__init__(service_name)
         self.pca_threshold = pca_threshold
         self.vif_threshold = vif_threshold
-        self.pca_model: PCA | None = None
-        self.scaler: StandardScaler | None = None
-        self.feature_names: list[str] = []
-        self.explained_variance_ratio_: list[float] = []
+        self.pca_model: Optional[PCA] = None
+        self.scaler: Optional[StandardScaler] = None
+        self.feature_names: List[str] = []
+        self.explained_variance_ratio_: List[float] = []
 
     async def initialize(self) -> None:
         self.logger.info("MulticollinearityMitigationService initialized")
@@ -36,7 +36,7 @@ class MulticollinearityMitigationService(AnalysisService):
     async def shutdown(self) -> None:
         self.logger.info("MulticollinearityMitigationService shutdown")
 
-    async def analyze(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Run multicollinearity analysis and mitigation."""
         if "features" not in data or "feature_names" not in data:
             return {"error": "Missing features or feature_names"}
@@ -61,8 +61,8 @@ class MulticollinearityMitigationService(AnalysisService):
         return results
 
     async def _calculate_vif(
-        self, features: np.ndarray, feature_names: list[str]
-    ) -> dict[str, Any]:
+        self, features: np.ndarray, feature_names: List[str]
+    ) -> Dict[str, Any]:
         """Calculate Variance Inflation Factor for each feature."""
         try:
             from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -103,8 +103,8 @@ class MulticollinearityMitigationService(AnalysisService):
             }
 
     async def _perform_pca(
-        self, features: np.ndarray, feature_names: list[str]
-    ) -> dict[str, Any]:
+        self, features: np.ndarray, feature_names: List[str]
+    ) -> Dict[str, Any]:
         """Perform PCA and determine optimal number of components."""
         if len(features) < 2:
             return {"error": "Insufficient samples for PCA"}
@@ -119,7 +119,7 @@ class MulticollinearityMitigationService(AnalysisService):
 
         # Determine components for threshold variance
         cumsum = np.cumsum(self.pca_model.explained_variance_ratio_)
-        n_components = int(np.argmax(cumsum >= self.pca_threshold) + 1)
+        n_components = np.argmax(cumsum >= self.pca_threshold) + 1
         if cumsum[-1] < self.pca_threshold:
             n_components = len(self.pca_model.explained_variance_ratio_)
 
@@ -141,12 +141,9 @@ class MulticollinearityMitigationService(AnalysisService):
             > 0.5,
         }
 
-    def _get_removal_recommendations(self, vif_analysis: dict[str, Any]) -> list[str]:
-        return []
-
     def transform_features(
         self, features: np.ndarray
-    ) -> np.ndarray | None:
+    ) -> Optional[np.ndarray]:
         """Transform features using fitted PCA model."""
         if self.pca_model is None or self.scaler is None:
             return None
@@ -155,8 +152,8 @@ class MulticollinearityMitigationService(AnalysisService):
         return self.pca_model.transform(features_scaled)
 
     def get_feature_importance(
-        self, feature_names: list[str] | None = None
-    ) -> dict[str, float]:
+        self, feature_names: Optional[List[str]] = None
+    ) -> Dict[str, float]:
         """Get feature importance from PCA loadings."""
         if self.pca_model is None:
             return {}

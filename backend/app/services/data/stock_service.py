@@ -5,16 +5,14 @@ Manages stock data and operations using live external APIs (yfinance).
 No hardcoded data. No fallback to static arrays.
 """
 
-import asyncio
+from typing import Any, Dict, Optional, List
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timedelta
-from typing import Any
+import asyncio
+from app.core.utils import utc_now_iso
 
 from app.core.config import get_settings
 from app.core.exceptions import DataProviderException
-from app.core.utils import utc_now_iso
-from app.infrastructure.resilience.retry_decorator import retry_with_backoff
-
 from ..core import CachedService
 
 settings = get_settings()
@@ -24,36 +22,35 @@ _EXECUTOR = ThreadPoolExecutor(max_workers=8)
 class StockService(CachedService):
     """
     Stock data management service using yfinance.
-
+    
     Provides:
     - Stock information retrieval
     - Price data management
     - Stock search via yfinance suggestions
     - Batch stock operations
     """
-
+    
     def __init__(
         self,
         service_name: str = "StockService",
         cache_ttl_seconds: int = 3600,
     ):
         super().__init__(service_name, cache_ttl_seconds=cache_ttl_seconds)
-
+    
     async def initialize(self) -> None:
         """Initialize stock service"""
         self.logger.info("StockService initialized (yfinance provider)")
-
+    
     async def shutdown(self) -> None:
         """Shutdown stock service"""
         self.cache_clear()
         self.logger.info("StockService shutdown")
-
+    
     async def _run_blocking(self, func, *args, **kwargs):
         loop = asyncio.get_running_loop()
-        operation = loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
-        return await asyncio.wait_for(operation, timeout=settings.DATA_PROVIDER_TIMEOUT)
+        return await loop.run_in_executor(_EXECUTOR, lambda: func(*args, **kwargs))
 
-    def _fetch_yfinance_search(self, query: str) -> list[dict[str, Any]]:
+    def _fetch_yfinance_search(self, query: str) -> List[Dict[str, Any]]:
         """Blocking call to yfinance for symbol suggestions.
 
         Only instruments that participate in the formation of the Nasdaq
@@ -81,7 +78,6 @@ class StockService(CachedService):
             "NYBOT",
         }
 
-        @retry_with_backoff(max_retries=3, base_delay=1.0, retry_on=(Exception,))
         def _search_yahoo() -> list:
             import requests
             try:
@@ -104,7 +100,7 @@ class StockService(CachedService):
         except Exception:
             tickers = []
 
-        quotes: list[dict[str, Any]] = []
+        quotes: List[Dict[str, Any]] = []
         if tickers:
             for t in tickers[:25]:
                 if isinstance(t, str):
@@ -114,7 +110,7 @@ class StockService(CachedService):
         if not quotes:
             quotes = _search_yahoo()
 
-        results: list[dict[str, Any]] = []
+        results: List[Dict[str, Any]] = []
         for quote in quotes[:25]:
             symbol = quote.get("symbol")
             if not symbol:
@@ -147,44 +143,42 @@ class StockService(CachedService):
                 continue
         return results
 
-    async def search(self, query: str, limit: int = 25) -> list[dict[str, Any]]:
+    async def search(self, query: str) -> List[Dict[str, Any]]:
         """
         Search stocks using yfinance live suggestions.
-
+        
         Args:
             query: Search query
-            limit: Maximum number of suggestions to return
-
+            
         Returns:
             Search results from live API
         """
         cache_key = f"search:{query}"
         cached = self.get_cached(cache_key)
         if cached:
-            return cached[:limit]
-
+            return cached
+        
         results = await self._run_blocking(self._fetch_yfinance_search, query)
-        results = results[:limit]
         self.set_cached(cache_key, results, ttl_seconds=300)
         return results
-
-    async def get_stock(self, ticker: str, use_cache: bool = True) -> dict[str, Any]:
+    
+    async def get_stock(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
         """
         Get stock information from yfinance.
-
+        
         Args:
             ticker: Stock ticker
-
+            
         Returns:
             Stock information from live API
         """
         cache_key = f"stock:{ticker}"
-
+        
         if use_cache:
             cached = self.get_cached(cache_key)
             if cached:
                 return cached
-
+        
         def fetch():
             import yfinance as yf
             t = yf.Ticker(ticker)
@@ -214,18 +208,18 @@ class StockService(CachedService):
                 "volume": info.get("volume") or info.get("regularMarketVolume"),
                 "timestamp": utc_now_iso(),
             }
-
+        
         stock_data = await self._run_blocking(fetch)
         self.set_cached(cache_key, stock_data, ttl_seconds=30)
         return stock_data
-
-    async def get_price(self, ticker: str) -> dict[str, float]:
+    
+    async def get_price(self, ticker: str) -> Dict[str, float]:
         """
         Get current stock price from yfinance.
-
+        
         Args:
             ticker: Stock ticker
-
+            
         Returns:
             Price data from live API
         """
@@ -243,25 +237,25 @@ class StockService(CachedService):
                 "close": current,
                 "last": current,
             }
-
+        
         return await self._run_blocking(fetch)
-
+    
     async def get_history(
         self,
         ticker: str,
-        start_date: str | None = None,
-        end_date: str | None = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         interval: str = "daily",
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """
         Get historical stock data from yfinance.
-
+        
         Args:
             ticker: Stock ticker
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
             interval: Data interval
-
+            
         Returns:
             Historical data from live API
         """
@@ -269,12 +263,12 @@ class StockService(CachedService):
         cached = self.get_cached(cache_key)
         if cached:
             return cached
-
+        
         def fetch():
             import yfinance as yf
             t = yf.Ticker(ticker)
-            end = end_date or datetime.now(UTC).strftime("%Y-%m-%d")
-            start = start_date or (datetime.now(UTC) - timedelta(days=365)).strftime("%Y-%m-%d")
+            end = end_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            start = start_date or (datetime.now(timezone.utc) - __import__("datetime").timedelta(days=365)).strftime("%Y-%m-%d")
             hist = t.history(start=start, end=end, interval=interval, auto_adjust=False)
             if hist.empty:
                 raise DataProviderException(f"No history for {ticker}", details={"provider": "yfinance"})
@@ -290,18 +284,18 @@ class StockService(CachedService):
                     "volume": int(row["Volume"]),
                 })
             return records
-
+        
         history = await self._run_blocking(fetch)
         self.set_cached(cache_key, history, ttl_seconds=3600)
         return history
-
-    async def get_multiple(self, tickers: list[str]) -> dict[str, dict[str, Any]]:
+    
+    async def get_multiple(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
         """
         Get multiple stocks from yfinance.
-
+        
         Args:
             tickers: List of stock tickers
-
+            
         Returns:
             Dictionary of {ticker: stock_data} from live API
         """
@@ -312,5 +306,5 @@ class StockService(CachedService):
             except Exception as e:
                 self.logger.error(f"Error getting stock {ticker}: {e}")
                 results[ticker] = {"error": str(e)}
-
+        
         return results

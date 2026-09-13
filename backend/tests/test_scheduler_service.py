@@ -228,7 +228,7 @@ class TestScoringJobsRegistration:
         svc = _TestScheduler(service_name="ScoringJobsCheck")
         await svc.initialize()
         try:
-            jobs = {j["name"] for j in svc.list_jobs()}
+            jobs = {j.name for j in svc.list_jobs()}
             EXPECTED: set = {
                 "FastIndicators5m",
                 "HourlyScoreRecompute",
@@ -237,22 +237,19 @@ class TestScoringJobsRegistration:
             }
             missing = EXPECTED - jobs
             assert not missing, f"Missing scoring jobs: {sorted(missing)}"
-            # Macro refresh jobs (free, no-API sources) must also be registered.
-            assert "MacroDataRefresh" in jobs
-            assert "MacroForecastRefresh" in jobs
             # Interval parity check: 300s / 3600s / 86400s
             fi = svc.get_job_status("FastIndicators5m")
             assert fi is not None
-            assert fi["interval_seconds"] == 300
+            assert fi.interval_seconds == 300
             hr = svc.get_job_status("HourlyScoreRecompute")
             assert hr is not None
-            assert hr["interval_seconds"] == 3600
+            assert hr.interval_seconds == 3600
             ds = svc.get_job_status("DailyScoreRecalculation")
             assert ds is not None
-            assert ds["interval_seconds"] == 86400
+            assert ds.interval_seconds == 86400
             cs = svc.get_job_status("CoefficientSnapshotDaily")
             assert cs is not None
-            assert cs["interval_seconds"] == 86400
+            assert cs.interval_seconds == 86400
         finally:
             await svc.shutdown()
 
@@ -307,29 +304,5 @@ class TestScoringJobsRegistration:
                 if r2["status"] == "skipped":
                     assert "skip_reason" in r2 and isinstance(r2["skip_reason"], str)
                     assert len(r2["skip_reason"]) > 0
-        finally:
-            await svc.shutdown()
-
-
-class TestSecFinancialsJobRegistration:
-    async def test_sec_financials_bulk_refresh_job_registered(self):
-        """SecFinancialsBulkRefresh job is registered after initialize()."""
-        svc = _TestScheduler(service_name="SecJobsCheck")
-        await svc.initialize()
-        try:
-            status = svc.get_job_status("SecFinancialsBulkRefresh")
-            assert status is not None
-            assert status["interval_seconds"] == 604800
-        finally:
-            await svc.shutdown()
-
-    async def test_fundamental_data_refresh_still_registered(self):
-        """FundamentalDataRefresh job remains registered after adding SEC job."""
-        svc = _TestScheduler(service_name="FundamentalJobsCheck")
-        await svc.initialize()
-        try:
-            status = svc.get_job_status("FundamentalDataRefresh")
-            assert status is not None
-            assert status["interval_seconds"] == 86400
         finally:
             await svc.shutdown()

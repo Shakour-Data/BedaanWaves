@@ -6,12 +6,14 @@ This module provides a unified interface for accessing different market data sou
 """
 
 import asyncio
-import logging
 from abc import ABC, abstractmethod
-from typing import Any
-
-from app.core.config import get_settings
+from typing import Any, Dict, List, Optional
+import logging
+from datetime import datetime, timezone
 from app.core.utils import utc_now_iso
+
+from ..core import ExternalAPIService
+from app.core.config import get_settings
 
 
 class MarketType:
@@ -34,7 +36,7 @@ class ApiClient(ABC):
     def __init__(
         self,
         market_type: str,
-        service_name: str | None = None,
+        service_name: Optional[str] = None,
         timeout: int = 30,
         max_retries: int = 3,
     ):
@@ -56,7 +58,7 @@ class ApiClient(ABC):
         self.call_count = 0
 
     @abstractmethod
-    async def get_stock(self, symbol: str, **kwargs) -> dict[str, Any]:
+    async def get_stock(self, symbol: str, **kwargs) -> Dict[str, Any]:
         """
         Get stock information for a specific symbol.
 
@@ -67,9 +69,10 @@ class ApiClient(ABC):
         Returns:
             Dictionary containing stock information
         """
+        pass
 
     @abstractmethod
-    async def get_index(self, index_code: str, **kwargs) -> dict[str, Any]:
+    async def get_index(self, index_code: str, **kwargs) -> Dict[str, Any]:
         """
         Get index information for a specific index code.
 
@@ -80,9 +83,10 @@ class ApiClient(ABC):
         Returns:
             Dictionary containing index information
         """
+        pass
 
     @abstractmethod
-    async def get_market_stats(self, **kwargs) -> dict[str, Any]:
+    async def get_market_stats(self, **kwargs) -> Dict[str, Any]:
         """
         Get overall market statistics.
 
@@ -92,8 +96,9 @@ class ApiClient(ABC):
         Returns:
             Dictionary containing market statistics
         """
+        pass
 
-    async def get_multiple_stocks(self, symbols: list[str], **kwargs) -> dict[str, dict[str, Any]]:
+    async def get_multiple_stocks(self, symbols: List[str], **kwargs) -> Dict[str, Dict[str, Any]]:
         """
         Get stock information for multiple symbols concurrently.
 
@@ -117,7 +122,7 @@ class ApiClient(ABC):
 
         return stock_data
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """
         Perform health check on the API client.
 
@@ -157,7 +162,7 @@ class NasdaqApiClient(ApiClient):
         """Shutdown the client."""
         self.logger.info("NasdaqApiClient shutdown")
 
-    async def get_stock(self, symbol: str, **kwargs) -> dict[str, Any]:
+    async def get_stock(self, symbol: str, **kwargs) -> Dict[str, Any]:
         """
         Get stock information for Nasdaq symbol.
 
@@ -199,7 +204,7 @@ class NasdaqApiClient(ApiClient):
             self.logger.error(f"Error getting stock {symbol} from Nasdaq: {e}")
             raise
 
-    async def get_index(self, index_code: str, **kwargs) -> dict[str, Any]:
+    async def get_index(self, index_code: str, **kwargs) -> Dict[str, Any]:
         """
         Get index information for Nasdaq indices.
 
@@ -252,7 +257,7 @@ class NasdaqApiClient(ApiClient):
             self.logger.error(f"Error getting index {index_code} from Nasdaq: {e}")
             raise
 
-    async def get_market_stats(self, **kwargs) -> dict[str, Any]:
+    async def get_market_stats(self, **kwargs) -> Dict[str, Any]:
         """
         Get Nasdaq market statistics.
 
@@ -368,7 +373,7 @@ class MarketClientFactory:
             # For other markets, return a generic client
             return ApiClient(market_type=market_type, **init_kwargs)
 
-    async def get_all_clients(self, **kwargs) -> dict[str, ApiClient]:
+    async def get_all_clients(self, **kwargs) -> Dict[str, ApiClient]:
         """
         Get all configured market clients.
 

@@ -1,9 +1,9 @@
 """Notification Routes (Tier 6)"""
 
-
-from uuid import UUID
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from uuid import UUID
 
 from app.api.dependencies import get_route_user_id
 from app.schemas.schemas import NotificationResponse
@@ -43,7 +43,6 @@ async def mark_read(
 
 @router.post("/read-all", status_code=status.HTTP_200_OK)
 async def mark_all_read(user_id: UUID = Depends(get_route_user_id)):
-    """Mark all notifications as read for the current user."""
     count = await _notification_service.mark_all_read(user_id)
     return {"status": "success", "marked": count}
 
@@ -53,7 +52,6 @@ async def delete_notification(
     notification_id: UUID,
     user_id: UUID = Depends(get_route_user_id),
 ):
-    """Delete a notification for the current user."""
     deleted = await _notification_service.delete_notification(notification_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Notification not found")

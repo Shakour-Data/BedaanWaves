@@ -9,6 +9,14 @@ interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
+const variantMap: Record<string, "primary" | "destructive" | "outline" | "secondary" | "ghost"> = {
+  default: "primary",
+  destructive: "destructive",
+  outline: "outline",
+  secondary: "secondary",
+  ghost: "ghost",
+};
+
 export function PrimaryButton({
   children,
   className,
@@ -19,7 +27,7 @@ export function PrimaryButton({
   return (
     <Button
       size={size}
-      variant={variant === "default" ? "primary" : variant === "destructive" ? "destructive" : variant === "outline" ? "outline" : variant === "secondary" ? "secondary" : "ghost"}
+      variant={variantMap[variant] ?? "primary"}
       className={className}
       {...props}
     >

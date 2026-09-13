@@ -122,7 +122,10 @@ class TestAPIVersioning:
 
     def test_v2_endpoint(self, client):
         """Test v2 API endpoint."""
-        response = client.post("/api/v1/stocks/v2/batch?include_history=true", json=["AAPL"])
+        response = client.post("/api/v1/stocks/v2/batch", json={
+            "tickers": ["AAPL"],
+            "include_history": True
+        })
         assert response.status_code in [200, 401, 404]
 
     def test_version_header(self, client):

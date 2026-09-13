@@ -1,13 +1,18 @@
 """API integration tests for the advanced filter endpoint."""
 
+import asyncio
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.routes.filter import get_async_session as real_get_session
 from app.api.routes.filter import router as filter_router
+from app.api.routes.filter import get_async_session as real_get_session
+from app.services.filter.filter_service import FilterService
+from app.services.filter.filter_parser import parse_filter_tree
+from app.services.filter.field_registry import FieldRegistry
+from app.schemas.filter_schemas import FilterGroup, FilterCondition, LogicOperator
 
 
 class FakeRow:

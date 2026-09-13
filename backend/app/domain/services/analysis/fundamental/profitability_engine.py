@@ -1,7 +1,8 @@
+from typing import Dict, Any
 
 class ProfitabilityEngine:
     """Domain service for calculating profitability ratios."""
-
+    
     def calculate_gross_margin(self, gross_profit: float, revenue: float) -> float:
         if revenue <= 0:
             return 0.0

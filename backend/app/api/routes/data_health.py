@@ -10,16 +10,17 @@ Enhanced with live-pipeline specific sections:
     slo_summary  -> warn/error totals + current threshold values
 """
 
+from datetime import datetime, timezone
 import logging
-from typing import Any
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter
 
 from app.core.config import get_settings
 from app.core.utils import utc_now_iso
-from app.services.core.dependency_container import get_global_container
 from app.services.data.market_hours_service import MarketHoursService
 from app.services.data.real_time_market_data_service import RealTimeMarketDataService
+from app.services.core.dependency_container import get_global_container
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["data-health"])
@@ -41,21 +42,21 @@ def _overall_status_from_parts(
     return "stale"
 
 
-@router.get("/data-health", response_model=dict)
-async def data_health_check() -> dict[str, Any]:
+@router.get("/data-health")
+async def data_health_check() -> Dict[str, Any]:
     """
     Health check for the live data pipeline.
 
     Verifies connectivity to the data provider, confirms last successful fetch,
-    and returns current data source status with SLO metrics.
+    and returns current data source status.
     """
     timestamp = utc_now_iso()
     container = get_global_container()
 
-    provider_health: dict[str, Any] = {}
+    provider_health: Dict[str, Any] = {}
     provider_status = "unknown"
     try:
-        service: RealTimeMarketDataService | None = container.get("real_time_market_data_service")
+        service: Optional[RealTimeMarketDataService] = container.get("real_time_market_data_service")
         if service is None:
             provider_health = {
                 "status": "unhealthy",
@@ -80,10 +81,10 @@ async def data_health_check() -> dict[str, Any]:
         provider_status = "unhealthy"
 
     # Live-pipeline specific metrics
-    live_pipeline: dict[str, Any] = {}
-    streams: dict[str, Any] = {}
-    sse_clients: dict[str, Any] = {"count": 0, "top_subscriptions": []}
-    slo_summary: dict[str, Any] = {
+    live_pipeline: Dict[str, Any] = {}
+    streams: Dict[str, Any] = {}
+    sse_clients: Dict[str, Any] = {"count": 0, "top_subscriptions": []}
+    slo_summary: Dict[str, Any] = {
         "warn": 0,
         "error": 0,
         "threshold_values_open": {
@@ -109,8 +110,8 @@ async def data_health_check() -> dict[str, Any]:
             "idle_unsubscribe_s": settings.LIVE_IDLE_UNSUBSCRIBE_S,
         },
     }
-    slo_attainment_pct_last_5m: float | None = None
-    circuit_snapshot: dict[str, Any] = {}
+    slo_attainment_pct_last_5m: Optional[float] = None
+    circuit_snapshot: Dict[str, Any] = {}
 
     try:
         metrics_svc = None
@@ -165,7 +166,7 @@ async def data_health_check() -> dict[str, Any]:
         pass
 
     # Market-hours context
-    market_ctx: dict[str, Any] = {}
+    market_ctx: Dict[str, Any] = {}
     try:
         market_hours = MarketHoursService()
         market_ctx = market_hours.get_market_status()

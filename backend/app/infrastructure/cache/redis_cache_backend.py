@@ -1,6 +1,7 @@
-import asyncio
 import logging
-from typing import Any
+import asyncio
+from typing import Any, Optional
+from datetime import datetime, timedelta, timezone
 
 from ...application.interfaces.i_cache_backend import ICacheBackend
 
@@ -45,7 +46,7 @@ class RedisCacheBackend(ICacheBackend):
                 self._connected = False
                 return False
 
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> Optional[Any]:
         if not await self._ensure_connection():
             return None
         try:
@@ -58,7 +59,7 @@ class RedisCacheBackend(ICacheBackend):
             self._connected = False
             return None
 
-    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         if not await self._ensure_connection():
             return
         try:

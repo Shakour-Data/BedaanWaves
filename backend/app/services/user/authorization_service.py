@@ -1,10 +1,10 @@
 """Authorization Service (Tier 6: User Services)
 
 Centralizes role/permission resolution and authorization helpers used both by
-the global auth guard  and by per-route permission dependencies.
+the global auth guard middleware and by per-route permission dependencies.
 """
 
-from collections.abc import Iterable
+from typing import Iterable, List, Set
 
 from app.core.config import get_settings
 from app.models.models import User
@@ -13,7 +13,7 @@ from app.models.models import User
 class AuthorizationService:
     """Resolves the permission set granted to a user and validates access."""
 
-    def get_permissions(self, user: User) -> set[str]:
+    def get_permissions(self, user: User) -> Set[str]:
         """Return the full set of permissions granted to ``user``."""
         settings = get_settings()
         if getattr(user, "is_admin", False):

@@ -1,22 +1,20 @@
-import json
 import logging
-from typing import Any
-
-from app.core.utils import utc_now_iso
-
+import json
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 from ...application.interfaces.i_logger import ILogger
-
+from app.core.utils import utc_now_iso
 
 class LoggerService(ILogger):
     """
     Concrete implementation of ILogger.
     Handles structured logging and console/file output.
     """
-
+    
     def __init__(self, name: str, level: str = "INFO"):
         self._logger = logging.getLogger(name)
         self._logger.setLevel(self._parse_level(level))
-        self._context: dict[str, Any] = {}
+        self._context: Dict[str, Any] = {}
 
     def debug(self, message: str, **kwargs) -> None:
         self._log("debug", message, **kwargs)
@@ -27,13 +25,13 @@ class LoggerService(ILogger):
     def warning(self, message: str, **kwargs) -> None:
         self._log("warning", message, **kwargs)
 
-    def error(self, message: str, error: Exception | None = None, **kwargs) -> None:
+    def error(self, message: str, error: Optional[Exception] = None, **kwargs) -> None:
         if error:
             kwargs["error_type"] = type(error).__name__
             kwargs["error_message"] = str(error)
         self._log("error", message, **kwargs)
 
-    def critical(self, message: str, error: Exception | None = None, **kwargs) -> None:
+    def critical(self, message: str, error: Optional[Exception] = None, **kwargs) -> None:
         if error:
             kwargs["error_type"] = type(error).__name__
             kwargs["error_message"] = str(error)

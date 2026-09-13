@@ -1,13 +1,11 @@
 "use client";
 
 import { TarotCard } from "@/components/ui/TarotCard";
-import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 
 export default function Error({
   error,
-  reset,
-}: {
+  reset }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
@@ -21,13 +19,16 @@ export default function Error({
           <h2 className="text-2xl font-bold text-foreground">Something went wrong!</h2>
           <p className="text-muted-foreground">{error.message}</p>
           <div className="flex gap-3">
-            <Button variant="primary" size="md" onClick={reset}>
+            <button
+              onClick={reset}
+              className="btn btn-primary btn-md"
+            >
               Try again
-            </Button>
+            </button>
             <Link href="/">
-              <Button variant="secondary" size="md">
+              <button className="btn btn-secondary btn-md">
                 Go back home
-              </Button>
+              </button>
             </Link>
           </div>
         </div>

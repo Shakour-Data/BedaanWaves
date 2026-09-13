@@ -7,19 +7,17 @@ Traceability: powers the Processing / Result / Error_Recovery states of the
 password-recovery finite state machine defined in spec.yaml.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from uuid import UUID
 from secrets import token_urlsafe
 
 from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.db.base import async_session_maker
-from app.models.models import PasswordResetToken, User
-from app.services.user.auth_service import (
-    get_user_by_email,
-    hash_password,
-    verify_password,
-)
+from app.models.models import User, PasswordResetToken
+from app.services.user.auth_service import hash_password, verify_password, get_user_by_email
 
 settings = get_settings()
 
@@ -42,7 +40,7 @@ def verify_token_hash(stored_hash: str, raw_token: str) -> bool:
     return verify_password(raw_token, stored_hash)
 
 
-async def create_password_reset_token(email: str, session=None) -> str | None:
+async def create_password_reset_token(email: str, session=None) -> Optional[str]:
     """Create a single-use reset token for the user identified by *email*.
 
     Returns the **raw** token string (to be sent via email link) or
@@ -59,7 +57,7 @@ async def create_password_reset_token(email: str, session=None) -> str | None:
             return None
 
         raw_token = generate_raw_token()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         # Invalidate previous non-consumed tokens for this user (single valid token)
         result = await session.execute(
@@ -88,7 +86,7 @@ async def create_password_reset_token(email: str, session=None) -> str | None:
             await session.close()
 
 
-async def get_valid_reset_token(raw_token: str, session=None) -> PasswordResetToken | None:
+async def get_valid_reset_token(raw_token: str, session=None) -> Optional[PasswordResetToken]:
     """Look up a token by its raw value.
 
     Returns the token row only when it is not consumed and not expired.
@@ -98,7 +96,7 @@ async def get_valid_reset_token(raw_token: str, session=None) -> PasswordResetTo
     if owns:
         session = async_session_maker()
     try:
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         result = await session.execute(
             select(PasswordResetToken).where(
                 PasswordResetToken.consumed.is_(False),
@@ -127,7 +125,7 @@ async def verify_reset_token(raw_token: str, session=None) -> bool:
             await session.close()
 
 
-async def consume_reset_token(raw_token: str, session=None) -> User | None:
+async def consume_reset_token(raw_token: str, session=None) -> Optional[User]:
     """Consume a valid token and return the associated user.
 
     Returns ``None`` when the token is invalid, consumed, or expired.
@@ -140,7 +138,7 @@ async def consume_reset_token(raw_token: str, session=None) -> User | None:
         if token is None:
             return None
         token.consumed = True
-        token.consumed_at = datetime.now(UTC)
+        token.consumed_at = datetime.now(timezone.utc)
         await session.commit()
 
         result = await session.execute(select(User).where(User.id == token.user_id))

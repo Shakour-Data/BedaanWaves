@@ -36,7 +36,6 @@ interface DateState {
   snapshotLoading: boolean;
   snapshotError: string | null;
   snapshotIndex: SnapshotIndexResponse | null;
-  selectedSnapshotId: string | null;
 
   // Actions
   setSelectedDate: (date: string | null) => void;
@@ -48,9 +47,6 @@ interface DateState {
 
   // Snapshot actions
   setSnapshot: (snap: SnapshotResponse | null, symbol?: string | null) => void;
-  setSnapshotLoading: (loading: boolean) => void;
-  setSnapshotError: (error: string | null) => void;
-  setSnapshotIndex: (idx: SnapshotIndexResponse | null) => void;
   clearSnapshot: () => void;
   loadSnapshot: (options?: FetchSnapshotOptions) => Promise<SnapshotResponse | null>;
   loadSnapshotIndex: (opts?: {
@@ -76,7 +72,6 @@ export const useDateStore = create<DateState>()(
       snapshotLoading: false,
       snapshotError: null,
       snapshotIndex: null,
-      selectedSnapshotId: null,
 
       // ---- Legacy date actions ----
       setSelectedDate: (date) => {
@@ -126,42 +121,38 @@ export const useDateStore = create<DateState>()(
       },
 
       reset: () => {
-        set((state) => {
-          state.selectedDate = null;
-          state.latestAvailableDate = null;
-          state.useLatestDate = true;
-          state.snapshot = null;
-          state.snapshotId = null;
-          state.snapshotTimestamp = null;
-          state.snapshotSymbol = null;
-          state.snapshotLoading = false;
-          state.snapshotError = null;
-          state.snapshotIndex = null;
-          state.selectedSnapshotId = null;
-          return state;
+        set({
+          selectedDate: null,
+          latestAvailableDate: null,
+          useLatestDate: true,
+          snapshot: null,
+          snapshotId: null,
+          snapshotTimestamp: null,
+          snapshotSymbol: null,
+          snapshotLoading: false,
+          snapshotError: null,
+          snapshotIndex: null,
         });
       },
 
       // ---- Snapshot actions ----
       setSnapshot: (snap, symbol = null) => {
         if (!snap) {
-          set((state) => {
-            state.snapshot = null;
-            state.snapshotId = null;
-            state.snapshotTimestamp = null;
-            state.snapshotSymbol = symbol;
-            state.snapshotError = null;
-            return state;
+          set({
+            snapshot: null,
+            snapshotId: null,
+            snapshotTimestamp: null,
+            snapshotSymbol: symbol,
+            snapshotError: null,
           });
           return;
         }
-        set((state) => {
-          state.snapshot = snap;
-          state.snapshotId = snap.snapshotId;
-          state.snapshotTimestamp = snap.timestamp;
-          state.snapshotSymbol = symbol ?? null;
-          state.snapshotError = null;
-          return state;
+        set({
+          snapshot: snap,
+          snapshotId: snap.snapshotId,
+          snapshotTimestamp: snap.timestamp,
+          snapshotSymbol: symbol ?? null,
+          snapshotError: null,
         });
         // Update latest available date from snapshot timestamp parity
         if (snap.timestamp) {
@@ -175,70 +166,34 @@ export const useDateStore = create<DateState>()(
         }
       },
 
-      setSnapshotLoading: (loading: boolean) => {
-        set((state) => {
-          state.snapshotLoading = loading;
-          return state;
-        });
-      },
-
-      setSnapshotError: (error: string | null) => {
-        set((state) => {
-          state.snapshotError = error;
-          return state;
-        });
-      },
-
-      setSnapshotIndex: (idx: SnapshotIndexResponse | null) => {
-        set((state) => {
-          state.snapshotIndex = idx;
-          return state;
-        });
-      },
-
       clearSnapshot: () => {
-        set((state) => {
-          state.snapshot = null;
-          state.snapshotId = null;
-          state.snapshotTimestamp = null;
-          state.snapshotError = null;
-          return state;
+        set({
+          snapshot: null,
+          snapshotId: null,
+          snapshotTimestamp: null,
+          snapshotError: null,
         });
       },
 
       loadSnapshot: async (options) => {
-        set((state) => {
-          state.snapshotLoading = true;
-          state.snapshotError = null;
-          return state;
-        });
+        set({ snapshotLoading: true, snapshotError: null });
         try {
           const snap = await fetchDashboardSnapshot(options);
           get().setSnapshot(snap, options?.symbol ?? null);
           return snap;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          set((state) => {
-            state.snapshotLoading = false;
-            state.snapshotError = msg;
-            return state;
-          });
+          set({ snapshotLoading: false, snapshotError: msg });
           return null;
         } finally {
-          set((state) => {
-            state.snapshotLoading = false;
-            return state;
-          });
+          set({ snapshotLoading: false });
         }
       },
 
       loadSnapshotIndex: async (opts) => {
         try {
           const idx = await fetchDashboardSnapshots(opts);
-          set((state) => {
-            state.snapshotIndex = idx;
-            return state;
-          });
+          set({ snapshotIndex: idx });
           return idx;
         } catch {
           return null;
@@ -248,16 +203,8 @@ export const useDateStore = create<DateState>()(
       selectSnapshotById: async (id) => {
         if (!id) {
           get().clearSnapshot();
-          set((state) => {
-            state.selectedSnapshotId = null;
-            return state;
-          });
           return null;
         }
-        set((state) => {
-          state.selectedSnapshotId = id;
-          return state;
-        });
         if (get().snapshotId === id && get().snapshot) {
           return get().snapshot;
         }

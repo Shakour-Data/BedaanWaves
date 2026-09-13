@@ -21,29 +21,28 @@ import csv
 import logging
 import math
 import os
-from datetime import UTC, datetime, timedelta
-from typing import Any
-from urllib.request import Request, urlopen
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
+from app.core.exceptions import DataParsingException, IngestionException
 
+from app.services.core.base_service import DataService
 from app.core.config import get_settings
-from app.core.exceptions import IngestionException
-from app.db.base import async_session_maker
 from app.models.models import (
     Asset,
-    CompanyLeadership,
+    IntlPriceCandle,
     FinancialStatement,
     FundamentalRatio,
-    IntlPriceCandle,
-    MacroIndicator,
+    CompanyLeadership,
     News,
+    MacroIndicator,
 )
-from app.services.core.base_service import DataService
 from app.services.data.multi_source_news_fetcher import MultiSourceNewsFetcher
 from app.services.data.sec_edgar_client import SEDGARFinancialService
+from app.db.base import async_session_maker
 
 logger = logging.getLogger(__name__)
 
@@ -73,12 +72,6 @@ MAX_CONCURRENT = 5
 # Batch size for DB inserts
 CANDLE_BATCH_SIZE = 1000
 NEWS_BATCH_SIZE = 500
-# Minimum quarterly financial statements to ensure per symbol via SEC EDGAR
-SEC_EDGAR_MIN_QUARTERS = 20
-# SEC EDGAR rate limit per request (seconds)
-SEC_EDGAR_RATE_DELAY = 0.6
-# Chunk size for bulk SEC EDGAR ingestion
-SEC_EDGAR_CHUNK_SIZE = 50
 
 
 class NasdaqIngestionService(DataService):
@@ -87,11 +80,9 @@ class NasdaqIngestionService(DataService):
     def __init__(self, service_name: str = "NasdaqIngestionService"):
         super().__init__(service_name)
         self.settings = get_settings()
-        self._symbols: list[str] = []
+        self._symbols: List[str] = []
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT)
         self._sec_service = SEDGARFinancialService()
-        self._asset_cache: dict[str, Asset] = {}
-        self._asset_lock = asyncio.Lock()
 
     @staticmethod
     def _clean_nan(obj):
@@ -149,7 +140,7 @@ class NasdaqIngestionService(DataService):
         except (TypeError, ValueError):
             return None
 
-    def _load_symbols_from_csv(self) -> list[str]:
+    def _load_symbols_from_csv(self) -> List[str]:
         """Load all Nasdaq symbols from the CSV file."""
         symbols = []
         try:
@@ -166,7 +157,7 @@ class NasdaqIngestionService(DataService):
         return symbols
 
     @property
-    def DEFAULT_CONSTITUENTS(self) -> list[str]:
+    def DEFAULT_CONSTITUENTS(self) -> List[str]:
         if not self._symbols:
             self._symbols = self._load_symbols_from_csv()
         return self._symbols
@@ -183,12 +174,7 @@ class NasdaqIngestionService(DataService):
 
     async def _ensure_asset(self, symbol: str, name: str, asset_class: str = "EQUITY",
                             market: str = "NASDAQ", sector: str = "", industry: str = "") -> Asset:
-        """Get or create asset record with in-memory caching."""
-        async with self._asset_lock:
-            cached = self._asset_cache.get(symbol)
-            if cached is not None:
-                return cached
-
+        """Get or create asset record."""
         async with async_session_maker() as session:
             result = await session.execute(select(Asset).where(Asset.symbol == symbol))
             asset = result.scalar_one_or_none()
@@ -223,12 +209,9 @@ class NasdaqIngestionService(DataService):
                 if updated:
                     await session.commit()
                     await session.refresh(asset)
-
-            async with self._asset_lock:
-                self._asset_cache[symbol] = asset
             return asset
 
-    async def _bulk_upsert_candles(self, candles: list[IntlPriceCandle]) -> int:
+    async def _bulk_upsert_candles(self, candles: List[IntlPriceCandle]) -> int:
         """Bulk upsert candles using PostgreSQL upsert."""
         if not candles:
             return 0
@@ -252,7 +235,7 @@ class NasdaqIngestionService(DataService):
                         "adjusted_close": float(c.adjusted_close) if c.adjusted_close else None,
                         "split_ratio": float(c.split_ratio) if c.split_ratio else 1.0,
                     })
-
+                
                 stmt = pg_insert(IntlPriceCandle).values(rows)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["asset_id", "timestamp", "timeframe"],
@@ -299,7 +282,7 @@ class NasdaqIngestionService(DataService):
                     sector=info.get("sector", ""),
                     industry=info.get("industry", ""),
                 )
-
+                
             candles = []
             for timestamp, row in hist.iterrows():
                 ts = timestamp.to_pydatetime().replace(tzinfo=None) if hasattr(timestamp, 'to_pydatetime') else timestamp
@@ -477,136 +460,13 @@ class NasdaqIngestionService(DataService):
                     await session.commit()
 
                 if len(seen_periods) < 20:
-                    sec_results = await self._sec_service.ingest_sec_financials(
-                        symbol, str(asset.id),
-                        min_quarters=20,
-                        skip_if_sufficient=True,
-                    )
+                    sec_results = await self._sec_service.ingest_sec_financials(symbol, str(asset.id))
                     self.logger.debug(f"SEC EDGAR fallback for {symbol}: {sec_results}")
 
                 return True
         except Exception as e:
             self.logger.error(f"Failed to ingest fundamentals for {symbol}: {e}")
             return False
-
-    async def bulk_ingest_sec_financials(
-        self,
-        symbols: list[str] | None = None,
-        min_quarters: int = SEC_EDGAR_MIN_QUARTERS,
-        max_concurrent: int = MAX_CONCURRENT,
-        chunk_size: int = SEC_EDGAR_CHUNK_SIZE,
-    ) -> dict[str, int]:
-        """
-        Bulk-ingest quarterly financial statements for all (or a subset of)
-        Nasdaq constituents using the free SEC EDGAR API.
-
-        SEC EDGAR (data.sec.gov) is a public, no-API-key data source.  Each
-        company's full XBRL fact history is retrieved via the
-        ``companyfacts`` endpoint, which returns every 10-Q / 10-K filing
-        on record.  This guarantees at least ``min_quarters`` (default 20)
-        quarters of income-statement, balance-sheet, and cash-flow data
-        per symbol.
-
-        Args:
-            symbols: Symbol list; falls back to ``DEFAULT_CONSTITUENTS``.
-            min_quarters: Minimum quarterly financial statements to ensure
-                per symbol.  Symbols that already have >= this many quarters
-                in the DB are skipped.
-            max_concurrent: Maximum concurrent SEC EDGAR requests.
-            chunk_size: Number of symbols processed per batch.
-
-        Returns:
-            Aggregate counts: ``{symbols_processed, statements_stored,
-            ratios_stored, skipped, errors}``.
-        """
-        symbols = symbols or self.DEFAULT_CONSTITUENTS
-        self.logger.info(
-            f"Starting SEC EDGAR bulk financial ingestion for {len(symbols)} symbols "
-            f"(target min {min_quarters} quarters each)"
-        )
-        await self._sec_service.initialize()
-
-        results = {"symbols_processed": 0, "statements_stored": 0,
-                    "ratios_stored": 0, "skipped": 0, "errors": 0}
-        semaphore = asyncio.Semaphore(max_concurrent)
-
-        async def _process_symbol(sym: str) -> dict[str, int]:
-            async with semaphore:
-                try:
-                    asset = await self._ensure_asset(sym, sym, "EQUITY")
-                    outcome = await self._sec_service.ingest_sec_financials(
-                        sym, str(asset.id),
-                        min_quarters=min_quarters,
-                        skip_if_sufficient=True,
-                    )
-                    return outcome
-                except Exception as e:
-                    self.logger.error(f"SEC EDGAR ingestion failed for {sym}: {e}")
-                    return {"statements": 0, "ratios": 0, "errors": 1}
-
-        for i in range(0, len(symbols), chunk_size):
-            chunk = symbols[i:i + chunk_size]
-            self.logger.info(
-                f"SEC EDGAR chunk {i // chunk_size + 1}/"
-                f"{(len(symbols) + chunk_size - 1) // chunk_size}: "
-                f"{len(chunk)} symbols"
-            )
-            tasks = [_process_symbol(s) for s in chunk]
-            outcomes = await asyncio.gather(*tasks, return_exceptions=True)
-
-            for outcome in outcomes:
-                if isinstance(outcome, Exception):
-                    results["errors"] += 1
-                    continue
-                if outcome.get("skipped"):
-                    results["skipped"] += 1
-                results["symbols_processed"] += 1
-                results["statements_stored"] += outcome.get("statements", 0)
-                results["ratios_stored"] += outcome.get("ratios", 0)
-                if outcome.get("errors"):
-                    results["errors"] += outcome["errors"]
-
-            await asyncio.sleep(SEC_EDGAR_RATE_DELAY)
-
-        await self._sec_service.shutdown()
-        self.logger.info(f"SEC EDGAR bulk ingestion complete: {results}")
-        return results
-
-    async def backfill_sec_financials(self, min_quarters: int = SEC_EDGAR_MIN_QUARTERS) -> dict[str, int]:
-        """
-        Backfill quarterly financial statements for all Nasdaq constituents
-        that have fewer than ``min_quarters`` quarters already stored.
-        """
-        self.logger.info(f"Starting SEC EDGAR backfill (target {min_quarters} quarters)")
-
-        symbols_to_process = []
-        async with async_session_maker() as session:
-            all_assets = await session.execute(
-                select(Asset.id, Asset.symbol)
-                .where(Asset.active)
-                .where(Asset.asset_class == "EQUITY")
-                .where(Asset.market == "NASDAQ")
-                .limit(2000)
-            )
-            assets = all_assets.fetchall()
-
-        for asset_id, symbol in assets:
-            count = await self._sec_service.count_quarters_in_db(str(asset_id))
-            if count < min_quarters:
-                symbols_to_process.append(symbol)
-
-        self.logger.info(
-            f"Backfill: {len(symbols_to_process)}/{len(assets)} symbols need "
-            f"more quarters (<{min_quarters})"
-        )
-
-        if symbols_to_process:
-            return await self.bulk_ingest_sec_financials(
-                symbols=sorted(symbols_to_process),
-                min_quarters=min_quarters,
-            )
-        return {"symbols_processed": 0, "statements_stored": 0,
-                "ratios_stored": 0, "skipped": len(assets), "errors": 0}
 
     async def ingest_board_members(self, symbol: str) -> int:
         """Fetch board members and officers from yfinance."""
@@ -676,7 +536,7 @@ class NasdaqIngestionService(DataService):
                         sector=info.get("sector", ""),
                         industry=info.get("industry", ""),
                     )
-                    cutoff = datetime.now(UTC) - timedelta(days=days)
+                    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
                     for item in raw_news:
                         published_str = item.get("published")
@@ -685,7 +545,7 @@ class NasdaqIngestionService(DataService):
                             try:
                                 published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
                             except (ValueError, TypeError):
-                                published_dt = datetime.now(UTC)
+                                published_dt = datetime.now(timezone.utc)
 
                         if published_dt and published_dt < cutoff:
                             continue
@@ -748,7 +608,7 @@ class NasdaqIngestionService(DataService):
                         latest_date = hist.index[-1]
                         period_str = latest_date.strftime("%Y-%m-%d")
                         value = float(latest["Close"])
-
+                        
                         macro_data.append({
                             "indicator_code": ticker_sym,
                             "name": name,
@@ -779,7 +639,7 @@ class NasdaqIngestionService(DataService):
             self.logger.error(f"Failed to ingest macro indicators: {e}")
             return False
 
-    async def backfill_nasdaq(self, symbols: list[str] | None = None, years: int = 5):
+    async def backfill_nasdaq(self, symbols: Optional[List[str]] = None, years: int = 5):
         """Run full backfill for Nasdaq constituents."""
         symbols = symbols or self.DEFAULT_CONSTITUENTS
         self.logger.info(f"Starting Nasdaq backfill for {len(symbols)} symbols, {years} years")
@@ -866,7 +726,7 @@ class NasdaqIngestionService(DataService):
         self.logger.info(f"Backfill complete: {results}")
         return results
 
-    async def daily_update(self, symbols: list[str] | None = None):
+    async def daily_update(self, symbols: Optional[List[str]] = None):
         """Run daily incremental update."""
         symbols = symbols or self.DEFAULT_CONSTITUENTS
         self.logger.info(f"Starting daily update for {len(symbols)} symbols")
@@ -904,8 +764,8 @@ class NasdaqIngestionService(DataService):
         self.logger.info(f"Daily update complete: {results}")
         return results
 
-    async def ingest_symbol_batch(self, symbols: list[str], include_news: bool = True,
-                                  include_fundamentals: bool = False) -> dict[str, Any]:
+    async def ingest_symbol_batch(self, symbols: List[str], include_news: bool = True,
+                                  include_fundamentals: bool = False) -> Dict[str, Any]:
         """Ingest a batch of symbols with configurable data types."""
         results = {"prices": 0, "fundamentals": 0, "board": 0, "news": 0, "errors": []}
 
