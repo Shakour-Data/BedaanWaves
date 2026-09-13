@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import ForgotPasswordPage from '@/app/(auth)/forgot-password/page';
 
@@ -15,27 +15,32 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('@/lib/api', () => ({
+  apiClient: {
+    post: vi.fn().mockResolvedValue({ status: 200, data: { status: 'success' } }),
+  },
+  getApiErrorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
 describe('ForgotPasswordPage', () => {
   beforeEach(() => {
     pushMock.mockClear();
   });
 
-  it('renders disabled state message', () => {
+  it('renders a password recovery form', () => {
     render(<ForgotPasswordPage />);
-
-    expect(screen.getByText(/Password Recovery Disabled/i)).not.toBeNull();
-    expect(screen.getByText(/temporarily disabled during development/i)).not.toBeNull();
+    expect(screen.getByRole('heading', { name: /Reset Password/i })).not.toBeNull();
+    expect(screen.getByPlaceholderText(/you@example.com/i)).not.toBeNull();
   });
 
-  it('renders Go to Home button', () => {
+  it('renders a submit button', () => {
     render(<ForgotPasswordPage />);
-
-    expect(screen.getByRole('button', { name: /go to home/i })).not.toBeNull();
+    expect(screen.getByRole('button', { name: /Send Recovery Link/i })).not.toBeNull();
   });
 
-  it('navigates to home when Go to Home button is clicked', () => {
+  it('navigates to login when Back to Sign In is clicked', () => {
     render(<ForgotPasswordPage />);
-    fireEvent.click(screen.getByRole('button', { name: /go to home/i }));
-    expect(pushMock).toHaveBeenCalledWith('/');
+    fireEvent.click(screen.getByRole('button', { name: /Back to Sign In/i }));
+    expect(pushMock).toHaveBeenCalledWith('/login');
   });
 });

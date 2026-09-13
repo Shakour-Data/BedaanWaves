@@ -56,8 +56,8 @@ function StockRow({ stock, index }: { stock: Stock; index: number }) {
       <div className={cn(
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold",
         index === 0 ? "bg-[var(--color-warning)] text-white" :
-        index === 1 ? "bg-gray-400 text-white" :
-        index === 2 ? "bg-amber-700 text-white" :
+        index === 1 ? "bg-[var(--color-secondary)] text-white" :
+        index === 2 ? "bg-[var(--color-warning)]/80 text-white" :
         "bg-[var(--color-border)] text-[var(--color-text-secondary)]"
       )}>
         {index + 1}
@@ -192,9 +192,9 @@ export default function StocksPage() {
 
   useEffect(() => {
     if (searchQuery) {
-      addToast({ type: "info", message: `Showing results for "${searchQuery}"` });
+      addRecent(searchQuery);
     }
-  }, [searchQuery, addToast]);
+  }, [searchQuery, addRecent]);
 
   const filteredStocks = useMemo(() => {
     let result = [...stocks];

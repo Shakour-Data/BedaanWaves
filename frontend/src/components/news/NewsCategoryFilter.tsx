@@ -45,8 +45,8 @@ export function NewsCategoryFilter({ selected, onChange }: NewsCategoryFilterPro
         className={cn(
           "w-full justify-start gap-2 px-3 py-2 text-sm font-medium transition-all",
           selected === "market-moving"
-            ? "bg-red-600 text-white shadow-md"
-            : "text-red-600 hover:bg-red-50"
+            ? "bg-[var(--color-error)] text-white shadow-md"
+            : "text-[var(--color-error)] hover:bg-red-50"
         )}
         onClick={() => onChange(selected === "market-moving" ? null : "market-moving")}
       >

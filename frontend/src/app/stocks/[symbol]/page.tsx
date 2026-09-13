@@ -458,11 +458,11 @@ export default function StockDetailPage() {
                       "text-5xl font-black rounded-full h-32 w-32 flex items-center justify-center border-8 shadow-inner",
                       typeof scoring.overall_score === "number" &&
                         scoring.overall_score >= 70
-                        ? "text-green-600 border-green-600/20"
+                        ? "text-[var(--color-success)] border-[var(--color-success)]/20"
                         : typeof scoring.overall_score === "number" &&
                           scoring.overall_score >= 40
-                        ? "text-yellow-500 border-yellow-500/20"
-                        : "text-red-600 border-red-600/20"
+                        ? "text-[var(--color-warning)] border-[var(--color-warning)]/20"
+                        : "text-[var(--color-error)] border-[var(--color-error)]/20"
                     )}
                   >
                     {scoring.overall_score as number}
@@ -491,10 +491,10 @@ export default function StockDetailPage() {
                               className={cn(
                                 "h-full rounded-full",
                                 (score as number) >= 70
-                                  ? "bg-green-600"
+                                  ? "bg-[var(--color-success)]"
                                   : (score as number) >= 40
-                                  ? "bg-yellow-500"
-                                  : "bg-red-600"
+                                  ? "bg-[var(--color-warning)]"
+                                  : "bg-[var(--color-error)]"
                               )}
                               style={{ width: `${score as number}%` }}
                             />

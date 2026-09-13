@@ -66,10 +66,10 @@ describe('Dashboard navigation', () => {
   });
 
   describe('Sidebar Navigation', () => {
-    it('exposes the Dashboard item in the Analytics category of the sidebar', async () => {
+    it('exposes the Dashboard item in the Platform category of the sidebar', async () => {
       const { sidebarCategories } = await import('@/lib/sidebar-config');
-      const analyticsItems = sidebarCategories.find((cat) => cat.label === 'Analytics')?.items || [];
-      const dashboardItem = analyticsItems.find((item) => item.href === '/dashboard');
+      const platformItems = sidebarCategories.find((cat) => cat.label === 'Platform')?.items || [];
+      const dashboardItem = platformItems.find((item) => item.href === '/dashboard');
       expect(dashboardItem).toBeDefined();
       expect(dashboardItem?.label).toBe('Dashboard');
     });

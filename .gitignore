@@ -111,6 +111,7 @@ backend/logs/*.log
 *.pyc
 fix_*.py
 test_fix.py
+create_index.py
 check_*.py
 verify_*.py
 count_*.py

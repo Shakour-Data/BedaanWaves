@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -22,13 +22,6 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFullName(user.full_name || user.username || "");
-    }
-  }, [user]);
 
   const handleToggleShowPassword = () => {
     setShowPassword(!showPassword);
@@ -74,14 +67,14 @@ export default function ProfilePage() {
         <Card icon="Profile" title={t("app.settings.profile.user_profile")} className="lg:col-span-3">
           <div className="flex items-center gap-6 py-2">
             <div className="w-24 h-24 rounded-full bg-neutral flex items-center justify-center text-4xl border-4 border-surface shadow-lg">
-              Profile
+              {(fullName || user?.username || "U").charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
               <h3 className="text-2xl font-black">{fullName || user?.full_name || user?.username || "User"}</h3>
               <p className="text-muted-foreground font-mono">{user?.email || "user@example.com"}</p>
               <div className="mt-3 flex gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-error/10 text-error border border-error/20">
-                  {t("app.settings.profile.member_since").replace("{date}", "2023/01/01")}
+                  {t("app.settings.profile.member_since").replace("{date}", user?.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A")}
                 </span>
               </div>
             </div>
@@ -112,7 +105,7 @@ export default function ProfilePage() {
 
             <div>
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{t("app.settings.profile.joined_date")}</div>
-              <span className="text-sm font-medium">2023/01/01</span>
+              <span className="text-sm font-medium">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}</span>
             </div>
           </div>
         </Card>

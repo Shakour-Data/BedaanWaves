@@ -42,10 +42,6 @@ async def register(
     _rate_limit: None = Depends(require_auth_rate_limit),
 ) -> Token:
     """Register a new user account and return access/refresh tokens."""
-    raise HTTPException(
-        status_code=503,
-        detail="Authentication service is temporarily disabled for development",
-    )
     existing = await get_user_by_username(data.username)
     if existing:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -77,10 +73,6 @@ async def login(
     _rate_limit: None = Depends(require_auth_rate_limit),
 ) -> Token:
     """Authenticate user and return access/refresh tokens."""
-    raise HTTPException(
-        status_code=503,
-        detail="Authentication service is temporarily disabled for development",
-    )
     user = await authenticate_user(data.username, data.password)
     if not user:
         raise HTTPException(

@@ -108,6 +108,9 @@ interface SidebarComponentProps {
   showFooter?: boolean;
   showUserInfo?: boolean;
   onLogout?: () => void;
+  sidebarOpen?: boolean;
+  setSidebarOpen?: (open: boolean) => void;
+  closeOnLgOnly?: boolean;
 }
 
 const SidebarComponent = ({
@@ -118,11 +121,21 @@ const SidebarComponent = ({
   showFooter = true,
   showUserInfo = true,
   onLogout,
+  sidebarOpen: externalSidebarOpen,
+  setSidebarOpen: externalSetSidebarOpen,
+  closeOnLgOnly = false,
 }: SidebarComponentProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
-  const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
+  const internalSidebarOpen = useAppStore((state) =>
+    side === "left" ? state.sidebarOpen : state.rightSidebarOpen
+  );
+  const internalSetSidebarOpen = useAppStore((state) =>
+    side === "left" ? state.setSidebarOpen : state.setRightSidebarOpen
+  );
+
+  const sidebarOpen = externalSidebarOpen ?? internalSidebarOpen;
+  const setSidebarOpen = externalSetSidebarOpen ?? internalSetSidebarOpen;
   const { user, logout } = useAuthStore();
 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
@@ -410,5 +423,5 @@ const SidebarComponent = ({
   );
 };
 
-export const NewSidebar = memo(SidebarComponent);
+export const Sidebar = memo(SidebarComponent);
 export type { SidebarComponentProps };

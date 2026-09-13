@@ -819,10 +819,10 @@ export default function AnalysisPage() {
                                 className={cn(
                                   "h-full rounded-full",
                                   numericScore >= 70
-                                    ? "bg-green-600"
+                                    ? "bg-[var(--color-success)]"
                                     : numericScore >= 40
-                                    ? "bg-yellow-500"
-                                    : "bg-red-600"
+                                    ? "bg-[var(--color-warning)]"
+                                    : "bg-[var(--color-error)]"
                                 )}
                                 style={{ width: `${Math.max(0, Math.min(100, numericScore))}%` }}
                               />

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import { NewSidebar } from "./Sidebar";
+import { Sidebar } from "./Sidebar";
 import { RightSidebar } from "./RightSidebar";
 import { NewTopbar } from "./NewTopbar";
 
@@ -17,14 +17,11 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
   const isLoading = useAuthStore((state) => state.loading);
   const router = useRouter();
 
-  // During development, allow access without authentication
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
   useEffect(() => {
-    if (!isDevelopment && !isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, router, isDevelopment]);
+  }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -37,7 +34,7 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
     );
   }
 
-  if (!isDevelopment && !isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
         <p className="text-sm text-[var(--color-text-muted)]">Redirecting to login...</p>
@@ -53,7 +50,7 @@ export function NewDashboardShell({ title, children }: NewDashboardShellProps) {
       >
         Skip to main content
       </a>
-      <NewSidebar />
+      <Sidebar />
 
       <div className="flex flex-1 flex-col min-w-0 lg:mr-72">
         <NewTopbar title={title} />

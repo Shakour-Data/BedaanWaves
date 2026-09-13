@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { sidebarCategories, sidebarBottomItems, type NavItem, type NavCategory } from '@/lib/sidebar-config';
-import { NewSidebar } from '@/components/layout/NewSidebar';
+import { Sidebar } from '@/components/layout/Sidebar';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
@@ -121,9 +121,9 @@ describe('sidebar-config', () => {
     });
   });
 
-  it('keeps the Analytics category with Dashboard item (backward compat)', () => {
-    const analyticsItems = sidebarCategories.find((cat) => cat.label === 'Analytics')?.items || [];
-    const dashboardItem = analyticsItems.find((item) => item.href === '/dashboard');
+  it('keeps the Platform category with Dashboard item (backward compat)', () => {
+    const platformItems = sidebarCategories.find((cat) => cat.label === 'Platform')?.items || [];
+    const dashboardItem = platformItems.find((item) => item.href === '/dashboard');
     expect(dashboardItem).toBeDefined();
     expect(dashboardItem?.label).toBe('Dashboard');
   });
@@ -172,17 +172,17 @@ describe('NewSidebar component', () => {
   });
 
   it('renders the sidebar with brand logo', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     expect(screen.getByText('BedaanWaves')).toBeInTheDocument();
   });
 
   it('renders the unified search bar', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     expect(screen.getByTestId('unified-search-bar')).toBeInTheDocument();
   });
 
   it('renders all category headers', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     sidebarCategories.forEach((cat) => {
       const headerEls = screen.getAllByText(cat.label);
@@ -191,7 +191,7 @@ describe('NewSidebar component', () => {
   });
 
   it('renders bottom account items', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     sidebarBottomItems.forEach((item) => {
       expect(screen.getAllByText(item.label).length).toBeGreaterThanOrEqual(1);
@@ -199,7 +199,7 @@ describe('NewSidebar component', () => {
   });
 
   it('renders items from expanded categories', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     expandAllCategories();
 
     const allItems = sidebarCategories.flatMap((cat) => cat.items);
@@ -210,14 +210,14 @@ describe('NewSidebar component', () => {
   });
 
   it('renders nav items from the auto-expanded category on initial load', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     const dashboardLinks = screen.getAllByRole('link', { name: 'Dashboard' });
     expect(dashboardLinks.length).toBeGreaterThanOrEqual(1);
   });
 
   it('toggles category expand/collapse when header is clicked', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     const toggleButtons = screen.getAllByRole('button');
     const categoryToggle = toggleButtons.find((btn) => btn.getAttribute('aria-expanded') === 'false');
@@ -237,7 +237,7 @@ describe('NewSidebar component', () => {
   });
 
   it('has proper aria-labels for accessibility', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     const nav = screen.getByRole('navigation', { name: /main navigation/i });
     expect(nav).toBeInTheDocument();
@@ -247,7 +247,7 @@ describe('NewSidebar component', () => {
   });
 
   it('renders icons for category headers (always visible)', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     sidebarCategories.forEach((cat) => {
       expect(screen.getAllByTestId(`icon-${cat.icon}`).length).toBeGreaterThan(0);
@@ -255,7 +255,7 @@ describe('NewSidebar component', () => {
   });
 
   it('renders icons for items in expanded categories', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     expandAllCategories();
 
     const allItems = sidebarCategories.flatMap((cat) => cat.items);
@@ -265,13 +265,13 @@ describe('NewSidebar component', () => {
   });
 
   it('renders SVG icon elements', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     const svgElements = document.querySelectorAll('svg');
     expect(svgElements.length).toBeGreaterThan(0);
   });
 
   it('closes sidebar on mobile when a nav item is clicked', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
 
     const dashboardLinks = screen.getAllByRole('link', { name: 'Dashboard' });
     fireEvent.click(dashboardLinks[0]);
@@ -279,13 +279,13 @@ describe('NewSidebar component', () => {
   });
 
   it('renders the Account section label', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     const accountLabels = screen.getAllByText('Account');
     expect(accountLabels.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders a quick search hint in the footer', () => {
-    render(<NewSidebar />);
+    render(<Sidebar />);
     const quickSearchText = screen.getByText(/Quick search/i);
     expect(quickSearchText).toBeInTheDocument();
   });

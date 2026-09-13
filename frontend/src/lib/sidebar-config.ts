@@ -29,7 +29,6 @@ export const sidebarCategories: NavCategory[] = [
     label: "Analytics",
     icon: "BarChart3",
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", marker: "DB" },
       { label: "Analytical Dashboard", href: "/dashboard?tab=general", icon: "AreaChart", marker: "AN" },
       { label: "Leaderboard", href: "/leaderboard", icon: "Trophy", marker: "LB" },
       { label: "Biggest Movers", href: "/movers", icon: "TrendingUpDown", marker: "MV" },
@@ -47,7 +46,6 @@ export const sidebarCategories: NavCategory[] = [
     label: "Markets",
     icon: "Globe",
     items: [
-      { label: "NASDAQ", href: "/dashboard", icon: "Activity", marker: "NQ" },
       { label: "Neark Index", href: "/nerk", icon: "Globe", marker: "NK" },
     ],
   },

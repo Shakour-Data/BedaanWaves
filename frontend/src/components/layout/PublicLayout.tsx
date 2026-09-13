@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { useAppStore } from "@/store/useAppStore";
-import { NewSidebar } from "@/components/layout/NewSidebar";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -29,7 +29,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-background)]">
-      <NewSidebar />
+      <Sidebar />
 
       <header
         className={cn(

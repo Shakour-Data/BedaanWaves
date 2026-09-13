@@ -18,9 +18,11 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   loading: boolean;
+  error: string | null;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, full_name: string) => Promise<void>;
   logout: () => void;
+  clearError: () => void;
 }
 
 async function fetchUserProfile(): Promise<UserProfile | null> {
@@ -40,8 +42,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       loading: false,
+      error: null,
+      clearError: () => set({ error: null }),
       login: async (username, password) => {
-        set({ loading: true });
+        set({ loading: true, error: null });
         try {
           const response = await apiClient.post('auth/login', { username, password });
           const token = response.data.access_token;
@@ -56,13 +60,19 @@ export const useAuthStore = create<AuthState>()(
             set({ user: profile });
           }
         } catch (error) {
-          throw error;
+          set({
+            error: error instanceof Error ? error.message : "Login failed",
+            isAuthenticated: false,
+            token: null,
+            refreshToken: null,
+            user: null,
+          });
         } finally {
           set({ loading: false });
         }
       },
       register: async (username, email, password, full_name) => {
-        set({ loading: true });
+        set({ loading: true, error: null });
         try {
           const response = await apiClient.post('auth/register', { username, email, password, full_name });
           const token = response.data.access_token;
@@ -77,7 +87,13 @@ export const useAuthStore = create<AuthState>()(
             set({ user: profile });
           }
         } catch (error) {
-          throw error;
+          set({
+            error: error instanceof Error ? error.message : "Registration failed",
+            isAuthenticated: false,
+            token: null,
+            refreshToken: null,
+            user: null,
+          });
         } finally {
           set({ loading: false });
         }
