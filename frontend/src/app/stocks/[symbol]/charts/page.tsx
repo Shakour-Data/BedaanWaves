@@ -1,22 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { PageLoading } from "@/components/ui/PageLoading";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ScoreTrendChart } from "@/components/charts/ScoreTrendChart";
 import { ColumnChart } from "@/components/charts/ColumnChart";
-import {
-  fetchPriceHistory,
-  type Candle,
-} from "@/lib/api/stocks";
-import {
-  fetchScoreHistory,
-  type ScoreHistoryPoint,
-} from "@/lib/api/scoring";
-
+import { fetchPriceHistory } from "@/lib/api/stocks";
+import { fetchScoreHistory } from "@/lib/api/scoring";
+import { QK } from "@/lib/query-keys";
 import { t } from "@/lib/i18n";
 import { num } from "@/lib/utils";
 
@@ -36,39 +31,22 @@ export default function StockChartsPage() {
     Array.isArray(params.symbol) ? params.symbol[0] : params.symbol ?? "",
   );
 
-  const [candles, setCandles] = useState<Candle[] | null>(null);
-  const [history, setHistory] = useState<ScoreHistoryPoint[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: candles = null, isLoading: priceLoading } = useQuery({
+    queryKey: QK.priceHistory(symbol, "1d", 500),
+    queryFn: () => fetchPriceHistory({ symbol, timeframe: "1d", limit: 500 }),
+    enabled: !!symbol,
+  });
 
-  useEffect(() => {
-    if (!symbol) return;
-    let active = true;
+  const { data: history = null, isLoading: historyLoading, error: queryError } = useQuery({
+    queryKey: QK.scoreHistory(symbol, 30),
+    queryFn: () => fetchScoreHistory(symbol, 30),
+    enabled: !!symbol,
+  });
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [c, h] = await Promise.all([
-          fetchPriceHistory({ symbol, timeframe: "1d", limit: 500 }),
-          fetchScoreHistory(symbol, 30),
-        ]);
-        if (!active) return;
-        setCandles(c);
-        setHistory(h);
-      } catch (e: unknown) {
-        if (active) setError(e instanceof Error ? e.message : t("app.analysis.scoring_not_found"));
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, [symbol]);
+  const loading = priceLoading || historyLoading;
+  const error = queryError
+    ? (queryError instanceof Error ? queryError.message : t("app.analysis.scoring_not_found"))
+    : null;
 
   const scoreSeries = useMemo(() => {
     if (!history) return [];

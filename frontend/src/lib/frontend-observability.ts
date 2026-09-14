@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
-import { onCLS, onINP, onLCP, onFCP, onTTFB } from "web-vitals";
+import { onCLS, onINP, onLCP, onFCP, onTTFB, type Metric } from "web-vitals";
+import { API_BASE_URL } from "./utils";
 
 function send(payload: Record<string, unknown>) {
   if (typeof navigator === "undefined" || !navigator.sendBeacon) {
     return;
   }
   const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-  navigator.sendBeacon("/api/v1/system/observability/frontend-metrics", blob);
+  navigator.sendBeacon(`${API_BASE_URL}/system/observability/frontend-metrics`, blob);
 }
 
 export function reportWebVitals() {
-  onCLS((metric) => send({ type: "CLS", ...metric }));
-  onINP((metric) => send({ type: "INP", ...metric }));
-  onLCP((metric) => send({ type: "LCP", ...metric }));
-  onFCP((metric) => send({ type: "FCP", ...metric }));
-  onTTFB((metric) => send({ type: "TTFB", ...metric }));
+  const report = (type: string) => (metric: Metric) => send({ type, ...metric });
+  onCLS(report("CLS"));
+  onINP(report("INP"));
+  onLCP(report("LCP"));
+  onFCP(report("FCP"));
+  onTTFB(report("TTFB"));
 }
 
 export function useFrontendObservability() {

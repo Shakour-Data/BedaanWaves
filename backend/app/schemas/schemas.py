@@ -55,8 +55,12 @@ class AssetBase(BaseModel):
     sector: Optional[str] = None
     sub_sector: Optional[str] = None
     country_code: Optional[str] = None
-    currency: str = "IRR"
+    currency: str = "USD"
     active: bool = True
+
+    # Index membership (see Asset model / migration 20260908_add_nerk_support)
+    is_nerk_constituent: bool = False
+    nerk_weight: Optional[Decimal] = None
 
 
 class AssetCreate(AssetBase):
@@ -72,8 +76,8 @@ class AssetUpdate(BaseModel):
 
 class AssetResponse(AssetBase):
     id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -142,7 +146,7 @@ class PortfolioBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     portfolio_type: str = "PERSONAL"
-    base_currency: str = "IRR"
+    base_currency: str = "USD"
 
 
 class PortfolioCreate(PortfolioBase):
@@ -556,3 +560,131 @@ class DataProviderHealthResponse(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 
+
+
+# ---------------------------------------------------------------------------
+# Nasdaq Index ("Neark") Schemas
+# ---------------------------------------------------------------------------
+# These back the /api/v1/nerk/* endpoints. The feature namespace keeps its
+# historical "nerk" spelling, but every value it exposes describes the Nasdaq
+# listing universe: USD prices, America/New_York timestamps, NASDAQ exchange.
+class NearkConstituentResponse(BaseModel):
+    """A single Nasdaq-listed instrument tracked by the index feature."""
+
+    id: uuid.UUID
+    symbol: str
+    name: str
+    sector: Optional[str] = None
+    asset_class: str
+    market: str
+    active: bool = True
+    price: float = 0.0
+    change_pct: float = 0.0
+    nerk_weight: Optional[Decimal] = None
+
+    class Config:
+        from_attributes = True
+
+
+class NearkConstituentsResponse(BaseModel):
+    """Envelope for GET /nerk/constituents."""
+
+    status: str = "ok"
+    index: str
+    exchange: str
+    currency: str
+    count: int
+    data: List[NearkConstituentResponse] = Field(default_factory=list)
+    timestamp: str
+
+
+class NearkMover(BaseModel):
+    """A top gainer / top loser row."""
+
+    symbol: str
+    name: str
+    price: float = 0.0
+    change_pct: float = 0.0
+
+
+class NearkMarketOverviewResponse(BaseModel):
+    """Market-wide roll-up returned inside the index overview."""
+
+    market: str = "NASDAQ"
+    total_symbols: int = 0
+    active_symbols: int = 0
+    currency: str = "USD"
+    timezone: str = "America/New_York"
+    index: str
+    last_updated: str
+    constituents_count: int = 0
+    avg_change_pct: float = 0.0
+    gainers_count: int = 0
+    losers_count: int = 0
+
+
+class NearkOverviewResponse(BaseModel):
+    """Envelope for GET /nerk/overview."""
+
+    status: str = "ok"
+    index: str
+    exchange: str = "NASDAQ"
+    market_overview: NearkMarketOverviewResponse
+    constituents_count: int = 0
+    top_gainers: List[NearkMover] = Field(default_factory=list)
+    top_losers: List[NearkMover] = Field(default_factory=list)
+    avg_change_pct: float = 0.0
+    timestamp: str
+
+
+class NearkCandle(BaseModel):
+    """One daily OHLCV bar for an index constituent."""
+
+    timestamp: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int = 0
+    turnover: Optional[float] = None
+    adjusted_close: Optional[float] = None
+
+
+class NearkPriceHistoryResponse(BaseModel):
+    """Envelope for GET /nerk/price-history/{symbol}."""
+
+    status: str = "ok"
+    symbol: str
+    name: str
+    market: str = "NASDAQ"
+    period: str
+    count: int
+    data: List[NearkCandle] = Field(default_factory=list)
+    timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# Privacy / GDPR Schemas
+# ---------------------------------------------------------------------------
+class ConsentUpdate(BaseModel):
+    """Body for PUT /privacy/consent."""
+
+    consents: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Consent key/value pairs (e.g. marketing=True, analytics=False).",
+    )
+
+
+class PrivacyExportResponse(BaseModel):
+    """Envelope for GET /privacy/export — full user data export."""
+
+    exported_at: str
+    status: str = "ok"
+    user: Dict[str, Any] = Field(default_factory=dict)
+    watchlists: List[Dict[str, Any]] = Field(default_factory=list)
+    portfolios: List[Dict[str, Any]] = Field(default_factory=list)
+    preferences: List[Dict[str, Any]] = Field(default_factory=list)
+    notifications: List[Dict[str, Any]] = Field(default_factory=list)
+    alerts: List[Dict[str, Any]] = Field(default_factory=list)
+    market_settings: List[Dict[str, Any]] = Field(default_factory=list)
+    audit_logs: List[Dict[str, Any]] = Field(default_factory=list)

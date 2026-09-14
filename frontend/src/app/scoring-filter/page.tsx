@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FilterBuilder } from "@/components/filter/FilterBuilder";
 import { ActiveFilters } from "@/components/filter/ActiveFilters";
 import { IndustryQuickFilter } from "@/components/filter/IndustryQuickFilter";
@@ -10,6 +11,7 @@ import { LEVEL_LABELS, LEVEL_COLORS } from "@/types/filter";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useUXStore } from "@/store/useUXStore";
+import { QK } from "@/lib/query-keys";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -39,58 +41,42 @@ function createEmptyGroup(): FilterGroup {
 export default function ScoringFilterPage() {
   const addToast = useUXStore((state) => state.addToast);
 
-  const [fields, setFields] = useState<FilterableField[]>([]);
   const [query, setQuery] = useState<FilterGroup>(createEmptyGroup());
-  const [results, setResults] = useState<AdvancedFilterResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [industryFilter, setIndustryFilter] = useState<string[]>([]);
 
   const debouncedQuery = useDebounce(query, 500);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setError(null);
+  const filterPayload = useMemo(() => ({
+    query: debouncedQuery,
+    limit: 50,
+    offset: 0,
+    sort_by: "score",
+    sort_dir: "desc" as const,
+  }), [debouncedQuery]);
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await fetchFilterableFields();
-        if (!cancelled) setFields(data);
-      } catch {
-        if (!cancelled) addToast({ type: "error", message: "Failed to load filter fields" });
-      }
-    })();
+  const { data: fields = [], error: fieldsError } = useQuery<FilterableField[]>({
+    queryKey: QK.filter.fields(),
+    queryFn: fetchFilterableFields,
+  });
 
-    return () => { cancelled = true; };
-  }, [addToast]);
+  const { data: results, isLoading: loading, error: filterError, refetch } = useQuery<AdvancedFilterResponse | null>({
+    queryKey: QK.filter.advanced(filterPayload),
+    queryFn: () => fetchAdvancedFilter(filterPayload),
+    enabled: true,
+  });
 
-  const applyFilter = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = {
-        query: debouncedQuery,
-        limit: 50,
-        offset: 0,
-        sort_by: "score",
-        sort_dir: "desc" as const,
-      };
-      const data = await fetchAdvancedFilter(payload);
-      setResults(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Filter failed";
-      setError(message);
-      addToast({ type: "error", message });
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQuery, addToast]);
+  const error = fieldsError
+    ? "Failed to load filter fields"
+    : filterError
+      ? (filterError instanceof Error ? filterError.message : "Filter failed")
+      : null;
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    applyFilter();
-  }, [applyFilter]);
+  if (error && !fields.length && !results) {
+    // Only show toast for fields error once
+    useMemo(() => {
+      if (fieldsError) addToast({ type: "error", message: "Failed to load filter fields" });
+    }, [fieldsError, addToast]);
+  }
 
   const handleApply = useCallback(() => {
     setQuery((q) => ({ ...q }));
@@ -161,7 +147,7 @@ export default function ScoringFilterPage() {
       {error && (
         <ErrorMessage
           message={error}
-          actions={[{ label: "Retry", onAction: () => setQuery((q) => ({ ...q })) }]}
+          actions={[{ label: "Retry", onAction: () => refetch() }]}
         />
       )}
 

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getApiErrorMessage } from "@/lib/api";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { searchNews } from "@/lib/api/news";
 import { useStockSearch } from "@/hooks/useStockSearch";
+import { QK } from "@/lib/query-keys";
 
 export type SearchStatus = "idle" | "loading" | "success" | "error" | "empty";
 
@@ -232,50 +233,44 @@ export function useUnifiedSearch(options: UseUnifiedSearchOptions = {}) {
   const debouncedQuery = useDebouncedValue(query, 300);
 
   const stockSearch = useStockSearch(minQueryLength);
-  const [news, setNews] = useState<NewsSearchItem[]>([]);
-  const [newsStatus, setNewsStatus] = useState<SearchStatus>("idle");
-  const [newsError, setNewsError] = useState<string | null>(null);
-  const newsAbortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    const trimmed = debouncedQuery.trim();
-    newsAbortRef.current?.abort();
-    if (trimmed.length < minQueryLength) {
-      return;
-    }
+  const trimmedForNews = debouncedQuery.trim();
+  const canSearchNews = trimmedForNews.length >= minQueryLength;
 
-    const controller = new AbortController();
-    newsAbortRef.current = controller;
+  const newsQ = useQuery({
+    queryKey: QK.news.search(trimmedForNews, newsLimit),
+    queryFn: () =>
+      searchNews(trimmedForNews, newsLimit).then((items) =>
+        items.slice(0, newsLimit).map((it) => ({
+          kind: "news" as const,
+          id: it.url || `${it.title}-${it.published_at}`,
+          title: it.title,
+          source: it.source || "Unknown",
+          url: it.url || "",
+          publishedAt: it.published_at || "",
+          category: it.category ?? null,
+          isMarketMoving: Boolean(it.is_market_moving),
+        }))
+      ),
+    enabled: canSearchNews,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+  });
 
-    (async () => {
-      setNewsStatus("loading");
-      setNewsError(null);
-      try {
-        const items = await searchNews(trimmed, newsLimit);
-        if (controller.signal.aborted) return;
-        setNews(
-          items.slice(0, newsLimit).map((it) => ({
-            kind: "news" as const,
-            id: it.url || `${it.title}-${it.published_at}`,
-            title: it.title,
-            source: it.source || "Unknown",
-            url: it.url || "",
-            publishedAt: it.published_at || "",
-            category: it.category ?? null,
-            isMarketMoving: Boolean(it.is_market_moving),
-          }))
-        );
-        setNewsStatus(items.length === 0 ? "empty" : "success");
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setNews([]);
-        setNewsError(getApiErrorMessage(err));
-        setNewsStatus("error");
-      }
-    })();
-
-    return () => controller.abort();
-  }, [debouncedQuery, minQueryLength, newsLimit]);
+  const news: NewsSearchItem[] = newsQ.data ?? [];
+  const newsStatus: SearchStatus = !canSearchNews
+    ? "idle"
+    : newsQ.isLoading
+      ? "loading"
+      : newsQ.isError
+        ? "error"
+        : news.length === 0
+          ? "empty"
+          : "success";
+  const newsError: string | null = newsQ.error
+    ? (newsQ.error as Error).message ?? "News search failed"
+    : null;
 
   const trimmed = debouncedQuery.trim();
   const showPages = trimmed.length >= minQueryLength;
@@ -324,9 +319,6 @@ export function useUnifiedSearch(options: UseUnifiedSearchOptions = {}) {
   const clear = useCallback(() => {
     setQuery("");
     stockSearch.clearResults();
-    setNews([]);
-    setNewsStatus("idle");
-    setNewsError(null);
   }, [stockSearch]);
 
   return {

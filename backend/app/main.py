@@ -88,6 +88,14 @@ from app.api.routes import (
     data_health_router,
     dashboard_router,
     filter_router,
+    nerk_router,
+    privacy_router,
+    alerts_router,
+    observability_router,
+    security_audit_router,
+    service_map_router,
+    compare_router,
+    forecast_router,
 )
 
 logging.basicConfig(
@@ -437,33 +445,6 @@ async def lifespan(app: FastAPI):
             _container = DependencyContainer()
             set_global_container(_container)
 
-    # Register all routers (outside try/except so routes are always available)
-    app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
-    app.include_router(password_reset_router, prefix="/api/v1/auth", tags=["auth"])
-    app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
-    app.include_router(market_router, prefix="/api/v1/market", tags=["market"])
-    app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["analysis"])
-    app.include_router(portfolio_router, prefix="/api/v1/portfolio", tags=["portfolio"])
-    app.include_router(history_router, prefix="/api/v1/history", tags=["history"])
-    app.include_router(news_router, prefix="/api/v1/news", tags=["news"])
-    app.include_router(ml_router, prefix="/api/v1/ml", tags=["ml"])
-    app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
-    app.include_router(watchlists_router, prefix="/api/v1/watchlists", tags=["watchlists"])
-    app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
-    app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
-    app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
-    app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
-    app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
-    app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
-    app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
-    app.include_router(data_health_router, tags=["data-health"])
-    app.include_router(dashboard_router, prefix="/api/v1/analysis", tags=["dashboard"])
-    app.include_router(filter_router, prefix="/api/v1/filter", tags=["filter"])
-    app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
-    app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
-    app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
-
-    logger.info("Registered all API routes")
     logger.info("BedaanWaves application ready")
 
     yield
@@ -523,6 +504,47 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+# ---------------------------------------------------------------------------
+# Router registration
+# ---------------------------------------------------------------------------
+# Core routers
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(password_reset_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(stocks_router, prefix="/api/v1/stocks", tags=["stocks"])
+app.include_router(market_router, prefix="/api/v1/market", tags=["market"])
+app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["analysis"])
+app.include_router(portfolio_router, prefix="/api/v1/portfolio", tags=["portfolio"])
+app.include_router(history_router, prefix="/api/v1/history", tags=["history"])
+app.include_router(news_router, prefix="/api/v1/news", tags=["news"])
+app.include_router(ml_router, prefix="/api/v1/ml", tags=["ml"])
+app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
+app.include_router(watchlists_router, prefix="/api/v1/watchlists", tags=["watchlists"])
+app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(specialized_router, prefix="/api/v1/specialized", tags=["specialized"])
+app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+app.include_router(live_router, prefix="/api/v1/live", tags=["live"])
+app.include_router(live_sse_router, prefix="/api/v1/live", tags=["live-sse"])
+app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
+app.include_router(market_data_router, prefix="/api/v1/market-data", tags=["market-data"])
+app.include_router(data_health_router, tags=["data-health"])
+app.include_router(dashboard_router, prefix="/api/v1/analysis", tags=["dashboard"])
+app.include_router(filter_router, prefix="/api/v1/filter", tags=["filter"])
+app.include_router(symbols_router, prefix="/api/v1/symbols", tags=["symbols"])
+app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(ranking_router, prefix="/api/v1/ranking", tags=["ranking"])
+
+# Previously orphaned routers — now mounted
+app.include_router(nerk_router, prefix="/api/v1/nerk", tags=["nerk"])
+app.include_router(privacy_router, prefix="/api/v1/privacy", tags=["privacy"])
+app.include_router(alerts_router, prefix="/api/v1/alerts", tags=["alerts"])
+app.include_router(observability_router, prefix="/api/v1/system/observability", tags=["observability"])
+app.include_router(security_audit_router, prefix="/api/v1/security", tags=["security-audit"])
+app.include_router(service_map_router, prefix="/api/v1/system", tags=["service-map"])
+app.include_router(compare_router, prefix="/api/v1", tags=["compare"])
+app.include_router(forecast_router, prefix="/api/v1", tags=["forecast"])
+
+logger.info("Registered all API routes")
 
 
 def custom_openapi():

@@ -147,11 +147,30 @@ def upgrade() -> None:
             DEFAULT;
         """)
 
-        # Copy data from old table to new partitioned table
-        op.execute("""
-            INSERT INTO scoring_snapshots_new
-            SELECT * FROM scoring_snapshots;
-        """)
+        # Copy data from old table to new partitioned table (only if there's data)
+        result = op.get_bind().execute(sa.text("SELECT COUNT(*) FROM scoring_snapshots"))
+        row_count = result.scalar()
+        
+        if row_count > 0:
+            # Explicitly map columns to avoid type mismatches
+            # The old table may have different structure, so we map what we can
+            op.execute("""
+                INSERT INTO scoring_snapshots_new (
+                    id, asset_id, date, snapshot_tier, effective_at,
+                    level, level_key, level_name, score, score_change,
+                    industry, company_id, timestamp, extra_fields
+                )
+                SELECT 
+                    id, asset_id, 
+                    COALESCE(date, timestamp::date) as date,
+                    snapshot_tier, effective_at,
+                    COALESCE(level, 'overall'::snapshot_level) as level,
+                    COALESCE(level_key, 'default') as level_key,
+                    COALESCE(level_name, 'Default') as level_name,
+                    score, score_change,
+                    industry, company_id, timestamp, extra_fields
+                FROM scoring_snapshots;
+            """)
 
         # Drop old table and rename new one
         op.execute("DROP TABLE scoring_snapshots CASCADE;")

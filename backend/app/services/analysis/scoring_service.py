@@ -1,9 +1,13 @@
 """
 Scoring Service - Tier 3 Analysis Service
 
-6D Scoring System with 305-node hierarchy (4 levels).
+6D Scoring System with a 4-level hierarchy.
 Comprehensive stock scoring for US/OTC and foreign exchanges.
 Now supports ML-driven dynamic coefficient learning.
+
+The hierarchy is *derived*, not hardcoded: every level comes from
+``scoring_engine_v2.METRIC_UNIVERSE`` via ``app.services.analysis.hierarchy``,
+which is the single source of truth shared with the trend endpoints.
 """
 
 from typing import Any, Dict, List, Optional
@@ -13,18 +17,29 @@ from ..core import AnalysisService
 from ..ml import CoefficientLearningService
 from app.services.core.dependency_container import get_global_container
 from app.core.utils import utc_now_iso
+from app.services.analysis.hierarchy import (
+    ASPECT_TO_PARENT,
+    SUB_ASPECT_TO_PARENT,
+    SUB_DIMENSION_TO_PARENT,
+    V2_ASPECTS,
+    V2_DIMENSIONS,
+    V2_SUB_ASPECTS,
+    V2_SUB_DIMENSIONS,
+)
 
 
 class ScoringService(AnalysisService):
     """
-    6D Scoring service with 305-node hierarchy.
-    
-    Hierarchy:
-    - Level 1: 6 Dimensions (fundamental, technical, sentiment, risk, macro, ai)
-    - Level 2: 40 Sub-Dimensions
-    - Level 3: 80 Aspects
-    - Level 4: 173 Sub-Aspects
-    
+    6D Scoring service with a 4-level hierarchy derived from METRIC_UNIVERSE.
+
+    Hierarchy (counts come from ``app.services.analysis.hierarchy``):
+    - Level 1: Dimensions (fundamental, technical, sentiment, risk, macro, ai)
+    - Level 2: Sub-Dimensions
+    - Level 3: Aspects
+    - Level 4: Sub-Aspects
+
+    Call :meth:`get_hierarchy_info` for the authoritative live counts.
+
     6D Aggregation now uses ML-learned weights with fallback to static weights:
     - Fundamental (learned, fallback 25%)
     - Technical (learned, fallback 20%)
@@ -78,114 +93,80 @@ class ScoringService(AnalysisService):
         self.logger.info("ScoringService shutdown")
     
     def _build_hierarchy(self) -> None:
-        """Build 4-level 320-node hierarchy."""
-        level1 = self._build_level1_dimensions()
-        sub_dim_map = self._build_sub_dimension_map()
-        level2 = self._build_level2_sub_dimensions(sub_dim_map)
-        level3 = self._build_level3_aspects(level2)
-        level4 = self._build_level4_sub_aspects(level3)
-        
-        self._hierarchy.update({d["id"]: {"level": 1, **d} for d in level1})
-        self._hierarchy.update({sd["id"]: {"level": 2, **sd} for sd in level2})
-        self._hierarchy.update({a["id"]: {"level": 3, **a} for a in level3})
-        self._hierarchy.update({sa["id"]: {"level": 4, **sa} for sa in level4})
-        
+        """Build the 4-level hierarchy from the canonical v2 definition.
+
+        Every node id is a real metric key from
+        ``scoring_engine_v2.METRIC_UNIVERSE`` (surfaced via
+        ``app.services.analysis.hierarchy``), so the tree reported by
+        :meth:`get_hierarchy_info` is the same tree the scoring pipeline
+        actually uses. Level 1 weights come from ``DIMENSION_WEIGHTS``.
+        """
+        self._hierarchy = {}
+
+        for dim in V2_DIMENSIONS:
+            self._hierarchy[dim] = {
+                "level": 1,
+                "id": dim,
+                "name": dim,
+                "group": dim,
+                "parent_id": None,
+                "weight": self.DIMENSION_WEIGHTS.get(dim, 0.0),
+            }
+
+        for sub_dim in V2_SUB_DIMENSIONS:
+            self._hierarchy[sub_dim] = {
+                "level": 2,
+                "id": sub_dim,
+                "name": sub_dim,
+                "parent_id": SUB_DIMENSION_TO_PARENT.get(sub_dim),
+            }
+
+        for aspect in V2_ASPECTS:
+            self._hierarchy[aspect] = {
+                "level": 3,
+                "id": aspect,
+                "name": aspect,
+                "parent_id": ASPECT_TO_PARENT.get(aspect),
+            }
+
+        for sub_aspect in V2_SUB_ASPECTS:
+            self._hierarchy[sub_aspect] = {
+                "level": 4,
+                "id": sub_aspect,
+                "name": sub_aspect,
+                "parent_id": SUB_ASPECT_TO_PARENT.get(sub_aspect),
+            }
+
         self._verify_hierarchy_counts()
-    
-    def _build_level1_dimensions(self) -> List[Dict[str, Any]]:
-        """Build level 1 dimension definitions."""
-        return [
-            {"id": "d1", "name": "fundamental_price", "group": "fundamental", "weight": 0.15},
-            {"id": "d2", "name": "technical_moving_avg", "group": "technical", "weight": 0.10},
-            {"id": "d3", "name": "sentiment_news", "group": "sentiment", "weight": 0.08},
-            {"id": "d4", "name": "risk_market", "group": "risk", "weight": 0.10},
-            {"id": "d5", "name": "macro_gdp", "group": "macro", "weight": 0.08},
-            {"id": "d6", "name": "ai_prediction", "group": "ai", "weight": 0.08},
-            {"id": "d7", "name": "fundamental_corporate_actions", "group": "fundamental", "weight": 0.07},
-            {"id": "d8", "name": "fundamental_liquidity", "group": "fundamental", "weight": 0.07},
-            {"id": "d9", "name": "fundamental_profitability", "group": "fundamental", "weight": 0.07},
-            {"id": "d10", "name": "fundamental_efficiency", "group": "fundamental", "weight": 0.07},
-            {"id": "d11", "name": "fundamental_valuation", "group": "fundamental", "weight": 0.07},
-            {"id": "d12", "name": "fundamental_growth", "group": "fundamental", "weight": 0.07},
-        ]
-    
-    def _build_sub_dimension_map(self) -> Dict[str, List[str]]:
-        """Build sub-dimension mapping for level 2."""
-        return {
-            "d1": ["price_history", "ohlcv", "corporate_actions"],
-            "d2": ["moving_averages", "momentum", "volatility", "volume", "trend"],
-            "d3": ["news_sentiment", "social_sentiment", "analyst_sentiment"],
-            "d4": ["market_risk", "credit_risk", "operational_risk", "liquidity_risk"],
-            "d5": ["gdp", "inflation", "interest_rates", "exchange_rates", "commodity_prices"],
-            "d6": ["ml_prediction", "pattern_recognition", "anomaly_detection"],
-            "d7": ["current_ratio", "quick_ratio", "cash_ratio", "working_capital"],
-            "d8": ["roe", "roa", "roic", "gross_margin", "net_margin"],
-            "d9": ["asset_turnover", "inventory_turnover", "receivables_turnover"],
-            "d10": ["pe_ratio", "pb_ratio", "peg_ratio", "ev_ebitda"],
-            "d11": ["eps_growth", "revenue_growth", "book_value_growth"],
-            "d12": ["earnings_quality", "accounting_quality", "governance"],
-        }
-    
-    def _build_level2_sub_dimensions(self, sub_dim_map: Dict[str, List[str]]) -> List[Dict[str, Any]]:
-        """Build level 2 sub-dimensions from parent mapping."""
-        level2 = []
-        sub_dim_id = 0
-        for parent_id, children in sub_dim_map.items():
-            for child in children:
-                sub_dim_id += 1
-                level2.append({
-                    "id": f"sd{sub_dim_id}",
-                    "parent_id": parent_id,
-                    "name": child,
-                })
-        return level2
-    
-    def _build_level3_aspects(self, level2: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Build level 3 aspects (2 per sub-dimension)."""
-        level3 = []
-        aspect_id = 0
-        for sub in level2:
-            for i in range(2):
-                aspect_id += 1
-                level3.append({
-                    "id": f"a{aspect_id}",
-                    "parent_id": sub["id"],
-                    "name": f"{sub['name']}_aspect_{i+1}",
-                })
-        return level3
-    
-    def _build_level4_sub_aspects(self, level3: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Build level 4 sub-aspects distributed across aspects."""
-        level4 = []
-        sub_id = 0
-        total_aspects = len(level3)
-        base_count = 173 // total_aspects
-        remainder = 173 % total_aspects
-        
-        for idx, aspect in enumerate(level3):
-            count_for_this_aspect = base_count + (1 if idx < remainder else 0)
-            for i in range(count_for_this_aspect):
-                if sub_id >= 173:
-                    break
-                sub_id += 1
-                level4.append({
-                    "id": f"sa{sub_id}",
-                    "parent_id": aspect["id"],
-                    "name": f"{aspect['name']}_detail_{i+1}",
-                })
-        return level4
-    
+
     def _verify_hierarchy_counts(self) -> None:
-        """Verify hierarchy node counts at each level."""
+        """Verify the derived hierarchy matches the canonical definition."""
         level1_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 1)
         level2_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 2)
         level3_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 3)
         level4_count = sum(1 for v in self._hierarchy.values() if v.get("level") == 4)
-        
-        self.logger.debug(
-            f"Hierarchy built: L1={level1_count}, L2={level2_count}, "
-            f"L3={level3_count}, L4={level4_count}"
+
+        expected = (
+            len(V2_DIMENSIONS),
+            len(V2_SUB_DIMENSIONS),
+            len(V2_ASPECTS),
+            len(V2_SUB_ASPECTS),
         )
+        actual = (level1_count, level2_count, level3_count, level4_count)
+
+        if actual != expected:
+            self.logger.warning(
+                "Hierarchy drift: derived L1=%d L2=%d L3=%d L4=%d but the canonical "
+                "definition has L1=%d L2=%d L3=%d L4=%d",
+                *actual, *expected,
+            )
+        else:
+            self.logger.debug(
+                "Hierarchy built from canonical v2 definition: L1=%d, L2=%d, L3=%d, L4=%d "
+                "(%d nodes total)",
+                level1_count, level2_count, level3_count, level4_count,
+                len(self._hierarchy),
+            )
 
     def _get_dynamic_weights(self, level: str = "dimensions") -> Dict[str, float]:
         """

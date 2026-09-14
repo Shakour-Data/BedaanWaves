@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Trophy, TrendingUp, ArrowUpRight } from "lucide-react";
-import { fetchTopPerformers, type LeaderboardResponse, type Level } from "@/lib/api/dashboard";
+import { fetchTopPerformers, type Level } from "@/lib/api/dashboard";
+import { QK } from "@/lib/query-keys";
 import { LevelSelector } from "@/components/leaderboard/LevelSelector";
 import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { useUXStore } from "@/store/useUXStore";
 
 const LEVEL_LABELS: Record<Level, string> = {
   overall: "Overall Top Performers",
@@ -27,34 +28,18 @@ const LEVEL_DESCRIPTIONS: Record<Level, string> = {
 };
 
 export default function LeaderboardPage() {
-  const addToast = useUXStore((state) => state.addToast);
-
   const [level, setLevel] = useState<Level>("overall");
   const [dimension, setDimension] = useState<string>("fundamental");
   const [limit, setLimit] = useState(10);
-  const [data, setData] = useState<LeaderboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchTopPerformers({ level, dimension, limit });
-      setData(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load leaderboard";
-      setError(message);
-      addToast({ type: "error", message });
-    } finally {
-      setLoading(false);
-    }
-  }, [level, dimension, limit, addToast]);
+  const { data, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: QK.topPerformers({ level, dimension, limit }),
+    queryFn: () => fetchTopPerformers({ level, dimension, limit }),
+  });
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadData();
-  }, [loadData]);
+  const error = queryError
+    ? (queryError instanceof Error ? queryError.message : "Failed to load leaderboard")
+    : null;
 
   const handleLevelChange = (newLevel: Level) => {
     setLevel(newLevel);
@@ -76,7 +61,7 @@ export default function LeaderboardPage() {
       <div className="flex min-h-[40vh] items-center justify-center">
         <ErrorMessage
           message={error}
-          actions={[{ label: "Retry", onAction: () => { setError(null); loadData(); } }]}
+          actions={[{ label: "Retry", onAction: () => { refetch(); } }]}
           moreHelpSteps={["Check your internet connection", "Verify the API service is running"]}
           helpTitle="Troubleshooting steps"
         />

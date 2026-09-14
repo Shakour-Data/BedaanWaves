@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, RefreshCw, Globe } from "lucide-react";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { PageLoading } from "@/components/ui/PageLoading";
@@ -11,10 +12,8 @@ import { cn } from "@/lib/cn";
 import {
   fetchNerkConstituents,
   fetchNerkOverview,
-  type NerkConstituent,
-  type NerkOverviewResponse,
 } from "@/lib/api/nerk";
-import { useUXStore } from "@/store/useUXStore";
+import { QK } from "@/lib/query-keys";
 
 interface MoversRow {
   symbol: string;
@@ -25,57 +24,36 @@ interface MoversRow {
 }
 
 export default function NerkConstituentsPage() {
-  const addToast = useUXStore((s) => s.addToast);
-  const [overview, setOverview] = useState<NerkOverviewResponse | null>(null);
-  const [constituents, setConstituents] = useState<NerkConstituent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    data: overview = null,
+    isLoading: overviewLoading,
+    error: overviewError,
+    refetch: refetchOverview,
+  } = useQuery({
+    queryKey: QK.nerk.overview(),
+    queryFn: fetchNerkOverview,
+  });
 
-  const load = useCallback(async (mode: "initial" | "refresh") => {
-    if (mode === "initial") setLoading(true);
-    else setRefreshing(true);
-    setError(null);
-    try {
-      const [overviewData, constituentsData] = await Promise.allSettled([
-        fetchNerkOverview(),
-        fetchNerkConstituents(),
-      ]);
+  const {
+    data: constituents = [],
+    isLoading: constituentsLoading,
+    isFetching,
+    refetch: refetchConstituents,
+  } = useQuery({
+    queryKey: QK.nerk.constituents(),
+    queryFn: fetchNerkConstituents,
+  });
 
-      if (overviewData.status === "rejected" && constituentsData.status === "rejected") {
-        const msg =
-          (overviewData.reason instanceof Error && overviewData.reason.message) ||
-          (constituentsData.reason instanceof Error && constituentsData.reason.message) ||
-          "Failed to load Neark data";
-        setError(msg);
-        if (mode === "initial") {
-          addToast({ type: "error", message: msg });
-        }
-        return;
-      }
+  const loading = overviewLoading && constituentsLoading;
+  const refreshing = isFetching;
+  const error = overviewError
+    ? (overviewError instanceof Error ? overviewError.message : "Failed to load Nasdaq data")
+    : null;
 
-      if (overviewData.status === "fulfilled") {
-        setOverview(overviewData.value);
-      }
-      if (constituentsData.status === "fulfilled") {
-        setConstituents(constituentsData.value);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load Neark data";
-      setError(msg);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [addToast]);
-
-  const initialLoadRef = useRef(true);
-  useEffect(() => {
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
-      void load("initial");
-    }
-  }, [load]);
+  const handleRefresh = () => {
+    refetchOverview();
+    refetchConstituents();
+  };
 
   const topGainers = useMemo<MoversRow[]>(
     () =>
@@ -113,7 +91,7 @@ export default function NerkConstituentsPage() {
 
   if (loading) {
     return (
-      <NewDashboardShell title="Neark Constituents">
+      <NewDashboardShell title="Nasdaq Constituents">
         <PageLoading />
       </NewDashboardShell>
     );
@@ -121,11 +99,11 @@ export default function NerkConstituentsPage() {
 
   if (error && !overview) {
     return (
-      <NewDashboardShell title="Neark Constituents">
+      <NewDashboardShell title="Nasdaq Constituents">
         <ErrorMessage
           message={error}
           actions={[
-            { label: "Retry", onAction: () => load("initial") },
+            { label: "Retry", onAction: () => handleRefresh() },
           ]}
         />
       </NewDashboardShell>
@@ -133,13 +111,13 @@ export default function NerkConstituentsPage() {
   }
 
   return (
-    <NewDashboardShell title="Neark Constituents">
+    <NewDashboardShell title="Nasdaq Constituents">
       <div className="mb-6 flex items-center justify-between">
         <p className="text-[var(--color-text-muted)]">
-          Neark (نزدک) constituents overview
+          Nasdaq (نزدک) constituents overview
         </p>
         <button
-          onClick={() => load("refresh")}
+          onClick={() => handleRefresh()}
           disabled={refreshing}
           className={cn(
             "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",

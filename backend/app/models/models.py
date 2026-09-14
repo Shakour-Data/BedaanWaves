@@ -58,7 +58,7 @@ class Asset(Base):
 
     # Geographic
     country_code = Column(String(2))
-    currency = Column(String(3), default="IRR")
+    currency = Column(String(3), default="USD")
 
     # Identifiers
     isin_code = Column(String(12))
@@ -68,6 +68,12 @@ class Asset(Base):
     active = Column(Boolean, default=True, index=True)
     listing_date = Column(DateTime)
     delisting_date = Column(DateTime)
+
+    # Index membership — created by migration 20260908_add_nerk_support.
+    # ``is_nerk_constituent`` flags membership of the tracked Nasdaq index;
+    # ``nerk_weight`` is the (optional) index weight of the asset.
+    is_nerk_constituent = Column(Boolean, default=False, index=True)
+    nerk_weight = Column(Numeric(10, 4), nullable=True)
 
     # Metadata
     meta = Column("metadata", JSONB, default={})
@@ -262,7 +268,7 @@ class Portfolio(Base):
     description = Column(Text)
     portfolio_type = Column(String(20), default="PERSONAL")  # PERSONAL, WATCHLIST, PAPER_TRADING
 
-    base_currency = Column(String(3), default="IRR")
+    base_currency = Column(String(3), default="USD")
     rebalance_frequency = Column(String(20))
     target_allocation = Column(JSONB, default={})
 

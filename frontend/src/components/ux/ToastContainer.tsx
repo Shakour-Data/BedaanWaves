@@ -47,7 +47,7 @@ export function ToastContainer() {
   const { toasts, removeToast } = useUXStore();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
   if (!mounted) return null;
 

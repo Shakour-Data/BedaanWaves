@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '2fe829003863'
-down_revision: Union[str, None] = '20260908_standardize_grades_and_partition_snapshots'
+down_revision: Union[str, None] = '20260913_add_perf_score_idx'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -53,6 +53,9 @@ def _constraint_exists(table_name: str, constraint_name: str) -> bool:
 
 
 def upgrade() -> None:
+    # Enable pgcrypto extension for encryption functions
+    op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+    
     # ============================================================
     # 1. Add security fields to users table
     # ============================================================

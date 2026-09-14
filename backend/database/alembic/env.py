@@ -2,6 +2,12 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from the backend root (one level up from database/alembic/)
+backend_root = Path(__file__).parent.parent.parent
+load_dotenv(backend_root / ".env")
 
 config = context.config
 
@@ -14,6 +20,12 @@ target_metadata = Base.metadata
 
 db_url = os.environ.get("DATABASE_URL")
 if db_url:
+    # Alembic is synchronous — strip the async driver suffix if present.
+    db_url = db_url.replace("postgresql+asyncpg://", "postgresql://").replace(
+        "postgres+asyncpg://", "postgresql://"
+    )
+    # Escape % as %% for configparser interpolation.
+    db_url = db_url.replace("%", "%%")
     config.set_main_option("sqlalchemy.url", db_url)
 
 

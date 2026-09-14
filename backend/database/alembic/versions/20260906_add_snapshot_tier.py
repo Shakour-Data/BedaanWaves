@@ -1,9 +1,13 @@
 """Add snapshot_tier and effective_at to scoring_snapshots.
 
 Revision ID: 20260906_add_snapshot_tier
-Revises: 20260905_add_hierarchy_scores_to_score_history
+Revises: 20260906_create_scoring_snapshots
 Create Date: 2026-09-06 00:00:00.000000
 
+Historical note: this used to be a *sibling* of
+``20260906_create_scoring_snapshots`` (both revising ``20260905``), so alembic
+could apply it before the table existed and fail. It now revises that migration
+directly, guaranteeing ``scoring_snapshots`` exists before it is altered.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -13,7 +17,7 @@ import enum
 
 # revision identifiers, used by Alembic.
 revision = "20260906_add_snapshot_tier"
-down_revision = "20260905_add_hierarchy_scores_to_score_history"
+down_revision = "20260906_create_scoring_snapshots"
 branch_labels = None
 depends_on = None
 

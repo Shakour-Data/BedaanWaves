@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, ArrowUpRight, Info } from "lucide-react";
-import { fetchBiggestMovers, type LeaderboardResponse } from "@/lib/api/dashboard";
+import { fetchBiggestMovers } from "@/lib/api/dashboard";
+import { QK } from "@/lib/query-keys";
 import type { Level } from "@/components/leaderboard/LevelSelector";
 import { LevelSelector } from "@/components/leaderboard/LevelSelector";
 import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
@@ -36,42 +38,15 @@ export default function MoversPage() {
   const [dimension, setDimension] = useState<string>("fundamental");
   const [limit, setLimit] = useState(10);
   const [days, setDays] = useState(1);
-  const [data, setData] = useState<LeaderboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
+  const { data, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: QK.biggestMovers({ level, dimension, limit, days }),
+    queryFn: () => fetchBiggestMovers({ level, dimension, limit, days }),
+  });
 
-    async function loadData() {
-      try {
-        const result = await fetchBiggestMovers({ level, dimension, limit, days });
-        if (active) {
-          setData(result);
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to load movers";
-        if (active) {
-          setError(message);
-          addToast({ type: "error", message });
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadData();
-
-    return () => {
-      active = false;
-    };
-  }, [level, dimension, limit, days, addToast]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const error = queryError
+    ? (queryError instanceof Error ? queryError.message : "Failed to load movers")
+    : null;
 
   const handleLevelChange = (newLevel: Level) => {
     setLevel(newLevel);
@@ -93,7 +68,7 @@ export default function MoversPage() {
       <div className="flex min-h-[40vh] items-center justify-center">
         <ErrorMessage
           message={error}
-          actions={[{ label: "Retry", onAction: () => { setError(null); /* trigger reload */ } }]}
+          actions={[{ label: "Retry", onAction: () => { refetch(); } }]}
           moreHelpSteps={["Check your internet connection", "Verify the API service is running"]}
           helpTitle="Troubleshooting steps"
         />

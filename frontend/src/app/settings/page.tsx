@@ -4,10 +4,12 @@ import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useUXStore } from "@/store/useUXStore";
 import { cn } from "@/lib/cn";
+import { QK } from "@/lib/query-keys";
 
 interface MarketData {
   [country: string]: {
@@ -26,6 +28,7 @@ interface Country {
 
 export default function SettingsPage() {
   const addToast = useUXStore((state) => state.addToast);
+  const queryClient = useQueryClient();
   const [selectedCountry, setSelectedCountry] = useState("us");
   const [selectedIndex, setSelectedIndex] = useState("spx");
   const [selectedStock, setSelectedStock] = useState("");
@@ -36,33 +39,37 @@ export default function SettingsPage() {
     sms: false,
     telegram: true
   });
-  const [marketData, setMarketData] = useState<MarketData | null>(null);
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    async function loadInitialData() {
-      setLoading(true);
-      try {
-        const [prefsRes, countriesRes] = await Promise.all([
-          apiClient.get("settings/market-preferences"),
-          apiClient.get("settings/countries")
-        ]);
-        
-        if (active) {
-          if (prefsRes.data) setMarketData(prefsRes.data);
-          if (countriesRes.data) setCountries(countriesRes.data);
-        }
-      } catch (error) {
-        console.error("Failed to load settings data", error);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    loadInitialData();
-    return () => { active = false; };
-  }, []);
+  const { data: marketData, isLoading: loadingPrefs } = useQuery<MarketData | null>({
+    queryKey: QK.settings.marketPreferences(),
+    queryFn: async () => {
+      const res = await apiClient.get("settings/market-preferences");
+      return res.data ?? null;
+    },
+  });
+
+  const { data: countries = [], isLoading: loadingCountries } = useQuery<Country[]>({
+    queryKey: QK.settings.countries(),
+    queryFn: async () => {
+      const res = await apiClient.get("settings/countries");
+      return res.data ?? [];
+    },
+  });
+
+  const loading = loadingPrefs || loadingCountries;
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: unknown) => {
+      await apiClient.post("settings/market-preferences", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QK.settings.marketPreferences() });
+      addToast({ type: "success", message: "Settings saved successfully" });
+    },
+    onError: (error) => {
+      addToast({ type: "error", message: getApiErrorMessage(error) });
+    },
+  });
 
   const data = marketData ? marketData[selectedCountry] : null;
   const countryInfo = countries.find(c => c.id === selectedCountry);
@@ -74,28 +81,16 @@ export default function SettingsPage() {
     }));
   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      await apiClient.post("settings/market-preferences", {
-        ...marketData,
-        [selectedCountry]: {
-          ...data,
-          index: selectedIndex,
-          stock: selectedStock,
-          industry: selectedIndustry },
-        notifications,
-      });
-      const [prefsRes] = await Promise.all([
-        apiClient.get("settings/market-preferences"),
-      ]);
-      if (prefsRes.data) setMarketData(prefsRes.data);
-      addToast({ type: "success", message: "Settings saved successfully" });
-    } catch (error) {
-      addToast({ type: "error", message: getApiErrorMessage(error) });
-    } finally {
-      setLoading(false);
-    }
+  const handleSave = () => {
+    saveMutation.mutate({
+      ...marketData,
+      [selectedCountry]: {
+        ...data,
+        index: selectedIndex,
+        stock: selectedStock,
+        industry: selectedIndustry },
+      notifications,
+    });
   };
 
   const notificationTypes = [

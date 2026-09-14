@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { NewsList } from "@/components/shared/NewsList";
 import { cn } from "@/lib/cn";
@@ -8,6 +9,7 @@ import { apiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import type { NewsItem } from "@/lib/dashboard-data";
 import { formatTimeAgo } from "@/lib/utils";
+import { QK } from "@/lib/query-keys";
 import {
   useLiveData,
   LiveConnectionIndicator,
@@ -91,39 +93,27 @@ function NewsListWithBadges({ items }: NewsListWithBadgesProps) {
 export default function NewsPage() {
   const [newsItems, setNewsItems] = useState<LiveNewsItem[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const lastNewsEventRef = useRef<number | null>(null);
   const itemIdCounter = useRef(0);
 
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: QK.news.market(20),
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: NewsItem[] }>("/news/market?limit=20");
+      return res.data?.data ?? [];
+    },
+  });
+
   useEffect(() => {
-    let active = true;
-
-    async function loadNews() {
-      setLoading(true);
-      try {
-        const newsRes = await apiClient.get<{ data: NewsItem[] }>("/news/market?limit=20");
-
-        if (active) {
-          const rawItems: NewsItem[] = newsRes.data?.data || [];
-          const formatted: LiveNewsItem[] = rawItems.map((item, idx) => ({
-            title: item.title,
-            source: item.source || "Unknown",
-            time: item.time || formatTimeAgo(new Date().toISOString()),
-            id: `rest-${idx}-${Date.now()}`,
-          }));
-
-          setNewsItems(formatted);
-        }
-      } catch {
-        // ignore
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    loadNews();
-    return () => { active = false; };
-  }, []);
+    if (!queryData) return;
+    const formatted: LiveNewsItem[] = queryData.map((item, idx) => ({
+      title: item.title,
+      source: item.source || "Unknown",
+      time: item.time || formatTimeAgo(new Date().toISOString()),
+      id: `rest-${idx}-${Date.now()}`,
+    }));
+    setNewsItems(formatted);
+  }, [queryData]);
 
   useEffect(() => {
     const timer = setInterval(() => {

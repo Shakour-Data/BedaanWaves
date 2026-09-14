@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { TarotCard } from "@/components/ui/TarotCard";
 import { ChangeBadge } from "@/components/shared/StatCard";
-import { StatBox } from "@/components/shared/StatBox";
-import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { StockDetailSkeleton } from "@/components/ux/SkeletonLoaders";
-import { useUXStore } from "@/store/useUXStore";
 import {
   fetchAsset,
   fetchPriceHistory,
@@ -20,53 +18,31 @@ import {
   type Asset,
   type Candle,
   type LatestPrice,
-  type Market,
+  type ScoringResponse,
+  type FundamentalResponse,
+  type RiskResponse,
 } from "@/lib/api/stocks";
-
 import { t } from "@/lib/i18n";
 import {
   useLiveData,
   LiveConnectionIndicator,
   type LiveStreamKey,
 } from "@/hooks/useLiveData";
+import { QK } from "@/lib/query-keys";
+import { OverviewTab } from "./OverviewTab";
+import { RiskTab } from "./RiskTab";
+import { HistoryTab } from "./HistoryTab";
+import type {
+  QuotePayload,
+  IntradayBar,
+  IntradayPayload,
+  ScoreDelta,
+  ScoringData,
+  RiskData,
+  FundamentalData,
+} from "./types";
 
 type Tab = "overview" | "risk" | "history";
-
-interface QuotePayload {
-  symbol?: string;
-  price?: number;
-  change?: number;
-  change_pct?: number;
-  volume?: number;
-  open?: number;
-  high?: number;
-  low?: number;
-  freshness_ts?: string;
-}
-
-interface IntradayBar {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume?: number;
-}
-
-interface IntradayPayload {
-  symbol?: string;
-  interval?: string;
-  bar?: IntradayBar;
-  bars?: IntradayBar[];
-}
-
-interface ScoreDelta {
-  symbol?: string;
-  overall_score?: number;
-  overall_score_delta?: number;
-  grade?: string;
-  dimensions?: Record<string, number>;
-}
 
 export default function StockDetailPage() {
   const params = useParams<{ symbol: string }>();
@@ -79,13 +55,62 @@ export default function StockDetailPage() {
   const [candles, setCandles] = useState<Candle[] | null>(null);
   const [intradayBars, setIntradayBars] = useState<IntradayBar[]>([]);
   const [latest, setLatest] = useState<LatestPrice | null>(null);
-  const [scoring, setScoring] = useState<Record<string, unknown> | null>(null);
-  const [fundamental, setFundamental] = useState<Record<string, unknown> | null>(null);
-  const [risk, setRisk] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [scoring, setScoring] = useState<ScoringData | null>(null);
+  const [fundamental, setFundamental] = useState<FundamentalData | null>(null);
+  const [risk, setRisk] = useState<RiskData | null>(null);
   const [range, setRange] = useState<string>("90");
-  const addToast = useUXStore((state) => state.addToast);
+
+  const candlesQ = useQuery<Candle[]>({
+    queryKey: QK.priceHistory(symbol, "1d", 500),
+    queryFn: () => fetchPriceHistory({ symbol, timeframe: "1d", limit: 500 }),
+    enabled: !!symbol,
+  });
+
+  const assetQ = useQuery<Asset | null>({
+    queryKey: QK.symbols({ symbol }),
+    queryFn: () => fetchAsset(symbol),
+    enabled: !!symbol,
+  });
+
+  const latestQ = useQuery<LatestPrice | null>({
+    queryKey: QK.latestPrices([symbol]),
+    queryFn: () => fetchLatestPrice(symbol),
+    enabled: !!symbol,
+  });
+
+  const scoringQ = useQuery<ScoringResponse | null>({
+    queryKey: QK.scoring(symbol),
+    queryFn: () => fetchScoring(symbol),
+    enabled: !!symbol,
+  });
+
+  const riskQ = useQuery<RiskResponse | null>({
+    queryKey: QK.risk(symbol),
+    queryFn: () => fetchRisk(symbol),
+    enabled: !!symbol && activeTab === "risk",
+  });
+
+  const fundamentalQ = useQuery<FundamentalResponse | null>({
+    queryKey: QK.fundamental(symbol),
+    queryFn: () => fetchFundamental(symbol),
+    enabled: !!symbol && activeTab === "risk",
+  });
+
+  const coreLoading = candlesQ.isLoading || assetQ.isLoading || latestQ.isLoading || scoringQ.isLoading;
+  const hasData = candles !== null || asset !== null;
+  const loading = coreLoading && !hasData;
+
+  const coreError = candlesQ.error || assetQ.error || latestQ.error || scoringQ.error;
+  const error = coreError && !hasData
+    ? (coreError instanceof Error ? coreError.message : t("app.stocks.detail.error_title"))
+    : null;
+
+  useEffect(() => { if (candlesQ.data) setCandles(candlesQ.data); }, [candlesQ.data]);
+  useEffect(() => { if (assetQ.data !== undefined) setAsset(assetQ.data); }, [assetQ.data]);
+  useEffect(() => { if (latestQ.data !== undefined) setLatest(latestQ.data); }, [latestQ.data]);
+  useEffect(() => { if (scoringQ.data) setScoring(scoringQ.data as unknown as ScoringData); }, [scoringQ.data]);
+  useEffect(() => { if (riskQ.data) setRisk(riskQ.data as unknown as RiskData); }, [riskQ.data]);
+  useEffect(() => { if (fundamentalQ.data) setFundamental(fundamentalQ.data as unknown as FundamentalData); }, [fundamentalQ.data]);
 
   const intradayKey = `intraday:${symbol}:5m` as LiveStreamKey;
   const quoteKey = `quote:${symbol}` as LiveStreamKey;
@@ -163,57 +188,6 @@ export default function StockDetailPage() {
     },
   });
 
-  useEffect(() => {
-    if (!symbol) return;
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const requests: Promise<unknown>[] = [
-          fetchPriceHistory({ symbol, timeframe: "1d", limit: 500 }),
-          fetchAsset(symbol),
-          fetchLatestPrice(symbol),
-          fetchScoring(symbol),
-        ];
-
-        if (activeTab === "risk")
-          requests.push(fetchRisk(symbol), fetchFundamental(symbol));
-
-        const results = await Promise.all(requests);
-        if (cancelled) return;
-        setCandles(results[0] as Candle[]);
-        setAsset(results[1] as Asset | null);
-        setLatest(results[2] as LatestPrice | null);
-        setScoring(results[3] as Record<string, unknown>);
-        if (activeTab === "risk") {
-          setRisk(results[4] as Record<string, unknown>);
-          setFundamental(results[5] as Record<string, unknown>);
-        }
-      } catch (e: unknown) {
-        if (!cancelled) {
-          const message =
-            e instanceof Error ? e.message : t("app.stocks.detail.error_title");
-          setError(message);
-          addToast({ type: "error", message });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [symbol, activeTab, addToast]);
-
-  const MARKET_LABEL: Record<Market, string> = {
-    NASDAQ: t("app.stocks.markets.nasdaq"),
-  };
-
   const RANGES = useMemo(
     () => [
       { key: "30", label: t("app.stocks.detail.ranges.1m"), days: 30 },
@@ -256,7 +230,6 @@ export default function StockDetailPage() {
   const livePrice = latest?.price ?? derived?.price ?? 0;
   const liveChangePct = latest?.change_pct ?? derived?.changePct ?? 0;
   const currency = t("app.stocks.detail.currency_usd");
-  const noData = !candles || candles.length === 0;
 
   const chartBarsForWindow: Candle[] = useMemo(() => {
     if (intradayBars.length > 0) {
@@ -280,10 +253,6 @@ export default function StockDetailPage() {
     { key: "risk", label: "Risk" },
     { key: "history", label: "Historical Data" },
   ];
-
-  function fmt(n: number, digits = 0): string {
-    return n.toLocaleString("en-US", { maximumFractionDigits: digits });
-  }
 
   if (loading) {
     return <StockDetailSkeleton />;
@@ -323,13 +292,11 @@ export default function StockDetailPage() {
               <h1 className="text-xl font-bold">{symbol}</h1>
               {asset ? (
                 <span className="rounded-full bg-neutral/70 px-2 py-0.5 text-xs text-muted-foreground">
-                  {MARKET_LABEL[asset.market]}
+                  {t(`app.stocks.markets.${asset.market.toLowerCase()}`)}
                 </span>
               ) : null}
             </div>
-            {asset ? (
-              <span className="text-muted-foreground">{asset.name}</span>
-            ) : null}
+            {asset ? <span className="text-muted-foreground">{asset.name}</span> : null}
             {asset?.sector ? (
               <span className="text-xs text-muted-foreground">
                 {t("app.stocks.sector")}: {asset.sector}
@@ -338,7 +305,7 @@ export default function StockDetailPage() {
           </div>
           <div className="flex flex-col items-end gap-1">
             <span className="text-2xl font-bold tabular-nums">
-              {fmt(livePrice, 2)}
+              {livePrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}
             </span>
             <div className="flex items-center gap-2">
               <ChangeBadge value={liveChangePct} />
@@ -377,237 +344,42 @@ export default function StockDetailPage() {
       </div>
 
       {activeTab === "overview" && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          {derived ? (
-            <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <StatBox
-                label={t("app.stocks.detail.last_price")}
-                value={fmt(livePrice, 2)}
-                hint={currency}
-              />
-              <StatBox
-                label={`${t("app.stocks.detail.high")} (${
-                  RANGES.find((r) => r.key === range)?.label
-                })`}
-                value={fmt(derived.rangeHigh, 2)}
-              />
-              <StatBox
-                label={`${t("app.stocks.detail.low")} (${
-                  RANGES.find((r) => r.key === range)?.label
-                })`}
-                value={fmt(derived.rangeLow, 2)}
-              />
-              <StatBox
-                label={t("app.stocks.detail.volume")}
-                value={fmt(derived.lastVolume)}
-                hint={`${t("app.stocks.detail.avg_volume")}: ${fmt(
-                  derived.avgVol
-                )}`}
-              />
-            </section>
-          ) : null}
-
-          {intradayBars.length > 0 && (
-            <TarotCard>
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    Intraday · 5m · Last {intradayBars.length} bars
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Rolling window · live patches applied
-                  </p>
-                </div>
-                <LiveConnectionIndicator
-                  health={liveIntraday.connectionHealth}
-                  dataAgeMs={liveIntraday.lastDataAgeMs}
-                  lastEventTs={null}
-                />
-              </div>
-              <CandlestickChart
-                candles={chartBarsForWindow}
-                timeframe="5m"
-                height={320}
-              />
-            </TarotCard>
-          )}
-
-          {scoring ? (
-            <TarotCard icon="💎" title={t("app.stocks.detail.analysis_6d")}>
-              <div className="mb-3 flex items-center justify-end">
-                <LiveConnectionIndicator
-                  health={liveScores.connectionHealth}
-                  dataAgeMs={liveScores.lastDataAgeMs}
-                  lastEventTs={null}
-                  label="Scores"
-                />
-              </div>
-              <div className="flex flex-col md:flex-row items-center gap-8 py-4">
-                <div className="flex flex-col items-center justify-center">
-                  <div
-                    className={cn(
-                      "text-5xl font-black rounded-full h-32 w-32 flex items-center justify-center border-8 shadow-inner",
-                      typeof scoring.overall_score === "number" &&
-                        scoring.overall_score >= 70
-                        ? "text-green-600 border-green-600/20"
-                        : typeof scoring.overall_score === "number" &&
-                          scoring.overall_score >= 40
-                        ? "text-yellow-500 border-yellow-500/20"
-                        : "text-red-600 border-red-600/20"
-                    )}
-                  >
-                    {scoring.overall_score as number}
-                  </div>
-                  <div className="mt-4 text-lg font-bold">
-                    {t("app.stocks.detail.overall_score")}{" "}
-                    {(scoring.grade as string)?.replace("_", " ")}
-                  </div>
-                </div>
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
-                  {Object.entries(scoring.dimension_scores || {}).map(
-                    ([dim, score]: [string, unknown]) => (
-                      <div
-                        key={dim}
-                        className="p-3 rounded-xl bg-neutral/40 border border-border/40"
-                      >
-                        <div className="text-xs text-muted-foreground uppercase">
-                          {t(`app.scoring.dimensions.${dim.toLowerCase()}`)}
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="font-bold text-lg">
-                            {score as number}
-                          </span>
-                          <div className="h-1.5 flex-1 mx-2 bg-border rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                "h-full rounded-full",
-                                (score as number) >= 70
-                                  ? "bg-green-600"
-                                  : (score as number) >= 40
-                                  ? "bg-yellow-500"
-                                  : "bg-red-600"
-                              )}
-                              style={{ width: `${score as number}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border/40 flex flex-wrap gap-2">
-                <Link
-                  href={`/stocks/${symbol}/scoring`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/20"
-                >
-                  {t("app.scoring.title")} →
-                </Link>
-                <Link
-                  href={`/stocks/${symbol}/charts`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20"
-                >
-                  Charts →
-                </Link>
-              </div>
-            </TarotCard>
-          ) : null}
-        </div>
+        <OverviewTab
+          symbol={symbol}
+          asset={asset}
+          candles={candles}
+          intradayBars={intradayBars}
+          latest={latest}
+          scoring={scoring}
+          visibleCandles={visibleCandles}
+          chartBarsForWindow={chartBarsForWindow}
+          derived={derived}
+          livePrice={livePrice}
+          liveChangePct={liveChangePct}
+          currency={currency}
+          range={range}
+          ranges={RANGES}
+          liveQuoteHealth={liveQuote.connectionHealth}
+          liveQuoteAgeMs={liveQuote.lastDataAgeMs}
+          liveIntradayHealth={liveIntraday.connectionHealth}
+          liveIntradayAgeMs={liveIntraday.lastDataAgeMs}
+          liveScoresHealth={liveScores.connectionHealth}
+          liveScoresAgeMs={liveScores.lastDataAgeMs}
+        />
       )}
 
       {activeTab === "risk" && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          {risk && Object.keys(risk).length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TarotCard title="Risk Metrics">
-                <div className="space-y-3">
-                  {Object.entries(risk).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm text-muted-foreground capitalize">
-                        {key.replace(/_/g, " ")}
-                      </span>
-                      <span className="font-semibold">
-                        {typeof value === "number"
-                          ? fmt(value, 2)
-                          : String(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </TarotCard>
-              {fundamental && Object.keys(fundamental).length > 0 && (
-                <TarotCard title="Fundamentals">
-                  <div className="space-y-3">
-                    {Object.entries(fundamental).map(([key, value]) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between"
-                      >
-                        <span className="text-sm text-muted-foreground capitalize">
-                          {key.replace(/_/g, " ")}
-                        </span>
-                        <span className="font-semibold">
-                          {typeof value === "number"
-                            ? fmt(value, 2)
-                            : String(value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </TarotCard>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 py-12 text-center">
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Risk analysis data is not yet available for this stock.
-              </p>
-            </div>
-          )}
-        </div>
+        <RiskTab risk={risk} fundamental={fundamental} />
       )}
 
       {activeTab === "history" && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          <TarotCard>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">
-                {t("app.stocks.detail.chart_title")}
-              </h3>
-              <div className="flex gap-1">
-                {RANGES.map((r) => (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => setRange(r.key)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-sm transition duration-fast ease-flow",
-                      range === r.key
-                        ? "bg-primary/10 font-semibold text-primary"
-                        : "text-muted-foreground hover:bg-neutral"
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {noData ? (
-              <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-                {t("app.stocks.detail.no_history")}
-              </div>
-            ) : (
-              <CandlestickChart
-                candles={visibleCandles}
-                timeframe="1d"
-                height={420}
-              />
-            )}
-          </TarotCard>
-        </div>
+        <HistoryTab
+          candles={candles}
+          visibleCandles={visibleCandles}
+          range={range}
+          ranges={RANGES}
+          onRangeChange={setRange}
+        />
       )}
     </div>
   );

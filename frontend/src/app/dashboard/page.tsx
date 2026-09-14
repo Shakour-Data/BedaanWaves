@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, Suspense, lazy } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -21,8 +22,9 @@ import { PageLoading } from "@/components/ui/PageLoading";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
-import { fetchDashboardData, fetchGeneralDashboard, type GeneralDashboardResponse } from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchGeneralDashboard } from "@/lib/api/dashboard";
 import { useUXStore } from "@/store/useUXStore";
+import { QK } from "@/lib/query-keys";
 
 const UnifiedSearchBar = lazy(() => import("@/components/search/UnifiedSearchBar").then(mod => ({ default: mod.UnifiedSearchBar })));
 const GeneralDashboardTab = lazy(() => import("@/components/dashboard/GeneralDashboardTab").then(mod => ({ default: mod.GeneralDashboardTab })));
@@ -73,7 +75,7 @@ function fmtDate(iso: string | null): string {
 
 function DashboardOverview({ data, load }: {
   data: DashboardSnapshot;
-  load: (mode: "initial" | "refresh") => Promise<void>;
+  load: () => void | Promise<void>;
 }) {
   return (
     <>
@@ -96,7 +98,7 @@ function DashboardOverview({ data, load }: {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => load("refresh")}
+            onClick={() => void load()}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text-primary)]"
           >
             <RefreshCw className="h-4 w-4" />
@@ -366,15 +368,16 @@ function DashboardTabState({ onTabChange }: { onTabChange: (tab: "overview" | "g
 
 export default function DashboardPage() {
   const addToast = useUXStore((s) => s.addToast);
-  const [data, setData] = useState<DashboardSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "general">("overview");
 
-  const load = useCallback(async (mode: "initial" | "refresh") => {
-    if (mode === "initial") setLoading(true);
-    setError(null);
-    try {
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<DashboardSnapshot | null, Error>({
+    queryKey: QK.dashboardGeneral(),
+    queryFn: async () => {
       const [general, legacy] = await Promise.allSettled([
         fetchGeneralDashboard(),
         fetchDashboardData(),
@@ -385,19 +388,11 @@ export default function DashboardPage() {
           (general.reason instanceof Error && general.reason.message) ||
           (legacy.reason instanceof Error && legacy.reason.message) ||
           "Failed to load dashboard data";
-        setError(msg);
-        if (mode === "initial") {
-          addToast({ type: "error", message: msg });
-        }
-        return;
+        throw new Error(msg);
       }
 
-      const g: GeneralDashboardResponse | null =
-        general.status === "fulfilled" ? general.value : null;
-      const l =
-        legacy.status === "fulfilled"
-          ? legacy.value
-          : null;
+      const g = general.status === "fulfilled" ? general.value : null;
+      const l = legacy.status === "fulfilled" ? legacy.value : null;
 
       const dimensions = Object.entries(g?.dimensions ?? {}).map(([key, value]) => ({
         key,
@@ -413,7 +408,7 @@ export default function DashboardPage() {
         if (existing) existing.weight = c.weight;
       }
 
-      const merged: DashboardSnapshot = {
+      return {
         stats: [
           { label: "Universe", value: String(g?.summary?.total_symbols ?? l?.marketStats?.[0]?.value ?? "—") },
           {
@@ -452,22 +447,18 @@ export default function DashboardPage() {
             ],
         latestDate: g?.latest_date ?? null,
       };
-      setData(merged);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load dashboard";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [addToast]);
+    },
+  });
 
-  const initialLoadRef = useRef(true);
-  useEffect(() => {
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
-      void load("initial");
+  const handleRefresh = async () => {
+    try {
+      await refetch();
+    } catch {
+      addToast({ type: "error", message: "Failed to refresh dashboard" });
     }
-  }, [load]);
+  };
+
+  const errorMessage = error?.message ?? null;
 
   if (loading) {
     return (
@@ -477,13 +468,13 @@ export default function DashboardPage() {
     );
   }
 
-  if (error && !data) {
+  if (errorMessage && !data) {
     return (
       <NewDashboardShell title="Dashboard">
         <div className="flex min-h-[40vh] items-center justify-center">
           <ErrorMessage
-            message={error}
-            actions={[{ label: "Retry", onAction: () => load("initial") }]}
+            message={errorMessage}
+            actions={[{ label: "Retry", onAction: () => refetch() }]}
             moreHelpSteps={[
               "Check that the backend API is running on port 3000",
               "Verify your authentication token is still valid",
@@ -523,7 +514,7 @@ export default function DashboardPage() {
             <GeneralDashboardTab />
           </Suspense>
         ) : (
-          <DashboardOverview data={data} load={load} />
+          <DashboardOverview data={data} load={handleRefresh} />
         )}
       </div>
     </NewDashboardShell>

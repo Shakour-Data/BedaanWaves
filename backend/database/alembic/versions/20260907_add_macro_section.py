@@ -26,16 +26,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # 1. Collapse any pre-existing duplicate (indicator_code, period) rows,
-    #    keeping the most recent (highest id). Only affects non-null periods.
+    #    keeping one row per combination. Only affects non-null periods.
     op.execute(
         """
         DELETE FROM macro_indicators
         WHERE period IS NOT NULL
           AND id NOT IN (
-            SELECT MAX(id)
+            SELECT DISTINCT ON (indicator_code, period) id
             FROM macro_indicators
             WHERE period IS NOT NULL
-            GROUP BY indicator_code, period
+            ORDER BY indicator_code, period, id
           )
         """
     )

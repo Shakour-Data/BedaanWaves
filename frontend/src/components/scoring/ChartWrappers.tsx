@@ -17,8 +17,38 @@ import type {
   WeightDeltaPoint,
   TrendPoint,
 } from "@/store/useDateStore";
+import {
+  flexPickOverall,
+  flexLevelItems,
+  flexWeightItems,
+  flexTrendWeightValue,
+  flexWeightDeltaBucket,
+  flexWeightOverallDelta,
+  type FlexHierarchyScores,
+  type FlexTrendPoint,
+  type FlexWeights,
+  type FlexWeightDeltas,
+} from "@/lib/scoring-adapters";
 
-export type ScoringLevel = 0 | 1 | 2 | 3 | 4;
+import type {
+  ScoringLevel,
+  ScoringTab,
+  ViewMode,
+  DailyWindow,
+  IntradayWindow,
+  ChartWrapperBaseProps,
+  SpiderChartWrapperProps,
+  TrendWrapperProps,
+  DeltaWrapperProps,
+  WeightCurrentWrapperProps,
+  WeightTrendWrapperProps,
+  WeightDeltaWrapperProps,
+  ViewHeaderControlsProps,
+  ScoringLevelSelectorProps,
+  ParentSelectorProps,
+} from "./chart-wrapper-types";
+
+export type { ScoringLevel, ScoringTab, ViewMode, DailyWindow, IntradayWindow };
 
 export const LEVEL_META: Record<ScoringLevel, { label: string; short: string; key: string }> = {
   0: { label: "Overall", short: "OVERALL", key: "overall" },
@@ -40,8 +70,7 @@ const PALETTE = [
 ];
 
 function pickOverall(h: HierarchyScores): number {
-  const v = (h as any).overall ?? (h as any).overallScore ?? (h as any).OVERALL?.score ?? 0;
-  return num(v);
+  return flexPickOverall(h as FlexHierarchyScores);
 }
 
 export function levelItemsFromHierarchy(
@@ -54,33 +83,7 @@ export function levelItemsFromHierarchy(
   if (level === 0) {
     all = [{ key: "overall", label: "Overall", score: pickOverall(hierarchy), weight: 1.0 }];
   } else {
-    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const arr = (hierarchy as any)[k];
-    if (Array.isArray(arr)) {
-      all = arr.map((it: any) => ({
-        key: it.key ?? it.level_key ?? it.label ?? String(Math.random()).slice(2),
-        label: it.label ?? it.name ?? it.key ?? "Item",
-        score: num(it.score ?? it.value ?? it.level_score ?? 0),
-        weight: num(it.weight ?? it.coefficient ?? it.w ?? 0),
-      }));
-    } else {
-      const dimKeyMap: Record<ScoringLevel, string> = {
-        0: "overall",
-        1: "dimension",
-        2: "sub_dimension",
-        3: "aspect",
-        4: "sub_aspect",
-      };
-      const bucket = (hierarchy as any)[dimKeyMap[level]] as Record<string, number> | undefined;
-      if (bucket && typeof bucket === "object") {
-        all = Object.entries(bucket).map(([k2, v]) => ({
-          key: k2,
-          label: k2.replace(/_/g, " "),
-          score: num(v),
-          weight: 0,
-        }));
-      }
-    }
+    all = flexLevelItems(hierarchy as FlexHierarchyScores, level);
   }
   if (parentKey && level >= 2) {
     return all.filter((it) => it.key.startsWith(parentKey) || it.label.toLowerCase().includes(parentKey.toLowerCase()));
@@ -88,21 +91,6 @@ export function levelItemsFromHierarchy(
   return all;
 }
 
-interface ChartWrapperBaseProps {
-  className?: string;
-  title?: string;
-  emptyLabel?: string;
-  minHeight?: number;
-}
-
-interface SpiderChartWrapperProps extends ChartWrapperBaseProps {
-  snapshot: SnapshotResponse | null;
-  tier: "daily" | "hourly" | "current";
-  level: ScoringLevel;
-  parentKey?: string | null;
-  size?: number;
-  onLabelClick?: (label: string, item: { key: string; label: string; score: number; weight: number }) => void;
-}
 
 export function SpiderChartWrapper({
   snapshot,
@@ -153,15 +141,6 @@ export function SpiderChartWrapper({
   );
 }
 
-interface TrendWrapperProps extends ChartWrapperBaseProps {
-  series: TrendPoint[] | undefined | null;
-  hierarchy: HierarchyScores | null | undefined;
-  level: ScoringLevel;
-  parentKey?: string | null;
-  height?: number;
-  showLegend?: boolean;
-  windowLabel?: string;
-}
 
 export function ScoreTrendWrapper({
   series,
@@ -181,12 +160,13 @@ export function ScoreTrendWrapper({
   );
   const chartSeries = useMemo(() => {
     if (!series || series.length === 0) return [];
+    const flexSeries = series as unknown as FlexTrendPoint[];
     if (level === 0) {
       return [{
         key: "overall",
         label: "Overall",
         color: PALETTE[0],
-        data: series.map((pt) => ({ time: pt.date ?? pt.effective_at, value: num(pt.overall ?? (pt as any).value ?? 0) })),
+        data: flexSeries.map((pt) => ({ time: pt.date ?? pt.effective_at, value: num(pt.overall ?? pt.value ?? 0) })),
       }];
     }
     const scoreKeyMap: Record<ScoringLevel, string> = {
@@ -201,10 +181,14 @@ export function ScoreTrendWrapper({
       key: item.key,
       label: item.label,
       color: PALETTE[i % PALETTE.length],
-      data: series.map((pt) => {
-        const bucket = (pt as any)[sk] ?? (pt as any).level_scores ?? (pt as any).scores ?? {};
+      data: flexSeries.map((pt) => {
+        const bucket =
+          (pt[sk as keyof FlexTrendPoint] as Record<string, number> | undefined) ??
+          pt.level_scores ??
+          pt.scores ??
+          {};
         const val = bucket && typeof bucket === "object" ? bucket[item.key] : undefined;
-        return { time: pt.date ?? pt.effective_at, value: num(val ?? pt.overall ?? (pt as any).value ?? 0) };
+        return { time: pt.date ?? pt.effective_at, value: num(val ?? pt.overall ?? pt.value ?? 0) };
       }),
     }));
   }, [series, items, level]);
@@ -233,17 +217,6 @@ function deltaBucketForLevel(df: DeltaFrame, level: ScoringLevel): Record<string
   if (level === 3) return df.aspect_deltas ?? {};
   if (level === 4) return df.sub_aspect_deltas ?? {};
   return {};
-}
-
-interface DeltaWrapperProps extends ChartWrapperBaseProps {
-  deltaFrame: DeltaFrame | null | undefined;
-  hierarchy: HierarchyScores | null | undefined;
-  level: ScoringLevel;
-  parentKey?: string | null;
-  height?: number;
-  includeL1Grid?: boolean;
-  deltaLabel?: string;
-  periodEndLabel?: string;
 }
 
 export function ScoreDeltaWrapper({
@@ -337,12 +310,6 @@ export function ScoreDeltaWrapper({
   );
 }
 
-interface WeightCurrentWrapperProps extends ChartWrapperBaseProps {
-  weights: WeightSnapshot | null | undefined;
-  level: ScoringLevel;
-  parentKey?: string | null;
-  height?: number;
-}
 
 export function WeightCurrentWrapper({
   weights,
@@ -355,38 +322,7 @@ export function WeightCurrentWrapper({
 }: WeightCurrentWrapperProps) {
   const weightArr = useMemo(() => {
     if (!weights) return [];
-    if (level === 0) {
-      return [{ key: "overall", label: "Overall", weight: 1.0 }];
-    }
-    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = (weights as any)[k] as
-      | Array<{ key?: string; label?: string; weight?: number; level_key?: string; name?: string; value?: number }>
-      | undefined;
-    let normalized: Array<{ key: string; label: string; weight: number }> = [];
-    if (Array.isArray(rawLevel)) {
-      normalized = rawLevel.map((it) => ({
-        key: it.key ?? it.level_key ?? it.label ?? "",
-        label: it.label ?? it.name ?? it.key ?? "",
-        weight: num(it.weight ?? it.value ?? 0),
-      }));
-    } else {
-      const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
-        1: "dimension",
-        2: "sub_dimension",
-        3: "aspect",
-        4: "sub_aspect",
-      };
-      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
-        | Record<string, number>
-        | undefined;
-      if (bucket && typeof bucket === "object") {
-        normalized = Object.entries(bucket).map(([wk, wv]) => ({
-          key: wk,
-          label: wk.replace(/_/g, " "),
-          weight: num(wv),
-        }));
-      }
-    }
+    const normalized = flexWeightItems(weights as FlexWeights, level);
     return parentKey && level >= 2
       ? normalized.filter((w) => w.key.startsWith(parentKey))
       : normalized;
@@ -414,16 +350,6 @@ export function WeightCurrentWrapper({
   );
 }
 
-interface WeightTrendWrapperProps extends ChartWrapperBaseProps {
-  weightTrends: WeightTrendPoint[] | undefined | null;
-  weights: WeightSnapshot | null | undefined;
-  level: ScoringLevel;
-  parentKey?: string | null;
-  height?: number;
-  windowLabel?: string;
-  showLegend?: boolean;
-}
-
 export function WeightTrendWrapper({
   weightTrends,
   weights,
@@ -438,36 +364,7 @@ export function WeightTrendWrapper({
 }: WeightTrendWrapperProps) {
   const weightArr = useMemo(() => {
     if (!weights) return [];
-    if (level === 0) return [{ key: "overall", label: "Overall", weight: 1.0 }];
-    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = (weights as any)[k] as
-      | Array<{ key?: string; label?: string; weight?: number; level_key?: string }>
-      | undefined;
-    let norm: Array<{ key: string; label: string; weight: number }> = [];
-    if (Array.isArray(rawLevel)) {
-      norm = rawLevel.map((it) => ({
-        key: it.key ?? it.level_key ?? it.label ?? "",
-        label: it.label ?? it.key ?? "",
-        weight: num(it.weight ?? 0),
-      }));
-    } else {
-      const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
-        1: "dimension",
-        2: "sub_dimension",
-        3: "aspect",
-        4: "sub_aspect",
-      };
-      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
-        | Record<string, number>
-        | undefined;
-      if (bucket && typeof bucket === "object") {
-        norm = Object.entries(bucket).map(([wk, wv]) => ({
-          key: wk,
-          label: wk.replace(/_/g, " "),
-          weight: num(wv),
-        }));
-      }
-    }
+    const norm = flexWeightItems(weights as FlexWeights, level);
     return parentKey && level >= 2 ? norm.filter((w) => w.key.startsWith(parentKey)) : norm;
   }, [weights, level, parentKey]);
 
@@ -480,7 +377,7 @@ export function WeightTrendWrapper({
         color: PALETTE[0],
         data: weightTrends.map((pt) => ({
           time: pt.date ?? pt.effective_at,
-          value: num((weights as any)?.overall ?? (pt.weights as any)?.overall ?? 0),
+          value: num((weights as FlexWeights)?.overall ?? (pt.weights as FlexWeights)?.overall ?? 0),
         })),
       }];
     }
@@ -489,29 +386,7 @@ export function WeightTrendWrapper({
       label: w.label,
       color: PALETTE[i % PALETTE.length],
       data: weightTrends.map((pt) => {
-        const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-        const bucket = (pt.weights as any)?.[k];
-        let entry: any;
-        if (Array.isArray(bucket)) {
-          entry = bucket.find((b: any) => (b.key ?? b.level_key) === w.key);
-        } else if (bucket && typeof bucket === "object") {
-          entry = bucket[w.key];
-        }
-        const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
-          1: "dimension",
-          2: "sub_dimension",
-          3: "aspect",
-          4: "sub_aspect",
-        };
-        const altBucket = (pt.weights as any)?.[weightShortKey[level as Exclude<ScoringLevel, 0>]];
-        let v = 0;
-        if (entry && typeof entry === "object") {
-          v = num(entry.weight ?? entry.value ?? 0);
-        } else if (typeof entry === "number") {
-          v = entry;
-        } else if (altBucket && typeof altBucket === "object" && typeof altBucket[w.key] === "number") {
-          v = altBucket[w.key];
-        }
+        const v = flexTrendWeightValue(pt.weights as FlexWeights, level, w.key);
         return { time: pt.date ?? pt.effective_at, value: v };
       }),
     }));
@@ -536,13 +411,6 @@ export function WeightTrendWrapper({
   );
 }
 
-interface WeightDeltaWrapperProps extends ChartWrapperBaseProps {
-  weightDeltas: WeightDeltaPoint | null | undefined;
-  weights: WeightSnapshot | null | undefined;
-  level: ScoringLevel;
-  parentKey?: string | null;
-  height?: number;
-}
 
 export function WeightDeltaWrapper({
   weightDeltas,
@@ -556,56 +424,17 @@ export function WeightDeltaWrapper({
 }: WeightDeltaWrapperProps) {
   const weightArr = useMemo(() => {
     if (!weights) return [];
-    if (level === 0) return [{ key: "overall", label: "Overall", weight: 1.0 }];
-    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    const rawLevel = (weights as any)[k] as
-      | Array<{ key?: string; label?: string; weight?: number; level_key?: string }>
-      | undefined;
-    let norm: Array<{ key: string; label: string; weight: number }> = [];
-    if (Array.isArray(rawLevel)) {
-      norm = rawLevel.map((it) => ({
-        key: it.key ?? it.level_key ?? it.label ?? "",
-        label: it.label ?? it.key ?? "",
-        weight: num(it.weight ?? 0),
-      }));
-    } else {
-      const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
-        1: "dimension",
-        2: "sub_dimension",
-        3: "aspect",
-        4: "sub_aspect",
-      };
-      const bucket = (weights as any)[weightShortKey[level as Exclude<ScoringLevel, 0>]] as
-        | Record<string, number>
-        | undefined;
-      if (bucket && typeof bucket === "object") {
-        norm = Object.entries(bucket).map(([wk, wv]) => ({
-          key: wk,
-          label: wk.replace(/_/g, " "),
-          weight: num(wv),
-        }));
-      }
-    }
+    const norm = flexWeightItems(weights as FlexWeights, level);
     return parentKey && level >= 2 ? norm.filter((w) => w.key.startsWith(parentKey)) : norm;
   }, [weights, level, parentKey]);
 
   const flatSeries = useMemo(() => {
     if (!weightDeltas) return [];
-    const k = LEVEL_META[level].key as "level1" | "level2" | "level3" | "level4";
-    let bucket: Record<string, { delta?: number; delta_pct?: number; change?: number }> | undefined =
-      (weightDeltas.weights as any)?.[k];
-    if (!bucket) {
-      const weightShortKey: Record<Exclude<ScoringLevel, 0>, string> = {
-        1: "dimension",
-        2: "sub_dimension",
-        3: "aspect",
-        4: "sub_aspect",
-      };
-      bucket = (weightDeltas as any)?.[`${weightShortKey[level as Exclude<ScoringLevel, 0>]}_deltas`];
-    }
+    const flexDeltas = weightDeltas as unknown as FlexWeightDeltas;
+    let bucket = flexWeightDeltaBucket(flexDeltas, level);
     if (!bucket && level !== 0) return [];
     if (level === 0) {
-      const delta = num(weightDeltas.delta ?? (weightDeltas as any).overall?.delta ?? 0);
+      const delta = flexWeightOverallDelta(flexDeltas);
       return delta !== 0 ? [{ time: "Overall", value: delta, color: delta >= 0 ? "#10b981" : "#ef4444" }] : [];
     }
     return weightArr
@@ -640,22 +469,6 @@ export function WeightDeltaWrapper({
   );
 }
 
-export type ScoringTab = "HISTORICAL" | "INTRADAY";
-export type ViewMode = "SIMPLE" | "EXPERT";
-export type DailyWindow = 30 | 90 | 365;
-export type IntradayWindow = "6h" | "24h" | "7d";
-
-interface ViewHeaderControlsProps {
-  scoringTab: ScoringTab;
-  onScoringTabChange: (t: ScoringTab) => void;
-  viewMode: ViewMode;
-  onViewModeChange: (m: ViewMode) => void;
-  windowDaily: DailyWindow;
-  onWindowDailyChange: (w: DailyWindow) => void;
-  windowIntraday: IntradayWindow;
-  onWindowIntradayChange: (w: IntradayWindow) => void;
-  className?: string;
-}
 
 export function ViewHeaderControls({
   scoringTab,
@@ -763,13 +576,6 @@ export function ViewHeaderControls({
   );
 }
 
-interface ScoringLevelSelectorProps {
-  level: ScoringLevel;
-  onLevelChange: (l: ScoringLevel) => void;
-  className?: string;
-  includeOverall?: boolean;
-}
-
 export function ScoringLevelSelector({
   level,
   onLevelChange,
@@ -800,15 +606,6 @@ export function ScoringLevelSelector({
       })}
     </div>
   );
-}
-
-interface ParentSelectorProps {
-  hierarchy: HierarchyScores | null | undefined;
-  level: ScoringLevel;
-  parentLevel: Exclude<ScoringLevel, 0 | 4>;
-  parentKey: string | null;
-  onParentChange: (parentKey: string | null) => void;
-  className?: string;
 }
 
 export function ParentSelector({

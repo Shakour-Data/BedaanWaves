@@ -89,10 +89,8 @@ export function createExportButton(
   const existingButton = document.getElementById(buttonId);
 
   if (existingButton) {
-    existingButton.removeEventListener('click', () => {});
-    existingButton.innerHTML = options.className 
-      ? `${options.className} ${existingButton.innerHTML}`
-      : existingButton.innerHTML;
+    // Remove the old button and recreate it to cleanly replace the click handler
+    existingButton.remove();
   }
 
   const exportButton = document.createElement('button');

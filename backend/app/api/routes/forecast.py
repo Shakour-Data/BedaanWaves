@@ -26,11 +26,11 @@ from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel, Field, validator
 
-from ....core.config import get_settings
-from ....services.ml.prediction_service import PredictionService
-from ....services.ml.time_series_service import TimeSeriesService
-from ....services.data.stock_service import StockService
-from ....services.user.auth_service import get_current_user
+from app.core.config import get_settings
+from app.services.ml.prediction_service import PredictionService
+from app.services.data.stock_service import StockService
+from app.services.core.cache_service import CacheService
+from app.api.dependencies import get_current_user
 
 router = APIRouter(prefix="/forecast", tags=["Forecast"])
 
@@ -203,6 +203,18 @@ class BatchForecastResponse(BaseModel):
     errors: List[dict]
     generated_at: datetime
     processing_time_ms: int
+
+
+class BacktestRequest(BaseModel):
+    """Request for backtesting a forecasting model"""
+    model_id: ForecastModel = Field(..., description="Model to backtest")
+    symbol: str = Field(..., description="Symbol to backtest on")
+    start_date: datetime = Field(..., description="Backtest start date")
+    end_date: datetime = Field(..., description="Backtest end date")
+    initial_capital: float = Field(10000.0, ge=1000, description="Initial capital for trading simulation")
+    position_size_pct: float = Field(0.1, ge=0.01, le=1.0, description="Position size as % of capital")
+    take_profit_pct: Optional[float] = Field(None, description="Take profit percentage")
+    stop_loss_pct: Optional[float] = Field(None, description="Stop loss percentage")
 
 
 # =============================================================================
@@ -465,14 +477,7 @@ async def get_model_performance(
 
 @router.post("/backtest", response_model=dict)
 async def backtest_model(
-    model_id: ForecastModel = Field(..., description="Model to backtest"),
-    symbol: str = Field(..., description="Symbol to backtest on"),
-    start_date: datetime = Field(..., description="Backtest start date"),
-    end_date: datetime = Field(..., description="Backtest end date"),
-    initial_capital: float = Field(10000.0, ge=1000, description="Initial capital for trading simulation"),
-    position_size_pct: float = Field(0.1, ge=0.01, le=1.0, description="Position size as % of capital"),
-    take_profit_pct: Optional[float] = Field(None, description="Take profit percentage"),
-    stop_loss_pct: Optional[float] = Field(None, description="Stop loss percentage"),
+    request: BacktestRequest,
     current_user: dict = Depends(get_current_user),
     prediction_service: PredictionService = Depends(),
 ):
@@ -490,29 +495,29 @@ async def backtest_model(
     """
     try:
         backtest_result = await prediction_service.backtest_model(
-            model_id=model_id,
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            initial_capital=initial_capital,
-            position_size_pct=position_size_pct,
-            take_profit_pct=take_profit_pct,
-            stop_loss_pct=stop_loss_pct,
+            model_id=request.model_id,
+            symbol=request.symbol,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            initial_capital=request.initial_capital,
+            position_size_pct=request.position_size_pct,
+            take_profit_pct=request.take_profit_pct,
+            stop_loss_pct=request.stop_loss_pct,
         )
         
         return {
             "status": "success",
-            "model_id": model_id,
-            "symbol": symbol,
+            "model_id": request.model_id,
+            "symbol": request.symbol,
             "backtest_period": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat(),
+                "start": request.start_date.isoformat(),
+                "end": request.end_date.isoformat(),
             },
             "trading_parameters": {
-                "initial_capital": initial_capital,
-                "position_size_pct": position_size_pct,
-                "take_profit_pct": take_profit_pct,
-                "stop_loss_pct": stop_loss_pct,
+                "initial_capital": request.initial_capital,
+                "position_size_pct": request.position_size_pct,
+                "take_profit_pct": request.take_profit_pct,
+                "stop_loss_pct": request.stop_loss_pct,
             },
             "results": backtest_result,
             "generated_at": datetime.utcnow().isoformat(),

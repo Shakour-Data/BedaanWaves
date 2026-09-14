@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision: str = "20260907_consolidate_migrations"
-down_revision: Union[str, None] = "20260905_add_hierarchy_scores_to_score_history"
+down_revision: Union[str, None] = "20260906_add_snapshot_tier"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -166,77 +166,116 @@ def _create_scoring_snapshots() -> None:
     SnapshotTier.create(op.get_bind(), checkfirst=True)
     SnapshotLevel.create(op.get_bind(), checkfirst=True)
 
-    op.create_table(
-        "scoring_snapshots",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("asset_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("date", sa.Date(), nullable=False),
-        sa.Column("level", SnapshotLevel, nullable=False),
-        sa.Column("level_key", sa.String(length=100), nullable=False),
-        sa.Column("level_name", sa.String(length=255), nullable=False),
-        sa.Column("score", sa.Numeric(8, 4), nullable=False),
-        sa.Column("score_change", sa.Numeric(8, 4), nullable=True),
-        sa.Column("industry", sa.String(length=100), nullable=True),
-        sa.Column("company_id", sa.String(length=100), nullable=True),
-        sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("extra_fields", postgresql.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column("snapshot_tier", SnapshotTier, nullable=True, server_default="daily"),
-        sa.Column("effective_at", postgresql.TIMESTAMP(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["asset_id"], ["assets.id"], name="fk_scoring_snapshots_asset_id"),
-        sa.PrimaryKeyConstraint("id", name="pk_scoring_snapshots"),
-    )
+    if _table_exists("scoring_snapshots"):
+        # Created by 20260906_create_scoring_snapshots, or by an earlier run of
+        # this consolidated migration. Fall through to repair any missing
+        # indexes rather than failing on a duplicate table.
+        pass
+    else:
+        op.create_table(
+            "scoring_snapshots",
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
+            sa.Column("asset_id", postgresql.UUID(as_uuid=True), nullable=False),
+            sa.Column("date", sa.Date(), nullable=False),
+            sa.Column("level", SnapshotLevel, nullable=False),
+            sa.Column("level_key", sa.String(length=100), nullable=False),
+            sa.Column("level_name", sa.String(length=255), nullable=False),
+            sa.Column("score", sa.Numeric(8, 4), nullable=False),
+            sa.Column("score_change", sa.Numeric(8, 4), nullable=True),
+            sa.Column("industry", sa.String(length=100), nullable=True),
+            sa.Column("company_id", sa.String(length=100), nullable=True),
+            sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+            sa.Column("extra_fields", postgresql.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
+            sa.Column("snapshot_tier", SnapshotTier, nullable=True, server_default="daily"),
+            sa.Column("effective_at", postgresql.TIMESTAMP(timezone=True), nullable=True),
+            sa.ForeignKeyConstraint(["asset_id"], ["assets.id"], name="fk_scoring_snapshots_asset_id"),
+            sa.PrimaryKeyConstraint("id", name="pk_scoring_snapshots"),
+        )
 
-    op.create_index("idx_scoring_snapshot_asset_id", "scoring_snapshots", ["asset_id"])
-    op.create_index("idx_scoring_snapshot_date", "scoring_snapshots", ["date"])
-    op.create_index("idx_scoring_snapshot_level", "scoring_snapshots", ["level"])
-    op.create_index("idx_scoring_snapshot_level_key", "scoring_snapshots", ["level", "level_key"])
-    op.create_index("idx_scoring_snapshot_asset_level_date", "scoring_snapshots", ["asset_id", "level", "date"])
-    op.create_index("idx_scoring_snapshot_score_change", "scoring_snapshots", ["score_change"])
-    op.create_index("idx_scoring_snapshot_industry", "scoring_snapshots", ["industry"])
-    op.create_index("idx_scoring_snapshot_metadata", "scoring_snapshots", ["extra_fields"], postgresql_using="gin")
+    _wanted_indexes = [
+        ("idx_scoring_snapshot_asset_id", ["asset_id"], False, None),
+        ("idx_scoring_snapshot_date", ["date"], False, None),
+        ("idx_scoring_snapshot_level", ["level"], False, None),
+        ("idx_scoring_snapshot_level_key", ["level", "level_key"], False, None),
+        ("idx_scoring_snapshot_asset_level_date", ["asset_id", "level", "date"], False, None),
+        ("idx_scoring_snapshot_score_change", ["score_change"], False, None),
+        ("idx_scoring_snapshot_industry", ["industry"], False, None),
+        ("idx_scoring_snapshot_metadata", ["extra_fields"], False, "gin"),
+        ("ix_scoring_snapshots_effective_at", ["effective_at"], False, None),
+        ("uq_snapshot_asset_tier_effective",
+         ["asset_id", "snapshot_tier", "effective_at"], True, None),
+    ]
+    for name, columns, unique, using in _wanted_indexes:
+        if _index_exists("scoring_snapshots", name):
+            continue
+        kwargs = {"unique": unique}
+        if using:
+            kwargs["postgresql_using"] = using
+        op.create_index(name, "scoring_snapshots", columns, **kwargs)
 
-    op.create_index("ix_scoring_snapshots_effective_at", "scoring_snapshots", ["effective_at"], unique=False)
-
-    # Backfill existing rows
-    op.execute(
-        """
-        UPDATE scoring_snapshots
-        SET
-            snapshot_tier = 'daily'::snapshot_tier,
-            effective_at = (date::timestamp AT TIME ZONE 'UTC')
-        WHERE snapshot_tier IS NULL OR effective_at IS NULL
-        """
-    )
-
-    op.create_index(
-        "uq_snapshot_asset_tier_effective",
-        "scoring_snapshots",
-        ["asset_id", "snapshot_tier", "effective_at"],
-        unique=True,
-    )
+    # Backfill effective_at / snapshot_tier on rows that predate those columns.
+    # Safe to re-run: the WHERE clause only matches rows still missing values.
+    if _column_exists("scoring_snapshots", "effective_at"):
+        op.execute(
+            """
+            UPDATE scoring_snapshots
+            SET
+                snapshot_tier = 'daily'::snapshot_tier,
+                effective_at = (date::timestamp AT TIME ZONE 'UTC')
+            WHERE snapshot_tier IS NULL OR effective_at IS NULL
+            """
+        )
 
 
 # === Part 3: News classification (was 20260907_add_news_classification) ===
 
 
 def _add_news_classification() -> None:
-    op.add_column("news", sa.Column("category", sa.String(50), nullable=False, server_default="ECONOMIC"))
-    op.add_column("news", sa.Column("sub_category", sa.String(100), nullable=True))
-    op.add_column("news", sa.Column("region", sa.String(50), nullable=True))
-    op.add_column("news", sa.Column("priority", sa.String(10), nullable=False, server_default="NORMAL"))
-    op.add_column("news", sa.Column("is_market_moving", sa.Boolean(), nullable=False, server_default=sa.false()))
+    if not _table_exists("news"):
+        return
 
-    op.execute(
-        """
-        UPDATE news
-        SET url = COALESCE(url, 'https://bedaanwaves.local/news/' || id::text)
-        WHERE url IS NULL
-        """
-    )
-    op.alter_column("news", "url", nullable=False)
+    _news_columns = [
+        ("category", sa.String(50), False, "ECONOMIC"),
+        ("sub_category", sa.String(100), True, None),
+        ("region", sa.String(50), True, None),
+        ("priority", sa.String(10), False, "NORMAL"),
+        ("is_market_moving", sa.Boolean(), False, sa.false()),
+    ]
+    for name, type_, nullable, server_default in _news_columns:
+        if _column_exists("news", name):
+            continue
+        kwargs = {"nullable": nullable}
+        if server_default is not None:
+            kwargs["server_default"] = server_default
+        op.add_column("news", sa.Column(name, type_, **kwargs))
 
-    op.create_index("idx_news_category_priority", "news", ["category", "priority"], unique=False)
-    op.create_index("idx_news_region_category", "news", ["region", "category"], unique=False)
+    if _column_exists("news", "url"):
+        op.execute(
+            """
+            UPDATE news
+            SET url = COALESCE(url, 'https://bedaanwaves.local/news/' || id::text)
+            WHERE url IS NULL
+            """
+        )
+        url_cols = {c["name"]: c for c in sa.inspect(op.get_bind()).get_columns("news")}
+        if url_cols.get("url", {}).get("nullable", True):
+            op.alter_column("news", "url", nullable=False)
+
+    for name, columns in (
+        ("idx_news_category_priority", ["category", "priority"]),
+        ("idx_news_region_category", ["region", "category"]),
+    ):
+        if not _index_exists("news", name):
+            op.create_index(name, "news", columns, unique=False)
+
+    if _table_exists("news_sources"):
+        for name, columns in (
+            ("idx_news_source_enabled", ["enabled"]),
+            ("idx_news_source_category", ["category"]),
+        ):
+            if not _index_exists("news_sources", name):
+                op.create_index(name, "news_sources", columns, unique=False)
+        return
 
     op.create_table(
         "news_sources",

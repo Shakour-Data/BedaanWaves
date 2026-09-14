@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
@@ -9,6 +10,7 @@ import { StockSearchBar } from "@/components/search/StockSearchBar";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { useRouter } from "next/navigation";
 import { useUXStore } from "@/store/useUXStore";
+import { QK } from "@/lib/query-keys";
 
 const POPULAR_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "BRK-B"];
 
@@ -139,8 +141,6 @@ function StockCard({ stock }: { stock: Stock }) {
 }
 
 export default function StocksPage() {
-  const [stocks, setStocks] = useState<Stock[]>([]);
-  const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"symbol" | "price" | "change" | "score">("symbol");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const searchParams = useSearchParams();
@@ -149,46 +149,40 @@ export default function StocksPage() {
   const addToast = useUXStore((state) => state.addToast);
   const { recent: recentSearches, addRecent } = useRecentSearches();
 
-  useEffect(() => {
-    async function loadStocks() {
+  const { data: stocks = [], isLoading: loading } = useQuery<Stock[]>({
+    queryKey: searchQuery ? QK.stocksSearch(searchQuery) : QK.stocksBatch(POPULAR_TICKERS),
+    queryFn: async () => {
       try {
         let raw: unknown[] = [];
         if (searchQuery.trim()) {
           const res = await apiClient.get(`/stocks/search?q=${encodeURIComponent(searchQuery)}&limit=100`);
           raw = res.data?.data ?? [];
         } else {
-          // Browse view: fetch a default set of popular stocks. Use the batch
-          // endpoint (POST) so an empty query never triggers a 422 from
-          // backends that require a non-empty `q`.
           const res = await apiClient.post(`/stocks/batch`, POPULAR_TICKERS);
           const payload = res.data?.data ?? {};
           raw = Array.isArray(payload) ? payload : Object.values(payload);
         }
-        setStocks(
-          (raw as Record<string, unknown>[])
-            .filter((item) => item && !("error" in item))
-            .map((item) => ({
-              symbol: (item.symbol ?? item.ticker ?? "") as string,
-              name: (item.name ?? item.security_name ?? "") as string,
-              price: typeof item.price === "number" ? item.price : 0,
-              change: typeof item.change === "number" ? item.change : 0,
-              changePercent: typeof item.change_percent === "number" ? item.change_percent : 0,
-              volume: typeof item.volume === "number" ? item.volume : 0,
-              marketCap: formatMarketCap(item.market_cap),
-              peRatio: typeof item.pe_ratio === "number" ? item.pe_ratio : 0,
-              sector: (item.sector ?? "-") as string,
-              score: typeof item.score === "number" ? item.score : undefined,
-            }))
-        );
+        return (raw as Record<string, unknown>[])
+          .filter((item) => item && !("error" in item))
+          .map((item) => ({
+            symbol: (item.symbol ?? item.ticker ?? "") as string,
+            name: (item.name ?? item.security_name ?? "") as string,
+            price: typeof item.price === "number" ? item.price : 0,
+            change: typeof item.change === "number" ? item.change : 0,
+            changePercent: typeof item.change_percent === "number" ? item.change_percent : 0,
+            volume: typeof item.volume === "number" ? item.volume : 0,
+            marketCap: formatMarketCap(item.market_cap),
+            peRatio: typeof item.pe_ratio === "number" ? item.pe_ratio : 0,
+            sector: (item.sector ?? "-") as string,
+            score: typeof item.score === "number" ? item.score : undefined,
+          }));
       } catch (err) {
         console.error("Failed to load stocks:", err);
         addToast({ type: "error", message: "Failed to load stocks. Please try again." });
-      } finally {
-        setLoading(false);
+        return [];
       }
-    }
-    loadStocks();
-  }, [addToast, searchQuery]);
+    },
+  });
 
   useEffect(() => {
     if (searchQuery) {

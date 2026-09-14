@@ -103,7 +103,12 @@ class NasdaqIngestionService(DataService):
         return obj
 
     def _load_symbols_from_csv(self) -> List[str]:
-        """Load all Nasdaq symbols from the CSV file."""
+        """Load Nasdaq symbols from the optional CSV file.
+
+        The CSV is an *override* source, not a requirement. The authoritative
+        universe lives in the ``assets`` table; see :meth:`load_symbol_universe`.
+        A missing CSV is therefore not an error.
+        """
         symbols = []
         try:
             with open(NASDAQ_CSV_PATH, newline="", encoding="utf-8") as f:
@@ -113,13 +118,59 @@ class NasdaqIngestionService(DataService):
                     if row and len(row) >= 1 and row[0] and not row[0].startswith("File Creation"):
                         symbols.append(row[0].strip())
             logger.info(f"Loaded {len(symbols)} symbols from {NASDAQ_CSV_PATH}")
-        except (FileNotFoundError, PermissionError, csv.Error) as exc:
-            logger.error(f"Failed to load Nasdaq symbols from CSV: {exc}")
-            raise IngestionException(f"Nasdaq symbol CSV load failed: {exc}") from exc
+        except FileNotFoundError:
+            logger.info(
+                "No Nasdaq symbol CSV at %s - using the assets table as the "
+                "symbol universe instead", NASDAQ_CSV_PATH,
+            )
+        except (PermissionError, csv.Error, OSError) as exc:
+            logger.warning(f"Could not read Nasdaq symbol CSV ({exc}); falling back to the assets table")
+        return symbols
+
+    async def load_symbol_universe(self, market: str = "NASDAQ") -> List[str]:
+        """Return the symbol universe to ingest, database-first.
+
+        Reads active symbols of ``market`` from the ``assets`` table. If the
+        database is unreachable or holds no rows for that market, falls back to
+        the optional CSV so ingestion can still proceed.
+        """
+        symbols: List[str] = []
+        try:
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(Asset.symbol)
+                    .where(Asset.market == market, Asset.active.is_(True))
+                    .order_by(Asset.symbol)
+                )
+                symbols = [row[0].strip() for row in result.all() if row[0] and row[0].strip()]
+            if symbols:
+                logger.info(
+                    "Loaded %d %s symbols from the assets table", len(symbols), market
+                )
+        except Exception as exc:
+            logger.warning("Could not read the symbol universe from the database: %s", exc)
+
+        if not symbols:
+            symbols = self._load_symbols_from_csv()
+
+        if not symbols:
+            raise IngestionException(
+                f"No {market} symbols available: the assets table returned no active "
+                f"rows and no symbol CSV was found at {NASDAQ_CSV_PATH}. "
+                "Seed the assets table or provide the CSV before ingesting."
+            )
+
+        self._symbols = symbols
         return symbols
 
     @property
     def DEFAULT_CONSTITUENTS(self) -> List[str]:
+        """Cached symbol universe.
+
+        Populated by :meth:`load_symbol_universe` during :meth:`initialize`.
+        If accessed before initialization, attempts a synchronous CSV read as a
+        last resort so callers that never await ``initialize`` still work.
+        """
         if not self._symbols:
             self._symbols = self._load_symbols_from_csv()
         return self._symbols
@@ -127,8 +178,8 @@ class NasdaqIngestionService(DataService):
     async def initialize(self) -> None:
         self.logger.info("NasdaqIngestionService initialized")
         await self._sec_service.initialize()
-        # Pre-load symbols
-        _ = self.DEFAULT_CONSTITUENTS
+        # Pre-load the symbol universe from the database (CSV fallback).
+        await self.load_symbol_universe()
 
     async def shutdown(self) -> None:
         self.logger.info("NasdaqIngestionService shutdown")

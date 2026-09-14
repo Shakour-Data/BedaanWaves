@@ -3,6 +3,7 @@
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { AssetTable } from "@/components/shared/AssetTable";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import {
   fetchFundamental,
@@ -29,13 +30,13 @@ import {
 } from "@/hooks/useLiveData";
 import { useDateStore, useSnapshotLoading, useSnapshotError } from "@/store/useDateStore";
 import {
-  useLoadSnapshot,
   useSnapshot,
   useSnapshotId,
   useSnapshotTimestamp,
 } from "@/store/useDateStore";
 import { ScoreTripleBadge } from "@/components/scoring/ScoreTripleBadge";
 import { AsOfStamp } from "@/components/scoring/AsOfStamp";
+import { QK } from "@/lib/query-keys";
 
 interface Performer {
   symbol: string;
@@ -101,11 +102,9 @@ export default function AnalysisPage() {
     };
     symbol?: string;
   } | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // Snapshot Zustand integration
   const setLiveLatestFromStream = useDateStore((s) => s.setLiveLatestFromStream);
-  const loadSnapshot = useLoadSnapshot();
   const snapshot = useSnapshot();
   const snapshotId = useSnapshotId();
   const snapshotTs = useSnapshotTimestamp();
@@ -119,6 +118,203 @@ export default function AnalysisPage() {
     { id: "scoring" as Tab, label: t("app.analysis.tabs.scoring"), icon: "S" },
     { id: "sentiment" as Tab, label: t("app.analysis.tabs.sentiment"), icon: "N" },
   ], []);
+
+  // ── React Query: REST data fetching ──────────────────────────────
+  const performersQ = useQuery<{ data: Performer[] }>({
+    queryKey: QK.analysisTopPerformers(10, "1d", "NASDAQ"),
+    queryFn: () => apiClient.get<{ data: Performer[] }>(
+      "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ",
+      { timeout: 60000 },
+    ).then((r: { data: { data: Performer[] } }) => r.data),
+  });
+
+  const symbolsQ = useQuery<{ data: SymbolItem[] }>({
+    queryKey: QK.symbols({ market: "NASDAQ", limit: 50 }),
+    queryFn: () => apiClient.get<{ data: SymbolItem[] }>(
+      "/market/symbols?market=NASDAQ&limit=50",
+      { timeout: 60000 },
+    ).then((r: { data: { data: SymbolItem[] } }) => r.data),
+  });
+
+  const generalQ = useQuery<GeneralDashboardResponse | null>({
+    queryKey: QK.dashboardGeneral({ latest: true }),
+    queryFn: () => fetchGeneralDashboard({ latest: true }).catch(() => null),
+  });
+
+  const trendQ = useQuery<unknown>({
+    queryKey: QK.scoreTrend(30, "NASDAQ", { latest: "true" }),
+    queryFn: () => fetchScoreTrend(30, "NASDAQ", { latest: true }).catch(() => null),
+  });
+
+  const topMoverSymbol = performersQ.data?.data?.[0]?.symbol;
+
+  const topMoverAnalysisQ = useQuery({
+    queryKey: ["analysisTopMover", topMoverSymbol],
+    queryFn: async () => {
+      if (!topMoverSymbol) return null;
+      const [fundamental, technical, sentiment, scoring] = await Promise.all([
+        fetchFundamental(topMoverSymbol).catch(() => undefined),
+        fetchTechnical(topMoverSymbol).catch(() => undefined),
+        fetchSentiment(topMoverSymbol).catch(() => undefined),
+        fetchScoring(topMoverSymbol).catch(() => undefined),
+      ]);
+      return {
+        fundamental: fundamental ?? undefined,
+        technical: technical ?? undefined,
+        sentiment: sentiment ?? undefined,
+        scoring: scoring ?? undefined,
+        symbol: topMoverSymbol,
+      };
+    },
+    enabled: !!topMoverSymbol,
+  });
+
+  const coreLoading = performersQ.isLoading || symbolsQ.isLoading || generalQ.isLoading || trendQ.isLoading;
+  const hasAnyData = topMovers.length > 0 || marketStats.length > 0 || !!snapshot;
+  const loading = coreLoading && !hasAnyData;
+
+  // ── Sync: snapshot data → local state ────────────────────────────
+  useEffect(() => {
+    if (!snapshot) return;
+
+    const currentDims = snapshot.scores?.current?.dimension ?? {};
+    if (Object.keys(currentDims).length > 0) {
+      setDimensionScores(currentDims);
+    }
+    if (typeof snapshot.scores?.current?.overall === "number") {
+      setOverallScore(snapshot.scores.current.overall);
+    }
+    if (Array.isArray(snapshot.trends?.daily) && snapshot.trends.daily.length > 0) {
+      setScoreTrend(
+        snapshot.trends.daily.map((p) => ({
+          time: p.date,
+          value: typeof p.overall === "number" ? p.overall : NaN,
+        })).filter((p) => Number.isFinite(p.value)),
+      );
+    }
+
+    const snapshotSymbolCount = snapshot.scores?.current?.symbol_map
+      ? Object.keys(snapshot.scores.current.symbol_map).length
+      : null;
+
+    const topFromSnap = (() => {
+      if (!snapshot.scores?.current?.symbol_map) return null;
+      const entries = Object.entries(snapshot.scores.current.symbol_map);
+      entries.sort((a, b) => (b[1].overall ?? -Infinity) - (a[1].overall ?? -Infinity));
+      return entries.length ? entries[0] : null;
+    })();
+    const bottomFromSnap = (() => {
+      if (!snapshot.scores?.current?.symbol_map) return null;
+      const entries = Object.entries(snapshot.scores.current.symbol_map);
+      entries.sort((a, b) => (a[1].overall ?? Infinity) - (b[1].overall ?? Infinity));
+      return entries.length ? entries[0] : null;
+    })();
+
+    const statsFromSnap: typeof marketStats = [];
+    statsFromSnap.push({
+      label: "Active Symbols",
+      value: (snapshotSymbolCount ?? generalQ.data?.summary?.total_symbols ?? 0).toLocaleString("en-US"),
+      changePct: 0,
+    });
+    if (topFromSnap) {
+      const [sym, d] = topFromSnap;
+      statsFromSnap.push({
+        label: "Top Scorer",
+        value: `${sym} ${typeof d.overall === "number" ? d.overall.toFixed(1) : "0"}`,
+        changePct: 0,
+      });
+    } else if (generalQ.data?.top_performers?.[0]) {
+      const top = generalQ.data.top_performers[0];
+      statsFromSnap.push({
+        label: "Top Scorer",
+        value: `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}`,
+        changePct: 0,
+      });
+    }
+    if (bottomFromSnap) {
+      const [sym, d] = bottomFromSnap;
+      statsFromSnap.push({
+        label: "Lowest Scorer",
+        value: `${sym} ${typeof d.overall === "number" ? d.overall.toFixed(1) : "0"}`,
+        changePct: 0,
+      });
+    } else if (generalQ.data?.bottom_performers?.[0]) {
+      const bottom = generalQ.data.bottom_performers[0];
+      statsFromSnap.push({
+        label: "Lowest Scorer",
+        value: `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}`,
+        changePct: 0,
+      });
+    }
+    if (statsFromSnap.length > 0) setMarketStats(statsFromSnap);
+    if (snapshot.timestamp) setLiveLatestFromStream(snapshot.timestamp);
+  }, [snapshot, generalQ.data, setLiveLatestFromStream]);
+
+  // ── Sync: legacy fallback (when no snapshot) ─────────────────────
+  useEffect(() => {
+    if (snapshot) return;
+    const generalRes = generalQ.data;
+    const trendRes = trendQ.data as { status?: string; series?: Array<{ date: string; avg_score: number }> } | null;
+
+    if (generalRes?.status === "success") {
+      const top = generalRes.top_performers?.[0];
+      const bottom = generalRes.bottom_performers?.[0];
+      const totalSymbols = generalRes.summary?.total_symbols ?? 0;
+      setMarketStats([
+        { label: "Active Symbols", value: totalSymbols.toLocaleString("en-US"), changePct: 0 },
+        {
+          label: "Top Scorer",
+          value: top ? `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}` : "—",
+          changePct: 0,
+        },
+        {
+          label: "Lowest Scorer",
+          value: bottom ? `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}` : "—",
+          changePct: 0,
+        },
+      ]);
+
+      const dims: Record<string, number> = {};
+      if (generalRes.dimensions) {
+        Object.entries(generalRes.dimensions).forEach(([k, v]) => {
+          const val = v as { avg_score?: number } | null;
+          if (val && typeof val.avg_score === "number") dims[k] = val.avg_score;
+        });
+      }
+      if (Object.keys(dims).length > 0) setDimensionScores(dims);
+      if (generalRes.latest_date) setLiveLatestFromStream(generalRes.latest_date);
+    }
+
+    if (trendRes?.status === "success" && trendRes.series) {
+      setScoreTrend(trendRes.series.map((p) => ({ time: p.date, value: p.avg_score })));
+    }
+  }, [snapshot, generalQ.data, trendQ.data, setLiveLatestFromStream]);
+
+  // ── Sync: top movers from performers query ───────────────────────
+  useEffect(() => {
+    const performers = performersQ.data?.data;
+    const symbols = symbolsQ.data?.data;
+    if (!performers || !symbols) return;
+
+    const symbolMap = new Map(symbols.map((s) => [s.symbol, s.name]));
+    const movers: AssetRow[] = performers
+      .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
+      .map((p) => ({
+        symbol: p.symbol,
+        name: symbolMap.get(p.symbol) || p.name || "",
+        market: "NASDAQ" as const,
+        price: p.current_price ?? 0,
+        changePct: p.change_percent ?? 0,
+      }));
+    setTopMovers(movers.slice(0, 10));
+  }, [performersQ.data, symbolsQ.data]);
+
+  // ── Sync: top mover analysis ─────────────────────────────────────
+  useEffect(() => {
+    if (topMoverAnalysisQ.data) {
+      setAnalysisData(topMoverAnalysisQ.data);
+    }
+  }, [topMoverAnalysisQ.data]);
 
   const liveMarket = useLiveData<MarketPulsePayload>("market" as LiveStreamKey, {
     onData: (data) => {
@@ -167,225 +363,6 @@ export default function AnalysisPage() {
       }
     },
   });
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadAnalysisData() {
-      setLoading(true);
-      try {
-        // ------- UNIFIED SNAPSHOT (preferred, parity-first path) -------
-        const snapPromise = loadSnapshot({
-          window_daily: 30,
-          window_intraday: "24h",
-        }).catch(() => null);
-
-        // ------- LEGACY FALLBACKS (execute anyway for non-snapshot data) -------
-        const performersPromise = apiClient.get<{ data: Performer[] }>(
-          "/analysis/top-performers?limit=10&timeframe=1d&market=NASDAQ",
-          { timeout: 60000 }
-        );
-        const symbolsPromise = apiClient.get<{ data: SymbolItem[] }>(
-          "/market/symbols?market=NASDAQ&limit=50",
-          { timeout: 60000 }
-        );
-        const generalPromise = fetchGeneralDashboard({ latest: true }).catch(
-          () => null as GeneralDashboardResponse | null,
-        );
-        const trendPromise = fetchScoreTrend(30, "NASDAQ", { latest: true }).catch(
-          () => null,
-        );
-
-        const [snap, performersRes, symbolsRes, generalRes, trendRes] = await Promise.all([
-          snapPromise,
-          performersPromise,
-          symbolsPromise,
-          generalPromise,
-          trendPromise,
-        ]);
-
-        if (!active) return;
-
-        // ------- Populate parity data from snapshot if available -------
-        if (snap) {
-          // Dimension scores from CURRENT tier
-          const currentDims = snap.scores?.current?.dimension ?? {};
-          if (Object.keys(currentDims).length > 0) {
-            setDimensionScores(currentDims);
-          }
-          if (typeof snap.scores?.current?.overall === "number") {
-            setOverallScore(snap.scores.current.overall);
-          }
-          // Trend: use daily series (30-day default from window_daily)
-          if (Array.isArray(snap.trends?.daily) && snap.trends.daily.length > 0) {
-            setScoreTrend(
-              snap.trends.daily.map((p) => ({
-                time: p.date,
-                value: typeof p.overall === "number" ? p.overall : NaN,
-              })).filter((p) => Number.isFinite(p.value)),
-            );
-          }
-          // Market stats: derive Active Symbols count from snapshot or keep legacy
-          const snapshotSymbolCount =
-            snap.scores?.current?.symbol_map
-              ? Object.keys(snap.scores.current.symbol_map).length
-              : null;
-          // Legacy top/bottom performers - if not available we build from symbol_map top/bottom
-          const topFromSnap = (() => {
-            if (!snap.scores?.current?.symbol_map) return null;
-            const entries = Object.entries(snap.scores.current.symbol_map);
-            entries.sort(
-              (a, b) => (b[1].overall ?? -Infinity) - (a[1].overall ?? -Infinity),
-            );
-            return entries.length ? entries[0] : null;
-          })();
-          const bottomFromSnap = (() => {
-            if (!snap.scores?.current?.symbol_map) return null;
-            const entries = Object.entries(snap.scores.current.symbol_map);
-            entries.sort(
-              (a, b) => (a[1].overall ?? Infinity) - (b[1].overall ?? Infinity),
-            );
-            return entries.length ? entries[0] : null;
-          })();
-          const statsFromSnap: typeof marketStats = [];
-          statsFromSnap.push({
-            label: "Active Symbols",
-            value: (
-              snapshotSymbolCount ??
-              generalRes?.summary?.total_symbols ??
-              0
-            ).toLocaleString("en-US"),
-            changePct: 0,
-          });
-          if (topFromSnap) {
-            const [sym, data] = topFromSnap;
-            statsFromSnap.push({
-              label: "Top Scorer",
-              value: `${sym} ${typeof data.overall === "number" ? data.overall.toFixed(1) : "0"}`,
-              changePct: 0,
-            });
-          } else if (generalRes?.top_performers?.[0]) {
-            const top = generalRes.top_performers[0];
-            statsFromSnap.push({
-              label: "Top Scorer",
-              value: `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}`,
-              changePct: 0,
-            });
-          }
-          if (bottomFromSnap) {
-            const [sym, data] = bottomFromSnap;
-            statsFromSnap.push({
-              label: "Lowest Scorer",
-              value: `${sym} ${typeof data.overall === "number" ? data.overall.toFixed(1) : "0"}`,
-              changePct: 0,
-            });
-          } else if (generalRes?.bottom_performers?.[0]) {
-            const bottom = generalRes.bottom_performers[0];
-            statsFromSnap.push({
-              label: "Lowest Scorer",
-              value: `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}`,
-              changePct: 0,
-            });
-          }
-          if (statsFromSnap.length > 0) {
-            setMarketStats(statsFromSnap);
-          }
-          if (snap.timestamp) {
-            setLiveLatestFromStream(snap.timestamp);
-          }
-        } else {
-          // ------- FALLBACK: Populate from legacy REST endpoints -------
-          if (generalRes?.status === "success") {
-            const top = generalRes.top_performers?.[0];
-            const bottom = generalRes.bottom_performers?.[0];
-            const totalSymbols = generalRes.summary?.total_symbols ?? 0;
-            setMarketStats([
-              {
-                label: "Active Symbols",
-                value: totalSymbols.toLocaleString("en-US"),
-                changePct: 0,
-              },
-              {
-                label: "Top Scorer",
-                value: top
-                  ? `${top.symbol} ${typeof top.overall_score === "number" ? top.overall_score.toFixed(1) : "0"}`
-                  : "—",
-                changePct: 0,
-              },
-              {
-                label: "Lowest Scorer",
-                value: bottom
-                  ? `${bottom.symbol} ${typeof bottom.overall_score === "number" ? bottom.overall_score.toFixed(1) : "0"}`
-                  : "—",
-                changePct: 0,
-              },
-            ]);
-
-            const dims: Record<string, number> = {};
-            if (generalRes.dimensions) {
-              Object.entries(generalRes.dimensions).forEach(([k, v]) => {
-                if (v && typeof v.avg_score === "number") dims[k] = v.avg_score;
-              });
-            }
-            if (Object.keys(dims).length > 0) setDimensionScores(dims);
-            if (generalRes.latest_date) {
-              setLiveLatestFromStream(generalRes.latest_date);
-            }
-          }
-
-          if (trendRes?.status === "success" && trendRes.series) {
-            setScoreTrend(
-              trendRes.series.map((p) => ({
-                time: p.date,
-                value: p.avg_score,
-              })),
-            );
-          }
-        }
-
-        // ------- Top movers + per-symbol deep analysis (non-snapshot, legacy path) -------
-        const symbolMap = new Map(
-          (symbolsRes.data?.data ?? []).map((s) => [s.symbol, s.name]),
-        );
-        const movers: AssetRow[] = (performersRes.data?.data ?? [])
-          .filter((p) => isNasdaqEquityLike({ symbol: p.symbol }))
-          .map((p) => ({
-            symbol: p.symbol,
-            name: symbolMap.get(p.symbol) || p.name || "",
-            market: "NASDAQ" as const,
-            price: p.current_price ?? 0,
-            changePct: p.change_percent ?? 0,
-          }));
-        setTopMovers(movers.slice(0, 10));
-
-        if (movers.length > 0) {
-          const topSymbol = movers[0].symbol;
-          const [fundamental, technical, sentiment, scoring] = await Promise.all([
-            fetchFundamental(topSymbol).catch(() => undefined),
-            fetchTechnical(topSymbol).catch(() => undefined),
-            fetchSentiment(topSymbol).catch(() => undefined),
-            fetchScoring(topSymbol).catch(() => undefined),
-          ]);
-          setAnalysisData({
-            fundamental: fundamental ?? undefined,
-            technical: technical ?? undefined,
-            sentiment: sentiment ?? undefined,
-            scoring: scoring ?? undefined,
-            symbol: topSymbol,
-          });
-        }
-      } catch (error) {
-        console.error("Error loading analysis data:", error);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    loadAnalysisData();
-    return () => {
-      active = false;
-    };
-  }, [setLiveLatestFromStream, loadSnapshot]);
 
   const lastMarketEventTs =
     liveMarket.data === liveMarket.latest

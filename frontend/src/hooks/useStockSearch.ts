@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { StockSearchResult } from "./types";
 import { apiClient, getApiErrorMessage } from "@/lib/api";
+import { QK } from "@/lib/query-keys";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,13 +16,6 @@ export interface SearchState {
   status: SearchStatus;
   error: string | null;
 }
-
-// ---------------------------------------------------------------------------
-// In-memory cache: Map<query_lowercase, StockSearchResult[]>
-// ---------------------------------------------------------------------------
-
-const searchCache = new Map<string, { results: StockSearchResult[]; timestamp: number }>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Utility: Debounce
@@ -38,7 +33,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 // ---------------------------------------------------------------------------
-// Utility: Debounce
+// API helper
 // ---------------------------------------------------------------------------
 
 async function apiSearch(query: string): Promise<StockSearchResult[]> {
@@ -77,125 +72,40 @@ async function apiSearch(query: string): Promise<StockSearchResult[]> {
 // ---------------------------------------------------------------------------
 
 export function useStockSearch(minQueryLength = 1) {
-  const [searchState, setSearchState] = useState<SearchState>({
-    query: "",
-    results: [],
-    status: "idle",
-    error: null,
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const trimmed = debouncedQuery.trim();
+  const canSearch = trimmed.length >= minQueryLength;
+
+  const { data, isLoading, error } = useQuery<StockSearchResult[]>({
+    queryKey: QK.stocksSearch(trimmed),
+    queryFn: () => apiSearch(trimmed),
+    enabled: canSearch,
+    staleTime: 5 * 60 * 1000, // 5 min — replaces manual cache
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
-  const debouncedQuery = useDebouncedValue(searchState.query, 300);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isMountedRef = useRef(true);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      abortControllerRef.current?.abort();
-    };
-  }, []);
-
-  // Fetch logic
-  useEffect(() => {
-    const trimmed = debouncedQuery.trim();
-
-    if (trimmed.length < minQueryLength) {
-      setSearchState((prev) => ({ ...prev, results: [], status: trimmed.length === 0 ? "idle" : "idle" }));
-      return;
-    }
-
-    const cacheKey = trimmed.toLowerCase();
-
-    const cached = searchCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-      setSearchState((prev) => ({
-        ...prev,
-        query: trimmed,
-        results: cached.results,
-        status: "success",
-        error: null,
-      }));
-      return;
-    }
-
-    // Set loading state
-    setSearchState((prev) => ({
-      ...prev,
-      query: trimmed,
-      status: "loading",
-      error: null,
-    }));
-
-    // Abort any in-flight request
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    let cancelled = false;
-
-    async function performSearch() {
-      try {
-        let results: StockSearchResult[] = [];
-
-        try {
-          const apiResults = await apiSearch(trimmed);
-          if (!cancelled && !controller.signal.aborted) {
-            results = apiResults;
-          }
-        } catch (err) {
-          if (!cancelled && !controller.signal.aborted) {
-            throw err;
-          }
-        }
-
-        if (cancelled || controller.signal.aborted) return;
-
-        // Cache the result with TTL
-        searchCache.set(cacheKey, { results, timestamp: Date.now() });
-
-        if (isMountedRef.current) {
-          setSearchState((prev) => ({
-            ...prev,
-            query: trimmed,
-            results,
-            status: results.length === 0 ? "empty" : "success",
-            error: null,
-          }));
-        }
-      } catch (err) {
-        if (cancelled || controller.signal.aborted) return;
-        if (isMountedRef.current) {
-          setSearchState((prev) => ({
-            ...prev,
-            query: trimmed,
-            results: [],
-            status: "error",
-            error: getApiErrorMessage(err),
-          }));
-        }
-      }
-    }
-
-    performSearch();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [debouncedQuery, minQueryLength]);
-
-  // Expose a manual search setter (bypasses debounce if needed)
-  const setQuery = useCallback((q: string) => {
-    setSearchState((prev) => ({ ...prev, query: q }));
-  }, []);
+  const results = data ?? [];
+  const status: SearchStatus = !canSearch
+    ? "idle"
+    : isLoading
+      ? "loading"
+      : error
+        ? "error"
+        : results.length === 0
+          ? "empty"
+          : "success";
 
   const clearResults = useCallback(() => {
-    setSearchState({ query: "", results: [], status: "idle", error: null });
+    setQuery("");
   }, []);
 
   return {
-    ...searchState,
+    query,
+    results,
+    status,
+    error: error ? getApiErrorMessage(error) : null,
     setQuery,
     clearResults,
   };

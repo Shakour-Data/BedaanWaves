@@ -25,6 +25,14 @@ from . import (
     data_health,
     dashboard,
     filter,
+    nerk,
+    privacy,
+    alerts,
+    observability,
+    security_audit,
+    service_map,
+    compare,
+    forecast,
 )
 
 # Export routers with explicit names for main.py compatibility
@@ -52,12 +60,22 @@ market_data_router = market_data.router
 data_health_router = data_health.router
 dashboard_router = dashboard.router
 filter_router = filter.router
+nerk_router = nerk.router
+privacy_router = privacy.router
+alerts_router = alerts.router
+observability_router = observability.router
+security_audit_router = security_audit.router
+service_map_router = service_map.router
+compare_router = compare.router
+forecast_router = forecast.router
 
 __all__ = [
     "market", "analysis", "stocks", "portfolios", "history", "news",
     "auth", "ml", "live", "live_sse", "users", "watchlists", "notifications",
     "system", "specialized", "health", "symbols", "settings", "ranking", "password_reset",
     "market_data", "data_health", "dashboard", "filter",
+    "nerk", "privacy", "alerts", "observability", "security_audit", "service_map",
+    "compare", "forecast",
     "market_router", "analysis_router", "stocks_router", "portfolio_router",
     "history_router", "news_router", "auth_router", "ml_router",
     "users_router", "watchlists_router", "notifications_router",
@@ -66,4 +84,6 @@ __all__ = [
     "settings_router", "ranking_router", "password_reset_router",
     "market_data_router", "data_health_router", "dashboard_router",
     "filter_router",
+    "nerk_router", "privacy_router", "alerts_router", "observability_router",
+    "security_audit_router", "service_map_router", "compare_router", "forecast_router",
 ]

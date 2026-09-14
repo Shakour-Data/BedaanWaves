@@ -27,12 +27,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    dialect = postgresql.dialect()
-    for table in Base.metadata.sorted_tables:
-        op.execute(CreateTable(table, if_not_exists=True).compile(dialect=dialect))
+    # Create all tables from model metadata
+    bind = op.get_bind()
+    Base.metadata.create_all(bind=bind)
 
 
 def downgrade() -> None:
-    dialect = postgresql.dialect()
+    # Drop all tables in reverse order
+    bind = op.get_bind()
     for table in reversed(Base.metadata.sorted_tables):
-        op.execute(DropTable(table, if_exists=True).compile(dialect=dialect))
+        op.drop_table(table.name, if_exists=True)

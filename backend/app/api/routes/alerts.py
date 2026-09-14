@@ -27,9 +27,9 @@ from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel, Field, validator
 
-from ....core.config import get_settings
-from ....services.user.auth_service import AuthService, get_current_user
-from ....services.notifications.alert_service import AlertService
+from app.core.config import get_settings
+from app.api.dependencies import get_current_user
+from app.services.notifications.alert_service import AlertService
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 

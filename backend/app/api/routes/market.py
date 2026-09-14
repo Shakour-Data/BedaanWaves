@@ -144,7 +144,7 @@ async def get_price_history(
 
 @router.get("/latest-prices", response_model=dict)
 async def get_latest_prices(
-    symbols: List[str] = Query(...),
+    symbols: Optional[List[str]] = Query(None),
     include_change: bool = Query(True),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:

@@ -20,10 +20,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ....core.config import get_settings
-from ....services.core.cache_service import CacheService
-from ....services.data.stock_service import StockService
-from ....services.analysis.scoring_service import ScoringService
+from app.core.config import get_settings
+from app.services.core.cache_service import CacheService
+from app.services.data.stock_service import StockService
+from app.services.analysis.scoring_service import ScoringService
 
 router = APIRouter(prefix="/compare", tags=["Compare"])
 
@@ -39,6 +39,12 @@ class CompareStocksRequest(BaseModel):
     include_metrics: bool = Field(True, description="Include financial metrics")
     include_technical: bool = Field(True, description="Include technical indicators")
     include_historical: bool = Field(False, description="Include historical performance")
+    days: int = Field(30, ge=1, le=365, description="Number of days for historical data")
+
+
+class CompareHistoricalRequest(BaseModel):
+    """Request model for historical comparison"""
+    symbols: List[str] = Field(..., min_items=2, max_items=5, description="List of stock symbols to compare")
     days: int = Field(30, ge=1, le=365, description="Number of days for historical data")
 
 
@@ -182,8 +188,7 @@ async def compare_metrics(
 
 @router.post("/historical")
 async def compare_historical(
-    symbols: List[str] = Field(..., min_items=2, max_items=5),
-    days: int = Field(30, ge=1, le=365),
+    request: CompareHistoricalRequest,
     stock_service: StockService = Depends(),
 ):
     """

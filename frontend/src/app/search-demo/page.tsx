@@ -20,8 +20,8 @@ export default function SearchDemoPage() {
         placeholder="Search stocks, tickers..."
         recentSearches={recent.length > 0 ? recent : ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN"]}
         onRecent={addRecent}
-        onSelect={(stock) => {
-          console.log("Selected stock:", stock);
+        onSelect={() => {
+          // Demo: selection handled by StockSearchBar internally
         }}
         minQueryLength={1}
       />

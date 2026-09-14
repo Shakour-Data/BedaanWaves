@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { t } from "@/lib/i18n";
-import { getApiErrorMessage } from "@/lib/api";
+import { QK } from "@/lib/query-keys";
 import {
   useLiveData,
   LiveConnectionIndicator,
@@ -134,10 +135,6 @@ function DeltaBadge({ delta }: { delta: number }) {
 }
 
 export default function RankingPage() {
-  const [items, setItems] = useState<NasdaqRanking[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<RankingSortField>("overall_score");
   const [order, setOrder] = useState<SortOrder>("desc");
@@ -145,30 +142,19 @@ export default function RankingPage() {
   const [scoreBadges, setScoreBadges] = useState<ScoreBadgeMap>({});
   const lastEventTimestamp = useRef<number | null>(null);
 
-  const load = useCallback(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
-    fetchNasdaqRankings({ limit: PAGE_SIZE, offset, sort_by: sortBy, order })
-      .then((res) => {
-        if (!active) return;
-        setItems(res.items);
-        setTotal(res.total);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        const message = getApiErrorMessage(err);
-        setError(message || t("app.ranking.error_desc"));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [offset, sortBy, order]);
+  const { data: queryData, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: QK.ranking({ limit: PAGE_SIZE, offset, sort_by: sortBy, order }),
+    queryFn: () => fetchNasdaqRankings({ limit: PAGE_SIZE, offset, sort_by: sortBy, order }),
+  });
 
-  useEffect(() => load(), [load]);
+  const [items, setItems] = useState<NasdaqRanking[]>([]);
+  const total = queryData?.total ?? 0;
+
+  useEffect(() => {
+    if (queryData?.items) setItems(queryData.items);
+  }, [queryData]);
+
+  const error = queryError ? (queryError instanceof Error ? queryError.message : t("app.ranking.error_desc")) : null;
 
   useEffect(() => {
     if (!liveEnabled) return;
@@ -317,7 +303,7 @@ export default function RankingPage() {
         ) : error ? (
           <ErrorMessage
             message={t("app.ranking.error_title")}
-            actions={[{ label: t("app.ranking.retry"), onAction: () => load() }]}
+            actions={[{ label: t("app.ranking.retry"), onAction: () => refetch() }]}
           />
         ) : (
           <Card>

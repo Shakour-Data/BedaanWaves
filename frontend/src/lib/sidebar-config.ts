@@ -46,7 +46,7 @@ export const sidebarCategories: NavCategory[] = [
     label: "Markets",
     icon: "Globe",
     items: [
-      { label: "Neark Index", href: "/nerk", icon: "Globe", marker: "NK" },
+      { label: "Nasdaq Index", href: "/nerk", icon: "Globe", marker: "NK" },
     ],
   },
   {

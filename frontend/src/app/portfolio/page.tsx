@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { TarotCard } from "@/components/ui/TarotCard";
@@ -16,6 +17,7 @@ import {
   LiveConnectionIndicator,
   type SSEEvent,
 } from "@/hooks/useLiveData";
+import { QK } from "@/lib/query-keys";
 
 import { t } from "@/lib/i18n";
 
@@ -55,12 +57,70 @@ type LiveQuotesMap = Record<string, { price: number; changePct: number; ts: numb
 export default function PortfolioPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [holdings, setHoldings] = useState<AssetRow[]>([]);
   const [stats, setStats] = useState<Array<{ label: string; value: string; changePct?: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [holdings, setHoldings] = useState<AssetRow[]>([]);
   const [liveQuotes, setLiveQuotes] = useState<LiveQuotesMap>({});
   const lastQuoteEventRef = useRef<number | null>(null);
+
+  const { data: queryData, isLoading: loading, error: queryError, refetch } = useQuery<AssetRow[]>({
+    queryKey: QK.portfolio.detail(),
+    queryFn: async () => {
+      const portfoliosRes = await apiClient.get<PortfolioSummary[]>("/portfolio/");
+      const portfolios = portfoliosRes.data;
+
+      if (!portfolios || portfolios.length === 0) return [];
+
+      const portfolioId = portfolios[0].id;
+      const holdingsRes = await apiClient.get<Holding[]>(`/portfolio/${portfolioId}/holdings`);
+      const holdingsData = holdingsRes.data;
+
+      const symbolsRes = await apiClient.get<SymbolItem[]>("/market/symbols");
+      const allAssets = symbolsRes.data;
+      const assetMap = new Map(allAssets.map((a) => [a.id, a]));
+
+      if (holdingsData.length === 0) return [];
+
+      const symbols = holdingsData
+        .map((h) => assetMap.get(h.asset_id)?.symbol)
+        .filter((symbol): symbol is string => Boolean(symbol));
+      const pricesRes = await apiClient.get<{ data: Record<string, PriceItem> }>(
+        `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+      );
+      const prices = pricesRes.data?.data || {};
+
+      return holdingsData
+        .map((h) => {
+          const asset = assetMap.get(h.asset_id);
+          const symbol = asset?.symbol;
+          if (!symbol) return null;
+          const priceData = prices[symbol];
+          const row: AssetRow = {
+            symbol,
+            name: asset?.name || "Unknown",
+            market: "NASDAQ",
+            price: priceData?.price ?? h.entry_price ?? 0,
+            changePct: priceData?.change_pct ?? 0,
+            quantity: Number(h.quantity),
+            avg_price: Number(h.entry_price),
+          };
+          return isNasdaqEquityLike(row) ? row : null;
+        })
+        .filter((h): h is AssetRow => h !== null);
+    },
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (queryData) {
+      setHoldings(queryData);
+    }
+  }, [queryData]);
+
+  const error = !user ? t("app.portfolio.login_required") : queryError ? t("app.portfolio.error_loading") : null;
+
+  const handleRetry = () => {
+    void refetch();
+  };
 
   const applyQuotePatch = useCallback((symbol: string, price?: number, changePct?: number) => {
     const sym = symbol.toUpperCase();
@@ -146,95 +206,6 @@ export default function PortfolioPage() {
     });
   }, [liveHoldings]);
 
-  const loadPortfolio = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const portfoliosRes = await apiClient.get<PortfolioSummary[]>("/portfolio/");
-      const portfolios = portfoliosRes.data;
-      
-      if (portfolios && portfolios.length > 0) {
-        const portfolioId = portfolios[0].id;
-        
-        const holdingsRes = await apiClient.get<Holding[]>(`/portfolio/${portfolioId}/holdings`);
-        const holdingsData = holdingsRes.data;
-        
-        const symbolsRes = await apiClient.get<SymbolItem[]>("/market/symbols");
-        const allAssets = symbolsRes.data;
-        const assetMap = new Map(allAssets.map((a) => [a.id, a]));
-        
-        if (holdingsData.length > 0) {
-          const symbols = holdingsData
-            .map((h) => assetMap.get(h.asset_id)?.symbol)
-            .filter((symbol): symbol is string => Boolean(symbol));
-          const pricesRes = await apiClient.get<{ data: Record<string, PriceItem> }>(
-            `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
-          );
-          
-          const prices = pricesRes.data?.data || {};
-          
-          const enrichedHoldings: AssetRow[] = holdingsData
-            .map((h) => {
-              const asset = assetMap.get(h.asset_id);
-              const symbol = asset?.symbol;
-              if (!symbol) return null;
-              const priceData = prices[symbol];
-              const row: AssetRow = {
-                symbol,
-                name: asset?.name || "Unknown",
-                market: "NASDAQ",
-                price: priceData?.price ?? h.entry_price ?? 0,
-                changePct: priceData?.change_pct ?? 0,
-                quantity: Number(h.quantity),
-                avg_price: Number(h.entry_price),
-              };
-              return isNasdaqEquityLike(row) ? row : null;
-            })
-            .filter((h): h is AssetRow => h !== null);
-          
-          setHoldings(enrichedHoldings);
-          
-          const totalValue = enrichedHoldings.reduce((sum, h) => sum + (h.price * (h.quantity ?? 0)), 0);
-          const totalCost = enrichedHoldings.reduce((sum, h) => sum + ((h.avg_price ?? 0) * (h.quantity ?? 0)), 0);
-          const totalPnL = totalValue - totalCost;
-          const totalReturnPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-          
-          setStats([
-            { label: t("app.portfolio.total_value"), value: `$${totalValue.toLocaleString("en-US")}`, changePct: totalReturnPct },
-            { label: t("app.portfolio.total_pnl"), value: `$${totalPnL.toLocaleString("en-US")}`, changePct: totalReturnPct },
-            { label: t("app.portfolio.symbols_count"), value: String(enrichedHoldings.length), changePct: 0 },
-            { label: t("app.portfolio.daily_return"), value: `${(totalReturnPct / 30).toFixed(2)}%`, changePct: totalReturnPct / 30 },
-          ]);
-        } else {
-          setHoldings([]);
-          setStats([
-            { label: t("app.portfolio.total_value"), value: "$0", changePct: 0 },
-            { label: t("app.portfolio.total_pnl"), value: "$0", changePct: 0 },
-            { label: t("app.portfolio.symbols_count"), value: "0", changePct: 0 },
-            { label: t("app.portfolio.daily_return"), value: "0%", changePct: 0 },
-          ]);
-        }
-      } else {
-        setHoldings([]);
-        setStats([]);
-      }
-    } catch {
-      setError(t("app.portfolio.error_loading"));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadPortfolio();
-    } else {
-      setLoading(false);
-      setError(t("app.portfolio.login_required"));
-    }
-  }, [user, loadPortfolio]);
-
   if (loading) {
     return (
       <NewDashboardShell title={t("app.portfolio.title")}>
@@ -249,7 +220,7 @@ export default function PortfolioPage() {
         <TarotCard icon="⚠️" title={t("app.portfolio.error_loading")} className="max-w-md mx-auto border-error/20 bg-error/5">
           <div className="py-4 text-center">
             <p className="text-sm text-error font-medium mb-4">{error}</p>
-            <PrimaryButton onClick={() => { setError(null); loadPortfolio(); }} variant="outline" size="sm">
+            <PrimaryButton onClick={handleRetry} variant="outline" size="sm">
               {t("app.auth.submit")}
             </PrimaryButton>
           </div>

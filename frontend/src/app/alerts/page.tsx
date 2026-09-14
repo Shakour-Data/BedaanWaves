@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NewDashboardShell } from "@/components/layout/NewDashboardShell";
 import { AssetTable } from "@/components/shared/AssetTable";
 import { apiClient } from "@/lib/api";
@@ -8,6 +9,7 @@ import type { AssetRow } from "@/lib/dashboard-data";
 
 import { t } from "@/lib/i18n";
 import { formatTimeAgo } from "@/lib/utils";
+import { QK } from "@/lib/query-keys";
 
 interface WatchlistItem {
   asset?: {
@@ -37,85 +39,73 @@ interface PriceMap {
   };
 }
 
-export default function AlertsPage() {
-  
-  const [watchlistAlerts, setWatchlistAlerts] = useState<AssetRow[]>([]);
-  const [alertHistory, setAlertHistory] = useState<Array<{
+interface AlertsData {
+  watchlistAlerts: AssetRow[];
+  alertHistory: Array<{
     time: string;
     alert: string;
     type: string;
     status: string;
     statusKey: string;
-  }>>([]);
-  const [loading, setLoading] = useState(true);
+  }>;
+}
 
-  useEffect(() => {
-    let active = true;
+export default function AlertsPage() {
 
-    async function loadAlerts() {
-      setLoading(true);
-      setWatchlistAlerts([]);
-      setAlertHistory([]);
+  const { data, isLoading: loading } = useQuery<AlertsData>({
+    queryKey: ["alerts"],
+    queryFn: async () => {
+      const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists/watchlists");
+      const notificationsRes = await apiClient.get<Notification[]>("/notifications/notifications?limit=20");
 
-      try {
-        const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists/watchlists");
-        const notificationsRes = await apiClient.get<Notification[]>("/notifications/notifications?limit=20");
+      const watchlists = watchlistsRes.data || [];
+      const defaultWatchlist = watchlists.find((w) => w.is_default);
+      let watchlistAlerts: AssetRow[] = [];
 
-        if (!active) return;
+      if (defaultWatchlist?.items?.length) {
+        const symbols = defaultWatchlist.items
+          .map((item) => item.asset?.symbol)
+          .filter((symbol): symbol is string => Boolean(symbol));
+        if (symbols.length) {
+          const pricesRes = await apiClient.get<{ data: PriceMap }>(
+            `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
+          );
+          const prices = pricesRes.data?.data || {};
 
-        const watchlists = watchlistsRes.data || [];
-        const defaultWatchlist = watchlists.find((w) => w.is_default);
-        if (defaultWatchlist?.items?.length) {
-          const symbols = defaultWatchlist.items
-            .map((item) => item.asset?.symbol)
-            .filter((symbol): symbol is string => Boolean(symbol));
-          if (symbols.length) {
-            const pricesRes = await apiClient.get<{ data: PriceMap }>(
-              `/market/latest-prices?${symbols.map((s) => `symbols=${encodeURIComponent(s)}`).join("&")}`
-            );
-            const prices = pricesRes.data?.data || {};
-
-            const watchAssets: AssetRow[] = [];
-            for (const item of defaultWatchlist.items) {
-              const sym = item.asset?.symbol;
-              if (!sym) continue;
-              const priceData = prices[sym];
-              if (!priceData) continue;
-              watchAssets.push({
-                symbol: sym,
-                name: item.asset!.name ?? "",
-                market: item.asset!.market as "NASDAQ",
-                price: priceData.price ?? 0,
-                changePct: priceData.change_pct ?? 0,
-              });
-            }
-            setWatchlistAlerts(watchAssets);
+          for (const item of defaultWatchlist.items) {
+            const sym = item.asset?.symbol;
+            if (!sym) continue;
+            const priceData = prices[sym];
+            if (!priceData) continue;
+            watchlistAlerts.push({
+              symbol: sym,
+              name: item.asset!.name ?? "",
+              market: item.asset!.market as "NASDAQ",
+              price: priceData.price ?? 0,
+              changePct: priceData.change_pct ?? 0,
+            });
           }
         }
-
-        const notifications = notificationsRes.data || [];
-        const history = notifications
-          .filter((n) => n.type === "ALERT" || n.title?.includes("Alert"))
-          .slice(0, 10)
-          .map((n) => ({
-            time: formatTimeAgo(n.created_at as string),
-            alert: n.title as string,
-            type: n.extra?.signal_type || "INFO",
-            status: n.read ? t("app.alerts.status.executed") : t("app.alerts.status.active"),
-            statusKey: n.read ? "executed" : "active",
-          }));
-        setAlertHistory(history);
-
-      } catch {
-        // Handle error silently
-      } finally {
-        if (active) setLoading(false);
       }
-    }
 
-    loadAlerts();
-    return () => { active = false; };
-  }, []);
+      const notifications = notificationsRes.data || [];
+      const alertHistory = notifications
+        .filter((n) => n.type === "ALERT" || n.title?.includes("Alert"))
+        .slice(0, 10)
+        .map((n) => ({
+          time: formatTimeAgo(n.created_at as string),
+          alert: n.title as string,
+          type: n.extra?.signal_type || "INFO",
+          status: n.read ? t("app.alerts.status.executed") : t("app.alerts.status.active"),
+          statusKey: n.read ? "executed" : "active",
+        }));
+
+      return { watchlistAlerts, alertHistory };
+    },
+  });
+
+  const watchlistAlerts = data?.watchlistAlerts ?? [];
+  const alertHistory = data?.alertHistory ?? [];
 
   if (loading) {
     return (
