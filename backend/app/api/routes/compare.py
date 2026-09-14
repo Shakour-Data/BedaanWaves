@@ -16,6 +16,7 @@ USAGE:
 - POST /api/v1/compare/historical - Compare historical performance
 """
 
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -131,18 +132,108 @@ class CompareDimensionsResponse(BaseModel):
 async def compare_stocks(
     request: CompareStocksRequest,
     cache_service: CacheService = Depends(),
+    stock_service: StockService = Depends(),
+    scoring_service: ScoringService = Depends(),
 ) -> CompareStocksResponse:
-    """
-    Compare multiple stocks side-by-side.
-    
-    Supports 2-5 stocks comparison with:
-    - 6D dimension scores
-    - Financial metrics
-    - Technical indicators
-    - Historical performance
-    """
-    # Implementation here
-    pass
+    symbols = request.symbols
+    try:
+        stocks_data = await stock_service.get_multiple(symbols)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stock data: {exc}")
+
+    comparisons: List[StockComparison] = []
+    for symbol in symbols:
+        data = stocks_data.get(symbol, {})
+        if "error" in data:
+            continue
+        ticker = data.get("symbol", symbol)
+        overall_score = 0.0
+        grade = ""
+        dimensions = None
+        if request.include_dimensions:
+            score_input = {
+                "ticker": ticker,
+                "market": data.get("exchange", "NASDAQ"),
+                "fundamental": {},
+                "technical": {},
+                "sentiment": {},
+                "risk": {},
+                "macro": {},
+                "ai": {},
+            }
+            try:
+                scores = await scoring_service.analyze(score_input)
+                overall_score = scores.get("overall_score", 0.0)
+                grade = scores.get("grade", "")
+                dim_scores = scores.get("dimension_scores", {})
+                dimensions = DimensionComparison(
+                    fundamental=dim_scores.get("fundamental"),
+                    technical=dim_scores.get("technical"),
+                    sentiment=dim_scores.get("sentiment"),
+                    risk=dim_scores.get("risk"),
+                    macro=dim_scores.get("macro"),
+                    ai=dim_scores.get("ai"),
+                )
+            except Exception:
+                pass
+
+        metrics = None
+        if request.include_metrics:
+            metrics = MetricsComparison(
+                market_cap=data.get("market_cap"),
+                pe_ratio=data.get("pe_ratio"),
+                pb_ratio=data.get("pb_ratio"),
+                eps=data.get("eps"),
+                dividend_yield=data.get("dividend_yield"),
+                roe=data.get("roe"),
+                debt_to_equity=data.get("debt_to_equity"),
+                current_ratio=data.get("current_ratio"),
+            )
+
+        technical = None
+        if request.include_technical:
+            technical = TechnicalComparison(
+                rsi_14=None,
+                macd=None,
+                bollinger_upper=None,
+                bollinger_lower=None,
+                ema_50=None,
+                ema_200=None,
+                volume_sma_20=None,
+            )
+
+        comparisons.append(StockComparison(
+            symbol=symbol,
+            name=data.get("name") or data.get("shortName") or data.get("longName"),
+            sector=data.get("sector"),
+            current_price=data.get("price") or data.get("currentPrice"),
+            change_pct=data.get("change_percent") or data.get("changePct"),
+            overall_score=overall_score if overall_score else None,
+            grade=grade,
+            dimensions=dimensions,
+            metrics=metrics,
+            technical=technical,
+        ))
+
+    historical_data = None
+    if request.include_historical:
+        try:
+            hist_points: List[HistoricalPoint] = []
+            for symbol in symbols:
+                history = await stock_service.get_history(symbol, days=request.days)
+                for point in history[-30:]:
+                    hist_points.append(HistoricalPoint(
+                        date=point.get("timestamp", "")[:10],
+                        symbol=symbol,
+                        price=point.get("close", 0),
+                        change_pct=0.0,
+                        volume=point.get("volume"),
+                    ))
+            historical_data = hist_points
+        except Exception:
+            pass
+
+    return format_comparison_response(comparisons, historical_data)
 
 
 @router.get("/dimensions/{symbol1}/{symbol2}", response_model=CompareDimensionsResponse)
@@ -151,6 +242,7 @@ async def compare_dimensions(
     symbol2: str,
     include_sub_dimensions: bool = Query(False, description="Include sub-dimension scores"),
     scoring_service: ScoringService = Depends(),
+    stock_service: StockService = Depends(),
 ) -> CompareDimensionsResponse:
     """
     Compare 6D dimension scores between two stocks.
@@ -160,8 +252,47 @@ async def compare_dimensions(
     - Winner by dimension
     - Overall comparison summary
     """
-    # Implementation here
-    pass
+    try:
+        data1 = await stock_service.get_stock(symbol1)
+        data2 = await stock_service.get_stock(symbol2)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stock data: {exc}")
+
+    dimensions = {}
+    for label, symbol, data in [("symbol1", symbol1, data1), ("symbol2", symbol2, data2)]:
+        score_input = {
+            "ticker": data.get("symbol", symbol),
+            "market": data.get("exchange", "NASDAQ"),
+            "fundamental": {},
+            "technical": {},
+            "sentiment": {},
+            "risk": {},
+            "macro": {},
+            "ai": {},
+        }
+        try:
+            scores = await scoring_service.analyze(score_input)
+            dim_scores = scores.get("dimension_scores", {})
+            dimensions[label] = dim_scores
+        except Exception:
+            dimensions[label] = {}
+
+    dim_scores_combined: dict = {}
+    for dim in ["fundamental", "technical", "sentiment", "risk", "macro", "ai"]:
+        dim_scores_combined[dim] = {
+            symbol1: dimensions.get("symbol1", {}).get(dim),
+            symbol2: dimensions.get("symbol2", {}).get(dim),
+        }
+
+    winners = calculate_winner_by_dimension(dim_scores_combined)
+
+    return CompareDimensionsResponse(
+        status="success",
+        symbols=[symbol1, symbol2],
+        dimensions=dim_scores_combined,
+        winner_by_dimension=winners,
+        timestamp=datetime.utcnow().isoformat(),
+    )
 
 
 @router.get("/metrics/{symbol1}/{symbol2}")
@@ -182,8 +313,34 @@ async def compare_metrics(
     - ROE
     - Debt ratios
     """
-    # Implementation here
-    pass
+    try:
+        data1 = await stock_service.get_stock(symbol1)
+        data2 = await stock_service.get_stock(symbol2)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stock data: {exc}")
+
+    return {
+        "symbol1_metrics": {
+            "market_cap": data1.get("market_cap"),
+            "pe_ratio": data1.get("pe_ratio"),
+            "pb_ratio": data1.get("pb_ratio"),
+            "eps": data1.get("eps"),
+            "dividend_yield": data1.get("dividend_yield"),
+            "roe": data1.get("roe"),
+            "debt_to_equity": data1.get("debt_to_equity"),
+            "current_ratio": data1.get("current_ratio"),
+        },
+        "symbol2_metrics": {
+            "market_cap": data2.get("market_cap"),
+            "pe_ratio": data2.get("pe_ratio"),
+            "pb_ratio": data2.get("pb_ratio"),
+            "eps": data2.get("eps"),
+            "dividend_yield": data2.get("dividend_yield"),
+            "roe": data2.get("roe"),
+            "debt_to_equity": data2.get("debt_to_equity"),
+            "current_ratio": data2.get("current_ratio"),
+        },
+    }
 
 
 @router.post("/historical")
@@ -196,8 +353,27 @@ async def compare_historical(
     
     Returns price data, change percentages, and volume for the specified period.
     """
-    # Implementation here
-    pass
+    historical_data: List[dict] = []
+    for symbol in request.symbols:
+        try:
+            history = await stock_service.get_history(symbol, days=request.days)
+            for point in history:
+                historical_data.append({
+                    "date": point.get("timestamp", "")[:10],
+                    "symbol": symbol,
+                    "price": point.get("close", 0),
+                    "change_pct": 0.0,
+                    "volume": point.get("volume"),
+                })
+        except Exception:
+            continue
+
+    return {
+        "status": "success",
+        "symbols": request.symbols,
+        "historical_data": historical_data,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 # =============================================================================

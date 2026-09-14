@@ -173,6 +173,129 @@ class NewsService(CachedService):
         
         return related
     
+    async def get_news_by_category(
+        self,
+        category: str,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Get news articles filtered by category."""
+        cache_key = f"news_category:{category}:{limit}"
+        cached = self.get_cached(cache_key)
+        if cached:
+            return cached
+
+        results = []
+        if self.news_client:
+            try:
+                if hasattr(self.news_client, "get_news_by_category"):
+                    results = await self.news_client.get_news_by_category(category=category, limit=limit)
+            except Exception as exc:
+                self.logger.warning(f"External news client failed for category {category}: {exc}")
+
+        if not results:
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(News)
+                    .where(News.metadata["category"].astext == category)
+                    .order_by(desc(News.published_at))
+                    .limit(limit)
+                )
+                news_items = result.scalars().all()
+                results = [self._news_to_dict(n) for n in news_items]
+
+        self.set_cached(cache_key, results)
+        return results
+
+    async def get_market_moving_news(
+        self,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Get market-moving news articles."""
+        cache_key = f"market_moving:{limit}"
+        cached = self.get_cached(cache_key)
+        if cached:
+            return cached
+
+        results = []
+        if self.news_client:
+            try:
+                if hasattr(self.news_client, "get_market_moving_news"):
+                    results = await self.news_client.get_market_moving_news(limit=limit)
+            except Exception as exc:
+                self.logger.warning(f"External news client failed for market-moving: {exc}")
+
+        if not results:
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(News)
+                    .where(News.metadata["market_moving"].astext == "true")
+                    .order_by(desc(News.published_at))
+                    .limit(limit)
+                )
+                news_items = result.scalars().all()
+                results = [self._news_to_dict(n) for n in news_items]
+
+        self.set_cached(cache_key, results)
+        return results
+
+    async def get_news_categories(self) -> List[Dict[str, Any]]:
+        """Get available news categories."""
+        cache_key = "news_categories"
+        cached = self.get_cached(cache_key)
+        if cached:
+            return cached
+
+        results = []
+        if self.news_client:
+            try:
+                if hasattr(self.news_client, "get_news_categories"):
+                    results = await self.news_client.get_news_categories()
+            except Exception as exc:
+                self.logger.warning(f"External news client failed for categories: {exc}")
+
+        if not results:
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(News.metadata["category"].astext.label("category"))
+                    .distinct()
+                    .where(News.metadata["category"].astext.isnot(None))
+                    .limit(20)
+                )
+                categories = result.scalars().all()
+                results = [{"name": c, "count": 0} for c in categories if c]
+
+        self.set_cached(cache_key, results)
+        return results
+
+    async def get_news_regions(self) -> List[Dict[str, Any]]:
+        """Get available news regions."""
+        cache_key = "news_regions"
+        cached = self.get_cached(cache_key)
+        if cached:
+            return cached
+
+        results = []
+        if self.news_client:
+            try:
+                if hasattr(self.news_client, "get_news_regions"):
+                    results = await self.news_client.get_news_regions()
+            except Exception as exc:
+                self.logger.warning(f"External news client failed for regions: {exc}")
+
+        if not results:
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(News.metadata["region"].astext.label("region"))
+                    .distinct()
+                    .where(News.metadata["region"].astext.isnot(None))
+                    .limit(20)
+                )
+                regions = result.scalars().all()
+                results = [{"name": r, "count": 0} for r in regions if r]
+
+        self.set_cached(cache_key, results)
+        return results
+
     def _news_to_dict(self, news: News) -> Dict[str, Any]:
         return {
             "id": str(news.id),

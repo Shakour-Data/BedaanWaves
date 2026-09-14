@@ -8,22 +8,10 @@ import {
   FilterCondition as FilterConditionType,
   LogicOperator,
   FilterableField,
-  FilterGroup,
-  FilterCondition,
 } from "@/types/filter";
 import { ConditionRow } from "./ConditionRow";
 
-interface GroupRowProps {
-  group: FilterGroupType;
-  fields: FilterableField[];
-  depth: number;
-  onAddCondition: (groupId: string) => void;
-  onAddGroup: (groupId: string) => void;
-  onRemove: (groupId: string, nodeId: string) => void;
-  onUpdateNode: (groupId: string, nodeId: string, updater: (node: FilterCondition | FilterGroup) => FilterCondition | FilterGroup) => void;
-  onSetLogic: (groupId: string, logic: LogicOperator) => void;
-  parentId: string | null;
-}
+type FilterNode = FilterGroupType["conditions"][number];
 
 interface GroupRowProps {
   group: FilterGroupType;
@@ -32,7 +20,7 @@ interface GroupRowProps {
   onAddCondition: (groupId: string) => void;
   onAddGroup: (groupId: string) => void;
   onRemove: (groupId: string, nodeId: string) => void;
-  onUpdateNode: (groupId: string, nodeId: string, updater: (node: FilterGroupType["conditions"][number]) => FilterGroupType["conditions"][number]) => void;
+  onUpdateNode: (groupId: string, nodeId: string, updater: (node: FilterNode) => FilterNode) => void;
   onSetLogic: (groupId: string, logic: LogicOperator) => void;
   parentId: string | null;
 }
@@ -99,7 +87,7 @@ export function GroupRow({
                 key={node.id}
                 condition={node as FilterConditionType}
                 fields={fields}
-                onUpdate={(updater) => onUpdateNode(group.id, node.id, updater as (node: FilterCondition | FilterGroup) => FilterCondition | FilterGroup)}
+                onUpdate={(updater) => onUpdateNode(group.id, node.id, updater as (node: FilterNode) => FilterNode)}
                 onRemove={() => onRemove(group.id, node.id)}
               />
             ) : (

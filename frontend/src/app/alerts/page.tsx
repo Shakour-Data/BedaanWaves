@@ -55,8 +55,8 @@ export default function AlertsPage() {
   const { data, isLoading: loading } = useQuery<AlertsData>({
     queryKey: ["alerts"],
     queryFn: async () => {
-      const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists/watchlists");
-      const notificationsRes = await apiClient.get<Notification[]>("/notifications/notifications?limit=20");
+      const watchlistsRes = await apiClient.get<Watchlist[]>("/watchlists");
+      const notificationsRes = await apiClient.get<Notification[]>("/notifications?limit=20");
 
       const watchlists = watchlistsRes.data || [];
       const defaultWatchlist = watchlists.find((w) => w.is_default);

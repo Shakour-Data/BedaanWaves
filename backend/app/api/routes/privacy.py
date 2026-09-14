@@ -11,6 +11,8 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import select
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_current_active_user

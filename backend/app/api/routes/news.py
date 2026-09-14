@@ -57,3 +57,59 @@ async def search_news(
         "count": len(results),
         "data": results,
     }
+
+
+@router.get("/category/{category}", response_model=dict)
+async def get_news_by_category(
+    category: str,
+    limit: int = Query(20, ge=1, le=100),
+) -> dict:
+    """Get news by category."""
+    service = NewsService()
+    await service.initialize()
+    news = await service.get_news_by_category(category, limit)
+    return {
+        "status": "success",
+        "category": category,
+        "count": len(news),
+        "data": news,
+    }
+
+
+@router.get("/market-moving", response_model=dict)
+async def get_market_moving_news(
+    limit: int = Query(20, ge=1, le=100),
+) -> dict:
+    """Get market moving news."""
+    service = NewsService()
+    await service.initialize()
+    news = await service.get_market_moving_news(limit)
+    return {
+        "status": "success",
+        "count": len(news),
+        "data": news,
+    }
+
+
+@router.get("/categories", response_model=dict)
+async def get_news_categories() -> dict:
+    """Get news categories."""
+    service = NewsService()
+    await service.initialize()
+    categories = await service.get_news_categories()
+    return {
+        "status": "success",
+        "data": categories,
+    }
+
+
+@router.get("/regions", response_model=dict)
+async def get_news_regions() -> dict:
+    """Get news regions."""
+    service = NewsService()
+    await service.initialize()
+    regions = await service.get_news_regions()
+    return {
+        "status": "success",
+        "data": regions,
+    }

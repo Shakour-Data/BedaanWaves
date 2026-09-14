@@ -345,6 +345,8 @@ class User(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_login = Column(DateTime)
 
+    mfa = relationship("UserMFA", back_populates="user", uselist=False)
+
 
 class RefreshToken(Base):
     """Refresh tokens for user sessions"""
@@ -361,6 +363,25 @@ class RefreshToken(Base):
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     __table_args__ = (Index('idx_refresh_user', 'user_id'),)
+
+
+class UserMFA(Base):
+    """User MFA settings for TOTP-based multi-factor authentication."""
+    __tablename__ = "user_mfa"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    secret = Column(String(255), nullable=False)
+    backup_codes = Column(JSONB, default=[])
+    is_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates="mfa")
+
+    __table_args__ = (
+        Index('idx_mfa_user', 'user_id'),
+    )
 
 
 class PasswordResetToken(Base):

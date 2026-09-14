@@ -178,22 +178,22 @@ export function isStaleByAge(ageMs: number | null, timestamp: number | null): bo
 }
 
 export function getStreamEndpoint(key: LiveStreamKey): string {
-  if (key === 'market') return '/api/v1/live-sse/market/stream';
-  if (key === 'scores') return '/api/v1/live-sse/scores/stream?scope=NASDAQ';
-  if (key === 'news') return '/api/v1/live-sse/news/stream';
+  if (key === 'market') return '/api/v1/live/market/stream';
+  if (key === 'scores') return '/api/v1/live/scores/stream?scope=NASDAQ';
+  if (key === 'news') return '/api/v1/live/news/stream';
   if (key.startsWith('quote:')) {
     const symbol = key.slice('quote:'.length);
-    return `/api/v1/live-sse/quote/${encodeURIComponent(symbol)}/stream`;
+    return `/api/v1/live/quote/${encodeURIComponent(symbol)}/stream`;
   }
   if (key.startsWith('intraday:')) {
     const rest = key.slice('intraday:'.length);
     const colon = rest.indexOf(':');
     if (colon === -1) {
-      return `/api/v1/live-sse/intraday/${encodeURIComponent(rest)}/stream?interval=5m`;
+      return `/api/v1/live/intraday/${encodeURIComponent(rest)}/stream?interval=5m`;
     }
     const symbol = rest.slice(0, colon);
     const interval = rest.slice(colon + 1);
-    return `/api/v1/live-sse/intraday/${encodeURIComponent(symbol)}/stream?interval=${encodeURIComponent(interval)}`;
+    return `/api/v1/live/intraday/${encodeURIComponent(symbol)}/stream?interval=${encodeURIComponent(interval)}`;
   }
   return '';
 }
