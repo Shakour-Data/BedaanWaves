@@ -394,10 +394,7 @@ async def risk_analysis(
     return {
         "status": "success",
         "symbol": asset.symbol,
-        "name": asset.name,
-        "market": asset.market,
-        "data_points": len(returns),
-        "risk": result,
+        "risk": result["metrics"],
         "timestamp": utc_now_iso(),
     }
 
@@ -435,7 +432,7 @@ async def fundamental_analysis(
     try:
         # Get financial data for the asset
         financial_data = await financial_ingest_service.get_latest_fundamentals(
-            asset_id=asset.symbol,
+            asset_id=str(asset.id),
             market=market_type or MarketType.US,
         )
         financials = financial_data.get("financials", {})
@@ -634,8 +631,8 @@ async def get_symbol_scoring(
         return {
             "status": "insufficient_data",
             "symbol": asset.symbol,
-            "message": f"Only {len(candles)} 1-day candles available; at least 20 required for scoring",
             "scoring": None,
+            "hierarchy": None,
             "timestamp": utc_now_iso(),
         }
     

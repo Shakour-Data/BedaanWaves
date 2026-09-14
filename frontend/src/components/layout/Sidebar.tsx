@@ -98,8 +98,6 @@ const cleanPath = (p: string) => p.split("?")[0];
 const isCategoryActive = (items: NavItem[], checkActive: (href: string) => boolean) =>
   items.some((item) => checkActive(item.href));
 
-const SIDEBAR_WIDTH = "16rem";
-
 interface SidebarComponentProps {
   side?: "left" | "right";
   title?: string;
@@ -123,16 +121,11 @@ const SidebarComponent = ({
   onLogout,
   sidebarOpen: externalSidebarOpen,
   setSidebarOpen: externalSetSidebarOpen,
-  closeOnLgOnly = false,
 }: SidebarComponentProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const internalSidebarOpen = useAppStore((state) =>
-    side === "left" ? state.sidebarOpen : state.rightSidebarOpen
-  );
-  const internalSetSidebarOpen = useAppStore((state) =>
-    side === "left" ? state.setSidebarOpen : state.setRightSidebarOpen
-  );
+  const internalSidebarOpen = useAppStore((state) => state.sidebarOpen);
+  const internalSetSidebarOpen = useAppStore((state) => state.setSidebarOpen);
 
   const sidebarOpen = externalSidebarOpen ?? internalSidebarOpen;
   const setSidebarOpen = externalSetSidebarOpen ?? internalSetSidebarOpen;
@@ -222,15 +215,15 @@ const SidebarComponent = ({
           "transition-all duration-200 ease-out min-h-[44px]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30",
           active
-            ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+            ? "bg-gradient-to-r from-[var(--color-primary)]/[0.08] to-[var(--color-accent)]/[0.04] text-[var(--color-primary)]"
             : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted)] hover:text-[var(--color-text-primary)]"
         )}
       >
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
+            "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200",
             active
-              ? "bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20"
+              ? "bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md shadow-[var(--color-primary)]/25"
               : "bg-[var(--color-muted)] text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)]"
           )}
           aria-hidden="true"
@@ -253,7 +246,7 @@ const SidebarComponent = ({
         )}
         {active && !isBottom && (
           <span
-            className="absolute left-0 h-5 w-0.5 rounded-full bg-[var(--color-primary)]"
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-accent)]"
             aria-hidden="true"
           />
         )}
@@ -280,33 +273,36 @@ const SidebarComponent = ({
           sidebarOpen ? "translate-x-0" : side === "left" ? "-translate-x-full" : "translate-x-full"
         )}
         aria-label={side === "left" ? "Main navigation" : "Quick access navigation"}
-        style={{ width: SIDEBAR_WIDTH }}
+        data-sidebar
       >
         <div className="flex h-screen flex-col">
-          <div className="flex h-16 items-center gap-3 border-b border-[var(--color-border)] px-5 shrink-0">
-            <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md">
-                <span className="font-bold text-lg">B</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-bold text-[var(--color-text-primary)] leading-tight tracking-tight">
-                  {title}
-                </span>
-                <span className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider leading-tight">
-                  {subtitle}
-                </span>
-              </div>
-            </Link>
+          <div className="relative flex h-16 shrink-0 items-center gap-3 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)]/[0.04] via-transparent to-[var(--color-accent)]/[0.04]" />
+            <div className="relative flex w-full items-center gap-3 px-5">
+              <Link href="/dashboard" className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg shadow-[var(--color-primary)]/25 transition-transform duration-200 group-hover:scale-105">
+                  <span className="font-bold text-lg">B</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-base font-bold text-[var(--color-text-primary)] leading-tight tracking-tight">
+                    {title}
+                  </span>
+                  <span className="text-[10px] font-semibold text-[var(--color-primary)] uppercase tracking-widest leading-tight">
+                    {subtitle}
+                  </span>
+                </div>
+              </Link>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-4">
+          <div className="flex-1 overflow-y-auto px-3 py-4">
             {showSearch && (
-              <div className="px-3 pb-3">
+              <div className="mb-4">
                 <UnifiedSearchBar variant="sidebar" placeholder="Search stocks, news, pages..." />
               </div>
             )}
 
-            <nav className="flex flex-col gap-1 px-3" aria-label="Main navigation">
+            <nav className="flex flex-col gap-0.5" aria-label="Main navigation">
               {sidebarCategories.map((cat) => {
                 const isExpanded = allExpanded.has(cat.label);
                 const hasActive = isCategoryActive(cat.items, isActive);
@@ -328,10 +324,10 @@ const SidebarComponent = ({
                     >
                       <span
                         className={cn(
-                          "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                          "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
                           hasActive
-                            ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                            : "text-[var(--color-text-muted)]"
+                            ? "bg-gradient-to-br from-[var(--color-primary)]/15 to-[var(--color-accent)]/10 text-[var(--color-primary)]"
+                            : "bg-[var(--color-muted)] text-[var(--color-text-muted)]"
                         )}
                         aria-hidden="true"
                       >
@@ -353,14 +349,21 @@ const SidebarComponent = ({
                       </span>
                     </button>
 
-                    {isExpanded && (
-                      <div
-                        id={`nav-category-${cat.label.replace(/\s+/g, "-").toLowerCase()}`}
-                        className="ml-3 mt-1 flex flex-col gap-0.5"
-                      >
-                        {cat.items.map((item) => renderNavItem(item))}
+                    <div
+                      className={cn(
+                        "grid transition-all duration-200 ease-in-out",
+                        isExpanded ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0 mt-0"
+                      )}
+                    >
+                      <div className="overflow-hidden">
+                        <div
+                          id={`nav-category-${cat.label.replace(/\s+/g, "-").toLowerCase()}`}
+                          className="ml-3 flex flex-col gap-0.5"
+                        >
+                          {cat.items.map((item) => renderNavItem(item))}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -368,9 +371,9 @@ const SidebarComponent = ({
           </div>
 
           {showFooter && (
-            <div className="border-t border-[var(--color-border)] p-3 shrink-0">
-              <div className="mb-3 px-3">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+            <div className="shrink-0 border-t border-[var(--color-border)] px-3 py-3">
+              <div className="mb-2 px-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
                   Account
                 </span>
               </div>
@@ -379,16 +382,16 @@ const SidebarComponent = ({
               </div>
 
               {showUserInfo && user && (
-                <div className="mt-3 border-t border-[var(--color-border)] pt-2">
-                  <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white">
+                <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+                  <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-[var(--color-muted)]/50 to-transparent px-3 py-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-xs font-semibold text-white shadow-sm">
                       {user.full_name?.[0] || user.username?.[0] || "U"}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
                         {user.full_name || user.username || "User"}
                       </p>
-                      <p className="text-xs text-[var(--color-text-muted)] truncate">
+                      <p className="truncate text-xs text-[var(--color-text-muted)]">
                         {user.email || ""}
                       </p>
                     </div>
@@ -397,12 +400,12 @@ const SidebarComponent = ({
                     type="button"
                     onClick={onLogout ?? logout}
                     className={cn(
-                      "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)]",
+                      "mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)]",
                       "transition-all duration-200 hover:bg-[var(--color-error)]/10 hover:text-[var(--color-error)]",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)]/30 min-h-[44px]"
                     )}
                   >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-error)]/10 text-[var(--color-error)]">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-error)]/10 text-[var(--color-error)]">
                       <LogOut className="h-4 w-4" />
                     </span>
                     <span>Sign Out</span>

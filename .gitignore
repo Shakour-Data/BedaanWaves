@@ -60,8 +60,9 @@ DatabaseConfigs.txt
 *.swp
 *.swo
 
-# Kilo AI internal state
+# Kilo / Trae AI internal state
 .kilo/
+.trae/
 
 # PostgreSQL Installer (Windows)
 pginst*.exe
@@ -75,13 +76,29 @@ frontend/refactor.js
 verify_no_mock_data.py
 verify_*.py
 verify_*.out
+validate_*.py
 _yf_check.py
 
 # Frontend test results (Playwright)
 frontend/test-results/
 
-# Root-level logs
-logs/
+# Backend temp directories
+backend/backups/
+backend/data/archive/
+backend/temp/
+
+# Backend config (machine-specific)
+backend/mypy.ini
+
+# Playwright test artifacts
+frontend/playwright-report/
+frontend/playwright-output/
+frontend/playwright-browsers/
+
+# Root-level logs and test output
+*.log
+backend/task10_pytest_output.txt
+check_*.py
 
 # Docker secrets (never commit — contains real passwords/keys)
 .env.docker
@@ -168,8 +185,29 @@ scripts/
 # SEC EDGAR cache
 backend/sec_cik_cache.json
 
+# Generated OpenAPI specs (regenerable from the running API)
+openapi.json
+openapi_full.json
+
 # Data files
 backend/nasdaq_symbols.csv
 
 # Backup files
 backend/*.backup
+
+# Test integration (k6 load tests)
+tests/integration/k6/
+
+# Generated docs (regenerable)
+docs/INVENTORY.md
+docs/OBSOLETE_FILES_REPORT.md
+docs/DUPLICATES_REMOVAL_REPORT.md
+docs/PROJECT_DOCS_STATUS.md
+docs/security-privacy-report.md
+
+# Legacy generated docs
+docs/11_legacy/*.html
+
+# Junk / stray files
+Continue
+null
